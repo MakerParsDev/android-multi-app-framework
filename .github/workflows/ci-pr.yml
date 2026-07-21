@@ -34,6 +34,12 @@ jobs:
           set -euo pipefail
           python3 scripts/ci/workflow_policy_test.py
 
+      - name: Test CI load policy
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/resolve_ci_flavor_matrix_test.py
+          python3 scripts/ci/ci_load_policy_test.py
+
       - name: Validate active workflows and actions
         run: |
           set -euo pipefail
@@ -72,6 +78,7 @@ jobs:
 
   android-quality:
     name: Android Quality
+    if: github.event_name != 'pull_request' || github.event.pull_request.user.login != 'dependabot[bot]'
     needs: [workflow-policy, repository-security]
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -112,16 +119,39 @@ jobs:
           chmod +x ./gradlew
           ./gradlew detekt ktlintCheck testDebugUnitTest validateFlavorVersions --continue --no-daemon --stacktrace --max-workers=2
 
-  representative-builds:
+  resolve-apps:
+    name: Resolve App Matrix
+    if: github.event_name != 'pull_request' || github.event.pull_request.user.login != 'dependabot[bot]'
+    needs: [workflow-policy, repository-security]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      flavors: ${{ steps.catalog.outputs.flavors }}
+      count: ${{ steps.catalog.outputs.count }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Resolve all app flavors
+        id: catalog
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/resolve_ci_flavor_matrix.py >> "$GITHUB_OUTPUT"
+
+  app-builds:
     name: Build ${{ matrix.flavor }}
-    needs: [workflow-policy, repository-security, android-quality]
+    if: github.event_name != 'pull_request' || github.event.pull_request.user.login != 'dependabot[bot]'
+    needs: [workflow-policy, repository-security, android-quality, resolve-apps]
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
       fail-fast: false
-      max-parallel: 2
+      max-parallel: 3
       matrix:
-        flavor: [kuran_kerim, namazvakitleri, kible, zikirmatik]
+        flavor: ${{ fromJSON(needs.resolve-apps.outputs.flavors) }}
     env:
       FLAVOR: ${{ matrix.flavor }}
     steps:
@@ -153,7 +183,7 @@ jobs:
           set -euo pipefail
           python3 scripts/ci/generate_ci_google_services.py --flavors "$FLAVOR"
 
-      - name: Lint representative flavor
+      - name: Lint app flavor
         shell: bash
         run: |
           set -euo pipefail
@@ -161,7 +191,7 @@ jobs:
           cap="${FLAVOR^}"
           ./gradlew "lint${cap}Debug" --no-daemon --stacktrace --max-workers=2
 
-      - name: Assemble representative flavor
+      - name: Assemble app flavor
         shell: bash
         run: |
           set -euo pipefail
@@ -174,3 +204,40 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/ci/generate_ci_google_services.py --clean --flavors "$FLAVOR"
+
+  dependabot-smoke:
+    name: Dependabot Smoke
+    if: github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]'
+    needs: [workflow-policy, repository-security]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: '21'
+          check-latest: false
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+        with:
+          cache-read-only: true
+
+      - name: Validate dependency metadata
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/audit_dependency_catalog.py
+          python3 scripts/ci/validate_supply_chain_policy.py
+
+      - name: Run lightweight Gradle smoke check
+        run: |
+          set -euo pipefail
+          chmod +x ./gradlew
+          ./gradlew help validateFlavorVersions --no-daemon --stacktrace --max-workers=2

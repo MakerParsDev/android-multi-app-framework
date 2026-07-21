@@ -1,124 +1,26 @@
 version: 2
 
+multi-ecosystem-groups:
+  android-maintenance:
+    schedule:
+      interval: monthly
+
 updates:
   - package-ecosystem: github-actions
     directory: /
-    schedule:
-      interval: weekly
-      day: monday
-      time: '05:17'
-      timezone: Europe/Istanbul
-    open-pull-requests-limit: 5
-    groups:
-      github-actions:
-        patterns:
-          - '*'
+    patterns:
+      - '*'
+    multi-ecosystem-group: android-maintenance
+    open-pull-requests-limit: 1
     cooldown:
-      default-days: 7
+      default-days: 30
 
   - package-ecosystem: gradle
     directory: /
-    schedule:
-      interval: weekly
-      day: monday
-      time: '05:27'
-      timezone: Europe/Istanbul
-    open-pull-requests-limit: 5
+    patterns:
+      - '*'
+    multi-ecosystem-group: android-maintenance
+    open-pull-requests-limit: 1
     cooldown:
-      default-days: 7
-
-  - package-ecosystem: npm
-    directory: /side-projects/admin-notifications
-    schedule:
-      interval: weekly
-      day: monday
-      time: '05:37'
-      timezone: Europe/Istanbul
-    open-pull-requests-limit: 5
-    groups:
-      npm-minor-patch:
-        update-types:
-          - minor
-          - patch
-    cooldown:
-      default-days: 7
-
-  - package-ecosystem: npm
-    directory: /side-projects/firebase/functions
-    schedule:
-      interval: weekly
-      day: monday
-      time: '05:37'
-      timezone: Europe/Istanbul
-    open-pull-requests-limit: 5
-    groups:
-      npm-minor-patch:
-        update-types:
-          - minor
-          - patch
-    cooldown:
-      default-days: 7
-
-  - package-ecosystem: npm
-    directory: /side-projects/firebase/rules-tests
-    schedule:
-      interval: weekly
-      day: monday
-      time: '05:37'
-      timezone: Europe/Istanbul
-    open-pull-requests-limit: 5
-    groups:
-      npm-minor-patch:
-        update-types:
-          - minor
-          - patch
-    cooldown:
-      default-days: 7
-
-  - package-ecosystem: npm
-    directory: /side-projects/cloudflare/workers/admin-api
-    schedule:
-      interval: weekly
-      day: monday
-      time: '05:37'
-      timezone: Europe/Istanbul
-    open-pull-requests-limit: 5
-    groups:
-      npm-minor-patch:
-        update-types:
-          - minor
-          - patch
-    cooldown:
-      default-days: 7
-
-  - package-ecosystem: npm
-    directory: /side-projects/cloudflare/workers/content-api
-    schedule:
-      interval: weekly
-      day: monday
-      time: '05:37'
-      timezone: Europe/Istanbul
-    open-pull-requests-limit: 5
-    groups:
-      npm-minor-patch:
-        update-types:
-          - minor
-          - patch
-    cooldown:
-      default-days: 7
-
-  - package-ecosystem: npm
-    directory: /side-projects/cloudflare/workers/ssv-callback
-    schedule:
-      interval: weekly
-      day: monday
-      time: '05:37'
-      timezone: Europe/Istanbul
-    open-pull-requests-limit: 5
-    groups:
-      npm-minor-patch:
-        update-types:
-          - minor
-          - patch
-    cooldown:
-      default-days: 7
+      default-days: 30
+      semver-major-days: 60
