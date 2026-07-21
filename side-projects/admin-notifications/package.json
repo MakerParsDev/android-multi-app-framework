@@ -18,12 +18,12 @@
     "deploy": "node ../../scripts/ci/deploy_verified_side_project.mjs admin-notifications"
   },
   "dependencies": {
-    "firebase": "^12.9.0",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "firebase": "^12.16.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
   },
   "devDependencies": {
-    "@types/react": "^19.1.10",
+    "@types/react": "^19.2.17",
     "@types/react-dom": "^19.1.7",
     "@vitejs/plugin-react": "^5.0.0",
     "typescript": "^5.7.3",
