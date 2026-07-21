@@ -1,0 +1,153 @@
+name: Sync Play Version Codes
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_flavors:
+        description: 'Target flavors (comma-separated) or "all"'
+        required: true
+        default: 'all'
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: ${{ format('{0}-{1}', github.workflow, github.ref) }}
+  cancel-in-progress: true
+
+env:
+  JAVA_VERSION: '21'
+
+jobs:
+  sync:
+    name: Sync app-versions.properties from Play
+    runs-on: ubuntu-latest
+    env:
+      PLAY_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
+      GH_TOKEN: ${{ secrets.GH_PAT_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-read-only: true
+
+      - name: Resolve Flavors
+        id: resolve
+        uses: ./.github/actions/resolve-flavors
+        with:
+          target_flavors: ${{ github.event.inputs.target_flavors }}
+
+      - name: Validate CI apps catalog (warn)
+        run: |
+          set -euo pipefail
+          python3 ./scripts/ci/validate_ci_apps_catalog.py --mode warn --target-flavors "${{ steps.resolve.outputs.resolved_csv }}"
+
+      - name: Validate AdMob inventory (warn)
+        run: |
+          set -euo pipefail
+          python3 ./scripts/ci/validate_admob_inventory.py --mode warn --target-flavors "${{ steps.resolve.outputs.resolved_csv }}"
+
+      - name: Verify env contract
+        uses: ./.github/actions/verify-env-contract
+
+      - name: Validate Play service account secret
+        shell: bash
+        run: |
+          set -euo pipefail
+          PLAY_SERVICE_ACCOUNT_JSON_BASE64="$(printf '%s' "${PLAY_SERVICE_ACCOUNT_JSON_BASE64:-}" | tr -d '\r\n\t ')"
+          [ -n "$PLAY_SERVICE_ACCOUNT_JSON_BASE64" ] || { echo "::error::Missing required secret/env: PLAY_SERVICE_ACCOUNT_JSON_BASE64"; exit 1; }
+          [ "${#PLAY_SERVICE_ACCOUNT_JSON_BASE64}" -ge 500 ] || { echo "::error::PLAY_SERVICE_ACCOUNT_JSON_BASE64 is too short to be valid (len=${#PLAY_SERVICE_ACCOUNT_JSON_BASE64})"; exit 1; }
+          echo "::add-mask::$PLAY_SERVICE_ACCOUNT_JSON_BASE64"
+          printf 'PLAY_SERVICE_ACCOUNT_JSON_BASE64=%s\n' "$PLAY_SERVICE_ACCOUNT_JSON_BASE64" >> "$GITHUB_ENV"
+
+      - name: Validate GitHub PAT for PR creation
+        run: |
+          set -euo pipefail
+          [ -n "${GH_TOKEN:-}" ] || { echo "::error::Missing required secret: GH_PAT_TOKEN"; exit 1; }
+          echo "::add-mask::$GH_TOKEN"
+          gh auth status
+
+      - name: Decode Play Service Account
+        uses: ./.github/actions/decode-play-service-account
+        with:
+          output_path: ${{ runner.temp }}/service-account.json
+
+      - name: Verify Play service account project
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ runner.temp }}/service-account.json
+        run: |
+          python3 ./scripts/ci/verify_play_service_account_project.py \
+            --expected-project-id makerpars-oaslananka-mobil
+
+      - name: Sync from Play (all tracks)
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ runner.temp }}/service-account.json
+        run: |
+          set -euo pipefail
+          echo "::notice::Syncing app-versions.properties from Play (tracks=all, flavors=${{ steps.resolve.outputs.resolved_csv }})"
+          python3 -m pip install --quiet google-api-python-client google-auth
+          python3 ./scripts/ci/fetch_play_version_codes.py \
+            --flavors "${{ steps.resolve.outputs.resolved_csv }}" \
+            --tracks all \
+            --apply-to-app-versions \
+            --sync-version-names
+
+      - name: Detect app-versions.properties changes
+        id: diff
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- app-versions.properties; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::app-versions.properties is already in sync with Play."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Changed app-versions.properties:"
+            git diff -- app-versions.properties | sed -n '1,240p'
+          fi
+
+      - name: Create sync pull request
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          branch="chore/sync-play-version-codes-${GITHUB_RUN_ID}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add app-versions.properties
+          git commit -m "Sync Play version codes"
+          git push origin "$branch"
+          gh pr create \
+            --base main \
+            --head "$branch" \
+            --title "Sync Play version codes" \
+            --body "Automated Play Console versionCode/versionName sync.\n\nTarget flavors: ${{ steps.resolve.outputs.resolved_csv }}\nTracks checked: all\nRun: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
+      - name: Upload synced app-versions.properties
+        uses: actions/upload-artifact@v6
+        with:
+          name: synced-app-versions
+          path: app-versions.properties
+          retention-days: 30
+
+      - name: Upload Play versionCode report
+        uses: actions/upload-artifact@v6
+        with:
+          name: play-version-codes-report
+          path: |
+            TEMP_OUT/play_version_codes.json
+            TEMP_OUT/app-versions.properties.suggested
+          retention-days: 30
+
+      - name: Cleanup Secrets
+        if: always()
+        run: rm -f "${{ runner.temp }}/service-account.json"

@@ -1,0 +1,18 @@
+<resources>
+    <string name="content_empty_title">İçerik Hazırlanıyor</string>
+    <string name="content_empty_subtitle">Bu uygulama için özel içerik yakında eklenecektir.</string>
+
+    <string name="content_mode_arabic">Arapça</string>
+    <string name="content_mode_latin">Latince</string>
+    <string name="content_mode_turkish">Meal</string>
+    <string name="content_error_friendly">İçerik yüklenemedi. Lütfen tekrar deneyin.</string>
+    <string name="content_retry">Tekrar dene</string>
+    <string name="content_verse_copied">Ayet panoya kopyalandı</string>
+    <string name="miracles_default_title">Mucize Dualar</string>
+    <string name="miracles_section_description">Açıklama</string>
+    <string name="miracles_section_besmele">Besmele</string>
+    <string name="miracles_section_prayer">Dua</string>
+    <string name="miracles_section_arabic">@string/content_mode_arabic</string>
+    <string name="miracles_section_latin_pronunciation">Latince Okunuş</string>
+    <string name="miracles_play_all_audio">Tümünü Dinle</string>
+</resources>

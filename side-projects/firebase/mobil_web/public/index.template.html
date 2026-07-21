@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="tr">
+
+<head>
+  <meta charset="utf-8">
+  <title>Mobil Uygulama Geliştirici Sayfası</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5653675164707335"
+    crossorigin="anonymous"></script>
+  <script>
+    (function () {
+      const siteKey = "__GOOGLE_RECAPTCHA_SITE_KEY__";
+      const verifyEndpoint = "__RECAPTCHA_VERIFY_ENDPOINT__";
+
+      if (!siteKey || siteKey === "__GOOGLE_RECAPTCHA_SITE_KEY__") {
+        console.info("reCAPTCHA disabled: site key is not injected.");
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.src = `https://www.google.com/recaptcha/api.js?render=${encodeURIComponent(siteKey)}`;
+      script.async = true;
+      script.defer = true;
+      script.onload = function () {
+        if (!window.grecaptcha || !window.grecaptcha.ready) return;
+        window.grecaptcha.ready(function () {
+          window.grecaptcha.execute(siteKey, { action: "homepage" }).then(async function (token) {
+            try {
+              const response = await fetch(verifyEndpoint || "/api/recaptcha/verify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ token, action: "homepage" }),
+              });
+              if (!response.ok) {
+                console.warn("reCAPTCHA verify failed", response.status);
+              }
+            } catch (error) {
+              console.warn("reCAPTCHA verify request failed", error);
+            }
+          });
+        });
+      };
+      document.head.appendChild(script);
+    })();
+  </script>
+</head>
+
+<body>
+
+  <h1>Mobil Uygulama Geliştirici Sayfası</h1>
+
+  <p>Bu web sitesi, mobil uygulamalar için gerekli yasal ve teknik bilgilendirme sayfalarını barındırır.</p>
+
+  <ul>
+    <li><a href="/privacy">Gizlilik Politikası</a></li>
+    <li><a href="/terms">Kullanım Şartları</a></li>
+    <li><a href="/support">Destek</a></li>
+  </ul>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-analytics.js";
+
+    const firebaseConfig = {
+      // Inject with scripts/firebase/render_web_index.py before deploy.
+      apiKey: "__FIREBASE_WEB_API_KEY__",
+      authDomain: "makerpars-oaslananka-mobil.firebaseapp.com",
+      databaseURL: "https://makerpars-oaslananka-mobil-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "makerpars-oaslananka-mobil",
+      storageBucket: "makerpars-oaslananka-mobil.firebasestorage.app",
+      messagingSenderId: "462747480927",
+      appId: "1:462747480927:web:a00cb1781635ffed11bcea",
+      measurementId: "G-QPFJ0RYL3P"
+    };
+
+    if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "__FIREBASE_WEB_API_KEY__") {
+      const app = initializeApp(firebaseConfig);
+      getAnalytics(app);
+    } else {
+      console.warn("Firebase analytics disabled: FIREBASE_WEB_API_KEY is not injected.");
+    }
+  </script>
+
+</body>
+
+</html>

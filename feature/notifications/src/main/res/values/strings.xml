@@ -1,0 +1,16 @@
+<resources>
+    <string name="notifications_title">Bildirimler</string>
+    <string name="notifications_empty">Henüz bildiriminiz yok</string>
+    <string name="notifications_empty_hint">Yeni bildirimler burada görünecektir.</string>
+    <string name="notifications_permission_disabled_title">Bildirim izni kapalı</string>
+    <string name="notifications_permission_disabled_hint">Yeni bildirimleri görmek için uygulama bildirim iznini açın.</string>
+    <string name="notifications_empty_cta">Bildirim Ayarlarını Aç</string>
+    <string name="notifications_error">Hata: %s</string>
+    <string name="notifications_action_mark_all_read">Tümünü oku</string>
+    <string name="notifications_action_delete_all">Tümünü sil</string>
+    <string name="notifications_dialog_close">Kapat</string>
+    <string name="notifications_dialog_mark_unread">Okunmadı yap</string>
+    <string name="notifications_dialog_delete">Sil</string>
+    <string name="notifications_state_unread">Okunmadı</string>
+    <string name="notifications_state_read">Okundu</string>
+</resources>

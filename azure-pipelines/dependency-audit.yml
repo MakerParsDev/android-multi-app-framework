@@ -1,0 +1,68 @@
+name: dependency-audit-$(Date:yyyyMMdd)$(Rev:.r)
+
+trigger: none
+pr: none
+
+schedules:
+  - cron: '0 3 * * 1'
+    displayName: Weekly dependency lifecycle audit
+    branches:
+      include:
+        - main
+    always: true
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  - name: GRADLE_OPTS
+    value: '-Djava.awt.headless=true -Dorg.gradle.workers.max=1 -Dorg.gradle.daemon=false -Dksp.incremental=false'
+
+steps:
+  - checkout: self
+    clean: true
+    fetchDepth: 0
+
+  - template: /pipelines/templates/steps/security-gate.yml
+    parameters:
+      mode: history
+      selfTest: false
+
+  - bash: bash scripts/ci/setup-android-sdk.sh
+    displayName: Setup Android SDK
+
+  - bash: |
+      set -euo pipefail
+      mkdir -p build/reports/dependencies
+      warning_log="build/reports/dependencies/resolved-amenerrasulu-runtime.txt"
+      : > "$warning_log"
+      ./gradlew auditDependencyCatalog \
+        --warning-mode all --stacktrace --no-daemon --max-workers=1 \
+        2>&1 | tee "$warning_log"
+      ./gradlew :app:dependencies \
+        --configuration amenerrasuluDebugRuntimeClasspath \
+        --warning-mode all --stacktrace --no-daemon --max-workers=1 \
+        2>&1 | tee -a "$warning_log"
+      ./gradlew :app:assembleNamazsurelerivedualarsesliDebug \
+        --warning-mode all --stacktrace --no-daemon --max-workers=1 \
+        2>&1 | tee -a "$warning_log"
+    displayName: Audit catalog and resolved runtime graph
+    timeoutInMinutes: 45
+
+  - bash: |
+      set -euo pipefail
+      python3 scripts/ci/validate_gradle_warning_report.py \
+        --log build/reports/dependencies/resolved-amenerrasulu-runtime.txt
+    displayName: Enforce owned Gradle warning policy
+
+  - bash: python3 scripts/ci/collect_quality_reports.py
+    displayName: Collect dependency audit reports
+    condition: always()
+
+  - task: PublishPipelineArtifact@1
+    displayName: Publish dependency audit reports
+    condition: always()
+    inputs:
+      targetPath: 'build/quality-reports'
+      artifact: 'dependency-audit-reports'
+      publishLocation: pipeline

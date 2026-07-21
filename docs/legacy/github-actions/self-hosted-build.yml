@@ -1,0 +1,227 @@
+name: "Manual Build Ops"
+
+on:
+  workflow_dispatch:
+    inputs:
+      flavour:
+        description: "Target Flavour"
+        required: true
+        type: string
+        default: "all"
+
+      build_type:
+        description: "Build Variant"
+        required: true
+        type: choice
+        default: "Debug"
+        options:
+          - Debug
+          - Release
+
+      do_quality:
+        description: "Run Quality Checks (Lint/Detekt)"
+        type: boolean
+        default: false
+
+      do_build:
+        description: "Build APK/Bundle"
+        type: boolean
+        default: true
+
+      do_publish:
+        description: "Publish to Play Console (Release only)"
+        type: boolean
+        default: false
+
+env:
+  JAVA_VERSION: "21"
+  JAVA_DISTRIBUTION: "temurin"
+  GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx6g -Dorg.gradle.daemon=false"
+
+jobs:
+  manual-ops:
+    name: "Manual Ops: ${{ inputs.flavour }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Setup Environment
+        uses: ./.github/actions/setup-android
+
+      - name: Validate Flavour Input
+        shell: bash
+        run: |
+          INPUT="${{ inputs.flavour }}"
+          ALL_FLAVOURS_JSON="$(./gradlew -q printFlavors)"
+          mapfile -t ALL_FLAVOURS < <(echo "$ALL_FLAVOURS_JSON" | tr -d '[]"' | tr ',' '\n' | sed '/^\s*$/d')
+
+          if [ "$INPUT" = "all" ]; then
+            echo "Validated flavour input: all"
+            exit 0
+          fi
+
+          for flavour in "${ALL_FLAVOURS[@]}"; do
+            if [ "$flavour" = "$INPUT" ]; then
+              echo "Validated flavour input: $INPUT"
+              exit 0
+            fi
+          done
+
+          echo "::error::Invalid flavour '$INPUT'. Allowed: all, ${ALL_FLAVOURS[*]}"
+          exit 1
+
+      - name: Optional Firebase Config Override
+        if: ${{ secrets.FIREBASE_CONFIGS_ZIP_BASE64 != '' }}
+        shell: bash
+        run: |
+          echo "${{ secrets.FIREBASE_CONFIGS_ZIP_BASE64 }}" | base64 -d > firebase_configs.zip
+          unzip -o firebase_configs.zip
+          rm -f firebase_configs.zip
+
+      # ─────────────────────────────────────────────────────────────
+      # 1. Quality Checks
+      # ─────────────────────────────────────────────────────────────
+      - name: 🔍 Run Quality Checks
+        if: inputs.do_quality == 'true'
+        run: |
+          echo "::group::Lint & Detekt"
+          if [ "${{ inputs.flavour }}" = "all" ]; then
+            ./gradlew lintDebug detekt -Dorg.gradle.java.home="$JAVA_HOME" --stacktrace
+          else
+            FLAVOUR="${{ inputs.flavour }}"
+            FLAVOUR_CAP="$(tr '[:lower:]' '[:upper:]' <<< ${FLAVOUR:0:1})${FLAVOUR:1}"
+            ./gradlew "lint${FLAVOUR_CAP}Debug" detekt -Dorg.gradle.java.home="$JAVA_HOME" --stacktrace
+          fi
+          echo "::endgroup::"
+
+      # ─────────────────────────────────────────────────────────────
+      # 2. Build
+      # ─────────────────────────────────────────────────────────────
+      - name: ✅ Validate Publish Inputs
+        if: inputs.do_publish == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ inputs.build_type }}" != "Release" ]; then
+            echo "::error::Publishing requires Release build type!"
+            exit 1
+          fi
+          if [ "${{ inputs.do_build }}" != "true" ]; then
+            echo "::error::Publishing requires do_build=true (build outputs must exist)."
+            exit 1
+          fi
+
+      - name: 🛡️ Validate Release Secrets
+        if: (inputs.do_build == 'true' || inputs.do_publish == 'true') && inputs.build_type == 'Release'
+        env:
+          HAS_KEYSTORE: ${{ secrets.KEYSTORE_BASE64 != '' }}
+        run: |
+          if [ "$HAS_KEYSTORE" != "true" ]; then
+            echo "::error::KEYSTORE_BASE64 secret is not configured!"
+            exit 1
+          fi
+
+      - name: 🔑 Decode Keystore
+        if: (inputs.do_build == 'true' || inputs.do_publish == 'true') && inputs.build_type == 'Release'
+        env:
+          ENCODED_STRING: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$ENCODED_STRING" | tr -d '\r\n\t ' | base64 -d > release.jks
+
+      - name: 🏗️ Build
+        if: inputs.do_build == 'true'
+        run: |
+          echo "Building ${{ inputs.flavour }} ${{ inputs.build_type }}..."
+
+          TASK_PREFIX="assemble"
+          if [[ "${{ inputs.do_publish }}" == "true" ]]; then
+            TASK_PREFIX="bundle"
+          fi
+
+          if [ "${{ inputs.flavour }}" = "all" ]; then
+            chmod +x ./scripts/build-all-flavours.sh
+            ./scripts/build-all-flavours.sh ${{ inputs.build_type }} $TASK_PREFIX
+          else
+            FLAVOUR="${{ inputs.flavour }}"
+            FLAVOUR_CAP="$(tr '[:lower:]' '[:upper:]' <<< ${FLAVOUR:0:1})${FLAVOUR:1}"
+            ./gradlew "${TASK_PREFIX}${FLAVOUR_CAP}${{ inputs.build_type }}" \
+              -Dorg.gradle.java.home="$JAVA_HOME" \
+              --stacktrace
+          fi
+        env:
+          KEYSTORE_FILE: ../release.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      - name: 📦 Upload Artifacts
+        if: inputs.do_build == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: manual-${{ inputs.flavour }}-${{ inputs.build_type }}
+          path: |
+            app/build/outputs/apk/**/*.apk
+            app/build/outputs/bundle/**/*.aab
+          retention-days: 5
+
+      - name: 📊 Build Summary
+        if: always()
+        run: |
+          echo "## 🛠️ Manual Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Flavor:** ${{ inputs.flavour }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Build Type:** ${{ inputs.build_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Quality Checks:** ${{ inputs.do_quality }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Build APK/AAB:** ${{ inputs.do_build }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Publish:** ${{ inputs.do_publish }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ inputs.do_build }}" = "true" ]; then
+            echo "### ✅ Build Completed" >> $GITHUB_STEP_SUMMARY
+            echo "Artifacts uploaded for 5 days" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      # ─────────────────────────────────────────────────────────────
+      # 3. Publish
+      # ─────────────────────────────────────────────────────────────
+      - name: Decode Service Account
+        if: inputs.do_publish == 'true'
+        env:
+          SA_CONTENT: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          set -euo pipefail
+          if [ -z "$SA_CONTENT" ]; then
+            echo "::error::PLAY_SERVICE_ACCOUNT_JSON secret is missing!"
+            exit 1
+          fi
+          printf '%s' "$SA_CONTENT" > service-account.json
+
+      - name: 🚀 Publish to Play Store
+        if: inputs.do_publish == 'true'
+        run: |
+          echo "Starting Publication..."
+
+          if [ "${{ inputs.build_type }}" != "Release" ]; then
+            echo "::error::Publishing requires Release build type!"
+            exit 1
+          fi
+
+          if [ "${{ inputs.flavour }}" = "all" ]; then
+            echo "⚠️  Mass publishing all apps sequentially..."
+            ./scripts/build-all-flavours.sh Release publish
+          else
+            FLAVOUR="${{ inputs.flavour }}"
+            FLAVOUR_CAP="$(tr '[:lower:]' '[:upper:]' <<< ${FLAVOUR:0:1})${FLAVOUR:1}"
+            ./gradlew "publish${FLAVOUR_CAP}ReleaseBundle" \
+              -Dorg.gradle.java.home="$JAVA_HOME" \
+              --stacktrace
+          fi
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: service-account.json
+
+      - name: 🔒 Cleanup secrets
+        if: always()
+        run: |
+          rm -f release.jks service-account.json
+          echo "Secrets cleaned up"

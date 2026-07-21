@@ -1,0 +1,156 @@
+{
+  "schema_version": 1,
+  "source_authority": {
+    "crash_anr_rate": "play_vitals",
+    "fatal_stack_and_nonfatal": "firebase_crashlytics",
+    "product_and_consent_funnel": "ga4",
+    "ad_delivery_and_revenue": "admob",
+    "release_identity": "git_play_track_and_app_version"
+  },
+  "release_context_keys": [
+    "package_name",
+    "flavor",
+    "version_code",
+    "version_name",
+    "build_type",
+    "release_revision",
+    "release_track"
+  ],
+  "required_signals": {
+    "billing_purchase_verification_failure": {
+      "source": "firebase_crashlytics",
+      "owner": "billing-runtime"
+    },
+    "ad_failed_to_load": {
+      "source": "ga4_and_admob",
+      "owner": "ads-runtime",
+      "technical_failure_note": "Exclude AdMob error code 3 no-fill from technical failure rate."
+    },
+    "consent_error": {
+      "source": "ga4_and_firebase_crashlytics",
+      "owner": "privacy-runtime"
+    },
+    "push_registration_sync_failed": {
+      "source": "firebase_crashlytics",
+      "owner": "push-runtime"
+    },
+    "remote_config_fetch_failure": {
+      "source": "firebase_crashlytics",
+      "owner": "firebase-runtime"
+    }
+  },
+  "metrics": {
+    "crash_rate": {
+      "source": "play_vitals",
+      "unit": "ratio",
+      "direction": "higher_is_worse",
+      "watch": 0.005,
+      "hotfix": 0.01,
+      "rollback": 0.02
+    },
+    "anr_rate": {
+      "source": "play_vitals",
+      "unit": "ratio",
+      "direction": "higher_is_worse",
+      "watch": 0.0025,
+      "hotfix": 0.005,
+      "rollback": 0.01
+    },
+    "new_error_affected_users": {
+      "source": "play_vitals_and_crashlytics",
+      "unit": "users",
+      "direction": "higher_is_worse",
+      "watch": 3,
+      "hotfix": 10,
+      "rollback": 25
+    },
+    "billing_verification_failure_rate": {
+      "source": "firebase_crashlytics",
+      "unit": "ratio",
+      "direction": "higher_is_worse",
+      "watch": 0.02,
+      "hotfix": 0.05,
+      "rollback": 0.1
+    },
+    "ad_technical_failure_rate": {
+      "source": "ga4_and_admob",
+      "unit": "ratio",
+      "direction": "higher_is_worse",
+      "watch": 0.15,
+      "hotfix": 0.3,
+      "rollback": 0.5
+    },
+    "ump_consent_failure_rate": {
+      "source": "ga4_and_firebase_crashlytics",
+      "unit": "ratio",
+      "direction": "higher_is_worse",
+      "watch": 0.01,
+      "hotfix": 0.03,
+      "rollback": 0.05
+    },
+    "push_registration_failure_rate": {
+      "source": "firebase_crashlytics",
+      "unit": "ratio",
+      "direction": "higher_is_worse",
+      "watch": 0.02,
+      "hotfix": 0.05,
+      "rollback": 0.1
+    },
+    "remote_config_failure_rate": {
+      "source": "firebase_crashlytics",
+      "unit": "ratio",
+      "direction": "higher_is_worse",
+      "watch": 0.05,
+      "hotfix": 0.15,
+      "rollback": 0.3
+    }
+  },
+  "checkpoints": {
+    "24": {
+      "ack_minutes": 30,
+      "required_metrics": [
+        "crash_rate",
+        "anr_rate",
+        "new_error_affected_users",
+        "billing_verification_failure_rate",
+        "ad_technical_failure_rate",
+        "ump_consent_failure_rate",
+        "push_registration_failure_rate",
+        "remote_config_failure_rate"
+      ]
+    },
+    "48": {
+      "ack_minutes": 60,
+      "required_metrics": [
+        "crash_rate",
+        "anr_rate",
+        "new_error_affected_users",
+        "billing_verification_failure_rate",
+        "ad_technical_failure_rate",
+        "ump_consent_failure_rate",
+        "push_registration_failure_rate",
+        "remote_config_failure_rate"
+      ]
+    },
+    "72": {
+      "ack_minutes": 120,
+      "required_metrics": [
+        "crash_rate",
+        "anr_rate",
+        "new_error_affected_users",
+        "billing_verification_failure_rate",
+        "ad_technical_failure_rate",
+        "ump_consent_failure_rate",
+        "push_registration_failure_rate",
+        "remote_config_failure_rate"
+      ]
+    }
+  },
+  "decision_actions": {
+    "healthy": "Continue rollout and complete the next checkpoint.",
+    "watch": "Assign an owner, annotate the release, and recheck within the checkpoint acknowledgement window.",
+    "hotfix": "Pause rollout, open a P0/P1 incident, and prepare a tested corrective build.",
+    "rollback": "Halt or roll back the Play release and revert the triggering Remote Config change immediately.",
+    "incomplete": "Do not advance rollout until every required metric is supplied."
+  }
+}

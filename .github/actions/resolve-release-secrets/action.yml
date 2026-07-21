@@ -1,0 +1,52 @@
+name: Resolve Release Values
+description: Validate and export release signing and Play publish values from the workflow environment
+
+inputs:
+  require_play_service_account:
+    description: Require PLAY_SERVICE_ACCOUNT_JSON_BASE64
+    required: false
+    default: true
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        REQUIRE_PLAY_SERVICE_ACCOUNT: ${{ inputs.require_play_service_account }}
+      run: |
+        set -euo pipefail
+
+        write_env_if_present() {
+          local key="$1"
+          local val="${!key:-}"
+          if [ -n "$val" ]; then
+            echo "::add-mask::$val"
+            printf '%s=%s\n' "$key" "$val" >> "$GITHUB_ENV"
+          fi
+        }
+
+        write_env_if_present KEYSTORE_BASE64
+        write_env_if_present KEYSTORE_PASSWORD
+        write_env_if_present KEY_ALIAS
+        write_env_if_present KEY_PASSWORD
+        write_env_if_present PUSH_REGISTRATION_URL
+        write_env_if_present PURCHASE_VERIFICATION_URL
+        write_env_if_present PLAY_SERVICE_ACCOUNT_JSON_BASE64
+
+        PLAY_SERVICE_ACCOUNT_JSON_BASE64="$(printf '%s' "${PLAY_SERVICE_ACCOUNT_JSON_BASE64:-}" | tr -d '\r\n\t ')"
+        if [ -n "${PLAY_SERVICE_ACCOUNT_JSON_BASE64:-}" ]; then
+          echo "::add-mask::$PLAY_SERVICE_ACCOUNT_JSON_BASE64"
+          printf 'PLAY_SERVICE_ACCOUNT_JSON_BASE64=%s\n' "$PLAY_SERVICE_ACCOUNT_JSON_BASE64" >> "$GITHUB_ENV"
+        fi
+
+        for required_key in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD PUSH_REGISTRATION_URL PURCHASE_VERIFICATION_URL; do
+          [ -n "${!required_key:-}" ] || { echo "::error::Missing required workflow env: ${required_key}"; exit 1; }
+        done
+
+        if [ "$REQUIRE_PLAY_SERVICE_ACCOUNT" = "true" ]; then
+          [ -n "${PLAY_SERVICE_ACCOUNT_JSON_BASE64:-}" ] || { echo "::error::Missing required workflow env: PLAY_SERVICE_ACCOUNT_JSON_BASE64"; exit 1; }
+          if [ "${#PLAY_SERVICE_ACCOUNT_JSON_BASE64}" -lt 500 ]; then
+            echo "::error::PLAY_SERVICE_ACCOUNT_JSON_BASE64 is too short to be valid (len=${#PLAY_SERVICE_ACCOUNT_JSON_BASE64})"
+            exit 1
+          fi
+        fi

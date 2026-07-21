@@ -1,0 +1,111 @@
+<resources>
+    <string name="counter_title">Dhikr-Zähler</string>
+    <string name="counter_change_zikir">Ändern</string>
+    <string name="counter_target_format">/ %d</string>
+    <string name="counter_reset">Zurücksetzen</string>
+    <string name="counter_share">Teilen</string>
+    <string name="counter_tap_hint">Zum Zählen tippen</string>
+    <string name="counter_daily_goal_progress">%1$s / %2$s · %3$d%% erledigt</string>
+    <string name="counter_goal_complete">Tagesziel erreicht! ✅</string>
+
+    <plurals name="counter_streak_label">
+        <item quantity="one">%d TAG SERIE</item>
+        <item quantity="other">%d TAGE SERIE</item>
+    </plurals>
+    <string name="counter_today_total">Heute: %s Dhikr</string>
+
+    <string name="counter_open_zikir_list">Zur Dhikr-Liste zurück</string>
+    <string name="counter_add_zikir">Dhikr hinzufügen</string>
+    <string name="counter_empty_zikir_list_title">Noch kein Dhikr vorhanden</string>
+    <string name="counter_empty_zikir_list_message">Tippe oben auf „Dhikr hinzufügen“, um einen neuen Dhikr zu erstellen.</string>
+    <string name="counter_add_zikir_title">Neuen Dhikr hinzufügen</string>
+    <string name="counter_add_zikir_arabic">Arabischer Text</string>
+    <string name="counter_add_zikir_latin">Lateinische Umschrift</string>
+    <string name="counter_add_zikir_meaning">Bedeutung</string>
+    <string name="counter_add_zikir_target">Zielanzahl</string>
+    <string name="counter_cancel">Abbrechen</string>
+    <string name="counter_delete">Löschen</string>
+    <plurals name="counter_recommended_target">
+        <item quantity="one">Empfohlen: %d Wiederholung</item>
+        <item quantity="other">Empfohlen: %d Wiederholungen</item>
+    </plurals>
+
+    <string name="counter_session_done_title">🤲 MashaAllah!</string>
+    <string name="counter_session_done_body">%1$d %2$s abgeschlossen</string>
+    <string name="counter_session_duration">Dauer: %s</string>
+    <string name="counter_continue">Fortfahren</string>
+    <string name="counter_share_session">↗ Teilen</string>
+    <string name="counter_duration_minutes_seconds">%1$d min %2$d sek</string>
+    <plurals name="counter_duration_seconds">
+        <item quantity="one">%d sek</item>
+        <item quantity="other">%d sek</item>
+    </plurals>
+    <plurals name="counter_session_seconds_format">
+        <item quantity="one">%d sek</item>
+        <item quantity="other">%d sek</item>
+    </plurals>
+
+    <string name="counter_reminder_title">Erinnerungseinstellungen</string>
+    <string name="counter_reminder_daily">Tägliche Erinnerung</string>
+    <string name="counter_reminder_time_label">Uhrzeit</string>
+    <plurals name="counter_daily_goal_label">
+        <item quantity="one">Tagesziel: %d Dhikr</item>
+        <item quantity="other">Tagesziel: %d Dhikr</item>
+    </plurals>
+    <string name="counter_streak_reminder">Serienwarnung (21:00 Uhr)</string>
+    <string name="counter_save">Speichern</string>
+    <string name="counter_reminder_saved">Erinnerung gespeichert</string>
+    <string name="counter_exact_alarm_permission_required">Für Erinnerungen zur exakten Uhrzeit ist die Berechtigung „Alarme &amp; Erinnerungen“ erforderlich.</string>
+    <string name="counter_exact_alarm_permission_action">Erlauben</string>
+    <string name="counter_exact_alarm_settings_open_failed">Der Berechtigungsbildschirm konnte nicht geöffnet werden.</string>
+    <string name="counter_exact_alarm_permission_granted">Berechtigung für exakte Erinnerungen aktiviert.</string>
+    <string name="counter_exact_alarm_permission_still_missing">Berechtigung für exakte Erinnerungen wurde nicht erteilt. Erinnerung läuft ungefähr zur geplanten Zeit.</string>
+    <string name="counter_first_session_reminder_prompt">📿 Möchtest du eine Erinnerung einrichten?</string>
+    <string name="counter_first_session_reminder_action">Einrichten</string>
+
+    <string name="counter_history_title">Dhikr-Verlauf</string>
+    <string name="counter_history_premium_hint">Mit Premium den gesamten Verlauf sehen</string>
+    <string name="counter_history_empty">Noch keine Sitzung. Starte deinen ersten Dhikr!</string>
+    <string name="counter_unlock_history_with_ad">Werbung ansehen → Vollen Verlauf entsperren</string>
+
+    <string name="notif_reminder_channel">Dhikr-Erinnerungen</string>
+    <string name="notif_reminder_title">📿 Zeit für Dhikr</string>
+    <string name="notif_reminder_body_no_activity">Du hast heute noch keinen Dhikr gemacht. Das Gedenken Allahs bringt Ruhe ins Herz.</string>
+    <plurals name="notif_reminder_body_with_activity">
+        <item quantity="one">Du hast heute %d Dhikr gemacht. Weiter so! 🤲</item>
+        <item quantity="other">Du hast heute %d Dhikr gemacht. Weiter so! 🤲</item>
+    </plurals>
+    <string name="notif_streak_title">🔥 Deine Serie ist in Gefahr!</string>
+    <plurals name="notif_streak_body">
+        <item quantity="one">Erledige den heutigen Dhikr, um deine %d-Tage-Serie zu halten.</item>
+        <item quantity="other">Erledige den heutigen Dhikr, um deine %d-Tage-Serie zu halten.</item>
+    </plurals>
+    <string name="notif_goal_done_title">✅ Ziel erreicht!</string>
+    <plurals name="notif_goal_done_body">
+        <item quantity="one">Du hast dein Tagesziel von %d Dhikr erreicht. Glückwunsch!</item>
+        <item quantity="other">Du hast dein Tagesziel von %d Dhikr erreicht. Glückwunsch!</item>
+    </plurals>
+
+    <string name="share_text_template">🤲 Ich habe %1$d mal %2$s rezitiert\n%3$s\n\n📊 Heute gesamt: %4$s Dhikr\n\n📿 Baue mit Zikirmatik eine Dhikr-Gewohnheit auf\nhttps://play.google.com/store/apps/details?id=com.parsfilo.zikirmatik</string>
+    <string name="counter_share_preview_title">Teilvorschau</string>
+    <string name="counter_copied">In die Zwischenablage kopiert</string>
+
+    <string name="counter_virtue_label">📖 Vorzug</string>
+    <string name="counter_virtue_source_label">Quelle:</string>
+
+    <string name="counter_target_33">33 Wiederholungen</string>
+    <string name="counter_target_99">99 Wiederholungen</string>
+    <string name="counter_target_100">100 Wiederholungen</string>
+
+    <string name="counter_settings_haptic">Vibration</string>
+    <string name="counter_settings_sound">Ton</string>
+    <string name="counter_menu_settings">Einstellungen</string>
+    <string name="counter_menu_rewards">Belohnungen</string>
+    <string name="counter_menu_more">Weitere Optionen</string>
+    <string name="counter_goal_slider_value">Ziel: %d</string>
+    <plurals name="counter_content_description_fab">
+        <item quantity="one">%d Dhikr gezählt. Zum Zählen tippen.</item>
+        <item quantity="other">%d Dhikr gezählt. Zum Zählen tippen.</item>
+    </plurals>
+    <string name="counter_copy">Kopieren</string>
+</resources>

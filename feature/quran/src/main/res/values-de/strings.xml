@@ -1,0 +1,37 @@
+<resources>
+    <string name="quran_title">Koran</string>
+    <string name="quran_search_placeholder">Sure oder Nummer suchen</string>
+    <string name="quran_bookmarks_title">Lesezeichen</string>
+    <string name="quran_last_read_title">Zuletzt gelesen</string>
+    <string name="quran_last_read_format">Sure %1$d · Vers %2$d</string>
+    <string name="quran_revelation_meccan">Mekkanisch</string>
+    <string name="quran_revelation_medinan">Medinensisch</string>
+    <string name="quran_no_results">Keine Ergebnisse</string>
+    <string name="quran_no_results_desc">Bitte mit einem anderen Begriff suchen.</string>
+    <string name="quran_empty_offline">Die Sure-Liste wurde noch nicht heruntergeladen. Für die erste Einrichtung ist Internet erforderlich.</string>
+    <string name="quran_retry">Erneut versuchen</string>
+    <string name="quran_mode_arabic">Arabisch</string>
+    <string name="quran_mode_latin">Umschrift</string>
+    <string name="quran_mode_translation">Übersetzung</string>
+    <string name="quran_reciter">Rezitator</string>
+    <string name="quran_select_reciter">Rezitator wählen</string>
+    <string name="quran_copy">Kopieren</string>
+    <string name="quran_add_bookmark">Lesezeichen hinzufügen</string>
+    <string name="quran_remove_bookmark">Lesezeichen entfernen</string>
+    <string name="quran_audio_play">Abspielen</string>
+    <string name="quran_audio_pause">Pausieren</string>
+    <string name="quran_audio_download">Herunterladen</string>
+    <string name="quran_audio_downloaded">Heruntergeladen</string>
+    <string name="quran_bookmarks_empty">Noch keine Lesezeichen vorhanden.</string>
+    <string name="quran_ayah_label">Vers %d</string>
+    <item type="string" name="quran_open_bookmarks">@string/quran_bookmarks_title</item>
+    <string name="quran_open_settings">Einstellungen</string>
+    <string name="quran_open_rewards">Belohnungen</string>
+    <string name="quran_error_load_suras">Sure-Liste konnte nicht geladen werden.</string>
+    <string name="quran_error_load_sura">Sure-Inhalt konnte nicht geladen werden.</string>
+    <string name="quran_audio_download_progress">Wird heruntergeladen %% %d</string>
+    <string name="quran_ayah_actions">Versaktionen</string>
+    <string name="quran_loading">Wird geladen…</string>
+    <string name="quran_toggle_search">Suche</string>
+    <string name="quran_more_options">Weitere Optionen</string>
+</resources>

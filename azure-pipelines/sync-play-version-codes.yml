@@ -1,0 +1,58 @@
+name: sync-play-version-codes-$(Date:yyyyMMdd)$(Rev:.r)
+
+trigger: none
+pr: none
+
+parameters:
+  - name: targetFlavors
+    displayName: Target flavors, comma-separated or all
+    type: string
+    default: all
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  - group: android-multi-app-framework-prod
+  - name: DOPPLER_PROJECT
+    value: android-multi-app-framework
+  - name: DOPPLER_CONFIG
+    value: prod
+
+steps:
+  - checkout: self
+    clean: true
+    fetchDepth: 0
+    persistCredentials: true
+
+  - template: /pipelines/templates/steps/security-gate.yml
+    parameters:
+      mode: history
+      selfTest: false
+
+  - bash: bash scripts/azure/install-doppler.sh
+    displayName: Install Doppler CLI
+
+  - bash: bash scripts/ci/setup-android-sdk.sh
+    displayName: Setup Android SDK
+
+  - bash: bash scripts/azure/resolve-flavors.sh '${{ parameters.targetFlavors }}'
+    displayName: Resolve flavors
+
+  - bash: bash scripts/azure/doppler-run.sh bash scripts/azure/sync-play-version-codes.sh
+    displayName: Sync Play version codes and open PR
+    timeoutInMinutes: 60
+    env:
+      DOPPLER_TOKEN: $(DOPPLER_TOKEN)
+      DOPPLER_PROJECT: $(DOPPLER_PROJECT)
+      DOPPLER_CONFIG: $(DOPPLER_CONFIG)
+      RESOLVED_FLAVORS_CSV: $(RESOLVED_FLAVORS_CSV)
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+
+  - task: PublishPipelineArtifact@1
+    displayName: Publish app-versions.properties
+    condition: always()
+    inputs:
+      targetPath: 'app-versions.properties'
+      artifact: 'app-versions-properties'
+      publishLocation: pipeline

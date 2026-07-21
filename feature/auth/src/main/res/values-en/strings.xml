@@ -1,0 +1,8 @@
+<resources>
+    <string name="auth_title">Messages</string>
+    <string name="auth_description">Sign in with your Google account to send messages and see replies.</string>
+    <string name="auth_value_short">After signing in, you can track your message history and see replies on a single screen.</string>
+    <string name="auth_sign_in_google">Sign in with Google</string>
+    <string name="auth_sign_in_failed">Sign in failed. Please try again.</string>
+</resources>
+

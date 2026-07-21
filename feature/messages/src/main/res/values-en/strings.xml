@@ -1,0 +1,14 @@
+<resources>
+    <string name="messages_title">Messages</string>
+    <string name="messages_send">Send Message</string>
+    <string name="messages_empty">No messages yet</string>
+    <string name="messages_empty_hint">Tap the button at the bottom-right to send a message.</string>
+    <string name="messages_empty_cta">@string/messages_send</string>
+    <string name="messages_subject">Subject</string>
+    <string name="messages_body">Your message</string>
+    <string name="messages_has_reply">Has reply</string>
+    <string name="messages_error">Error: %s</string>
+    <string name="send">Send</string>
+    <string name="cancel">Cancel</string>
+</resources>
+

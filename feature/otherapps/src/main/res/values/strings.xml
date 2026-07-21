@@ -1,0 +1,8 @@
+<resources>
+    <string name="other_apps_title">Diğer Uygulamalarımız</string>
+    <string name="other_apps_new">Yeni</string>
+    <string name="other_apps_install">Yükle</string>
+    <string name="other_apps_empty">Henüz uygulama yok.</string>
+    <string name="other_apps_error">Uygulama listesi yüklenemedi.</string>
+    <string name="other_apps_retry">Tekrar dene</string>
+</resources>

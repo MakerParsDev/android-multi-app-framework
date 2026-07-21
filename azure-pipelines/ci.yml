@@ -1,0 +1,96 @@
+name: ci-$(Date:yyyyMMdd)$(Rev:.r)
+
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - app/**
+      - core/**
+      - feature/**
+      - buildSrc/**
+      - gradle/**
+      - build.gradle.kts
+      - settings.gradle.kts
+      - gradle.properties
+      - config/dependency-policy.json
+      - config/gradle-warning-policy.json
+      - config/secret-scan-policy.json
+      - config/secret-ownership.json
+      - config/supply-chain-policy.json
+      - config/firebase-apps.json
+      - side-projects/**
+      - .gitleaks.toml
+      - .gitleaksignore
+      - app-versions.properties
+      - .ci/**
+      - scripts/**
+      - azure-pipelines/**
+      - pipelines/**
+
+pr:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  - group: android-multi-app-framework-prod
+  - name: DOPPLER_PROJECT
+    value: android-multi-app-framework
+  - name: DOPPLER_CONFIG
+    value: prod
+  - name: GRADLE_OPTS
+    value: '-Djava.awt.headless=true -Dorg.gradle.workers.max=2 -Dorg.gradle.daemon=false -Dksp.incremental=false'
+
+steps:
+  - checkout: self
+    clean: true
+    fetchDepth: 0
+
+  - template: /pipelines/templates/steps/security-gate.yml
+    parameters:
+      mode: history
+      selfTest: false
+
+  - task: UseNode@1
+    displayName: Setup Node.js 22
+    inputs:
+      version: '22.x'
+      checkLatest: false
+
+  - bash: bash scripts/ci/run_side_project_quality.sh --install
+    displayName: Verify Firebase and Cloudflare side projects
+
+  - bash: bash scripts/azure/install-doppler.sh
+    displayName: Install Doppler CLI
+
+  - bash: bash scripts/ci/setup-android-sdk.sh
+    displayName: Setup Android SDK
+
+  - bash: bash scripts/azure/resolve-flavors.sh all
+    displayName: Resolve flavors
+
+  - bash: bash scripts/azure/doppler-run.sh bash scripts/azure/quality.sh
+    displayName: CI quality/test/lint/coverage
+    env:
+      DOPPLER_TOKEN: $(DOPPLER_TOKEN)
+      DOPPLER_PROJECT: $(DOPPLER_PROJECT)
+      DOPPLER_CONFIG: $(DOPPLER_CONFIG)
+      VALIDATION_MODE: strict
+      SKIP_SIDE_PROJECT_QUALITY: "true"
+
+  - bash: python3 scripts/ci/collect_quality_reports.py
+    displayName: Collect quality reports
+    condition: always()
+
+  - task: PublishPipelineArtifact@1
+    displayName: Publish quality reports
+    condition: always()
+    inputs:
+      targetPath: 'build/quality-reports'
+      artifact: 'quality-reports'
+      publishLocation: pipeline

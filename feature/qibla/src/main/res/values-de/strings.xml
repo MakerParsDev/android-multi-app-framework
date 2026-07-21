@@ -1,0 +1,28 @@
+<resources>
+    <string name="qibla_heading_value">Qibla-Winkel: %1$d°</string>
+    <string name="qibla_compass_value">Kompass: %1$d°</string>
+    <string name="qibla_instruction">Halten Sie das Telefon möglichst flach und bewegen Sie es in einer Acht zur Kalibrierung.</string>
+    <string name="qibla_location_fallback">Standort nicht verfügbar, Standardregion wird verwendet.</string>
+    <string name="qibla_location_format">Standort: %1$s, %2$s</string>
+    <string name="qibla_location_accuracy_format">Standortgenauigkeit: ±%1$d m</string>
+    <string name="qibla_sensor_format">Sensor: %1$s</string>
+    <string name="qibla_sensor_rotation_vector">Rotation Vector (Gyro + Beschleunigung + Magnet)</string>
+    <string name="qibla_sensor_geomagnetic_rotation">Geomagnetic Rotation Vector (Beschleunigung + Magnet)</string>
+    <string name="qibla_sensor_accel_magnetometer">Beschleunigung + Magnetometer</string>
+    <string name="qibla_sensor_unavailable">Kein kompatibler Sensor auf dem Gerät</string>
+    <string name="qibla_refresh_location">Standort aktualisieren</string>
+    <string name="qibla_location_unavailable">Aktueller Standort nicht verfügbar; Fallback aktiv.</string>
+    <string name="qibla_calibration_hint">Kompassgenauigkeit niedrig. Bewegen Sie das Telefon in einer Acht.</string>
+    <string name="qibla_aligned">Sie sind zur Qibla ausgerichtet</string>
+    <string name="qibla_turn_right_format">Drehen Sie %1$d° nach rechts</string>
+    <string name="qibla_turn_left_format">Drehen Sie %1$d° nach links</string>
+    <string name="qibla_location_refreshing">Standort wird aktualisiert…</string>
+    <string name="qibla_confidence_format">Genauigkeitswert: %1$d%% (%2$s)</string>
+    <string name="qibla_confidence_excellent">Sehr gut</string>
+    <string name="qibla_confidence_good">Gut</string>
+    <string name="qibla_confidence_fair">Mittel</string>
+    <string name="qibla_confidence_low">Niedrig</string>
+    <string name="qibla_kaaba_image_desc">Kaaba-Bild</string>
+    <string name="qibla_settings">Einstellungen</string>
+    <string name="qibla_rewards">Belohnungen</string>
+</resources>

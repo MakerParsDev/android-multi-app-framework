@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Uygulama Detayi | Parsfilo</title>
+  <meta name="description" content="Parsfilo uygulama detay sayfasi.">
+  <link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+  <main class="container">
+    <header class="hero">
+      <p class="kicker">Parsfilo</p>
+      <h1 id="title">Uygulama detayi</h1>
+      <p class="lead" id="subtitle">Detay bilgileri yukleniyor...</p>
+    </header>
+
+    <section id="content" class="stack"></section>
+  </main>
+
+  <script type="module">
+    import { fetchApps, findAppBySlug, appSlug, playUrl } from "/assets/apps.js";
+
+    const content = document.getElementById("content");
+    const title = document.getElementById("title");
+    const subtitle = document.getElementById("subtitle");
+
+    function readSlug() {
+      const path = window.location.pathname.replace(/\/+$/, "");
+      const parts = path.split("/").filter(Boolean);
+      const appsIndex = parts.indexOf("apps");
+      if (appsIndex < 0) return "";
+      const next = parts[appsIndex + 1];
+      if (!next || next === "app") return "";
+      return next;
+    }
+
+    function renderNotFound(slug) {
+      title.textContent = "Uygulama bulunamadi";
+      subtitle.textContent = `Slug: ${slug || "-"}`;
+      content.innerHTML = `
+        <article class="card">
+          <p class="muted">Girdiginiz uygulama bulunamadi. Listeye donup tekrar secim yapin.</p>
+          <p class="chips">
+            <a class="chip" href="/apps/">Uygulama listesi</a>
+            <a class="chip" href="/">Ana sayfa</a>
+          </p>
+        </article>
+      `;
+    }
+
+    fetchApps()
+      .then((apps) => {
+        const slug = readSlug();
+        if (!slug) {
+          window.location.replace("/apps/");
+          return;
+        }
+        const app = findAppBySlug(apps, slug);
+        if (!app) {
+          renderNotFound(slug);
+          return;
+        }
+
+        const canonical = `/apps/${appSlug(app)}/`;
+        if (window.location.pathname !== canonical) {
+          history.replaceState({}, "", canonical);
+        }
+
+        document.title = `${app.appName} | Parsfilo`;
+        title.textContent = app.appName;
+        subtitle.textContent = "Play Store ve destek baglantilari";
+
+        content.innerHTML = `
+          <article class="card app-item">
+            <img src="${app.appIcon || ""}" alt="${app.appName}">
+            <div class="app-meta">
+              <h3>${app.appName}</h3>
+              <p>${app.packageName}</p>
+              <div class="chips">
+                ${app.isNew ? '<span class="chip new">Yeni</span>' : '<span class="chip">Yayinda</span>'}
+              </div>
+            </div>
+            <div class="actions chips">
+              <a class="chip" href="${playUrl(app.packageName)}" target="_blank" rel="noopener">Play Store</a>
+              <a class="chip" href="/support/">Destek</a>
+            </div>
+          </article>
+
+          <article class="card">
+            <h2>Hizli baglantilar</h2>
+            <p class="chips">
+              <a class="chip" href="/privacy/">Gizlilik</a>
+              <a class="chip" href="/terms/">Kullanim sartlari</a>
+              <a class="chip" href="/contact/">Iletisim</a>
+              <a class="chip" href="/apps/">Tum uygulamalar</a>
+            </p>
+          </article>
+        `;
+      })
+      .catch((error) => {
+        console.error(error);
+        renderNotFound("");
+      });
+  </script>
+</body>
+</html>

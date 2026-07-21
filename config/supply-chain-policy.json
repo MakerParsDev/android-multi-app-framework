@@ -1,0 +1,13 @@
+{
+  "dependency_verification": {
+    "decision": "deferred",
+    "next_review_on": "2026-10-01",
+    "reason": "Full Gradle verification metadata across 17 application variants is deferred until repository and plugin artifact churn is measured; stable catalog enforcement, resolved prerelease rejection, Socket reporting, pinned wrapper checksums, and scheduled dependency audits remain blocking controls."
+  },
+  "gradle_wrapper": {
+    "distribution_sha256": "bafc141b619ad6350fd975fc903156dd5c151998cc8b058e8c1044ab5f7b031f",
+    "jar_sha256": "76805e32c009c0cf0dd5d206bddc9fb22ea42e84db904b764f3047de095493f3",
+    "version": "9.5.1"
+  },
+  "schema_version": 1
+}

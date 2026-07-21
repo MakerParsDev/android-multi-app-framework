@@ -1,0 +1,397 @@
+{
+  "schema_version": 1,
+  "account_name": "accounts/pub-3312485084079132",
+  "evidence": {
+    "captured_on": "2026-07-13",
+    "current_week": {
+      "start": "2026-07-06",
+      "end": "2026-07-12"
+    },
+    "previous_week": {
+      "start": "2026-06-29",
+      "end": "2026-07-05"
+    },
+    "currency": "TRY",
+    "country_scope": "selected_high_signal_markets_for_source_controlled_baseline; live weekly pipeline queries all countries"
+  },
+  "current_rows": [
+    {
+      "app": "portfolio",
+      "app_id": "portfolio",
+      "format": "app_open",
+      "app_version": "mixed",
+      "ad_unit": "all",
+      "ad_requests": 5261,
+      "matched_requests": 4940,
+      "impressions": 351,
+      "clicks": 65,
+      "earnings_micros": 61471205
+    },
+    {
+      "app": "portfolio",
+      "app_id": "portfolio",
+      "format": "banner",
+      "app_version": "mixed",
+      "ad_unit": "all",
+      "ad_requests": 5109,
+      "matched_requests": 4196,
+      "impressions": 3311,
+      "clicks": 101,
+      "earnings_micros": 90618888
+    },
+    {
+      "app": "portfolio",
+      "app_id": "portfolio",
+      "format": "interstitial",
+      "app_version": "mixed",
+      "ad_unit": "all",
+      "ad_requests": 11214,
+      "matched_requests": 8825,
+      "impressions": 758,
+      "clicks": 151,
+      "earnings_micros": 137370254
+    },
+    {
+      "app": "portfolio",
+      "app_id": "portfolio",
+      "format": "native",
+      "app_version": "mixed",
+      "ad_unit": "all",
+      "ad_requests": 13446,
+      "matched_requests": 10560,
+      "impressions": 1227,
+      "clicks": 37,
+      "earnings_micros": 22071636
+    },
+    {
+      "app": "portfolio",
+      "app_id": "portfolio",
+      "format": "rewarded",
+      "app_version": "mixed",
+      "ad_unit": "all",
+      "ad_requests": 394,
+      "matched_requests": 368,
+      "impressions": 15,
+      "clicks": 2,
+      "earnings_micros": 6790533
+    }
+  ],
+  "previous_rows": [
+    {
+      "app": "portfolio",
+      "app_id": "portfolio",
+      "format": "app_open",
+      "app_version": "mixed",
+      "ad_unit": "all",
+      "ad_requests": 5047,
+      "matched_requests": 4712,
+      "impressions": 387,
+      "clicks": 71,
+      "earnings_micros": 65979596
+    },
+    {
+      "app": "portfolio",
+      "app_id": "portfolio",
+      "format": "banner",
+      "app_version": "mixed",
+      "ad_unit": "all",
+      "ad_requests": 5312,
+      "matched_requests": 4105,
+      "impressions": 3349,
+      "clicks": 83,
+      "earnings_micros": 86925969
+    },
+    {
+      "app": "portfolio",
+      "app_id": "portfolio",
+      "format": "interstitial",
+      "app_version": "mixed",
+      "ad_unit": "all",
+      "ad_requests": 10371,
+      "matched_requests": 8395,
+      "impressions": 735,
+      "clicks": 124,
+      "earnings_micros": 143456045
+    },
+    {
+      "app": "portfolio",
+      "app_id": "portfolio",
+      "format": "native",
+      "app_version": "mixed",
+      "ad_unit": "all",
+      "ad_requests": 13476,
+      "matched_requests": 9837,
+      "impressions": 1157,
+      "clicks": 31,
+      "earnings_micros": 21676004
+    },
+    {
+      "app": "portfolio",
+      "app_id": "portfolio",
+      "format": "rewarded",
+      "app_version": "mixed",
+      "ad_unit": "all",
+      "ad_requests": 372,
+      "matched_requests": 334,
+      "impressions": 12,
+      "clicks": 1,
+      "earnings_micros": 2105211
+    }
+  ],
+  "current_country_rows": [
+    {
+      "country": "RU",
+      "format": "app_open",
+      "ad_requests": 290,
+      "matched_requests": 0,
+      "impressions": 0,
+      "clicks": 0,
+      "earnings_micros": 0
+    },
+    {
+      "country": "RU",
+      "format": "banner",
+      "ad_requests": 146,
+      "matched_requests": 0,
+      "impressions": 0,
+      "clicks": 0,
+      "earnings_micros": 0
+    },
+    {
+      "country": "RU",
+      "format": "interstitial",
+      "ad_requests": 1272,
+      "matched_requests": 0,
+      "impressions": 0,
+      "clicks": 0,
+      "earnings_micros": 0
+    },
+    {
+      "country": "RU",
+      "format": "native",
+      "ad_requests": 792,
+      "matched_requests": 0,
+      "impressions": 0,
+      "clicks": 0,
+      "earnings_micros": 0
+    },
+    {
+      "country": "RU",
+      "format": "rewarded",
+      "ad_requests": 5,
+      "matched_requests": 0,
+      "impressions": 0,
+      "clicks": 0,
+      "earnings_micros": 0
+    },
+    {
+      "country": "MY",
+      "format": "app_open",
+      "ad_requests": 52,
+      "matched_requests": 52,
+      "impressions": 0,
+      "clicks": 0,
+      "earnings_micros": 0
+    },
+    {
+      "country": "MY",
+      "format": "banner",
+      "ad_requests": 1,
+      "matched_requests": 1,
+      "impressions": 0,
+      "clicks": 0,
+      "earnings_micros": 0
+    },
+    {
+      "country": "MY",
+      "format": "interstitial",
+      "ad_requests": 104,
+      "matched_requests": 104,
+      "impressions": 0,
+      "clicks": 0,
+      "earnings_micros": 0
+    },
+    {
+      "country": "MY",
+      "format": "native",
+      "ad_requests": 155,
+      "matched_requests": 155,
+      "impressions": 0,
+      "clicks": 0,
+      "earnings_micros": 0
+    },
+    {
+      "country": "TR",
+      "format": "app_open",
+      "ad_requests": 3392,
+      "matched_requests": 3380,
+      "impressions": 242,
+      "clicks": 47,
+      "earnings_micros": 48116067
+    },
+    {
+      "country": "TR",
+      "format": "banner",
+      "ad_requests": 3624,
+      "matched_requests": 3311,
+      "impressions": 2672,
+      "clicks": 79,
+      "earnings_micros": 72594173
+    },
+    {
+      "country": "TR",
+      "format": "interstitial",
+      "ad_requests": 6917,
+      "matched_requests": 6391,
+      "impressions": 555,
+      "clicks": 110,
+      "earnings_micros": 108459234
+    },
+    {
+      "country": "TR",
+      "format": "native",
+      "ad_requests": 8536,
+      "matched_requests": 7866,
+      "impressions": 938,
+      "clicks": 24,
+      "earnings_micros": 14954621
+    },
+    {
+      "country": "TR",
+      "format": "rewarded",
+      "ad_requests": 127,
+      "matched_requests": 122,
+      "impressions": 9,
+      "clicks": 1,
+      "earnings_micros": 4711275
+    }
+  ],
+  "previous_country_rows": [
+    {
+      "country": "RU",
+      "format": "app_open",
+      "ad_requests": 297,
+      "matched_requests": 0,
+      "impressions": 0,
+      "clicks": 0,
+      "earnings_micros": 0
+    },
+    {
+      "country": "RU",
+      "format": "banner",
+      "ad_requests": 329,
+      "matched_requests": 0,
+      "impressions": 0,
+      "clicks": 0,
+      "earnings_micros": 0
+    },
+    {
+      "country": "RU",
+      "format": "interstitial",
+      "ad_requests": 1110,
+      "matched_requests": 0,
+      "impressions": 0,
+      "clicks": 0,
+      "earnings_micros": 0
+    },
+    {
+      "country": "RU",
+      "format": "native",
+      "ad_requests": 891,
+      "matched_requests": 0,
+      "impressions": 0,
+      "clicks": 0,
+      "earnings_micros": 0
+    },
+    {
+      "country": "RU",
+      "format": "rewarded",
+      "ad_requests": 26,
+      "matched_requests": 0,
+      "impressions": 0,
+      "clicks": 0,
+      "earnings_micros": 0
+    },
+    {
+      "country": "MY",
+      "format": "app_open",
+      "ad_requests": 42,
+      "matched_requests": 42,
+      "impressions": 0,
+      "clicks": 0,
+      "earnings_micros": 0
+    },
+    {
+      "country": "MY",
+      "format": "banner",
+      "ad_requests": 3,
+      "matched_requests": 3,
+      "impressions": 3,
+      "clicks": 2,
+      "earnings_micros": 260397
+    },
+    {
+      "country": "MY",
+      "format": "interstitial",
+      "ad_requests": 84,
+      "matched_requests": 84,
+      "impressions": 0,
+      "clicks": 0,
+      "earnings_micros": 0
+    },
+    {
+      "country": "MY",
+      "format": "native",
+      "ad_requests": 140,
+      "matched_requests": 140,
+      "impressions": 2,
+      "clicks": 0,
+      "earnings_micros": 109198
+    },
+    {
+      "country": "TR",
+      "format": "app_open",
+      "ad_requests": 3368,
+      "matched_requests": 3362,
+      "impressions": 279,
+      "clicks": 59,
+      "earnings_micros": 53302541
+    },
+    {
+      "country": "TR",
+      "format": "banner",
+      "ad_requests": 3549,
+      "matched_requests": 3219,
+      "impressions": 2681,
+      "clicks": 69,
+      "earnings_micros": 74396499
+    },
+    {
+      "country": "TR",
+      "format": "interstitial",
+      "ad_requests": 6212,
+      "matched_requests": 6154,
+      "impressions": 492,
+      "clicks": 77,
+      "earnings_micros": 115517093
+    },
+    {
+      "country": "TR",
+      "format": "native",
+      "ad_requests": 7771,
+      "matched_requests": 7387,
+      "impressions": 820,
+      "clicks": 19,
+      "earnings_micros": 13509856
+    },
+    {
+      "country": "TR",
+      "format": "rewarded",
+      "ad_requests": 156,
+      "matched_requests": 155,
+      "impressions": 11,
+      "clicks": 1,
+      "earnings_micros": 1922873
+    }
+  ]
+}

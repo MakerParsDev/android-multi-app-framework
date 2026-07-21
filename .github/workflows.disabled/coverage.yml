@@ -1,0 +1,68 @@
+name: Coverage
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ${{ format('ci-{0}-{1}', github.workflow, github.event.pull_request.number || github.head_ref || github.ref) }}
+  cancel-in-progress: true
+
+env:
+  GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx6g -Djava.awt.headless=true -Dorg.gradle.daemon=false
+  JAVA_VERSION: '21'
+
+jobs:
+  coverage:
+    name: Unit Test Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+          cache: gradle
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v5
+
+      - name: Generate Kover reports
+        run: ./gradlew koverXmlReport koverHtmlReport --no-daemon --stacktrace
+
+      - name: Upload HTML report artifact
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: kover-html-report
+          path: build/reports/kover/html/
+          retention-days: 14
+
+      - name: Upload XML report artifact
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: kover-xml-report
+          path: build/reports/kover/xml/coverage.xml
+          retention-days: 14
+
+      - name: Post coverage summary to PR
+        if: github.event_name == 'pull_request'
+        uses: mi-kas/kover-report@v1
+        with:
+          path: build/reports/kover/xml/coverage.xml
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: Unit Test Coverage
+          update-comment: true
+          min-coverage-overall: 10
+          min-coverage-changed-files: 0

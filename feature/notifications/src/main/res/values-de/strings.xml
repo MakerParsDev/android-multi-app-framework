@@ -1,0 +1,16 @@
+<resources>
+    <string name="notifications_title">Benachrichtigungen</string>
+    <string name="notifications_empty">Noch keine Benachrichtigungen</string>
+    <string name="notifications_empty_hint">Neue Benachrichtigungen werden hier angezeigt.</string>
+    <string name="notifications_permission_disabled_title">Benachrichtigungsberechtigung deaktiviert</string>
+    <string name="notifications_permission_disabled_hint">Aktiviere die Benachrichtigungsberechtigung, um neue Benachrichtigungen zu sehen.</string>
+    <string name="notifications_empty_cta">Benachrichtigungseinstellungen öffnen</string>
+    <string name="notifications_error">Fehler: %s</string>
+    <string name="notifications_action_mark_all_read">Alle als gelesen markieren</string>
+    <string name="notifications_action_delete_all">Alle löschen</string>
+    <string name="notifications_dialog_close">Schließen</string>
+    <string name="notifications_dialog_mark_unread">Als ungelesen markieren</string>
+    <string name="notifications_dialog_delete">Löschen</string>
+    <string name="notifications_state_unread">Ungelesen</string>
+    <string name="notifications_state_read">Gelesen</string>
+</resources>

@@ -1,0 +1,7 @@
+<resources>
+    <string name="auth_title">Mesajlar</string>
+    <string name="auth_description">Mesaj göndermek ve yanıtları görmek için Google hesabınızla giriş yapın.</string>
+    <string name="auth_value_short">Giriş yaptıktan sonra mesaj geçmişinizi takip edebilir, yanıtları tek ekranda görebilirsiniz.</string>
+    <string name="auth_sign_in_google">Google ile Giriş Yap</string>
+    <string name="auth_sign_in_failed">Giriş başarısız oldu. Lütfen tekrar deneyin.</string>
+</resources>

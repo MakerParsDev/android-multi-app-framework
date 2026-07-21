@@ -1,0 +1,376 @@
+name: Manual Stacktrace Diagnostics Parallel
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_flavor:
+        description: 'Target flavor or "all"'
+        required: true
+        default: 'all'
+        type: string
+      build_type:
+        description: 'Build type for assemble tasks'
+        required: true
+        default: 'Debug'
+        type: choice
+        options:
+          - Debug
+          - Release
+      run_static:
+        description: 'Run detekt + ktlintCheck'
+        required: false
+        default: true
+        type: boolean
+      run_lint:
+        description: 'Run Android lint per selected flavor'
+        required: false
+        default: true
+        type: boolean
+      run_tests:
+        description: 'Run unit tests per selected flavor'
+        required: false
+        default: true
+        type: boolean
+      run_assemble:
+        description: 'Run assemble per selected flavor'
+        required: false
+        default: true
+        type: boolean
+      max_parallel:
+        description: 'Maximum parallel flavor jobs'
+        required: false
+        default: '4'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ format('manual-diagnostics-parallel-{0}-{1}', github.workflow, github.ref) }}
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx6g -Djava.awt.headless=true -Dorg.gradle.daemon=false -Dksp.incremental=false
+  JAVA_VERSION: '21'
+  ANDROID_API_LEVEL: 36
+
+jobs:
+  resolve-flavors:
+    name: Resolve flavors
+    runs-on: ubuntu-latest
+    outputs:
+      resolved_flavors_json: ${{ steps.resolve.outputs.resolved_json }}
+      resolved_flavors_csv: ${{ steps.resolve.outputs.resolved_csv }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Resolve Flavors
+        id: resolve
+        uses: ./.github/actions/resolve-flavors
+        with:
+          target_flavors: ${{ github.event.inputs.target_flavor }}
+
+  prepare-shared-config:
+    name: Prepare shared config
+    needs: resolve-flavors
+    runs-on: ubuntu-latest
+    env:
+      FIREBASE_WEB_CLIENT_ID: ${{ secrets.FIREBASE_WEB_CLIENT_ID }}
+      FIREBASE_CONFIGS_ZIP_BASE64: ${{ secrets.FIREBASE_CONFIGS_ZIP_BASE64 }}
+      CF_R2_ACCOUNT_ID: ${{ secrets.CF_R2_ACCOUNT_ID }}
+      CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+      CF_R2_BUCKET: ${{ secrets.CF_R2_BUCKET }}
+      CF_R2_FIREBASE_OBJECT: ${{ secrets.CF_R2_FIREBASE_OBJECT }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Verify env contract
+        uses: ./.github/actions/verify-env-contract
+
+      - name: Export firebase override + web client env
+        uses: ./.github/actions/export-firebase-override-env
+
+      - name: Firebase Config Override (R2 preferred, Base64 fallback)
+        uses: ./.github/actions/firebase-config
+        with:
+          firebase_configs_zip_base64: ${{ env.FIREBASE_CONFIGS_ZIP_BASE64 }}
+          cf_r2_account_id: ${{ env.CF_R2_ACCOUNT_ID }}
+          cf_api_token: ${{ env.CF_API_TOKEN }}
+          cf_r2_bucket: ${{ env.CF_R2_BUCKET }}
+          cf_r2_firebase_object: ${{ env.CF_R2_FIREBASE_OBJECT }}
+
+      - name: Validate Google Sign-In Config
+        uses: ./.github/actions/verify-google-signin-config
+        with:
+          flavors: ${{ needs.resolve-flavors.outputs.resolved_flavors_csv }}
+
+      - name: Create firebase config archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          tar -czf firebase-config-artifact.tar.gz app/src/*/google-services.json
+
+      - name: Upload firebase config archive
+        uses: actions/upload-artifact@v6
+        with:
+          name: manual-diagnostics-firebase-config-${{ github.run_id }}
+          path: firebase-config-artifact.tar.gz
+          if-no-files-found: error
+          retention-days: 1
+
+  static-analysis:
+    name: Static analysis
+    if: github.event.inputs.run_static == 'true'
+    needs:
+      - resolve-flavors
+      - prepare-shared-config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Restore firebase config artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: manual-diagnostics-firebase-config-${{ github.run_id }}
+          path: .
+
+      - name: Extract firebase config artifact
+        shell: bash
+        run: tar -xzf firebase-config-artifact.tar.gz
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - uses: android-actions/setup-android@v4
+        with:
+          accept-android-sdk-licenses: false
+          log-accepted-android-sdk-licenses: false
+
+      - name: Install Android SDK packages
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          sdkmanager --sdk_root="$SDK_ROOT" "platform-tools" "platforms;android-${ANDROID_API_LEVEL}" "build-tools;36.0.0"
+
+      - name: Accept Android SDK licenses (non-interactive)
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          set +o pipefail
+          yes | sdkmanager --licenses --sdk_root="$SDK_ROOT" >/dev/null
+          set -o pipefail
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Run detekt / ktlint
+        run: |
+          set -euo pipefail
+          chmod +x ./gradlew
+          ./gradlew detekt ktlintCheck --stacktrace --warning-mode all --no-daemon --console=plain --max-workers=2
+
+  lint-flavor:
+    name: Lint ${{ matrix.flavor }} Debug
+    if: github.event.inputs.run_lint == 'true'
+    needs:
+      - resolve-flavors
+      - prepare-shared-config
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJSON(github.event.inputs.max_parallel) }}
+      matrix:
+        flavor: ${{ fromJSON(needs.resolve-flavors.outputs.resolved_flavors_json) }}
+    env:
+      FLAVOR: ${{ matrix.flavor }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Restore firebase config artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: manual-diagnostics-firebase-config-${{ github.run_id }}
+          path: .
+
+      - name: Extract firebase config artifact
+        shell: bash
+        run: tar -xzf firebase-config-artifact.tar.gz
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - uses: android-actions/setup-android@v4
+        with:
+          accept-android-sdk-licenses: false
+          log-accepted-android-sdk-licenses: false
+
+      - name: Install Android SDK packages
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          sdkmanager --sdk_root="$SDK_ROOT" "platform-tools" "platforms;android-${ANDROID_API_LEVEL}" "build-tools;36.0.0"
+
+      - name: Accept Android SDK licenses (non-interactive)
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          set +o pipefail
+          yes | sdkmanager --licenses --sdk_root="$SDK_ROOT" >/dev/null
+          set -o pipefail
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Run lint
+        run: |
+          set -euo pipefail
+          chmod +x ./gradlew
+          cap="$(tr '[:lower:]' '[:upper:]' <<< "${FLAVOR:0:1}")${FLAVOR:1}"
+          ./gradlew "lint${cap}Debug" --stacktrace --warning-mode all --no-daemon --console=plain --max-workers=2
+
+  unit-tests-flavor:
+    name: Unit tests ${{ matrix.flavor }} Debug
+    if: github.event.inputs.run_tests == 'true'
+    needs:
+      - resolve-flavors
+      - prepare-shared-config
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJSON(github.event.inputs.max_parallel) }}
+      matrix:
+        flavor: ${{ fromJSON(needs.resolve-flavors.outputs.resolved_flavors_json) }}
+    env:
+      FLAVOR: ${{ matrix.flavor }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Restore firebase config artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: manual-diagnostics-firebase-config-${{ github.run_id }}
+          path: .
+
+      - name: Extract firebase config artifact
+        shell: bash
+        run: tar -xzf firebase-config-artifact.tar.gz
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - uses: android-actions/setup-android@v4
+        with:
+          accept-android-sdk-licenses: false
+          log-accepted-android-sdk-licenses: false
+
+      - name: Install Android SDK packages
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          sdkmanager --sdk_root="$SDK_ROOT" "platform-tools" "platforms;android-${ANDROID_API_LEVEL}" "build-tools;36.0.0"
+
+      - name: Accept Android SDK licenses (non-interactive)
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          set +o pipefail
+          yes | sdkmanager --licenses --sdk_root="$SDK_ROOT" >/dev/null
+          set -o pipefail
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Run unit tests
+        run: |
+          set -euo pipefail
+          chmod +x ./gradlew
+          cap="$(tr '[:lower:]' '[:upper:]' <<< "${FLAVOR:0:1}")${FLAVOR:1}"
+          ./gradlew "test${cap}DebugUnitTest" --stacktrace --warning-mode all --no-daemon --console=plain --max-workers=2
+
+  assemble-flavor:
+    name: Assemble ${{ matrix.flavor }} ${{ github.event.inputs.build_type }}
+    if: github.event.inputs.run_assemble == 'true'
+    needs:
+      - resolve-flavors
+      - prepare-shared-config
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJSON(github.event.inputs.max_parallel) }}
+      matrix:
+        flavor: ${{ fromJSON(needs.resolve-flavors.outputs.resolved_flavors_json) }}
+    env:
+      FLAVOR: ${{ matrix.flavor }}
+      BUILD_TYPE: ${{ github.event.inputs.build_type }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Restore firebase config artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: manual-diagnostics-firebase-config-${{ github.run_id }}
+          path: .
+
+      - name: Extract firebase config artifact
+        shell: bash
+        run: tar -xzf firebase-config-artifact.tar.gz
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - uses: android-actions/setup-android@v4
+        with:
+          accept-android-sdk-licenses: false
+          log-accepted-android-sdk-licenses: false
+
+      - name: Install Android SDK packages
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          sdkmanager --sdk_root="$SDK_ROOT" "platform-tools" "platforms;android-${ANDROID_API_LEVEL}" "build-tools;36.0.0"
+
+      - name: Accept Android SDK licenses (non-interactive)
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          set +o pipefail
+          yes | sdkmanager --licenses --sdk_root="$SDK_ROOT" >/dev/null
+          set -o pipefail
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Run assemble
+        run: |
+          set -euo pipefail
+          chmod +x ./gradlew
+          cap="$(tr '[:lower:]' '[:upper:]' <<< "${FLAVOR:0:1}")${FLAVOR:1}"
+          ./gradlew "assemble${cap}${BUILD_TYPE}" --stacktrace --warning-mode all --no-daemon --console=plain --max-workers=2
+
+      - name: Upload build outputs
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: manual-diagnostics-build-${{ matrix.flavor }}-${{ github.event.inputs.build_type }}
+          path: app/build/outputs/
+          if-no-files-found: warn
+          retention-days: 7

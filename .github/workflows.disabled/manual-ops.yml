@@ -1,0 +1,352 @@
+name: Manual Ops
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_flavor:
+        description: 'Target flavor or "all"'
+        required: true
+        default: 'all'
+        type: string
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'Debug'
+        type: choice
+        options:
+          - Debug
+          - Release
+      do_quality:
+        description: 'Run quality checks (detekt/ktlint/lint)'
+        required: false
+        default: false
+        type: boolean
+      do_build:
+        description: 'Build APK/AAB'
+        required: false
+        default: true
+        type: boolean
+      do_internal_test:
+        description: 'Publish to Play Internal testing track (Release only)'
+        required: false
+        default: false
+        type: boolean
+      do_publish:
+        description: 'Publish to Play Production track (Release only)'
+        required: false
+        default: false
+        type: boolean
+      update_play_listing:
+        description: 'Update Play listing/metadata from repo'
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: ${{ (github.event.inputs.do_internal_test == 'true' || github.event.inputs.do_publish == 'true') && 'play-publish-global' || format('{0}-{1}', github.workflow, github.ref) }}
+  cancel-in-progress: ${{ github.event.inputs.do_internal_test != 'true' && github.event.inputs.do_publish != 'true' }}
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx6g -Djava.awt.headless=true -Dkotlin.daemon.jvmargs=-Xmx1g -Dorg.gradle.workers.max=2 -Dorg.gradle.daemon=false -Dksp.incremental=false
+  JAVA_VERSION: '21'
+  ANDROID_API_LEVEL: 36
+
+jobs:
+  manual-ops:
+    name: Manual Ops
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.do_publish == 'true' && 'production' || '' }}
+    env:
+      KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      PLAY_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
+      PUSH_REGISTRATION_URL: ${{ secrets.PUSH_REGISTRATION_URL }}
+      PURCHASE_VERIFICATION_URL: ${{ secrets.PURCHASE_VERIFICATION_URL }}
+      FIREBASE_WEB_CLIENT_ID: ${{ secrets.FIREBASE_WEB_CLIENT_ID }}
+      FIREBASE_CONFIGS_ZIP_BASE64: ${{ secrets.FIREBASE_CONFIGS_ZIP_BASE64 }}
+      CF_R2_ACCOUNT_ID: ${{ secrets.CF_R2_ACCOUNT_ID }}
+      CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+      CF_R2_BUCKET: ${{ secrets.CF_R2_BUCKET }}
+      CF_R2_FIREBASE_OBJECT: ${{ secrets.CF_R2_FIREBASE_OBJECT }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Ensure Gradle wrapper is executable
+        run: chmod +x ./gradlew
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - uses: android-actions/setup-android@v4
+        with:
+          accept-android-sdk-licenses: false
+          log-accepted-android-sdk-licenses: false
+
+      - name: Install Android SDK packages
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          sdkmanager --sdk_root="$SDK_ROOT" \
+            "platform-tools" \
+            "platforms;android-${ANDROID_API_LEVEL}" \
+            "build-tools;36.0.0"
+
+      - name: Accept Android SDK licenses (non-interactive)
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          set +o pipefail
+          yes | sdkmanager --licenses --sdk_root="$SDK_ROOT" >/dev/null
+          set -o pipefail
+
+      - uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-read-only: true
+
+      - name: Preflight Inputs
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event.inputs.do_build }}" = "false" ] && { [ "${{ github.event.inputs.do_internal_test }}" = "true" ] || [ "${{ github.event.inputs.do_publish }}" = "true" ]; }; then
+            echo "do_build=false iken publish/internal test çalıştırılamaz. Önce AAB build edilmelidir."
+            exit 1
+          fi
+          if { [ "${{ github.event.inputs.do_internal_test }}" = "true" ] || [ "${{ github.event.inputs.do_publish }}" = "true" ]; } && [ "${{ github.event.inputs.build_type }}" != "Release" ]; then
+            echo "buildType must be Release when publishing."
+            exit 1
+          fi
+          if [ "${{ github.event.inputs.do_internal_test }}" = "true" ] && [ "${{ github.event.inputs.do_publish }}" = "true" ]; then
+            echo "Aynı run içinde hem do_internal_test hem do_publish true olamaz. İki ayrı run başlatın."
+            exit 1
+          fi
+
+      - name: Resolve Flavors
+        id: resolve
+        uses: ./.github/actions/resolve-flavors
+        with:
+          target_flavors: ${{ github.event.inputs.target_flavor }}
+
+      - name: Export resolved flavors env
+        run: |
+          echo "RESOLVED_FLAVORS_JSON=${{ steps.resolve.outputs.resolved_json }}" >> "$GITHUB_ENV"
+          echo "RESOLVED_FLAVORS_CSV=${{ steps.resolve.outputs.resolved_csv }}" >> "$GITHUB_ENV"
+
+      - name: Validate CI apps catalog (warn)
+        run: python3 ./scripts/ci/validate_ci_apps_catalog.py --mode warn --target-flavors "${{ steps.resolve.outputs.resolved_csv }}"
+
+      - name: Validate AdMob inventory (warn)
+        run: python3 ./scripts/ci/validate_admob_inventory.py --mode warn --target-flavors "${{ steps.resolve.outputs.resolved_csv }}"
+
+      - name: Validate app-ads.txt (warn)
+        run: python3 ./scripts/ci/validate_app_ads_txt.py --mode warn
+
+      - name: Validate CI apps catalog (strict for publish)
+        if: github.event.inputs.do_internal_test == 'true' || github.event.inputs.do_publish == 'true'
+        run: python3 ./scripts/ci/validate_ci_apps_catalog.py --mode strict --target-flavors "${{ steps.resolve.outputs.resolved_csv }}"
+
+      - name: Validate AdMob inventory (strict for publish)
+        if: github.event.inputs.do_internal_test == 'true' || github.event.inputs.do_publish == 'true'
+        run: python3 ./scripts/ci/validate_admob_inventory.py --mode strict --target-flavors "${{ steps.resolve.outputs.resolved_csv }}"
+
+      - name: Validate app-ads.txt (strict for publish)
+        if: github.event.inputs.do_internal_test == 'true' || github.event.inputs.do_publish == 'true'
+        run: python3 ./scripts/ci/validate_app_ads_txt.py --mode strict
+
+      - name: Verify env contract
+        uses: ./.github/actions/verify-env-contract
+
+      - name: Export firebase override + web client env
+        uses: ./.github/actions/export-firebase-override-env
+
+      - name: Firebase Config Override (R2 preferred, Base64 fallback)
+        uses: ./.github/actions/firebase-config
+        with:
+          firebase_configs_zip_base64: ${{ env.FIREBASE_CONFIGS_ZIP_BASE64 }}
+          cf_r2_account_id: ${{ env.CF_R2_ACCOUNT_ID }}
+          cf_api_token: ${{ env.CF_API_TOKEN }}
+          cf_r2_bucket: ${{ env.CF_R2_BUCKET }}
+          cf_r2_firebase_object: ${{ env.CF_R2_FIREBASE_OBJECT }}
+
+      - name: Validate Google Sign-In Config (strict for publish/internal)
+        if: github.event.inputs.do_internal_test == 'true' || github.event.inputs.do_publish == 'true'
+        uses: ./.github/actions/verify-google-signin-config
+        with:
+          flavors: ${{ steps.resolve.outputs.resolved_csv }}
+          require_web_client_id: 'true'
+
+      - name: Validate Google Sign-In Config
+        if: github.event.inputs.do_internal_test != 'true' && github.event.inputs.do_publish != 'true'
+        uses: ./.github/actions/verify-google-signin-config
+        with:
+          flavors: ${{ steps.resolve.outputs.resolved_csv }}
+
+      - name: Resolve release values
+        if: >-
+          github.event.inputs.build_type == 'Release' &&
+          (github.event.inputs.do_build == 'true' || github.event.inputs.do_internal_test == 'true' || github.event.inputs.do_publish == 'true')
+        uses: ./.github/actions/resolve-release-secrets
+        with:
+          require_play_service_account: ${{ (github.event.inputs.do_internal_test == 'true' || github.event.inputs.do_publish == 'true') && 'true' || 'false' }}
+
+      - name: Validate Release Signing Values
+        if: >-
+          github.event.inputs.build_type == 'Release' &&
+          (github.event.inputs.do_build == 'true' || github.event.inputs.do_internal_test == 'true' || github.event.inputs.do_publish == 'true')
+        run: |
+          set -euo pipefail
+          [ -n "$KEYSTORE_BASE64" ] || { echo "::error::Missing required env: KEYSTORE_BASE64"; exit 1; }
+          [ -n "$KEYSTORE_PASSWORD" ] || { echo "::error::Missing required env: KEYSTORE_PASSWORD"; exit 1; }
+          [ -n "$KEY_ALIAS" ] || { echo "::error::Missing required env: KEY_ALIAS"; exit 1; }
+          [ -n "$KEY_PASSWORD" ] || { echo "::error::Missing required env: KEY_PASSWORD"; exit 1; }
+          [ -n "$PUSH_REGISTRATION_URL" ] || { echo "::error::Missing required env: PUSH_REGISTRATION_URL"; exit 1; }
+          [ -n "$PURCHASE_VERIFICATION_URL" ] || { echo "::error::Missing required env: PURCHASE_VERIFICATION_URL"; exit 1; }
+
+      - name: Run Quality Checks
+        if: github.event.inputs.do_quality == 'true'
+        run: |
+          set -euo pipefail
+          bash ./gradlew detekt ktlintCheck --stacktrace --no-daemon --max-workers=2
+          mapfile -t FLAVORS < <(echo "$RESOLVED_FLAVORS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d')
+          TASKS=()
+          for flavor in "${FLAVORS[@]}"; do
+            [ -z "$flavor" ] && continue
+            cap="$(tr '[:lower:]' '[:upper:]' <<< "${flavor:0:1}")${flavor:1}"
+            TASKS+=("lint${cap}Debug")
+          done
+          if [ "${#TASKS[@]}" -gt 0 ]; then
+            bash ./gradlew "${TASKS[@]}" --stacktrace --no-daemon --max-workers=2
+          fi
+
+      - name: Decode Keystore
+        if: >-
+          github.event.inputs.build_type == 'Release' &&
+          (github.event.inputs.do_build == 'true' || github.event.inputs.do_internal_test == 'true' || github.event.inputs.do_publish == 'true')
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > "${{ runner.temp }}/release.jks"
+          echo "KEYSTORE_FILE=${{ runner.temp }}/release.jks" >> "$GITHUB_ENV"
+
+      - name: Decode Play Service Account
+        if: github.event.inputs.do_internal_test == 'true' || github.event.inputs.do_publish == 'true'
+        uses: ./.github/actions/decode-play-service-account
+        with:
+          output_path: ${{ runner.temp }}/service-account.json
+
+      - name: Verify Play service account project
+        if: github.event.inputs.do_internal_test == 'true' || github.event.inputs.do_publish == 'true'
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ runner.temp }}/service-account.json
+        run: |
+          python3 ./scripts/ci/verify_play_service_account_project.py \
+            --expected-project-id makerpars-oaslananka-mobil
+
+      - name: Auto-bump Play versionCodes (selected flavors)
+        if: >-
+          github.event.inputs.build_type == 'Release' &&
+          (github.event.inputs.do_internal_test == 'true' || github.event.inputs.do_publish == 'true')
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ runner.temp }}/service-account.json
+        run: |
+          set -euo pipefail
+          [ -f "$PLAY_SERVICE_ACCOUNT_JSON" ] || { echo "::error::PLAY_SERVICE_ACCOUNT_JSON missing"; exit 1; }
+          TRACKS=()
+          [ "${{ github.event.inputs.do_internal_test }}" = "true" ] && TRACKS+=("internal")
+          [ "${{ github.event.inputs.do_publish }}" = "true" ] && TRACKS+=("production")
+          TRACKS_CSV="$(IFS=,; echo "${TRACKS[*]}")"
+          echo "::notice::Auto-bump starting (tracks=${TRACKS_CSV:-unknown}, flavors=${RESOLVED_FLAVORS_CSV:-unknown})"
+          python3 -m pip install --quiet google-api-python-client google-auth
+          python3 ./scripts/ci/fetch_play_version_codes.py \
+            --flavors "${RESOLVED_FLAVORS_CSV}" \
+            --tracks all \
+            --suggest-next \
+            --apply-to-app-versions \
+            --sync-version-names
+          echo "::notice::Auto-bump completed (tracks=${TRACKS_CSV:-unknown}, flavors=${RESOLVED_FLAVORS_CSV:-unknown})"
+          echo "PLAY_VERSION_AUTO_BUMP_DONE=true" >> "$GITHUB_ENV"
+
+      - name: Guard auto-bump marker before Play publish
+        if: >-
+          github.event.inputs.build_type == 'Release' &&
+          (github.event.inputs.do_internal_test == 'true' || github.event.inputs.do_publish == 'true')
+        run: |
+          set -euo pipefail
+          if [ "${PLAY_VERSION_AUTO_BUMP_DONE:-}" != "true" ]; then
+            echo "::error::Auto-bump marker missing. versionCode bump step did not complete before Play publish."
+            exit 1
+          fi
+
+      - name: Build
+        if: github.event.inputs.do_build == 'true'
+        run: |
+          set -euo pipefail
+          BUILD_TYPE="${{ github.event.inputs.build_type }}"
+          mapfile -t FLAVORS < <(echo "$RESOLVED_FLAVORS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d')
+          TASKS=()
+          for flavor in "${FLAVORS[@]}"; do
+            [ -z "$flavor" ] && continue
+            cap="$(tr '[:lower:]' '[:upper:]' <<< "${flavor:0:1}")${flavor:1}"
+            if [ "$BUILD_TYPE" = "Release" ] && { [ "${{ github.event.inputs.do_internal_test }}" = "true" ] || [ "${{ github.event.inputs.do_publish }}" = "true" ]; }; then
+              TASKS+=("bundle${cap}Release")
+            else
+              TASKS+=("assemble${cap}${BUILD_TYPE}")
+            fi
+          done
+          echo "Running: ${TASKS[*]}"
+          bash ./gradlew "${TASKS[@]}" --stacktrace --no-daemon --max-workers=2
+
+      - name: Notice release artifacts may use repo versionCodes (no Play publish selected)
+        if: >-
+          github.event.inputs.build_type == 'Release' &&
+          github.event.inputs.do_build == 'true' &&
+          github.event.inputs.do_internal_test != 'true' &&
+          github.event.inputs.do_publish != 'true'
+        run: |
+          echo "::warning::Release build artifact was created without Play auto-bump (no internal/prod publish selected)."
+          echo "::warning::Manual Play upload may fail if versionCode is already used."
+
+      - name: Upload Build Outputs
+        if: github.event.inputs.do_build == 'true'
+        uses: actions/upload-artifact@v6
+        with:
+          name: manual-${{ github.event.inputs.target_flavor }}-${{ github.event.inputs.build_type }}
+          path: app/build/outputs/
+          retention-days: 14
+
+      - name: Publish to Internal Track
+        if: github.event.inputs.do_internal_test == 'true'
+        run: |
+          set -euo pipefail
+          mapfile -t FLAVORS < <(echo "$RESOLVED_FLAVORS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d')
+          TASKS=()
+          for flavor in "${FLAVORS[@]}"; do
+            [ -z "$flavor" ] && continue
+            cap="$(tr '[:lower:]' '[:upper:]' <<< "${flavor:0:1}")${flavor:1}"
+            [ "${{ github.event.inputs.update_play_listing }}" = "true" ] && TASKS+=("publish${cap}ReleaseListing")
+            TASKS+=("publish${cap}ReleaseBundle")
+          done
+          bash ./gradlew "${TASKS[@]}" -PPLAY_TRACK=internal --stacktrace --no-daemon --max-workers=2
+
+      - name: Publish to Production Track
+        if: github.event.inputs.do_publish == 'true'
+        run: |
+          set -euo pipefail
+          mapfile -t FLAVORS < <(echo "$RESOLVED_FLAVORS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d')
+          TASKS=()
+          for flavor in "${FLAVORS[@]}"; do
+            [ -z "$flavor" ] && continue
+            cap="$(tr '[:lower:]' '[:upper:]' <<< "${flavor:0:1}")${flavor:1}"
+            [ "${{ github.event.inputs.update_play_listing }}" = "true" ] && TASKS+=("publish${cap}ReleaseListing")
+            TASKS+=("publish${cap}ReleaseBundle")
+          done
+          bash ./gradlew "${TASKS[@]}" -PPLAY_TRACK=production --stacktrace --no-daemon --max-workers=2
+
+      - name: Cleanup Secrets
+        if: always()
+        run: rm -f "${{ runner.temp }}/release.jks" "${{ runner.temp }}/service-account.json"

@@ -1,0 +1,48 @@
+name: Decode Play Service Account
+
+description: Decode PLAY_SERVICE_ACCOUNT_JSON_BASE64, validate its JSON structure, and export PLAY_SERVICE_ACCOUNT_JSON.
+
+inputs:
+  output_path:
+    description: Absolute path for decoded Play service account JSON
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Decode Play Service Account
+      shell: bash
+      env:
+        OUTPUT_PATH_INPUT: ${{ inputs.output_path }}
+      run: |
+        set -euo pipefail
+        output_path="$OUTPUT_PATH_INPUT"
+        if [ -z "$output_path" ]; then
+          output_path="$RUNNER_TEMP/service-account.json"
+        fi
+        if [ -z "${PLAY_SERVICE_ACCOUNT_JSON_BASE64:-}" ]; then
+          echo "::error::Missing secret: PLAY_SERVICE_ACCOUNT_JSON_BASE64"
+          exit 1
+        fi
+        echo "$PLAY_SERVICE_ACCOUNT_JSON_BASE64" | base64 -d > "$output_path"
+        if [ ! -s "$output_path" ]; then
+          echo "::error::Decoded Play service account is empty."
+          exit 1
+        fi
+        python3 - "$output_path" <<'PY'
+        import json, sys
+        p = sys.argv[1]
+        try:
+            with open(p, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        except Exception as exc:
+            print(f"::error::Decoded Play service account is not valid JSON: {exc}")
+            raise SystemExit(1)
+        missing = [k for k in ('project_id', 'client_email', 'private_key') if not data.get(k)]
+        if missing:
+            print(f"::error::Decoded Play service account missing keys: {', '.join(missing)}")
+            raise SystemExit(1)
+        print('::notice::Decoded Play service account JSON structure looks valid.')
+        PY
+        printf 'PLAY_SERVICE_ACCOUNT_JSON=%s\n' "$output_path" >> "$GITHUB_ENV"

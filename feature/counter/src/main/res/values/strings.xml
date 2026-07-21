@@ -1,0 +1,113 @@
+<resources>
+    <string name="counter_title">Zikirmatik</string>
+    <string name="counter_change_zikir">Değiştir</string>
+    <string name="counter_target_format">/ %d</string>
+    <string name="counter_reset">Sıfırla</string>
+    <string name="counter_share">Paylaş</string>
+    <string name="counter_tap_hint">Dokunarak say</string>
+    <string name="counter_daily_goal_progress">%1$s / %2$s · %3$d tamamlandı</string>
+    <string name="counter_goal_complete">Günlük hedef tamamlandı! ✅</string>
+
+    <plurals name="counter_streak_label">
+        <item quantity="one">%d GÜN</item>
+        <item quantity="other">%d GÜN</item>
+    </plurals>
+    <string name="counter_today_total">Bugün: %s zikir</string>
+
+    <string name="counter_open_zikir_list">Zikir listesine dön</string>
+    <string name="counter_add_zikir">Zikir ekle</string>
+    <string name="counter_empty_zikir_list_title">Henüz zikir yok</string>
+    <string name="counter_empty_zikir_list_message">Yeni bir zikir eklemek için yukarıdaki “Zikir ekle” butonuna basın.</string>
+    <string name="counter_add_zikir_title">Yeni zikir ekle</string>
+    <string name="counter_add_zikir_arabic">Arapça metin</string>
+    <string name="counter_add_zikir_latin">Okunuş (Latin)</string>
+    <string name="counter_add_zikir_meaning">Anlam</string>
+    <string name="counter_add_zikir_target">Hedef tekrar</string>
+    <string name="counter_cancel">İptal</string>
+    <string name="counter_delete">Sil</string>
+    <plurals name="counter_recommended_target">
+        <item quantity="one">Önerilen: %d tekrar</item>
+        <item quantity="other">Önerilen: %d tekrar</item>
+    </plurals>
+
+    <string name="counter_session_done_title">🤲 Tebrikler!</string>
+    <string name="counter_session_done_body">%1$d %2$s tamamlandı</string>
+    <string name="counter_session_duration">Süre: %s</string>
+    <string name="counter_continue">Devam Et</string>
+    <string name="counter_share_session">↗ Paylaş</string>
+    <string name="counter_duration_minutes_seconds">%1$d dk %2$d sn</string>
+    <plurals name="counter_duration_seconds">
+        <item quantity="one">%d sn</item>
+        <item quantity="other">%d sn</item>
+    </plurals>
+    <plurals name="counter_session_seconds_format">
+        <item quantity="one">%d sn</item>
+        <item quantity="other">%d sn</item>
+    </plurals>
+
+    <string name="counter_reminder_title">Hatırlatıcı Ayarları</string>
+    <string name="counter_reminder_daily">Günlük hatırlatıcı</string>
+    <string name="counter_reminder_time_label">Saat</string>
+    <plurals name="counter_daily_goal_label">
+        <item quantity="one">Günlük Hedef: %d zikir</item>
+        <item quantity="other">Günlük Hedef: %d zikir</item>
+    </plurals>
+    <string name="counter_streak_reminder">Seri uyarısı (akşam 21:00)</string>
+    <string name="counter_save">Kaydet</string>
+    <string name="counter_reminder_saved">Hatırlatıcı ayarları kaydedildi</string>
+    <string name="counter_exact_alarm_permission_required">Tam saatinde hatırlatma için Alarmlar ve Hatırlatıcılar izni gerekir.</string>
+    <string name="counter_exact_alarm_permission_action">İzin ver</string>
+    <string name="counter_exact_alarm_settings_open_failed">İzin ekranı açılamadı.</string>
+    <string name="counter_exact_alarm_permission_granted">Tam zamanlı hatırlatma izni etkinleştirildi.</string>
+    <string name="counter_exact_alarm_permission_still_missing">Tam zamanlı hatırlatma izni verilmedi. Hatırlatıcı yaklaşık zamanda çalışacaktır.</string>
+    <string name="counter_first_session_reminder_prompt">📿 Hatırlatıcı kurmak ister misiniz?</string>
+    <string name="counter_first_session_reminder_action">Ayarla</string>
+
+    <string name="counter_history_title">Zikir Geçmişi</string>
+    <string name="counter_history_premium_hint">Premium ile tüm geçmişi görün</string>
+    <string name="counter_history_empty">Henüz zikir oturumu yok. İlk zikirinizi yapın!</string>
+    <string name="counter_unlock_history_with_ad">Reklam İzle → Tüm Geçmişi Aç</string>
+
+    <string name="notif_reminder_channel">Zikir Hatırlatıcıları</string>
+    <string name="notif_reminder_title">📿 Zikir Vaktiniz</string>
+    <string name="notif_reminder_body_no_activity">Bugün henüz zikir yapmadınız. Allah’ın zikretmek kalplere huzur verir.</string>
+    <plurals name="notif_reminder_body_with_activity">
+        <item quantity="one">Bugün %d zikir yaptınız. Devam edin! 🤲</item>
+        <item quantity="other">Bugün %d zikir yaptınız. Devam edin! 🤲</item>
+    </plurals>
+    <string name="notif_streak_title">🔥 Seriniz Kırılmak Üzere!</string>
+    <plurals name="notif_streak_body">
+        <item quantity="one">%d günlük serinizi korumak için bugünkü zikirinizi yapın.</item>
+        <item quantity="other">%d günlük serinizi korumak için bugünkü zikirinizi yapın.</item>
+    </plurals>
+    <string name="notif_goal_done_title">✅ Hedef Tamamlandı!</string>
+    <plurals name="notif_goal_done_body">
+        <item quantity="one">Günlük %d zikir hedefinizi tamamladınız. Tebrikler!</item>
+        <item quantity="other">Günlük %d zikir hedefinizi tamamladınız. Tebrikler!</item>
+    </plurals>
+
+    <string name="share_text_template">🤲 %1$d kez %2$s zikri yaptım\n%3$s\n\n📊 Bugün toplam: %4$s zikir\n\n📿 Zikirmatik uygulamasıyla zikir alışkanlığı edinin\nhttps://play.google.com/store/apps/details?id=com.parsfilo.zikirmatik</string>
+    <string name="counter_share_preview_title">Paylaşım Önizleme</string>
+    <string name="counter_copied">Metin panoya kopyalandı</string>
+
+    <string name="counter_virtue_label">📖 Fazileti</string>
+    <string name="counter_virtue_source_label">Kaynak:</string>
+
+    <string name="counter_target_33">33 tekrar</string>
+    <string name="counter_target_99">99 tekrar</string>
+    <string name="counter_target_100">100 tekrar</string>
+
+    <string name="counter_settings_haptic">Titreşim</string>
+    <string name="counter_settings_sound">Ses</string>
+    <string name="counter_menu_settings">Ayarlar</string>
+    <string name="counter_menu_rewards">Ödüller</string>
+    <string name="counter_menu_more">Daha fazla seçenek</string>
+    <string name="counter_goal_slider_value">Hedef: %d</string>
+    <plurals name="counter_content_description_fab">
+        <item quantity="one">%d zikir sayıldı. Dokunarak say.</item>
+        <item quantity="other">%d zikir sayıldı. Dokunarak say.</item>
+    </plurals>
+    <string name="counter_copy">Kopyala</string>
+</resources>
+
+

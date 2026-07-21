@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Parsfilo Uygulamalari</title>
+  <meta name="description" content="Parsfilo uygulamalarini listeleyin ve Play Store'a gidin.">
+  <link rel="canonical" href="https://parsfilo.com/apps/">
+  <link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+  <main class="container">
+    <header class="hero">
+      <p class="kicker">Parsfilo</p>
+      <h1>Uygulamalar</h1>
+      <p class="lead">Tum uygulamalari buradan gorebilir, detayina inebilir ve Play Store'a gecis yapabilirsiniz.</p>
+    </header>
+
+    <section class="toolbar">
+      <input id="searchInput" type="search" placeholder="Uygulama adi veya paket ile ara">
+      <a class="btn" href="/">Ana sayfa</a>
+    </section>
+
+    <section id="appsList" class="list" aria-live="polite"></section>
+  </main>
+
+  <script type="module">
+    import { fetchApps, appSlug, playUrl } from "/assets/apps.js";
+
+    const list = document.getElementById("appsList");
+    const searchInput = document.getElementById("searchInput");
+    let allApps = [];
+
+    function render(items) {
+      if (!items.length) {
+        list.innerHTML = '<div class="card empty">Sonuc bulunamadi.</div>';
+        return;
+      }
+      list.innerHTML = items.map((app) => {
+        const slug = appSlug(app);
+        const newBadge = app.isNew ? '<span class="chip new">Yeni</span>' : "";
+        return `
+          <article class="card app-item">
+            <img loading="lazy" src="${app.appIcon || ""}" alt="${app.appName}">
+            <div class="app-meta">
+              <h3>${app.appName}</h3>
+              <p>${app.packageName}</p>
+              <div class="chips">${newBadge}</div>
+            </div>
+            <div class="actions chips">
+              <a class="chip" href="/apps/${slug}/">Detay</a>
+              <a class="chip" href="${playUrl(app.packageName)}" target="_blank" rel="noopener">Play Store</a>
+            </div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    function filterAndRender() {
+      const q = searchInput.value.trim().toLocaleLowerCase("tr-TR");
+      if (!q) {
+        render(allApps);
+        return;
+      }
+      const filtered = allApps.filter((app) =>
+        app.appName.toLocaleLowerCase("tr-TR").includes(q) ||
+        app.packageName.toLocaleLowerCase("tr-TR").includes(q)
+      );
+      render(filtered);
+    }
+
+    searchInput.addEventListener("input", filterAndRender);
+
+    fetchApps()
+      .then((apps) => {
+        allApps = apps;
+        render(allApps);
+      })
+      .catch((error) => {
+        console.error(error);
+        list.innerHTML = '<div class="card empty">Uygulama listesi yuklenemedi.</div>';
+      });
+  </script>
+</body>
+</html>

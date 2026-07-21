@@ -1,0 +1,8 @@
+<resources>
+    <string name="other_apps_title">Unsere Apps</string>
+    <string name="other_apps_new">Neu</string>
+    <string name="other_apps_install">Installieren</string>
+    <string name="other_apps_empty">Noch keine Apps verfügbar.</string>
+    <string name="other_apps_error">App-Liste konnte nicht geladen werden.</string>
+    <string name="other_apps_retry">Erneut versuchen</string>
+</resources>

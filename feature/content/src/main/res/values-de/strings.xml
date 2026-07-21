@@ -1,0 +1,18 @@
+<resources>
+    <string name="content_empty_title">Inhalt wird vorbereitet</string>
+    <string name="content_empty_subtitle">Spezielle Inhalte für diese App werden bald hinzugefügt.</string>
+
+    <string name="content_mode_arabic">Arabisch</string>
+    <string name="content_mode_latin">Latein</string>
+    <string name="content_mode_turkish">Übersetzung</string>
+    <string name="content_error_friendly">Inhalt konnte nicht geladen werden. Bitte erneut versuchen.</string>
+    <string name="content_retry">Erneut versuchen</string>
+    <string name="content_verse_copied">Vers in die Zwischenablage kopiert</string>
+    <string name="miracles_default_title">Wundergebete</string>
+    <string name="miracles_section_description">Erklärung</string>
+    <string name="miracles_section_besmele">Basmala</string>
+    <string name="miracles_section_prayer">Gebet</string>
+    <string name="miracles_section_arabic">@string/content_mode_arabic</string>
+    <string name="miracles_section_latin_pronunciation">Lateinische Lesung</string>
+    <string name="miracles_play_all_audio">Alles anhören</string>
+</resources>

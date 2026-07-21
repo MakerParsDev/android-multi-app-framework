@@ -1,0 +1,104 @@
+[
+  {
+    "appName": "Bereket - Karınca Duası",
+    "packageName": "com.parsfilo.bereketduasi",
+    "appIcon": "https://play-lh.googleusercontent.com/2w1qg1e_wi7Res8BC0Aq57PbE5Yu-d6-o0RXxvUMKR1e718G5Zmrwk5-3PbxXsYIGW1AK00RDFWjRLeN0Vumrw=w48-h48-rw",
+    "isNew": true
+  },
+  {
+    "appName": "Nazar Ayeti - Duası",
+    "packageName": "com.parsfilo.nazarayeti",
+    "appIcon": "https://play-lh.googleusercontent.com/EN583ubLLeUIQ1kZ9LYLWBY3FY7Lzb4EPgqhu3nUgR7dfj4zVDya-mlqI_AluFOLmOZPyquaZbnrgIT5e4NYo4o=w48-h48-rw",
+    "isNew": true
+  },
+  {
+    "appName": "Amenerrasulü Sesli",
+    "packageName": "com.parsfilo.amenerrasulu",
+    "appIcon": "https://play-lh.googleusercontent.com/jAZ_lU5aLKD-7Wla_q7pZfqNJ4Ejgt4XjvzmUX-eY0-NRrHoiqxvmHlAH4hWna8Esy0=w48-h48-rw",
+    "isNew": false
+  },
+  {
+    "appName": "Ayet-el Kürsi Sesli",
+    "packageName": "com.parsfilo.ayetelkursi",
+    "appIcon": "https://play-lh.googleusercontent.com/6MDYO9nKElfzE_AT_jI_YZ2_MMav2DCHtTruupcYmXwVlsfxEDhVVFzFBsJzOe7AZw=w48-h48-rw",
+    "isNew": false
+  },
+  {
+    "appName": "Esma-ül Hüsna",
+    "packageName": "com.parsfilo.esmaulhusna",
+    "appIcon": "https://play-lh.googleusercontent.com/s08s4QT3QtHrgGogtwwknkaRC6c_ieoSqHsKIMXAds9llNIV4F8dsU38gpmv5h8How=w48-h48-rw",
+    "isNew": false
+  },
+  {
+    "appName": "Fetih Suresi Sesli",
+    "packageName": "com.parsfilo.fetihsuresi",
+    "appIcon": "https://play-lh.googleusercontent.com/OdPbp-37-NXNeH2NFiM1R08kYLTxE-645SbeWJnpcLIkmYFLA5655qzeH6Ad4Pzpst4=w48-h48-rw",
+    "isNew": true
+  },
+  {
+    "appName": "İnşirah Sesli",
+    "packageName": "com.parsfilo.insirahsuresi",
+    "appIcon": "https://play-lh.googleusercontent.com/WdGSfJlX0d0DASPu7eaTrkZ3kzwy3U4TMq25iuCZLFBxQhCDzJDaKTe1oPKOeatnxZx4Zw7TaZGEnJvEtqsC=w48-h48-rw",
+    "isNew": true
+  },
+  {
+    "appName": "İsmi Azam Sesli",
+    "packageName": "com.parsfilo.ismiazamduasi",
+    "appIcon": "https://play-lh.googleusercontent.com/iy_d3XO8VHAUfSByfrqZF7-muJwM34N8KJF7nvdbBrabI6uHFCf_Pfh-Lx1z5xOwQuQ=w48-h48-rw",
+    "isNew": true
+  },
+  {
+    "appName": "Kenzül Arş Sesli",
+    "packageName": "com.parsfilo.kenzularsduasi",
+    "appIcon": "https://play-lh.googleusercontent.com/K8dU5UIVj-k_ZF4o7MbMovE_KO8BqYBrfGoJ718cSgG9Yd1tVlm3Gk9IP7pp-WD6xdeB=w48-h48-rw",
+    "isNew": true
+  },
+  {
+    "appName": "Kuran-ı Kerim",
+    "packageName": "com.parsfilo.kuran_kerim",
+    "appIcon": "https://play-lh.googleusercontent.com/OiNtYgxJWh3db9T9cCzeDKHYErdqH7o8cNgtoIvgURTuCLiGvsPmo1aTukKZK9_6Ib41=w48-h48-rw",
+    "isNew": false
+  },
+  {
+    "appName": "Kıble",
+    "packageName": "com.parsfilo.kible",
+    "appIcon": "https://play-lh.googleusercontent.com/hvL3UJnNYE8FxmiB_X3E_rVJb9xd67ZJtHdDdvnWR2eGTZs7WHY3inGMzFTwOR7mmbg=w48-h48-rw",
+    "isNew": true
+  },
+  {
+    "appName": "Mucize Dualar",
+    "packageName": "com.parsfilo.mucizedualar",
+    "appIcon": "https://play-lh.googleusercontent.com/X3APlgeaOHS9GUtBjDhtFJ_EnbqQO7n3wOCRnMmRe2p7yjAHw-K0xGgkLATFlcflnzE=w48-h48-rw",
+    "isNew": false
+  },
+  {
+    "appName": "Namaz Ezan Vakitleri",
+    "packageName": "com.parsfilo.namazvakitleri",
+    "appIcon": "https://play-lh.googleusercontent.com/iud0TsXDxwLOIgO99qEi2zxzw-vpj7jadD7eJnE5nLpncjBZsEQQFW3f9yodytQTug=w48-h48-rw",
+    "isNew": true
+  },
+  {
+    "appName": "Namaz Sureleri Sesli",
+    "packageName": "com.parsfilo.namazsurelerivedualarsesli",
+    "appIcon": "https://play-lh.googleusercontent.com/-gW9Z1NcSbE0PMhlFDqxKxBgUkbmy4XKl0MjBCjKwftg61gJrpUUC_vAsSow9YpQJXAX=w48-h48-rw",
+    "isNew": false
+  },
+  {
+    "appName": "Vakıa Sesli",
+    "packageName": "com.parsfilo.vakiasuresi",
+    "appIcon": "https://play-lh.googleusercontent.com/h9zPtyT9rtnW4njUrQsiTZtdFzxeM5tC_DA3-s15Q1o0ZSB1HehtOym7hv_TPX1qP3AwO3OY0dQE0t60sxgh_A=w48-h48-rw",
+    "isNew": true
+  },
+  {
+    "appName": "Yasin Suresi Sesli",
+    "packageName": "com.parsfilo.yasinsuresi",
+    "appIcon": "https://play-lh.googleusercontent.com/6HMjc0fsyjVuUmgGq1MFSnw0iFyeEcLEfi07L4cH-qZV6VuOcTw3fY-ZgsBgpoqHy4U=w48-h48-rw",
+    "isNew": false
+  },
+  {
+    "appName": "Zikirmatik",
+    "packageName": "com.parsfilo.zikirmatik",
+    "appIcon": "https://play-lh.googleusercontent.com/zC5JYO3yWqn7G9OXUOLFT9cBYmSTKNuDgTWRci-5R8trc3rvFexX9HDyHKaSEDuOkPE=w48-h48-rw",
+    "isNew": true
+  }
+]

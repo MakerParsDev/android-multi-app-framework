@@ -1,0 +1,8 @@
+title = "Android multi-app framework secret scanning"
+
+[extend]
+useDefault = true
+
+# Repository-specific allowlists are intentionally not defined here.
+# Time-limited historical fingerprints must be owned in
+# config/secret-scan-policy.json and synchronized into .gitleaksignore.

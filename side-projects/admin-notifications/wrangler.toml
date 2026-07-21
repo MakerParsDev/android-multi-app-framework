@@ -1,0 +1,22 @@
+# Cloudflare Pages — Admin Notifications Panel
+# Deploy:
+#   bash scripts/ci/run_side_project_quality.sh --install
+#   ADMIN_NOTIFICATIONS_METADATA_URL=https://<pages-domain>/build-metadata.json npm run deploy
+# Or connect GitHub repo via Cloudflare Dashboard for auto-deploy.
+
+name = "admin-notifications"
+pages_build_output_dir = "dist"
+
+# Environment variables are set in Cloudflare Dashboard → Pages → Settings → Environment variables.
+# Required VITE_* vars:
+#   VITE_FIREBASE_API_KEY
+#   VITE_FIREBASE_AUTH_DOMAIN
+#   VITE_FIREBASE_PROJECT_ID
+#   VITE_FIREBASE_APP_ID
+#   VITE_FIREBASE_MESSAGING_SENDER_ID
+#   VITE_FIREBASE_STORAGE_BUCKET
+#   VITE_FIREBASE_FUNCTIONS_REGION
+#   VITE_FUNCTIONS_BASE_URL
+# Optional:
+#   VITE_CONTENT_API_URL
+#   VITE_ADMIN_ALLOWED_EMAILS

@@ -1,0 +1,240 @@
+name: release-$(Date:yyyyMMdd)$(Rev:.r)
+
+# Manual-only. No automatic runs on push/PR.
+trigger: none
+pr: none
+
+parameters:
+  - name: targetFlavors
+    displayName: Target flavors (comma separated) or 'all'
+    type: string
+    default: all
+  - name: updatePlayListing
+    displayName: Update Play listing/metadata/screenshots/release-notes from repo (requires app/src/<flavor>/play)
+    type: boolean
+    default: false
+
+variables:
+  - group: android-release-secrets
+
+  - name: GRADLE_OPTS
+    value: '-Djava.awt.headless=true -Dorg.gradle.workers.max=2 -Dorg.gradle.daemon=false'
+  - name: GRADLE_USER_HOME
+    value: $(Agent.ToolsDirectory)/.gradle
+  - name: ANDROID_SDK_ROOT
+    value: $(Agent.ToolsDirectory)/android-sdk
+  - name: ANDROID_HOME
+    value: $(Agent.ToolsDirectory)/android-sdk
+
+  # Default false; override when queuing the run:
+  #   az pipelines run --name release --variables PUBLISH_TO_PLAY=true ...
+  - name: PUBLISH_TO_PLAY
+    value: false
+  # Committed app-versions.properties values are the default source of truth.
+  # Emergency auto-bump remains opt-in and only mutates the ephemeral build workspace.
+  - name: AUTO_BUMP_PLAY_VERSION_CODES
+    value: false
+  - name: PLAY_PREFLIGHT_ONLY
+    value: false
+
+stages:
+  - stage: BuildRelease
+    displayName: Build Signed Release
+    jobs:
+      - job: BuildSelected
+        displayName: Build Selected Release AAB
+        pool:
+          name: MSI
+          demands:
+            - Agent.Name -equals msi
+        steps:
+          - checkout: self
+            fetchDepth: 0
+
+          - template: templates/steps/setup-android.yml
+
+          - task: UseNode@1
+            displayName: Setup Node.js 22
+            inputs:
+              version: '22.x'
+              checkLatest: false
+
+          - bash: bash scripts/ci/run_side_project_quality.sh --install
+            displayName: Verify Firebase and Cloudflare side projects
+
+          - template: templates/steps/resolve-flavors.yml
+            parameters:
+              targetFlavors: ${{ parameters.targetFlavors }}
+
+          - bash: |
+              set -euo pipefail
+              MODE="warn"
+              if [ "${PUBLISH_TO_PLAY:-false}" = "true" ]; then
+                MODE="strict"
+              fi
+              python3 ./scripts/ci/validate_ci_apps_catalog.py --mode "$MODE" --target-flavors "${RESOLVED_FLAVORS_CSV}"
+            displayName: Validate CI apps catalog
+            env:
+              PUBLISH_TO_PLAY: $(PUBLISH_TO_PLAY)
+              RESOLVED_FLAVORS_CSV: $(RESOLVED_FLAVORS_CSV)
+
+          - template: templates/steps/setup-secrets.yml
+            parameters:
+              needSigning: false
+              needPlayServiceAccount: true
+
+          - bash: |
+              set -euo pipefail
+              if [ -z "${PLAY_SERVICE_ACCOUNT_JSON:-}" ] || [ ! -f "${PLAY_SERVICE_ACCOUNT_JSON}" ]; then
+                echo "PLAY_SERVICE_ACCOUNT_JSON is missing; cannot auto-bump version codes."
+                exit 1
+              fi
+
+              python3 -m pip install --quiet google-api-python-client google-auth
+
+              python3 ./scripts/ci/fetch_play_version_codes.py \
+                --flavors "${RESOLVED_FLAVORS_CSV}" \
+                --tracks all \
+                --suggest-next \
+                --apply-to-app-versions \
+                --sync-version-names
+
+              echo "Updated app-versions.properties for publish run (versionCode auto-bump):"
+              grep -E '^('"$(echo "${RESOLVED_FLAVORS_CSV}" | tr ',' '|')"')\.versionCode=' app-versions.properties || true
+            displayName: Auto-bump Play versionCodes (selected flavors)
+            condition: and(eq(variables['PUBLISH_TO_PLAY'], 'true'), eq(variables['AUTO_BUMP_PLAY_VERSION_CODES'], 'true'))
+            env:
+              PLAY_SERVICE_ACCOUNT_JSON: $(PLAY_SERVICE_ACCOUNT_JSON)
+              RESOLVED_FLAVORS_CSV: $(RESOLVED_FLAVORS_CSV)
+
+          - bash: |
+              set -euo pipefail
+              python3 -m pip install --quiet google-api-python-client google-auth
+              python3 ./scripts/ci/verify_play_console_access.py --flavors "${RESOLVED_FLAVORS_CSV}"
+            displayName: Verify Play Console Access Preflight
+            condition: or(eq(variables['PUBLISH_TO_PLAY'], 'true'), eq(variables['PLAY_PREFLIGHT_ONLY'], 'true'))
+            env:
+              PLAY_SERVICE_ACCOUNT_JSON: $(PLAY_SERVICE_ACCOUNT_JSON)
+              RESOLVED_FLAVORS_CSV: $(RESOLVED_FLAVORS_CSV)
+
+          - bash: |
+              set -euo pipefail
+              python3 ./scripts/ci/fetch_play_version_codes.py \
+                --flavors "${RESOLVED_FLAVORS_CSV}" \
+                --tracks all \
+                --verify-greater-than-play
+            displayName: Verify Play versionCode release gate
+            condition: or(eq(variables['PUBLISH_TO_PLAY'], 'true'), eq(variables['PLAY_PREFLIGHT_ONLY'], 'true'))
+            env:
+              PLAY_SERVICE_ACCOUNT_JSON: $(PLAY_SERVICE_ACCOUNT_JSON)
+              RESOLVED_FLAVORS_CSV: $(RESOLVED_FLAVORS_CSV)
+
+          - bash: |
+              set -euo pipefail
+              if [ -z "${RESOLVED_FLAVORS_JSON:-}" ] || [ -z "${RESOLVED_FLAVORS_CSV:-}" ]; then
+                echo "Resolved flavor variables are missing after resolve-flavors step."
+                exit 1
+              fi
+              echo "##vso[task.setvariable variable=RESOLVED_FLAVORS_JSON;isOutput=true]${RESOLVED_FLAVORS_JSON}"
+              echo "##vso[task.setvariable variable=RESOLVED_FLAVORS_CSV;isOutput=true]${RESOLVED_FLAVORS_CSV}"
+            name: resolveFlavorsOut
+            displayName: Export Resolved Flavors (Stage Output)
+            env:
+              RESOLVED_FLAVORS_JSON: $(RESOLVED_FLAVORS_JSON)
+              RESOLVED_FLAVORS_CSV: $(RESOLVED_FLAVORS_CSV)
+
+          - bash: |
+              set -euo pipefail
+              python3 ./scripts/ci/materialize_firebase_configs.py \
+                --flavors "${RESOLVED_FLAVORS_CSV}" \
+                --mode strict
+              python3 ./scripts/ci/verify_google_signin_config.py \
+                --flavors "${RESOLVED_FLAVORS_CSV}" \
+                --require-web-client-id
+            displayName: Materialize and Validate Firebase Config
+            env:
+              FIREBASE_CONFIGS_ZIP_BASE64: $(FIREBASE_CONFIGS_ZIP_BASE64)
+              FIREBASE_WEB_CLIENT_ID: $(FIREBASE_WEB_CLIENT_ID)
+
+          - template: templates/steps/setup-secrets.yml
+            parameters:
+              needSigning: true
+              needPlayServiceAccount: false
+
+          # Release pipeline is AAB-only for faster runtime.
+          - template: templates/steps/build.yml
+            parameters:
+              buildType: Release
+              doAssemble: false
+              doBundle: true
+
+          - task: PublishPipelineArtifact@1
+            displayName: Publish AAB Outputs
+            inputs:
+              targetPath: $(System.DefaultWorkingDirectory)/app/build/outputs/bundle
+              artifact: release-bundles
+
+          - bash: |
+              set -euo pipefail
+              rm -f "$(Pipeline.Workspace)/release.jks" "$(Pipeline.Workspace)/service-account.json" firebase_configs.zip
+            displayName: Cleanup Secrets
+            condition: always()
+
+  - stage: PublishProduction
+    displayName: Publish to Play Console
+    dependsOn: BuildRelease
+    condition: and(succeeded(), eq(variables['PUBLISH_TO_PLAY'], 'true'))
+    variables:
+      RESOLVED_FLAVORS_JSON: $[ stageDependencies.BuildRelease.BuildSelected.outputs['resolveFlavorsOut.RESOLVED_FLAVORS_JSON'] ]
+      RESOLVED_FLAVORS_CSV: $[ stageDependencies.BuildRelease.BuildSelected.outputs['resolveFlavorsOut.RESOLVED_FLAVORS_CSV'] ]
+    jobs:
+      - deployment: Publish
+        displayName: Publish Bundles
+        environment: production
+        pool:
+          name: MSI
+          demands:
+            - Agent.Name -equals msi
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+                  fetchDepth: 0
+
+                - template: templates/steps/security-gate.yml
+                  parameters:
+                    mode: history
+                    selfTest: false
+
+                - task: DownloadPipelineArtifact@2
+                  displayName: Download AAB Outputs
+                  inputs:
+                    artifact: release-bundles
+                    path: $(System.DefaultWorkingDirectory)/app/build/outputs/bundle
+
+                - template: templates/steps/setup-secrets.yml
+                  parameters:
+                    needSigning: true
+                    needPlayServiceAccount: true
+
+                - bash: |
+                    set -euo pipefail
+                    python3 -m pip install --quiet google-api-python-client google-auth
+                    python3 ./scripts/ci/verify_play_console_access.py --flavors "${RESOLVED_FLAVORS_CSV}"
+                  displayName: Verify Play Console Access
+                  env:
+                    PLAY_SERVICE_ACCOUNT_JSON: $(PLAY_SERVICE_ACCOUNT_JSON)
+                    RESOLVED_FLAVORS_CSV: $(RESOLVED_FLAVORS_CSV)
+
+                - template: templates/steps/publish-play.yml
+                  parameters:
+                    updatePlayListing: ${{ parameters.updatePlayListing }}
+                    track: production
+                    allowBundleFallback: false
+
+                - bash: |
+                    set -euo pipefail
+                    rm -f "$(Pipeline.Workspace)/release.jks" "$(Pipeline.Workspace)/service-account.json"
+                  displayName: Cleanup Secrets
+                  condition: always()

@@ -1,0 +1,37 @@
+<resources>
+    <string name="quran_title">Quran</string>
+    <string name="quran_search_placeholder">Search surah or number</string>
+    <string name="quran_bookmarks_title">Bookmarks</string>
+    <string name="quran_last_read_title">Last read</string>
+    <string name="quran_last_read_format">Surah %1$d · Ayah %2$d</string>
+    <string name="quran_revelation_meccan">Meccan</string>
+    <string name="quran_revelation_medinan">Medinan</string>
+    <string name="quran_no_results">No results found</string>
+    <string name="quran_no_results_desc">Try a different keyword.</string>
+    <string name="quran_empty_offline">Surah list is not downloaded yet. Internet is required for first setup.</string>
+    <string name="quran_retry">Retry</string>
+    <string name="quran_mode_arabic">Arabic</string>
+    <string name="quran_mode_latin">Transliteration</string>
+    <string name="quran_mode_translation">Translation</string>
+    <string name="quran_reciter">Reciter</string>
+    <string name="quran_select_reciter">Select reciter</string>
+    <string name="quran_copy">Copy</string>
+    <string name="quran_add_bookmark">Add bookmark</string>
+    <string name="quran_remove_bookmark">Remove bookmark</string>
+    <string name="quran_audio_play">Play</string>
+    <string name="quran_audio_pause">Pause</string>
+    <string name="quran_audio_download">Download</string>
+    <string name="quran_audio_downloaded">Downloaded</string>
+    <string name="quran_bookmarks_empty">No bookmarks yet.</string>
+    <string name="quran_ayah_label">Ayah %d</string>
+    <item type="string" name="quran_open_bookmarks">@string/quran_bookmarks_title</item>
+    <string name="quran_open_settings">Settings</string>
+    <string name="quran_open_rewards">Rewards</string>
+    <string name="quran_error_load_suras">Failed to load surah list.</string>
+    <string name="quran_error_load_sura">Failed to load surah content.</string>
+    <string name="quran_audio_download_progress">Downloading %% %d</string>
+    <string name="quran_ayah_actions">Ayah actions</string>
+    <string name="quran_loading">Loading…</string>
+    <string name="quran_toggle_search">Search</string>
+    <string name="quran_more_options">More options</string>
+</resources>

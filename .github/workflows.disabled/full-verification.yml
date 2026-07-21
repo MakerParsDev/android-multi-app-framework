@@ -1,0 +1,158 @@
+name: Full Verification
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_flavors:
+        description: 'Target flavors (comma-separated) or "all"'
+        required: true
+        default: 'all'
+        type: string
+  push:
+    branches: [main]
+    paths:
+      - '.github/actions/**'
+      - '.github/workflows/full-verification.yml'
+      - 'app/**'
+      - 'core/**'
+      - 'feature/**'
+      - 'buildSrc/**'
+      - 'gradle/**'
+      - 'build.gradle.kts'
+      - 'settings.gradle.kts'
+      - 'gradle.properties'
+      - 'app-versions.properties'
+      - '.ci/**'
+      - 'scripts/ci/**'
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: read
+
+concurrency:
+  group: ${{ format('ci-{0}-{1}', github.workflow, github.event.pull_request.number || github.head_ref || github.ref) }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx6g -Djava.awt.headless=true -Dkotlin.daemon.jvmargs=-Xmx1g -Dorg.gradle.workers.max=2 -Dorg.gradle.daemon=false -Dksp.incremental=false
+  JAVA_VERSION: '21'
+  ANDROID_API_LEVEL: 36
+  TARGET_FLAVORS: ${{ github.event.inputs.target_flavors || 'all' }}
+
+jobs:
+  full-verification:
+    name: Full Verification
+    runs-on: ubuntu-latest
+    env:
+      FIREBASE_WEB_CLIENT_ID: ${{ secrets.FIREBASE_WEB_CLIENT_ID }}
+      FIREBASE_CONFIGS_ZIP_BASE64: ${{ secrets.FIREBASE_CONFIGS_ZIP_BASE64 }}
+      CF_R2_ACCOUNT_ID: ${{ secrets.CF_R2_ACCOUNT_ID }}
+      CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+      CF_R2_BUCKET: ${{ secrets.CF_R2_BUCKET }}
+      CF_R2_FIREBASE_OBJECT: ${{ secrets.CF_R2_FIREBASE_OBJECT }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Ensure Gradle wrapper is executable
+        run: chmod +x ./gradlew
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - uses: android-actions/setup-android@v4
+        with:
+          accept-android-sdk-licenses: false
+          log-accepted-android-sdk-licenses: false
+
+      - name: Install Android SDK packages
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          sdkmanager --sdk_root="$SDK_ROOT" \
+            "platform-tools" \
+            "platforms;android-${ANDROID_API_LEVEL}" \
+            "build-tools;36.0.0"
+
+      - name: Accept Android SDK licenses (non-interactive)
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          set +o pipefail
+          yes | sdkmanager --licenses --sdk_root="$SDK_ROOT" >/dev/null
+          set -o pipefail
+
+      - uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-read-only: true
+
+      - name: Resolve Flavors
+        id: resolve
+        uses: ./.github/actions/resolve-flavors
+        with:
+          target_flavors: ${{ env.TARGET_FLAVORS }}
+
+      - name: Validate CI apps catalog (strict)
+        run: |
+          set -euo pipefail
+          python3 ./scripts/ci/validate_ci_apps_catalog.py --mode strict --target-flavors "${{ steps.resolve.outputs.resolved_csv }}"
+
+      - name: Validate AdMob inventory (strict)
+        run: |
+          set -euo pipefail
+          python3 ./scripts/ci/validate_admob_inventory.py --mode strict --target-flavors "${{ steps.resolve.outputs.resolved_csv }}"
+
+      - name: Validate app-ads.txt (strict)
+        run: |
+          set -euo pipefail
+          python3 ./scripts/ci/validate_app_ads_txt.py --mode strict
+
+      - name: Verify env contract
+        uses: ./.github/actions/verify-env-contract
+
+      - name: Export firebase override + web client env
+        uses: ./.github/actions/export-firebase-override-env
+
+      - name: Firebase Config Override (R2 preferred, Base64 fallback)
+        uses: ./.github/actions/firebase-config
+        with:
+          firebase_configs_zip_base64: ${{ env.FIREBASE_CONFIGS_ZIP_BASE64 }}
+          cf_r2_account_id: ${{ env.CF_R2_ACCOUNT_ID }}
+          cf_api_token: ${{ env.CF_API_TOKEN }}
+          cf_r2_bucket: ${{ env.CF_R2_BUCKET }}
+          cf_r2_firebase_object: ${{ env.CF_R2_FIREBASE_OBJECT }}
+
+      - name: Validate Google Sign-In Config
+        uses: ./.github/actions/verify-google-signin-config
+        with:
+          flavors: ${{ steps.resolve.outputs.resolved_csv }}
+
+      - name: Validate flavor versions
+        run: ./gradlew validateFlavorVersions --stacktrace --no-daemon --max-workers=2
+
+      - name: Unit tests
+        run: ./gradlew testDebugUnitTest --continue --stacktrace --no-daemon --max-workers=2
+
+      - name: Static analysis
+        run: ./gradlew detekt ktlintCheck --stacktrace --no-daemon --max-workers=2
+
+      - name: Android lint
+        run: ./gradlew lintDebug --continue --stacktrace --no-daemon --max-workers=2
+
+      - name: Coverage reports
+        run: ./gradlew koverXmlReport koverHtmlReport --stacktrace --no-daemon --max-workers=2
+
+      - name: Upload verification reports
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: full-verification-reports
+          path: |
+            **/build/reports/**
+            build/reports/kover/**
+          retention-days: 14

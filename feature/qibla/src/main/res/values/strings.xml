@@ -1,0 +1,28 @@
+<resources>
+    <string name="qibla_heading_value">Kıble Açısı: %1$d°</string>
+    <string name="qibla_compass_value">Pusula: %1$d°</string>
+    <string name="qibla_instruction">Telefonu yataya yakın tutun ve manyetik alan kalibrasyonu için 8 çizerek hareket ettirin.</string>
+    <string name="qibla_location_fallback">Konum alınamadı, varsayılan bölge kullanılıyor.</string>
+    <string name="qibla_location_format">Konum: %1$s, %2$s</string>
+    <string name="qibla_location_accuracy_format">Konum doğruluğu: ±%1$d m</string>
+    <string name="qibla_sensor_format">Sensör: %1$s</string>
+    <string name="qibla_sensor_rotation_vector">Rotation Vector (gyro + ivme + manyetik)</string>
+    <string name="qibla_sensor_geomagnetic_rotation">Geomagnetic Rotation Vector (ivme + manyetik)</string>
+    <string name="qibla_sensor_accel_magnetometer">Accelerometer + Magnetometer</string>
+    <string name="qibla_sensor_unavailable">Cihazda uygun sensör yok</string>
+    <string name="qibla_refresh_location">Konumu yenile</string>
+    <string name="qibla_location_unavailable">Anlık konum alınamadı, son bilinen/veri yok.</string>
+    <string name="qibla_calibration_hint">Pusula doğruluğu düşük. Telefonu 8 çizerek kalibre edin.</string>
+    <string name="qibla_aligned">Kıble ile hizalısınız</string>
+    <string name="qibla_turn_right_format">Sağa %1$d° çevirin</string>
+    <string name="qibla_turn_left_format">Sola %1$d° çevirin</string>
+    <string name="qibla_location_refreshing">Konum güncelleniyor…</string>
+    <string name="qibla_confidence_format">Doğruluk Skoru: %1$d%% (%2$s)</string>
+    <string name="qibla_confidence_excellent">Mükemmel</string>
+    <string name="qibla_confidence_good">İyi</string>
+    <string name="qibla_confidence_fair">Orta</string>
+    <string name="qibla_confidence_low">Düşük</string>
+    <string name="qibla_kaaba_image_desc">Kabe görseli</string>
+    <string name="qibla_settings">Ayarlar</string>
+    <string name="qibla_rewards">Ödüller</string>
+</resources>

@@ -1,0 +1,336 @@
+name: Quality Gate
+
+on:
+  pull_request:
+    branches: ['*']
+
+permissions:
+  checks: write
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ${{ format('ci-{0}-{1}', github.workflow, github.event.pull_request.number || github.head_ref || github.ref) }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx6g -Djava.awt.headless=true -Dorg.gradle.daemon=false -Dksp.incremental=false
+  JAVA_VERSION: '21'
+  ANDROID_API_LEVEL: 36
+
+jobs:
+  analyze-impact:
+    name: Analyze Impact
+    runs-on: ubuntu-latest
+    outputs:
+      has_code: ${{ steps.setvars.outputs.has_code }}
+      flavours_json: ${{ steps.setvars.outputs.flavours_json }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Validate CI apps catalog (warn)
+        run: |
+          set -euo pipefail
+          python3 ./scripts/ci/validate_ci_apps_catalog.py --mode warn --target-flavors all
+
+      - name: Validate AdMob inventory (warn)
+        run: |
+          set -euo pipefail
+          python3 ./scripts/ci/validate_admob_inventory.py --mode warn --target-flavors all
+
+      - name: Validate app-ads.txt (warn)
+        run: |
+          set -euo pipefail
+          python3 ./scripts/ci/validate_app_ads_txt.py --mode warn
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - uses: android-actions/setup-android@v4
+        with:
+          accept-android-sdk-licenses: false
+          log-accepted-android-sdk-licenses: false
+
+      - name: Install Android SDK packages
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          sdkmanager --sdk_root="$SDK_ROOT" \
+            "platform-tools" \
+            "platforms;android-${ANDROID_API_LEVEL}" \
+            "build-tools;36.0.0"
+
+      - name: Accept Android SDK licenses (non-interactive)
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          set +o pipefail
+          yes | sdkmanager --licenses --sdk_root="$SDK_ROOT" >/dev/null
+          set -o pipefail
+
+      - uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-read-only: true
+
+      - id: setvars
+        name: Detect Changed Flavours
+        run: |
+          set -euo pipefail
+
+          build_json_array() {
+            local -a arr=("$@")
+            if [ "${#arr[@]}" -eq 0 ]; then echo "[]"; return; fi
+            local out="["
+            local first=true
+            for item in "${arr[@]}"; do
+              [ -z "$item" ] && continue
+              if [ "$first" = false ]; then out+=","; fi
+              out+="\"$item\""
+              first=false
+            done
+            out+="]"
+            echo "$out"
+          }
+
+          CHANGED_FILES="$(git diff --name-only origin/${{ github.base_ref }}...HEAD || true)"
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          HAS_CODE="false"
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            case "$file" in
+              *.kt|*.kts|*.java|*.xml|*.gradle|*.properties|*"/src/"*|buildSrc/*|gradle/*)
+                HAS_CODE="true"
+                break
+                ;;
+            esac
+          done <<< "$CHANGED_FILES"
+
+          if [ "$HAS_CODE" != "true" ]; then
+            echo "has_code=false" >> "$GITHUB_OUTPUT"
+            echo "flavours_json=[]" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          chmod +x ./gradlew
+          ALL_FLAVOURS_JSON="$(./gradlew -q printFlavors | tr -d '\r')"
+          if [ -z "$ALL_FLAVOURS_JSON" ] || [ "$ALL_FLAVOURS_JSON" = "[]" ]; then
+            echo "printFlavors returned empty list."
+            exit 1
+          fi
+          mapfile -t ALL_FLAVOURS < <(echo "$ALL_FLAVOURS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d')
+
+          COMMON_CHANGED="false"
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            case "$file" in
+              buildSrc/*|core/*|feature/*|gradle/*|app/build.gradle.kts|app/src/main/*|build.gradle.kts|settings.gradle.kts|gradle.properties)
+                COMMON_CHANGED="true"
+                break
+                ;;
+            esac
+          done <<< "$CHANGED_FILES"
+
+          SELECTED=()
+          if [ "$COMMON_CHANGED" = "true" ]; then
+            SELECTED=("${ALL_FLAVOURS[@]}")
+          else
+            for flavour in "${ALL_FLAVOURS[@]}"; do
+              if grep -q "^app/src/${flavour}/" <<< "$CHANGED_FILES"; then
+                SELECTED+=("$flavour")
+              fi
+            done
+          fi
+
+          SELECTED_JSON="$(build_json_array "${SELECTED[@]}")"
+          echo "Detected flavours: $SELECTED_JSON"
+          echo "has_code=true" >> "$GITHUB_OUTPUT"
+          echo "flavours_json=$SELECTED_JSON" >> "$GITHUB_OUTPUT"
+
+  unit-tests:
+    name: Unit Tests
+    needs: analyze-impact
+    if: needs.analyze-impact.outputs.has_code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Lint baseline summary (warn)
+        run: |
+          set -euo pipefail
+          python3 ./scripts/ci/summarize_lint_baseline.py --file app/lint-baseline.xml --warn-max-bytes 70000
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - uses: android-actions/setup-android@v4
+        with:
+          accept-android-sdk-licenses: false
+          log-accepted-android-sdk-licenses: false
+
+      - name: Install Android SDK packages
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          sdkmanager --sdk_root="$SDK_ROOT" \
+            "platform-tools" \
+            "platforms;android-${ANDROID_API_LEVEL}" \
+            "build-tools;36.0.0"
+
+      - name: Accept Android SDK licenses (non-interactive)
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          set +o pipefail
+          yes | sdkmanager --licenses --sdk_root="$SDK_ROOT" >/dev/null
+          set -o pipefail
+
+      - uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-read-only: true
+
+      - name: Run Unit Tests
+        run: |
+          set -euo pipefail
+          chmod +x ./gradlew
+          ./gradlew testDebugUnitTest --continue --stacktrace --no-daemon --max-workers=2
+
+      - name: Publish Test Results
+        uses: mikepenz/action-junit-report@v4
+        if: always()
+        with:
+          report_paths: '**/build/test-results/test**/TEST-*.xml'
+
+  static-analysis:
+    name: Detekt & Ktlint
+    needs: analyze-impact
+    if: needs.analyze-impact.outputs.has_code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - uses: android-actions/setup-android@v4
+        with:
+          accept-android-sdk-licenses: false
+          log-accepted-android-sdk-licenses: false
+
+      - name: Install Android SDK packages
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          sdkmanager --sdk_root="$SDK_ROOT" \
+            "platform-tools" \
+            "platforms;android-${ANDROID_API_LEVEL}" \
+            "build-tools;36.0.0"
+
+      - name: Accept Android SDK licenses (non-interactive)
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          set +o pipefail
+          yes | sdkmanager --licenses --sdk_root="$SDK_ROOT" >/dev/null
+          set -o pipefail
+
+      - uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-read-only: true
+
+      - name: Run Static Analysis
+        run: |
+          chmod +x ./gradlew
+          ./gradlew detekt ktlintCheck --stacktrace --no-daemon --max-workers=2
+
+      - name: Fail on ktlint issues in changed files
+        run: |
+          set -euo pipefail
+          python3 ./scripts/ci/verify_changed_ktlint.py --repo-root "$GITHUB_WORKSPACE" --base-ref "${{ github.base_ref }}"
+
+      - name: Upload Detekt Reports
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: detekt-report
+          path: '**/build/reports/detekt/**'
+          retention-days: 14
+
+      - name: Upload Ktlint Reports
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: ktlint-report
+          path: '**/build/reports/ktlint/**'
+          retention-days: 14
+
+  android-lint:
+    name: Android Lint
+    needs: analyze-impact
+    if: >-
+      needs.analyze-impact.outputs.has_code == 'true' &&
+      needs.analyze-impact.outputs.flavours_json != '[]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - uses: android-actions/setup-android@v4
+        with:
+          accept-android-sdk-licenses: false
+          log-accepted-android-sdk-licenses: false
+
+      - name: Install Android SDK packages
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          sdkmanager --sdk_root="$SDK_ROOT" \
+            "platform-tools" \
+            "platforms;android-${ANDROID_API_LEVEL}" \
+            "build-tools;36.0.0"
+
+      - name: Accept Android SDK licenses (non-interactive)
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          set +o pipefail
+          yes | sdkmanager --licenses --sdk_root="$SDK_ROOT" >/dev/null
+          set -o pipefail
+
+      - uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-read-only: true
+
+      - name: Run Dynamic Lint Tasks
+        run: |
+          set -euo pipefail
+          chmod +x ./gradlew
+          ./gradlew lintDebug --continue --stacktrace --no-daemon --max-workers=2
+
+      - name: Upload Lint Reports
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: lint-reports
+          path: 'app/build/reports/**'
+          retention-days: 14

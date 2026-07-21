@@ -1,0 +1,343 @@
+{
+  "schema_version": 1,
+  "account": {
+    "publisher_id": "pub-3312485084079132",
+    "reporting_time_zone": "Europe/Istanbul",
+    "currency_code": "TRY"
+  },
+  "audit": {
+    "captured_on": "2026-07-13",
+    "traffic_window": {
+      "start_date": "2026-04-14",
+      "end_date": "2026-07-12",
+      "inclusive_days": 90
+    },
+    "live_counts": {
+      "apps": 27,
+      "approved_apps": 23,
+      "action_required_apps": 4
+    },
+    "sources": {
+      "framework_catalog": ".ci/apps.json",
+      "resource_pattern": "app/src/<flavor>/res/values/ads.xml",
+      "traffic_report_dimensions": [
+        "APP",
+        "AD_UNIT"
+      ],
+      "traffic_report_metrics": [
+        "AD_REQUESTS",
+        "MATCHED_REQUESTS",
+        "IMPRESSIONS",
+        "CLICKS",
+        "ESTIMATED_EARNINGS"
+      ]
+    },
+    "freshness_max_days": 90
+  },
+  "approved_framework_apps": [
+    {
+      "flavor": "amenerrasulu",
+      "package": "com.parsfilo.amenerrasulu",
+      "display_name": "Amenerrasulü Duası Sesli Dinle",
+      "admob_app_id": "ca-app-pub-3312485084079132~4012562548",
+      "linked_store_id": "com.parsfilo.amenerrasulu",
+      "approval_state": "APPROVED"
+    },
+    {
+      "flavor": "ayetelkursi",
+      "package": "com.parsfilo.ayetelkursi",
+      "display_name": "Ayetel Kürsi Sesli Dinle",
+      "admob_app_id": "ca-app-pub-3312485084079132~7496307482",
+      "linked_store_id": "com.parsfilo.ayetelkursi",
+      "approval_state": "APPROVED"
+    },
+    {
+      "flavor": "bereketduasi",
+      "package": "com.parsfilo.bereketduasi",
+      "display_name": "Bereket Duası & Karınca Duası",
+      "admob_app_id": "ca-app-pub-3312485084079132~4161185675",
+      "linked_store_id": "com.parsfilo.bereketduasi",
+      "approval_state": "APPROVED"
+    },
+    {
+      "flavor": "esmaulhusna",
+      "package": "com.parsfilo.esmaulhusna",
+      "display_name": "Esma-ül Hüsna | 99 İsim",
+      "admob_app_id": "ca-app-pub-3312485084079132~7465066634",
+      "linked_store_id": "com.parsfilo.esmaulhusna",
+      "approval_state": "APPROVED"
+    },
+    {
+      "flavor": "fetihsuresi",
+      "package": "com.parsfilo.fetihsuresi",
+      "display_name": "Fetih Suresi Sesli Dinle",
+      "admob_app_id": "ca-app-pub-3312485084079132~2457444899",
+      "linked_store_id": "com.parsfilo.fetihsuresi",
+      "approval_state": "APPROVED"
+    },
+    {
+      "flavor": "kenzularsduasi",
+      "package": "com.parsfilo.kenzularsduasi",
+      "display_name": "Kenzül Arş Duası Sesli Dinle",
+      "admob_app_id": "ca-app-pub-3312485084079132~3739252267",
+      "linked_store_id": "com.parsfilo.kenzularsduasi",
+      "approval_state": "APPROVED"
+    },
+    {
+      "flavor": "kuran_kerim",
+      "package": "com.parsfilo.kuran_kerim",
+      "display_name": "Kur'an-ı Kerim: Meal & Okunuş",
+      "admob_app_id": "ca-app-pub-3312485084079132~2762839648",
+      "linked_store_id": "com.parsfilo.kuran_kerim",
+      "approval_state": "APPROVED"
+    },
+    {
+      "flavor": "kible",
+      "package": "com.parsfilo.kible",
+      "display_name": "Kıbleyi Göster – Namaz Yönü",
+      "admob_app_id": "ca-app-pub-3312485084079132~9575660006",
+      "linked_store_id": "com.parsfilo.kible",
+      "approval_state": "APPROVED"
+    },
+    {
+      "flavor": "mucizedualar",
+      "package": "com.parsfilo.mucizedualar",
+      "display_name": "Mucize Dualar",
+      "admob_app_id": "ca-app-pub-3312485084079132~6594273442",
+      "linked_store_id": "com.parsfilo.mucizedualar",
+      "approval_state": "APPROVED"
+    },
+    {
+      "flavor": "namazvakitleri",
+      "package": "com.parsfilo.namazvakitleri",
+      "display_name": "Namaz Ezan Vakitleri",
+      "admob_app_id": "ca-app-pub-3312485084079132~3715770142",
+      "linked_store_id": "com.parsfilo.namazvakitleri",
+      "approval_state": "APPROVED"
+    },
+    {
+      "flavor": "namazsurelerivedualarsesli",
+      "package": "com.parsfilo.namazsurelerivedualarsesli",
+      "display_name": "Namaz Sureleri Sesli - Dualar",
+      "admob_app_id": "ca-app-pub-3312485084079132~9767231692",
+      "linked_store_id": "com.parsfilo.namazsurelerivedualarsesli",
+      "approval_state": "APPROVED"
+    },
+    {
+      "flavor": "nazarayeti",
+      "package": "com.parsfilo.nazarayeti",
+      "display_name": "Nazar Ayeti - Duası",
+      "admob_app_id": "ca-app-pub-3312485084079132~7557505209",
+      "linked_store_id": "com.parsfilo.nazarayeti",
+      "approval_state": "APPROVED"
+    },
+    {
+      "flavor": "vakiasuresi",
+      "package": "com.parsfilo.vakiasuresi",
+      "display_name": "Vakıa Suresi Sesli Dinle",
+      "admob_app_id": "ca-app-pub-3312485084079132~4284536659",
+      "linked_store_id": "com.parsfilo.vakiasuresi",
+      "approval_state": "APPROVED"
+    },
+    {
+      "flavor": "yasinsuresi",
+      "package": "com.parsfilo.yasinsuresi",
+      "display_name": "Yasin Suresi Sesli Dinle",
+      "admob_app_id": "ca-app-pub-3312485084079132~2954411334",
+      "linked_store_id": "com.parsfilo.yasinsuresi",
+      "approval_state": "APPROVED"
+    },
+    {
+      "flavor": "zikirmatik",
+      "package": "com.parsfilo.zikirmatik",
+      "display_name": "Zikirmatik – Tasbih Sayaç",
+      "admob_app_id": "ca-app-pub-3312485084079132~1856290341",
+      "linked_store_id": "com.parsfilo.zikirmatik",
+      "approval_state": "APPROVED"
+    },
+    {
+      "flavor": "insirahsuresi",
+      "package": "com.parsfilo.insirahsuresi",
+      "display_name": "İnşirah Suresi Sesli Dinle",
+      "admob_app_id": "ca-app-pub-3312485084079132~5523265003",
+      "linked_store_id": "com.parsfilo.insirahsuresi",
+      "approval_state": "APPROVED"
+    },
+    {
+      "flavor": "ismiazamduasi",
+      "package": "com.parsfilo.ismiazamduasi",
+      "display_name": "İsmi Azam Duası Sesli Dinle",
+      "admob_app_id": "ca-app-pub-3312485084079132~2404917464",
+      "linked_store_id": "com.parsfilo.ismiazamduasi",
+      "approval_state": "APPROVED"
+    }
+  ],
+  "approved_external_apps": [
+    {
+      "display_name": "Son Depremler",
+      "package": "com.parsfilo.sondepremler",
+      "admob_app_id": "ca-app-pub-3312485084079132~1677068236",
+      "approval_state": "APPROVED",
+      "repository_scope": "external"
+    },
+    {
+      "display_name": "Astroloji: Günlük Burç Yorumu",
+      "package": "com.parsfilo.astrology",
+      "admob_app_id": "ca-app-pub-3312485084079132~3362653443",
+      "approval_state": "APPROVED",
+      "repository_scope": "external"
+    },
+    {
+      "display_name": "Puzzle",
+      "package": "com.parsfilo.puzzle",
+      "admob_app_id": "ca-app-pub-3312485084079132~5389002983",
+      "approval_state": "APPROVED",
+      "repository_scope": "external"
+    },
+    {
+      "display_name": "İmsakiye",
+      "package": "com.parsfilo.imsakiye",
+      "admob_app_id": "ca-app-pub-3312485084079132~7652510108",
+      "approval_state": "APPROVED",
+      "repository_scope": "external"
+    },
+    {
+      "display_name": "Günlük Burç – Astroloji Yorum",
+      "package": "com.parsfilo.gunlukburc",
+      "admob_app_id": "ca-app-pub-3312485084079132~9620500760",
+      "approval_state": "APPROVED",
+      "repository_scope": "external"
+    },
+    {
+      "display_name": "Blok Oyunu",
+      "package": "com.parsfilo.blokoyunu",
+      "admob_app_id": "ca-app-pub-3312485084079132~9899658283",
+      "approval_state": "APPROVED",
+      "repository_scope": "external"
+    }
+  ],
+  "action_required_apps": [
+    {
+      "display_name": "Fetih Suresi Sesli Zoomlu",
+      "admob_app_id": "ca-app-pub-3312485084079132~1467364683",
+      "approval_state": "ACTION_REQUIRED",
+      "linked_store_id": null,
+      "relationship": {
+        "type": "duplicate_of_framework_app",
+        "target_flavor": "fetihsuresi"
+      },
+      "ad_units": [],
+      "traffic_90d": {
+        "ad_requests": 0,
+        "matched_requests": 0,
+        "impressions": 0,
+        "clicks": 0,
+        "estimated_earnings_micros": 0
+      },
+      "recommended_action": "archive_or_remove_after_console_confirmation",
+      "manual_console_status": "pending"
+    },
+    {
+      "display_name": "Missile Core",
+      "admob_app_id": "ca-app-pub-3312485084079132~1878047939",
+      "approval_state": "ACTION_REQUIRED",
+      "linked_store_id": null,
+      "relationship": {
+        "type": "legacy_external_app",
+        "target_flavor": null
+      },
+      "ad_units": [
+        {
+          "ad_unit_id": "ca-app-pub-3312485084079132/5507269356",
+          "name": "missilecore_banner",
+          "format": "BANNER"
+        },
+        {
+          "ad_unit_id": "ca-app-pub-3312485084079132/8089200661",
+          "name": "missilecore_yerel_gelismis",
+          "format": "NATIVE"
+        },
+        {
+          "ad_unit_id": "ca-app-pub-3312485084079132/4705323577",
+          "name": "missilecore_gecis",
+          "format": "INTERSTITIAL"
+        },
+        {
+          "ad_unit_id": "ca-app-pub-3312485084079132/5367668554",
+          "name": "missilecore_uygulama_acikken",
+          "format": "APP_OPEN"
+        },
+        {
+          "ad_unit_id": "ca-app-pub-3312485084079132/6495949799",
+          "name": "missilecore_odullu",
+          "format": "REWARDED"
+        },
+        {
+          "ad_unit_id": "ca-app-pub-3312485084079132/1220539985",
+          "name": "missilecore_odullu_gecis",
+          "format": "REWARDED_INTERSTITIAL"
+        }
+      ],
+      "traffic_90d": {
+        "ad_requests": 0,
+        "matched_requests": 0,
+        "impressions": 0,
+        "clicks": 0,
+        "estimated_earnings_micros": 0
+      },
+      "recommended_action": "archive_or_remove_after_console_confirmation",
+      "manual_console_status": "pending"
+    },
+    {
+      "display_name": "Ayetel Kürsi Oku Dinle Ezberle",
+      "admob_app_id": "ca-app-pub-3312485084079132~2997537381",
+      "approval_state": "ACTION_REQUIRED",
+      "linked_store_id": null,
+      "relationship": {
+        "type": "duplicate_of_framework_app",
+        "target_flavor": "ayetelkursi"
+      },
+      "ad_units": [],
+      "traffic_90d": {
+        "ad_requests": 0,
+        "matched_requests": 0,
+        "impressions": 0,
+        "clicks": 0,
+        "estimated_earnings_micros": 0
+      },
+      "recommended_action": "archive_or_remove_after_console_confirmation",
+      "manual_console_status": "pending"
+    },
+    {
+      "display_name": "Namaz Sureleri Sesli",
+      "admob_app_id": "ca-app-pub-3312485084079132~9663289915",
+      "approval_state": "ACTION_REQUIRED",
+      "linked_store_id": null,
+      "relationship": {
+        "type": "duplicate_of_framework_app",
+        "target_flavor": "namazsurelerivedualarsesli"
+      },
+      "ad_units": [],
+      "traffic_90d": {
+        "ad_requests": 0,
+        "matched_requests": 0,
+        "impressions": 0,
+        "clicks": 0,
+        "estimated_earnings_micros": 0
+      },
+      "recommended_action": "archive_or_remove_after_console_confirmation",
+      "manual_console_status": "pending"
+    }
+  ],
+  "mediation_audit": {
+    "api_status": "permission_denied",
+    "last_checked_on": "2026-07-13",
+    "manual_action": "Grant the service account read access to mediation groups and ad sources, then rerun the account audit."
+  },
+  "cleanup_policy": {
+    "minimum_zero_traffic_days": 90,
+    "require_linked_store_review": true,
+    "require_ad_unit_review": true,
+    "require_manual_console_confirmation": true
+  }
+}

@@ -1,0 +1,33 @@
+<resources>
+    <string name="billing_subscription_title">Abonelik</string>
+    <string name="billing_subscription_description">Reklamsız erişim için ön ödemeli bir plan seçin. Uygulamayı abonelik olmadan reklamlı olarak kullanabilirsiniz.</string>
+
+    <string name="billing_active_title">Aboneliğiniz aktif</string>
+    <string name="billing_active_subtitle">Reklamsız kullanım keyfini çıkarın</string>
+
+    <string name="billing_error_prefix">Hata: %s</string>
+    <string name="billing_error_connecting">Ödeme servisine bağlanılıyor, tekrar deneyin</string>
+    <string name="billing_error_reconnecting">Ödeme servisine yeniden bağlanılıyor, tekrar deneyin</string>
+    <string name="billing_error_unsupported">Bu cihazda abonelik satın alınamıyor. Google Play’i güncelleyin ve tekrar deneyin.</string>
+    <string name="billing_plans_loading">Planlar yükleniyor…</string>
+    <string name="billing_selected_badge">Seçili</string>
+    <string name="billing_subscribe">Google Play ile satın al</string>
+
+    <string name="billing_feature_no_ads">Tüm reklamlar kaldırılır</string>
+    <string name="billing_feature_continuous">Kesintisiz dinleme deneyimi</string>
+    <string name="billing_feature_no_open_ad">Uygulama açılış reklamı yok</string>
+    <string name="billing_feature_cancel_anytime">Otomatik yenilenmez</string>
+    <string name="billing_disclosure_title">Önemli abonelik bilgileri</string>
+    <string name="billing_disclosure_body">Bu planlar ön ödemelidir ve otomatik yenilenmez. Ücret, seçtiğiniz süre için Google Play üzerinden bir kez tahsil edilir. Süre sonunda reklamsız erişim sona erer. Uygulamayı abonelik olmadan reklamlı kullanmaya devam edebilirsiniz.</string>
+    <string name="billing_disclosure_footer">Satın alma ve ödeme işlemleri Google Play üzerinden gerçekleştirilir.</string>
+
+    <string name="billing_plan_daily">Günlük</string>
+    <string name="billing_plan_weekly">Haftalık</string>
+    <string name="billing_plan_monthly">Aylık</string>
+    <string name="billing_plan_2_months">2 Aylık</string>
+    <string name="billing_plan_3_months">3 Aylık</string>
+    <string name="billing_plan_6_months">6 Aylık</string>
+    <string name="billing_plan_yearly">Yıllık</string>
+    <string name="billing_plan_generic">Plan</string>
+    <string name="billing_back">Geri</string>
+</resources>

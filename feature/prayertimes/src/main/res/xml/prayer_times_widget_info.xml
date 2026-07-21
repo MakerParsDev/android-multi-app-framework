@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/prayertimes_widget_desc"
+    android:initialLayout="@layout/prayer_times_widget_loading"
+    android:minWidth="220dp"
+    android:minHeight="72dp"
+    android:previewImage="@drawable/ic_stat_prayer"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />

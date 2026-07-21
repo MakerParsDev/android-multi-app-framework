@@ -1,0 +1,107 @@
+name: Deploy Admin Notifications Panel
+
+on:
+  workflow_dispatch:
+    inputs:
+      pages_project_name:
+        description: "Cloudflare Pages project name"
+        required: false
+        default: "admin-notifications"
+      branch_name:
+        description: "Pages branch/environment name (e.g. production, preview)"
+        required: false
+        default: "main"
+
+concurrency:
+  group: ${{ format('ci-admin-notifications-pages-{0}', github.ref) }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Build & Deploy side-projects/admin-notifications (Cloudflare Pages)
+    runs-on: ubuntu-latest
+    env:
+      INPUT_PAGES_PROJECT_NAME: ${{ github.event.inputs.pages_project_name }}
+      INPUT_BRANCH_NAME: ${{ github.event.inputs.branch_name }}
+      CF_PAGES_PROJECT_FALLBACK: ${{ vars.CF_PAGES_ADMIN_NOTIFICATIONS_PROJECT }}
+      VITE_FIREBASE_API_KEY: ${{ secrets.FIREBASE_WEB_API_KEY }}
+      VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_WEB_AUTH_DOMAIN }}
+      VITE_FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_WEB_PROJECT_ID }}
+      VITE_FIREBASE_APP_ID: ${{ secrets.FIREBASE_WEB_APP_ID }}
+      VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_WEB_MESSAGING_SENDER_ID }}
+      VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_WEB_STORAGE_BUCKET }}
+      VITE_FIREBASE_FUNCTIONS_REGION: ${{ secrets.VITE_FIREBASE_FUNCTIONS_REGION }}
+      VITE_FUNCTIONS_BASE_URL: ${{ secrets.VITE_FUNCTIONS_BASE_URL }}
+      VITE_CONTENT_API_URL: ${{ secrets.VITE_CONTENT_API_URL }}
+      VITE_GA4_PROPERTY_ID: ${{ secrets.VITE_GA4_PROPERTY_ID }}
+      VITE_FLAVOR_VERSIONS: ${{ secrets.VITE_FLAVOR_VERSIONS }}
+      VITE_ADMIN_ALLOWED_EMAILS: ${{ secrets.ADMIN_ALLOWED_EMAILS }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+      CF_R2_ACCOUNT_ID: ${{ secrets.CF_R2_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Verify env contract
+        uses: ./.github/actions/verify-env-contract
+
+      - name: Export fallback deploy env
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ] && [ -n "${CF_API_TOKEN:-}" ]; then
+            echo "::add-mask::$CF_API_TOKEN"
+            echo "CLOUDFLARE_API_TOKEN=$CF_API_TOKEN" >> "$GITHUB_ENV"
+            export CLOUDFLARE_API_TOKEN="$CF_API_TOKEN"
+          fi
+          if [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ] && [ -n "${CF_R2_ACCOUNT_ID:-}" ]; then
+            echo "::add-mask::$CF_R2_ACCOUNT_ID"
+            echo "CLOUDFLARE_ACCOUNT_ID=$CF_R2_ACCOUNT_ID" >> "$GITHUB_ENV"
+            export CLOUDFLARE_ACCOUNT_ID="$CF_R2_ACCOUNT_ID"
+          fi
+          for key in VITE_FIREBASE_API_KEY VITE_FIREBASE_AUTH_DOMAIN VITE_FIREBASE_PROJECT_ID VITE_FIREBASE_APP_ID CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
+            if [[ -z "${!key:-}" ]]; then
+              echo "::error::Missing required secret/env: ${key}"
+              exit 1
+            fi
+            echo "::add-mask::${!key}"
+          done
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: side-projects/admin-notifications/package-lock.json
+
+      - name: Validate deploy configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          PAGES_PROJECT="${INPUT_PAGES_PROJECT_NAME:-${CF_PAGES_PROJECT_FALLBACK:-}}"
+          PAGES_BRANCH="${INPUT_BRANCH_NAME:-main}"
+
+          if [[ -z "${PAGES_PROJECT}" ]]; then
+            echo "::error::Cloudflare Pages project name is missing. Set workflow input 'pages_project_name' or repo variable CF_PAGES_ADMIN_NOTIFICATIONS_PROJECT."
+            exit 1
+          fi
+
+          echo "PAGES_PROJECT=${PAGES_PROJECT}" >> "$GITHUB_ENV"
+          echo "PAGES_BRANCH=${PAGES_BRANCH}" >> "$GITHUB_ENV"
+          echo "::notice::Deploying side-projects/admin-notifications to Cloudflare Pages project=${PAGES_PROJECT} branch=${PAGES_BRANCH}"
+
+      - name: Install dependencies
+        run: npm --prefix side-projects/admin-notifications ci
+
+      - name: Build side-projects/admin-notifications
+        run: npm --prefix side-projects/admin-notifications run build
+
+      - name: Deploy to Cloudflare Pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler@4 pages deploy side-projects/admin-notifications/dist \
+            --project-name "${PAGES_PROJECT}" \
+            --branch "${PAGES_BRANCH}"

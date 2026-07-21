@@ -1,0 +1,25 @@
+{
+  "name": "contentapp-cloudflare-content-api",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0 <21 || >=22.12.0"
+  },
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "node ../../../../scripts/ci/deploy_verified_side_project.mjs content-api",
+    "check": "tsc --noEmit",
+    "lint": "eslint src --max-warnings=0",
+    "test": "rm -rf .test-dist && tsc -p tsconfig.test.json && node --test test/*.test.mjs",
+    "dry-run": "wrangler deploy --dry-run",
+    "verify": "npm run check && npm run lint && npm test && npm run dry-run",
+    "predeploy": "npm run verify"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260721.1",
+    "eslint": "^10.7.0",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.65.0",
+    "wrangler": "^4.112.0"
+  }
+}

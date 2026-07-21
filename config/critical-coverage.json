@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "targets": [
+    {
+      "name": "Remote Config update policy",
+      "entity": "class",
+      "path": "com.parsfilo.contentapp.update.UpdatePolicyKt",
+      "minimum_line": 95,
+      "minimum_branch": 80
+    },
+    {
+      "name": "Remote Config update package",
+      "entity": "package",
+      "path": "com.parsfilo.contentapp.update",
+      "minimum_line": 25,
+      "minimum_branch": 35
+    },
+    {
+      "name": "Push registration retry policy",
+      "entity": "class",
+      "path": "com.parsfilo.contentapp.core.firebase.push.PushRegistrationRetryPolicyKt",
+      "minimum_line": 80,
+      "minimum_branch": 95
+    },
+    {
+      "name": "Push registration package",
+      "entity": "package",
+      "path": "com.parsfilo.contentapp.core.firebase.push",
+      "minimum_line": 1,
+      "minimum_branch": 10
+    },
+    {
+      "name": "Billing verification response parser",
+      "entity": "class",
+      "path": "com.parsfilo.contentapp.feature.billing.BillingVerificationResponseParserKt",
+      "minimum_line": 65,
+      "minimum_branch": 95
+    },
+    {
+      "name": "Billing package",
+      "entity": "package",
+      "path": "com.parsfilo.contentapp.feature.billing",
+      "minimum_line": 20,
+      "minimum_branch": 10
+    },
+    {
+      "name": "Zikir reminder scheduling policy",
+      "entity": "class",
+      "path": "com.parsfilo.contentapp.feature.counter.alarm.ZikirReminderSchedulePolicyKt",
+      "minimum_line": 90,
+      "minimum_branch": 95
+    },
+    {
+      "name": "Zikir reminder alarm package",
+      "entity": "package",
+      "path": "com.parsfilo.contentapp.feature.counter.alarm",
+      "minimum_line": 8,
+      "minimum_branch": 8
+    }
+  ]
+}

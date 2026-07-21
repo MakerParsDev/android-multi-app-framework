@@ -1,0 +1,13 @@
+<resources>
+    <string name="messages_title">Mesajlar</string>
+    <string name="messages_send">Mesaj Gönder</string>
+    <string name="messages_empty">Henüz mesajınız yok</string>
+    <string name="messages_empty_hint">Sağ alttaki butona tıklayarak mesaj gönderebilirsiniz.</string>
+    <string name="messages_empty_cta">@string/messages_send</string>
+    <string name="messages_subject">Konu</string>
+    <string name="messages_body">Mesajınız</string>
+    <string name="messages_has_reply">Yanıt var</string>
+    <string name="messages_error">Hata: %s</string>
+    <string name="send">Gönder</string>
+    <string name="cancel">İptal</string>
+</resources>

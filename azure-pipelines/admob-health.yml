@@ -1,0 +1,52 @@
+name: admob-health-$(Date:yyyyMMdd)$(Rev:.r)
+
+trigger: none
+pr: none
+
+schedules:
+  - cron: '15 5 * * *'
+    displayName: Daily latest AdMob health
+    branches:
+      include:
+        - main
+    always: true
+
+parameters:
+  - name: mode
+    displayName: Health mode
+    type: string
+    default: latest
+    values:
+      - latest
+      - today
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  - group: android-multi-app-framework-prod
+  - name: DOPPLER_PROJECT
+    value: android-multi-app-framework
+  - name: DOPPLER_CONFIG
+    value: prod
+
+steps:
+  - checkout: self
+    clean: true
+    fetchDepth: 0
+
+  - template: /pipelines/templates/steps/security-gate.yml
+    parameters:
+      mode: history
+      selfTest: false
+
+  - bash: bash scripts/azure/install-doppler.sh
+    displayName: Install Doppler CLI
+
+  - bash: bash scripts/azure/doppler-run.sh bash scripts/azure/admob-health.sh
+    displayName: Run AdMob health
+    env:
+      DOPPLER_TOKEN: $(DOPPLER_TOKEN)
+      DOPPLER_PROJECT: $(DOPPLER_PROJECT)
+      DOPPLER_CONFIG: $(DOPPLER_CONFIG)
+      ADMOB_HEALTH_MODE: ${{ parameters.mode }}

@@ -1,0 +1,35 @@
+name: Validate Google Sign-In Config
+
+description: Validate Google Sign-In configuration for one or more flavors. Strict mode is used only for publish/internal release gates.
+
+inputs:
+  flavors:
+    description: Comma-separated flavors or all
+    required: true
+  require_web_client_id:
+    description: Require FIREBASE_WEB_CLIENT_ID to be present and matched
+    required: false
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - name: Validate Google Sign-In Config
+      shell: bash
+      env:
+        FLAVORS: ${{ inputs.flavors }}
+        REQUIRE_WEB_CLIENT_ID: ${{ inputs.require_web_client_id }}
+        FIREBASE_WEB_CLIENT_ID_VALUE: ${{ env.FIREBASE_WEB_CLIENT_ID }}
+      run: |
+        set -euo pipefail
+        args=(--flavors "$FLAVORS")
+        if [ "$REQUIRE_WEB_CLIENT_ID" = 'true' ]; then
+          export WEB_CLIENT_ID="$FIREBASE_WEB_CLIENT_ID_VALUE"
+          args+=(--require-web-client-id)
+          python3 ./scripts/ci/verify_google_signin_config.py "${args[@]}"
+        else
+          unset WEB_CLIENT_ID || true
+          if ! python3 ./scripts/ci/verify_google_signin_config.py "${args[@]}"; then
+            echo "::warning::Google Sign-In config validation reported issues in non-strict mode. Release/publish gates still enforce strict validation."
+          fi
+        fi

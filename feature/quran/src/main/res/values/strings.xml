@@ -1,0 +1,37 @@
+<resources>
+    <string name="quran_title">Kuran-ı Kerim</string>
+    <string name="quran_search_placeholder">Sure ara veya numara gir</string>
+    <string name="quran_bookmarks_title">Yer İmleri</string>
+    <string name="quran_last_read_title">Son okunan</string>
+    <string name="quran_last_read_format">%1$d. sure · %2$d. ayet</string>
+    <string name="quran_revelation_meccan">Mekki</string>
+    <string name="quran_revelation_medinan">Medeni</string>
+    <string name="quran_no_results">Sonuç bulunamadı</string>
+    <string name="quran_no_results_desc">Arama ifadenizi değiştirip tekrar deneyin.</string>
+    <string name="quran_empty_offline">Sure listesi henüz indirilemedi. İlk kurulum için internet bağlantısı gerekiyor.</string>
+    <string name="quran_retry">Tekrar dene</string>
+    <string name="quran_mode_arabic">Arapça</string>
+    <string name="quran_mode_latin">Okunuş</string>
+    <string name="quran_mode_translation">Meal</string>
+    <string name="quran_reciter">Kari</string>
+    <string name="quran_select_reciter">Kari seç</string>
+    <string name="quran_copy">Kopyala</string>
+    <string name="quran_add_bookmark">Yer imi ekle</string>
+    <string name="quran_remove_bookmark">Yer imini kaldır</string>
+    <string name="quran_audio_play">Oynat</string>
+    <string name="quran_audio_pause">Duraklat</string>
+    <string name="quran_audio_download">İndir</string>
+    <string name="quran_audio_downloaded">İndirildi</string>
+    <string name="quran_bookmarks_empty">Henüz yer imi yok.</string>
+    <string name="quran_ayah_label">Ayet %d</string>
+    <string name="quran_open_bookmarks">Yer imleri</string>
+    <string name="quran_open_settings">Ayarlar</string>
+    <string name="quran_open_rewards">Ödüller</string>
+    <string name="quran_error_load_suras">Sure listesi yüklenemedi.</string>
+    <string name="quran_error_load_sura">Sure içeriği yüklenemedi.</string>
+    <string name="quran_audio_download_progress">İndiriliyor %% %d</string>
+    <string name="quran_ayah_actions">Ayet işlemleri</string>
+    <string name="quran_loading">Yükleniyor…</string>
+    <string name="quran_toggle_search">Arama</string>
+    <string name="quran_more_options">Daha fazla seçenek</string>
+</resources>

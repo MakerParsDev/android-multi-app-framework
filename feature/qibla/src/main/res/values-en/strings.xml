@@ -1,0 +1,28 @@
+<resources>
+    <string name="qibla_heading_value">Qibla Bearing: %1$d°</string>
+    <string name="qibla_compass_value">Compass: %1$d°</string>
+    <string name="qibla_instruction">Hold your phone nearly flat and move it in a figure-8 to calibrate magnetic readings.</string>
+    <string name="qibla_location_fallback">Location unavailable, using default region.</string>
+    <string name="qibla_location_format">Location: %1$s, %2$s</string>
+    <string name="qibla_location_accuracy_format">Location accuracy: ±%1$d m</string>
+    <string name="qibla_sensor_format">Sensor: %1$s</string>
+    <string name="qibla_sensor_rotation_vector">Rotation Vector (gyro + accel + magnetic)</string>
+    <string name="qibla_sensor_geomagnetic_rotation">Geomagnetic Rotation Vector (accel + magnetic)</string>
+    <string name="qibla_sensor_accel_magnetometer">Accelerometer + Magnetometer</string>
+    <string name="qibla_sensor_unavailable">No compatible orientation sensor on device</string>
+    <string name="qibla_refresh_location">Refresh location</string>
+    <string name="qibla_location_unavailable">Unable to get live location; fallback is active.</string>
+    <string name="qibla_calibration_hint">Compass accuracy is low. Move your phone in a figure-8 pattern.</string>
+    <string name="qibla_aligned">You are aligned with qibla</string>
+    <string name="qibla_turn_right_format">Turn right by %1$d°</string>
+    <string name="qibla_turn_left_format">Turn left by %1$d°</string>
+    <string name="qibla_location_refreshing">Refreshing location…</string>
+    <string name="qibla_confidence_format">Accuracy Score: %1$d%% (%2$s)</string>
+    <string name="qibla_confidence_excellent">Excellent</string>
+    <string name="qibla_confidence_good">Good</string>
+    <string name="qibla_confidence_fair">Fair</string>
+    <string name="qibla_confidence_low">Low</string>
+    <string name="qibla_kaaba_image_desc">Kaaba image</string>
+    <string name="qibla_settings">Settings</string>
+    <string name="qibla_rewards">Rewards</string>
+</resources>

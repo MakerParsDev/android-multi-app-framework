@@ -1,0 +1,164 @@
+name: AdMob Daily Latest Health
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 6 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  health-check:
+    name: Daily latest-version AdMob health
+    runs-on: ubuntu-latest
+    env:
+      ADMOB_CLIENT_ID: ${{ secrets.ADMOB_CLIENT_ID }}
+      ADMOB_CLIENT_SECRET: ${{ secrets.ADMOB_CLIENT_SECRET }}
+      ADMOB_REFRESH_TOKEN: ${{ secrets.ADMOB_REFRESH_TOKEN }}
+      ADMOB_PUBLISHER_ID: ${{ secrets.ADMOB_PUBLISHER_ID }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install requests google-auth
+
+      - name: Verify env contract
+        uses: ./.github/actions/verify-env-contract
+
+      - name: Validate AdMob credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          for key in ADMOB_CLIENT_ID ADMOB_CLIENT_SECRET ADMOB_REFRESH_TOKEN ADMOB_PUBLISHER_ID; do
+            [ -n "${!key:-}" ] || { echo "::error::Missing required secret/env: ${key}"; exit 1; }
+            echo "::add-mask::${!key}"
+          done
+
+      - name: Build temporary OAuth token file
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > "${RUNNER_TEMP}/admob_token.json" <<JSON
+          {
+            "client_id": "${ADMOB_CLIENT_ID}",
+            "client_secret": "${ADMOB_CLIENT_SECRET}",
+            "refresh_token": "${ADMOB_REFRESH_TOKEN}",
+            "type": "authorized_user"
+          }
+          JSON
+          echo "ADMOB_TOKEN_FILE=${RUNNER_TEMP}/admob_token.json" >> "$GITHUB_ENV"
+
+      - name: Run latest-version-only AdMob health check
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p TEMP_OUT
+          python ./scripts/ci/check_admob_today_latest.py \
+            --token-file "${ADMOB_TOKEN_FILE}" \
+            --publisher "${ADMOB_PUBLISHER_ID}" \
+            --apps-catalog ".ci/apps.json" \
+            --versions-file "app-versions.properties" \
+            --ignore-app-label "Son Depremler" \
+            --ignore-app-label "Astroloji: Günlük Burç Yorumu" \
+            --ignore-app-label "İmsakiye" \
+            --top 20 \
+            --min-requests 50 \
+            --show-rate-threshold 0.20 \
+            --match-rate-threshold 0.50 \
+            --out-json "TEMP_OUT/admob_today_latest_report.json" \
+            --strict \
+            --fail-on-alert
+
+      - name: Append report summary
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f "TEMP_OUT/admob_today_latest_report.json" ]; then
+            echo "No latest-version AdMob report file generated." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path("TEMP_OUT/admob_today_latest_report.json").read_text(encoding="utf-8"))
+          totals = data.get("totals_from_latest_rows", {})
+          filtering = data.get("filtering", {})
+          low = data.get("low_performing_apps", [])
+          zero = data.get("zero_impressions_apps", [])
+          top_apps = data.get("top_apps", [])
+          rollout_watch = data.get("rollout_watch", {})
+          runtime_health_available = data.get("runtime_health_available", False)
+          lines = [
+              "## AdMob Daily Latest-Version Health",
+              f"- Account: `{data.get('account', '-')}`",
+              f"- Currency: `{data.get('currency', '-')}`",
+              f"- Included latest rows: `{filtering.get('latest_rows_included', 0)}`",
+              f"- Excluded legacy rows: `{filtering.get('legacy_rows_excluded', 0)}`",
+              f"- Unmapped apps: `{len(filtering.get('unmapped_apps', {}))}`",
+              f"- Ignored labels: `{len(filtering.get('ignored_apps', {}))}`",
+              f"- Runtime health merged: `{runtime_health_available}`",
+              f"- Requests (latest): `{totals.get('ad_requests', 0)}`",
+              f"- Impressions (latest): `{totals.get('impressions', 0)}`",
+              f"- Earnings (latest): `{totals.get('estimated_earnings', 0)}`",
+              f"- Weighted match rate (latest): `{totals.get('weighted_match_rate', 0)}`",
+              f"- Weighted show rate (latest): `{totals.get('weighted_show_rate', 0)}`",
+              f"- Low performing apps: `{len(low)}`",
+              f"- Zero-impression apps: `{len(zero)}`",
+              "",
+              "### Top latest-version apps (by earnings)",
+          ]
+          for app in top_apps[:10]:
+              runtime = app.get('runtime_health') or {}
+              rollout_bits = []
+              if app.get('play_live_version'):
+                  rollout_bits.append(f"play={app.get('play_live_version')}")
+              if runtime:
+                  rollout_bits.append(f"recentSyncPct={runtime.get('recentSyncPct', '-')}")
+                  rollout_bits.append(f"stalePct={runtime.get('stalePct', '-')}")
+                  rollout_bits.append(f"topSuppress={runtime.get('topSuppressReason', '-')}")
+              lines.append(
+                  f"- `{app.get('app', 'unknown')}` v`{app.get('latest_version', '-')}` "
+                  f"| req={app.get('ad_requests', 0)} imp={app.get('impressions', 0)} "
+                  f"show={app.get('show_rate', 0)} match={app.get('match_rate', 0)} "
+                  f"earn={app.get('estimated_earnings', 0)}"
+                  + (f" | {' '.join(rollout_bits)}" if rollout_bits else "")
+              )
+          amen = rollout_watch.get("amenerrasulu")
+          if amen:
+              runtime = amen.get("runtime_health") or {}
+              lines.extend([
+                  "",
+                  "### Amenerrasulu rollout watch",
+                  f"- Latest version: `{amen.get('latest_version', '-')}`",
+                  f"- Play live version: `{amen.get('play_live_version', '-')}`",
+                  f"- Requests: `{amen.get('ad_requests', 0)}` impressions: `{amen.get('impressions', 0)}`",
+                  f"- Match/show: `{amen.get('match_rate', 0)}` / `{amen.get('show_rate', 0)}`",
+                  f"- Recent sync pct: `{runtime.get('recentSyncPct', '-')}`",
+                  f"- Stale pct: `{runtime.get('stalePct', '-')}`",
+                  f"- Top suppress: `{runtime.get('topSuppressReason', '-')}`",
+              ])
+          Path(".github_admob_latest_summary.md").write_text("\n".join(lines), encoding="utf-8")
+          PY
+          cat .github_admob_latest_summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload latest-version AdMob health artifact
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: admob-daily-latest-health-report
+          path: |
+            TEMP_OUT/admob_today_latest_report.json
+            .github_admob_latest_summary.md
+          if-no-files-found: warn
+          retention-days: 14

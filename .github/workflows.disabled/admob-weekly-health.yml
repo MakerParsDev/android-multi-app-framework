@@ -1,0 +1,137 @@
+name: AdMob Weekly Health
+
+on:
+  workflow_dispatch:
+    inputs:
+      fail_on_alert:
+        description: "Fail workflow when low-performing/zero-impression alerts exist"
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    - cron: "0 6 * * 5"
+
+permissions:
+  contents: read
+
+jobs:
+  health-check:
+    name: Weekly AdMob health check
+    runs-on: ubuntu-latest
+    env:
+      FAIL_ON_ALERT: ${{ (github.event_name == 'workflow_dispatch' && inputs.fail_on_alert) || 'false' }}
+      ADMOB_CLIENT_ID: ${{ secrets.ADMOB_CLIENT_ID }}
+      ADMOB_CLIENT_SECRET: ${{ secrets.ADMOB_CLIENT_SECRET }}
+      ADMOB_REFRESH_TOKEN: ${{ secrets.ADMOB_REFRESH_TOKEN }}
+      ADMOB_PUBLISHER_ID: ${{ secrets.ADMOB_PUBLISHER_ID }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install requests google-auth
+
+      - name: Verify env contract
+        uses: ./.github/actions/verify-env-contract
+
+      - name: Validate AdMob credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          for key in ADMOB_CLIENT_ID ADMOB_CLIENT_SECRET ADMOB_REFRESH_TOKEN ADMOB_PUBLISHER_ID; do
+            [ -n "${!key:-}" ] || { echo "::error::Missing required secret/env: ${key}"; exit 1; }
+            echo "::add-mask::${!key}"
+          done
+
+      - name: Build temporary OAuth token file
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > "${RUNNER_TEMP}/admob_token.json" <<JSON
+          {
+            "client_id": "${ADMOB_CLIENT_ID}",
+            "client_secret": "${ADMOB_CLIENT_SECRET}",
+            "refresh_token": "${ADMOB_REFRESH_TOKEN}",
+            "type": "authorized_user"
+          }
+          JSON
+          echo "ADMOB_TOKEN_FILE=${RUNNER_TEMP}/admob_token.json" >> "$GITHUB_ENV"
+
+      - name: Run AdMob health check (today so far)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p TEMP_OUT
+          EXTRA_ARGS=""
+          if [ "${FAIL_ON_ALERT}" = "true" ]; then
+            EXTRA_ARGS="--fail-on-alert"
+          fi
+          python ./scripts/ci/check_admob_today.py \
+            --token-file "${ADMOB_TOKEN_FILE}" \
+            --publisher "${ADMOB_PUBLISHER_ID}" \
+            --top 20 \
+            --min-requests 50 \
+            --show-rate-threshold 0.20 \
+            --match-rate-threshold 0.50 \
+            --out-json "TEMP_OUT/admob_today_report.json" \
+            ${EXTRA_ARGS}
+
+      - name: Append report summary
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f "TEMP_OUT/admob_today_report.json" ]; then
+            echo "No AdMob report file generated." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path("TEMP_OUT/admob_today_report.json").read_text(encoding="utf-8"))
+          totals = data.get("totals_from_rows", {})
+          low = data.get("low_performing_apps", [])
+          zero = data.get("zero_impressions_apps", [])
+          top_apps = data.get("top_apps", [])
+          lines = [
+              "## AdMob Weekly Health Summary",
+              f"- Account: `{data.get('account', '-')}`",
+              f"- Currency: `{data.get('currency', '-')}`",
+              f"- Requests: `{totals.get('ad_requests', 0)}`",
+              f"- Impressions: `{totals.get('impressions', 0)}`",
+              f"- Earnings: `{totals.get('estimated_earnings', 0)}`",
+              f"- Weighted match rate: `{totals.get('weighted_match_rate', 0)}`",
+              f"- Weighted show rate: `{totals.get('weighted_show_rate', 0)}`",
+              f"- Low performing apps: `{len(low)}`",
+              f"- Zero-impression apps: `{len(zero)}`",
+              "",
+              "### Top apps (by earnings)",
+          ]
+          for app in top_apps[:10]:
+              lines.append(
+                  f"- `{app.get('app', 'unknown')}` | req={app.get('ad_requests', 0)} "
+                  f"imp={app.get('impressions', 0)} show={app.get('show_rate', 0)} "
+                  f"match={app.get('match_rate', 0)} earn={app.get('estimated_earnings', 0)}"
+              )
+          Path(".github_admob_summary.md").write_text("\n".join(lines), encoding="utf-8")
+          PY
+          cat .github_admob_summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload AdMob health artifact
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: admob-health-report
+          path: |
+            TEMP_OUT/admob_today_report.json
+            .github_admob_summary.md
+          if-no-files-found: warn
+          retention-days: 14

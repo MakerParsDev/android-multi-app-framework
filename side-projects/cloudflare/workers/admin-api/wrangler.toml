@@ -1,0 +1,47 @@
+name = "contentapp-admin-api"
+main = "src/index.ts"
+compatibility_date = "2026-03-10"
+workers_dev = true
+
+[version_metadata]
+binding = "CF_VERSION_METADATA"
+
+[triggers]
+crons = ["0 * * * *", "15 7 * * 1"]
+
+[vars]
+SERVICE_ENVIRONMENT = "production"
+
+# Required
+FIREBASE_PROJECT_ID = "makerpars-oaslananka-mobil"
+FIREBASE_PROJECT_NUMBER = "462747480927"
+FIREBASE_APP_CHECK_ALLOWED_APP_IDS = "1:462747480927:android:04edc26b60ca1e6811bcea,1:462747480927:android:1db6899015e2fab911bcea,1:462747480927:android:31c8c39a8fab52bd11bcea,1:462747480927:android:5416d077d1fc631111bcea,1:462747480927:android:5bf43386d5e8b86311bcea,1:462747480927:android:5f2b006ffbd6f4c011bcea,1:462747480927:android:6a00ad3576e1a27711bcea,1:462747480927:android:b3de33d1c9e30ad111bcea,1:462747480927:android:b76cb7c5240d937e11bcea,1:462747480927:android:bca425acab83705d11bcea,1:462747480927:android:c13c2c0887442cfe11bcea,1:462747480927:android:c1a779f315c665b611bcea,1:462747480927:android:c87cf2e2e0fae90c11bcea,1:462747480927:android:d245b2a36342693011bcea,1:462747480927:android:d37c6ca6b76b503211bcea,1:462747480927:android:d8f5a4eb0274905b11bcea,1:462747480927:android:ff210c47d3978dd911bcea"
+VERIFY_PURCHASE_REQUIRE_APP_CHECK = "true"
+REGISTER_DEVICE_REQUIRE_APP_CHECK = "true"
+ADMOB_PUBLISHER_ID = "pub-3312485084079132"
+
+# Optional, comma-separated exact origins or wildcard patterns (e.g. https://*.pages.dev)
+# ALLOWED_ADMIN_ORIGINS = "https://admin.parsfilo.com,https://parsfilo-admin.pages.dev,http://localhost:5173"
+
+# Optional fallback allowlist, comma/space/semicolon-separated emails.
+# ADMIN_ALLOWED_EMAILS = "makerpars@gmail.com,oaslananka@gmail.com"
+
+# Optional AdMob report thresholds
+# AD_HEALTH_MIN_REQUESTS = "500"
+# AD_HEALTH_FILL_RATE_THRESHOLD = "55"
+# AD_HEALTH_SHOW_RATE_THRESHOLD = "20"
+
+# Required secret:
+# FIREBASE_WEB_API_KEY
+#   npx wrangler secret put FIREBASE_WEB_API_KEY
+#
+# Optional secret (needed for Firestore /admins uid lookup and auto-upsert):
+# FIREBASE_SERVICE_ACCOUNT_JSON
+#   npx wrangler secret put FIREBASE_SERVICE_ACCOUNT_JSON
+#
+# Optional secrets (needed for /adPerformance refresh and weekly cron report):
+#   npx wrangler secret put ADMOB_CLIENT_ID
+#   npx wrangler secret put ADMOB_CLIENT_SECRET
+#   npx wrangler secret put ADMOB_REFRESH_TOKEN
+# Optional var:
+# ADMOB_PUBLISHER_ID = "pub-xxxxxxxxxxxxxxxx"

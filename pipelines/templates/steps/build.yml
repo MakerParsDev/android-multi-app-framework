@@ -1,0 +1,66 @@
+parameters:
+  buildType: Debug # Debug|Release
+  doAssemble: true
+  doBundle: false
+
+steps:
+  - bash: |
+      set -euo pipefail
+      chmod +x ./gradlew
+
+      BUILD_TYPE="${{ parameters.buildType }}"
+      if [ "$BUILD_TYPE" != "Debug" ] && [ "$BUILD_TYPE" != "Release" ]; then
+        echo "Invalid buildType: $BUILD_TYPE"
+        exit 1
+      fi
+
+      RESOLVED_JSON="${RESOLVED_FLAVORS_JSON:-}"
+      if [ -z "$RESOLVED_JSON" ]; then
+        echo "RESOLVED_FLAVORS_JSON is missing. Did resolve-flavors.yml run?"
+        exit 1
+      fi
+
+      mapfile -t FLAVORS < <(
+        echo "$RESOLVED_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d'
+      )
+      if [ "${#FLAVORS[@]}" -eq 0 ]; then
+        echo "No flavors to build."
+        exit 1
+      fi
+
+      DO_ASSEMBLE="${{ parameters.doAssemble }}"
+      DO_BUNDLE="${{ parameters.doBundle }}"
+
+      if [ "$BUILD_TYPE" = "Debug" ] && [ "$DO_BUNDLE" = "true" ]; then
+        echo "bundle is Release-only. Set buildType=Release."
+        exit 1
+      fi
+
+      TASKS=()
+      for flavor in "${FLAVORS[@]}"; do
+        [ -z "$flavor" ] && continue
+        cap="$(tr '[:lower:]' '[:upper:]' <<< "${flavor:0:1}")${flavor:1}"
+
+        if [ "$DO_ASSEMBLE" = "true" ]; then
+          TASKS+=("assemble${cap}${BUILD_TYPE}")
+        fi
+
+        if [ "$DO_BUNDLE" = "true" ]; then
+          TASKS+=("bundle${cap}Release")
+        fi
+      done
+
+      if [ "${#TASKS[@]}" -eq 0 ]; then
+        echo "No Gradle tasks selected (doAssemble/doBundle are both false)."
+        exit 0
+      fi
+
+      echo "Running Gradle tasks: ${TASKS[*]}"
+      ./gradlew "${TASKS[@]}" --stacktrace --no-daemon --max-workers=2
+    displayName: Build (assemble/bundle)
+    env:
+      KEYSTORE_FILE: $(KEYSTORE_FILE)
+      KEYSTORE_PASSWORD: $(KEYSTORE_PASSWORD)
+      KEY_ALIAS: $(KEY_ALIAS)
+      KEY_PASSWORD: $(KEY_PASSWORD)
+

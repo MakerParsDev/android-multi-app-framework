@@ -1,0 +1,104 @@
+<resources>
+    <string name="settings_title">Ayarlar</string>
+    <string name="settings_back">Geri</string>
+    <string name="settings_dark_mode">Karanlık Mod</string>
+    <string name="settings_font_size_value">Yazı Boyutu: %d</string>
+    <string name="settings_notifications">Bildirimler</string>
+    <string name="settings_notifications_desc">Uygulama bildirimlerini aç/kapat</string>
+    <string name="settings_share_app">Bu uygulamayı paylaş</string>
+    <string name="settings_share_app_desc">Uygulamayı sistem paylaşım menüsü ile paylaşın</string>
+    <string name="settings_share_app_button">Uygulamayı paylaş</string>
+    <string name="settings_share_app_message">Bu uygulamayı dene: %1$s</string>
+    <string name="settings_device_id_title">Cihaz Kimliği</string>
+    <string name="settings_device_id_desc">Test bildirimi için bu kimliği kullanın</string>
+    <string name="settings_device_id_copy">Kimliği Kopyala</string>
+    <string name="settings_device_id_copied">Cihaz kimliği kopyalandı</string>
+    <string name="settings_push_health_status">Push durumu: %1$s · Son başarılı senkron: %2$s</string>
+    <string name="settings_push_health_ready">hazır</string>
+    <string name="settings_push_health_missing">token eksik</string>
+    <string name="settings_push_health_failure">Son hata: %1$s</string>
+    <string name="settings_push_retry_now">Push kaydını şimdi yeniden dene</string>
+    <string name="settings_push_retry_started">Push kayıt denemesi başlatıldı</string>
+    <string name="settings_developer_mode_enabled">Developer modu açıldı</string>
+    <string name="settings_fcm_debug_title">Debug FCM Token</string>
+    <string name="settings_fcm_debug_desc">Sadece debug derlemelerde görünür. Test bildirimi için token alın.</string>
+    <string name="settings_fcm_debug_empty">Henüz token alınmadı.</string>
+    <string name="settings_fcm_debug_refresh">Token Al / Yenile</string>
+    <string name="settings_fcm_debug_fetching">Token alınıyor…</string>
+    <string name="settings_fcm_debug_copy">FCM Token Kopyala</string>
+    <string name="settings_fcm_debug_copied">FCM token kopyalandı</string>
+    <string name="settings_fcm_debug_refreshed">FCM token güncellendi</string>
+    <string name="settings_fcm_debug_error">FCM token alınamadı</string>
+
+    <string name="settings_crash_debug_title">Crashlytics Test</string>
+    <string name="settings_crash_debug_desc">Sadece debug derlemelerde görünür. Crashlytics raporlamasını test edin.</string>
+    <string name="settings_crash_debug_fatal">💥 Test Crash (Fatal)</string>
+    <string name="settings_crash_debug_non_fatal">⚠️ Non-Fatal Hata Gönder</string>
+    <string name="settings_crash_debug_non_fatal_sent">Non-fatal hata Crashlytics’e gönderildi</string>
+
+    <string name="settings_language">Dil</string>
+    <string name="settings_language_system">Sistem</string>
+    <string name="settings_language_tr">Türkçe</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_language_de">Deutsch</string>
+    <string name="settings_language_changed">Dil değiştirildi</string>
+
+    <string name="settings_privacy_options">Gizlilik seçenekleri</string>
+    <string name="settings_privacy_options_desc_required">Reklam gizlilik seçenekleri gerekli</string>
+    <string name="settings_privacy_options_desc_optional">Gizlilik ve reklam tercihlerini görüntüle / güncelle</string>
+    <string name="settings_privacy_options_button">Yönet</string>
+    <string name="settings_privacy_options_unavailable">Bu işlem şu anda kullanılamıyor</string>
+    <string name="settings_privacy_options_error">Gizlilik seçenekleri açılamadı</string>
+    <string name="settings_privacy_options_saved">Gizlilik tercihleri güncellendi</string>
+    <string name="settings_privacy_options_not_required_now">Bu bölgede gizlilik seçenekleri şu an gerekli değil.</string>
+
+    <string name="settings_ads_age_gate_title">Reklam yaş tercihi</string>
+    <string name="settings_ads_age_gate_desc">Reklam gizlilik ayarları için yaş grubunu belirtin</string>
+    <string name="settings_ads_age_unknown">Belirtmek istemiyorum</string>
+    <string name="settings_ads_age_under_13">13 yaş altıyım</string>
+    <string name="settings_ads_age_13_to_15">13–15 yaş arasındayım</string>
+    <string name="settings_ads_age_16_or_over">16 yaş ve üzeriyim</string>
+
+    <string name="settings_ads_debug_title">Ads Debug (UMP / GMA)</string>
+    <string name="settings_ads_debug_desc">Sadece debug derlemelerde görünür. Consent ve reklam araçlarını test edin.</string>
+    <string name="settings_ads_debug_geo_status">UMP debug geography: %1$s</string>
+    <string name="settings_ads_debug_geo_last_request_status">Son UMP isteğinde kullanılan geography: %1$s</string>
+    <string name="settings_ads_debug_can_request_ads">Reklam isteyebilir: %1$s</string>
+    <string name="settings_ads_debug_yes">evet</string>
+    <string name="settings_ads_debug_no">hayır</string>
+    <string name="settings_ads_debug_privacy_options_status">Gizlilik seçenekleri gerekli: %1$s</string>
+    <string name="settings_ads_debug_last_result">Son UMP sonucu: %1$s</string>
+    <string name="settings_ads_debug_last_result_idle">henüz çalıştırılmadı</string>
+    <string name="settings_ads_debug_last_result_shown">form gösterildi</string>
+    <string name="settings_ads_debug_last_result_not_required">form gerekli değildi</string>
+    <string name="settings_ads_debug_last_result_error">hata: %1$s</string>
+    <string name="settings_ads_debug_geo_effective_none">Debug geography devre dışı. Normal coğrafya tespiti kullanılacak.</string>
+    <string name="settings_ads_debug_geo_effective_applied">Seçilen geography UMP isteğine uygulanmış: %1$s</string>
+    <string name="settings_ads_debug_geo_effective_pending">Seçilen geography henüz UMP isteğine uygulanmadı: %1$s. Gerekliyse Rıza Formunu Göster veya consent yenile.</string>
+    <string name="settings_ads_debug_open_inspector">Ad Inspector Aç</string>
+    <string name="settings_ads_debug_reset_consent">Consent Sıfırla</string>
+    <string name="settings_ads_debug_show_consent_form">Gerekliyse Rıza Formunu Göster</string>
+    <string name="settings_ads_debug_force_eea">Force EEA</string>
+    <string name="settings_ads_debug_force_us">Force US States</string>
+    <string name="settings_ads_debug_clear_geo">Debug Geography Temizle</string>
+    <string name="settings_ads_debug_geo_set_reset_hint">UMP debug geography: %1$s. Consent sıfırlandı. Test için Gerekliyse Rıza Formunu Göster’e basın.</string>
+    <string name="settings_ads_debug_ad_inspector_opened">Ad Inspector açıldı</string>
+    <string name="settings_ads_debug_ad_inspector_error">Ad Inspector açılamadı</string>
+    <string name="settings_ads_debug_consent_reset">Consent bilgisi sıfırlandı</string>
+    <string name="settings_ads_debug_consent_form_done">Rıza akışı tamamlandı</string>
+    <string name="settings_ads_debug_consent_form_error">Consent akışı tamamlanamadı</string>
+    <string name="settings_ads_debug_consent_form_not_required">Rıza formu gerekli değildi</string>
+    <string name="settings_ads_debug_consent_form_shown">Rıza formu gösterildi</string>
+    <string name="settings_ads_debug_ads_config_updated">Reklam ayarları güncellendi</string>
+
+    <string name="settings_update_debug_title">Güncelleme Hata Ayıklama (Remote Config)</string>
+    <string name="settings_update_debug_desc">Sadece debug derlemelerde görünür. Force update akışını test edin.</string>
+    <string name="settings_update_debug_summary_empty">Henüz force update verisi alınmadı.</string>
+    <string name="settings_update_debug_fetch_now">Remote Config Getir</string>
+    <string name="settings_update_debug_fetch_started">Remote Config fetch başlatıldı</string>
+    <string name="settings_update_debug_simulate_soft">Yumuşak Simüle Et</string>
+    <string name="settings_update_debug_simulate_hard">Zorlu Simüle Et</string>
+    <string name="settings_update_debug_clear_simulation">Simülasyonu Temizle</string>
+    <string name="settings_update_debug_reset_soft_session">Yumuşak İstemi Sıfırla</string>
+</resources>
+

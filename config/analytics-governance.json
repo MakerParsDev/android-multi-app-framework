@@ -1,0 +1,221 @@
+{
+  "schema_version": 2,
+  "ga4_property_id": "526790653",
+  "retention_months": 14,
+  "required_default_parameters": [
+    "flavor_id",
+    "app_version",
+    "analytics_schema_version",
+    "consent_state",
+    "subscription_status"
+  ],
+  "custom_dimensions": [
+    {
+      "parameter_name": "flavor_id",
+      "display_name": "Flavor ID",
+      "scope": "EVENT",
+      "cardinality": "low",
+      "description": "Stable product flavor identifier shared by all Android streams."
+    },
+    {
+      "parameter_name": "app_version",
+      "display_name": "App Version",
+      "scope": "EVENT",
+      "cardinality": "medium",
+      "description": "Application version name attached to every governed event."
+    },
+    {
+      "parameter_name": "consent_state",
+      "display_name": "Consent State",
+      "scope": "EVENT",
+      "cardinality": "low",
+      "description": "Resolved analytics/ads consent lifecycle state."
+    },
+    {
+      "parameter_name": "ad_format",
+      "display_name": "Ad Format",
+      "scope": "EVENT",
+      "cardinality": "low",
+      "description": "Banner, interstitial, rewarded, app-open, or native format."
+    },
+    {
+      "parameter_name": "ad_placement",
+      "display_name": "Ad Placement",
+      "scope": "EVENT",
+      "cardinality": "medium",
+      "description": "Bounded AdPlacement enum value."
+    },
+    {
+      "parameter_name": "content_id",
+      "display_name": "Content ID",
+      "scope": "EVENT",
+      "cardinality": "high",
+      "description": "Bounded application content identifier; never a user identifier."
+    },
+    {
+      "parameter_name": "subscription_status",
+      "display_name": "Subscription Status",
+      "scope": "EVENT",
+      "cardinality": "low",
+      "description": "unknown, loading, active, inactive, or error."
+    }
+  ],
+  "custom_metrics": [
+    {
+      "parameter_name": "ad_value",
+      "display_name": "Ad Value",
+      "scope": "EVENT",
+      "measurement_unit": "STANDARD",
+      "description": "Paid-event numeric value; currency is carried by the same event's currency parameter."
+    },
+    {
+      "parameter_name": "audio_duration_ms",
+      "display_name": "Audio Duration",
+      "scope": "EVENT",
+      "measurement_unit": "MILLISECONDS",
+      "description": "Completed audio duration in milliseconds."
+    },
+    {
+      "parameter_name": "load_latency_ms",
+      "display_name": "Ad Load Latency",
+      "scope": "EVENT",
+      "measurement_unit": "MILLISECONDS",
+      "description": "Ad request-to-fill latency in milliseconds."
+    }
+  ],
+  "key_events": [
+    "purchase",
+    "content_play_complete",
+    "audio_complete",
+    "rewarded_watch_complete",
+    "push_open"
+  ],
+  "retired_key_events": [
+    "add_to_cart",
+    "add_to_wishlist",
+    "begin_checkout",
+    "session_start",
+    "view_item",
+    "view_item_list",
+    "view_search_results"
+  ],
+  "event_owner_rules": [
+    {
+      "prefix": "ad_",
+      "owner": "monetization"
+    },
+    {
+      "prefix": "rewarded_",
+      "owner": "monetization"
+    },
+    {
+      "prefix": "history_unlock_",
+      "owner": "monetization"
+    },
+    {
+      "prefix": "purchase",
+      "owner": "billing"
+    },
+    {
+      "prefix": "subscription_",
+      "owner": "billing"
+    },
+    {
+      "prefix": "billing_",
+      "owner": "billing"
+    },
+    {
+      "prefix": "paywall_",
+      "owner": "billing"
+    },
+    {
+      "prefix": "audio_",
+      "owner": "audio"
+    },
+    {
+      "prefix": "content_",
+      "owner": "content"
+    },
+    {
+      "prefix": "verse_",
+      "owner": "content"
+    },
+    {
+      "prefix": "display_",
+      "owner": "content"
+    },
+    {
+      "prefix": "prayer_",
+      "owner": "prayer-times"
+    },
+    {
+      "prefix": "push_",
+      "owner": "notifications"
+    },
+    {
+      "prefix": "notification_",
+      "owner": "notifications"
+    },
+    {
+      "prefix": "notifications_",
+      "owner": "notifications"
+    },
+    {
+      "prefix": "consent_",
+      "owner": "privacy"
+    },
+    {
+      "prefix": "privacy_",
+      "owner": "privacy"
+    },
+    {
+      "prefix": "age_gate_",
+      "owner": "privacy"
+    },
+    {
+      "prefix": "screen_",
+      "owner": "platform"
+    },
+    {
+      "prefix": "tab_",
+      "owner": "navigation"
+    },
+    {
+      "prefix": "login",
+      "owner": "identity"
+    },
+    {
+      "prefix": "user_logout",
+      "owner": "identity"
+    },
+    {
+      "prefix": "share",
+      "owner": "engagement"
+    }
+  ],
+  "pii_policy": {
+    "forbidden_parameter_tokens": [
+      "email",
+      "phone",
+      "address",
+      "auth_token",
+      "access_token",
+      "refresh_token",
+      "purchase_token",
+      "advertising_id",
+      "device_id",
+      "latitude",
+      "longitude"
+    ],
+    "runtime_dropped_parameters": [
+      "error_message"
+    ],
+    "opaque_user_id_prefix": "anon_",
+    "max_string_length": 100
+  },
+  "cardinality_policy": {
+    "low": "Fewer than 50 values per 30 days.",
+    "medium": "Fewer than 500 values per 30 days.",
+    "high": "Not used as a default dashboard dimension; query only with bounded filters."
+  }
+}

@@ -1,0 +1,242 @@
+[
+    {
+        "ayetID": 1,
+        "ayetAR": "بسم الله الرحمن الرحيم",
+        "ayetLAT": "Bismillâhirrahmânirrahîm",
+        "ayetTR": "Rahmân ve Rahîm olan Allah’ın adıyla."
+    },
+    {
+        "ayetID": 2,
+        "ayetAR": "لَا إِلٰهَ إِلَّا اللّٰهُ الْمَلِكُ الْحَقُّ الْمُبِينُ",
+        "ayetLAT": "Lâ ilâhe illâllâhül melikül hakkul mübîn.",
+        "ayetTR": "Melik (kral), Hakk, Mübin Allah’tan başka ilah yoktur."
+    },
+    {
+        "ayetID": 3,
+        "ayetAR": "لَا إِلٰهَ إِلَّا اللّٰهُ الْحَكَمُ الْعَدْلُ الْمَتِينُ",
+        "ayetLAT": "Lâ ilâhe illâllâhül hakemül adlül metîn.",
+        "ayetTR": "Hakem, Adl ve Metin Allah’tan başka ilah yoktur."
+    },
+    {
+        "ayetID": 4,
+        "ayetAR": "رَبُّنَا وَرَبُّ اٰبَائِنَا الْأَوَّلِينَ",
+        "ayetLAT": "Rabbunâ ve rabbü âbâinel evvelîn.",
+        "ayetTR": "Bizim ve eski atalarımızın Rabbidir."
+    },
+    {
+        "ayetID": 5,
+        "ayetAR": "لَا إِلٰهَ إِلَّا أَنْتَ سُبْحَانَكَ إِنِّي كُنْتُ مِنَ الظَّالِمِينَ",
+        "ayetLAT": "Lâ ilâhe illâ ente sübhâneke innî küntü minezzâlimîn.",
+        "ayetTR": "Senden başka ilah yoktur. Sen arınıksındır. Ben zalimlerden oldum."
+    },
+    {
+        "ayetID": 6,
+        "ayetAR": "لَا إِلٰهَ إِلَّا اللّٰهُ وَحْدَهُ لَا شَرِيكَ لَهُ لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ يُحْيِي وَيُمِيتُ وَهُوَ حَيٌّ لَا يَمُوتُ أَبَدًا بِيَدِهِ الْخَيْرُ وَإِلَيْهِ الْمَصِيرُ وَهُوَ عَلٰى كُلِّ شَيْءٍ قَدِيرٌ وَبِهِ نَسْتَعِينُ وَلَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللّٰهِ الْعَلِيِّ الْعَظِيمِ",
+        "ayetLAT": "Lâ ilâhe illâllâhü vahdehû lâ şerîke leh, lehül mülkü ve lehül hamdü yuhyî ve yumîtü ve hüve hayyül lâ yemûtü ebeden, biyedihil hayr, ve ileyhil masîr, ve hüve alâ külli şey’in kadîr. Ve bihî neste’înü ve lâ havle ve lâ kuvvete illâ billâhil aliyyil azîm.",
+        "ayetTR": "Allah’tan başka ilah yoktur. Onun ortağı yoktur. Mülk (yönetim) onundur, övgüler de onadır. Diriltir ve öldürür. O diridir ve ebediyen ölmez. Hayır onun elindedir, dönüş onadır. O her şeye gücü yetendir. Ve yalnız O’ndan yardım dileriz. İyilik yapmaya da kötülükten kaçınmaya güç ve kuvvet, ancak yüce ve büyük Allah’tandır."
+    },
+    {
+        "ayetID": 7,
+        "ayetAR": "لَا إِلٰهَ إِلَّا اللّٰهُ شُكْرَ النِّعْمَةِ",
+        "ayetLAT": "Lâ ilâhe illâllâhü şükran ni’metih.",
+        "ayetTR": "Nimetlere şükür olarak, ondan başka ilah yoktur."
+    },
+    {
+        "ayetID": 8,
+        "ayetAR": "لَا إِلٰهَ إِلَّا اللّٰهُ إِقْرَارًا بِرُبُوبِيَّتِهِ",
+        "ayetLAT": "Lâ ilâhe illâllâhü ikrâran bi rubûbiyyetih.",
+        "ayetTR": "Rablığının ikrarı olarak, ondan başka ilah yoktur."
+    },
+    {
+        "ayetID": 9,
+        "ayetAR": "وَسُبْحَانَ اللّٰهِ تَنْزِيهًا لِعَظَمَتِهِ",
+        "ayetLAT": "Ve sübhânallâhi tenzîhen li azametih.",
+        "ayetTR": "Yüceliğini tenzih etmek için Allah noksanlıklardan münezzehtir."
+    },
+    {
+        "ayetID": 10,
+        "ayetAR": "اَسْأَلُكَ اللّٰهُمَّ بِحَقِّ اِسْمِكَ الْمَكْتُوبِ عَلٰى جَنَاحِ جِبْرِيلَ عَلَيْكَ يَا رَبّ",
+        "ayetLAT": "Es’elüke’llâhümme bi hakkı ismikellezî mektûbi alâ cenâhı Cibrîl aleyke yâ Rab.",
+        "ayetTR": "Cebrâil’in (a.s.) kanadında yazılı ismin hürmetine."
+    },
+    {
+        "ayetID": 11,
+        "ayetAR": "وَبِحَقِّ اِسْمِكَ الْمَكْتُوبِ عَلٰى مِيكَائِيلَ عَلَيْكَ يَا رَبّ",
+        "ayetLAT": "Ve bi hakkı ismikellezî mektûbi alâ cenâhı Mîkâîl aleyke yâ Rab.",
+        "ayetTR": "Mîkâil’in (a.s.) kanadı üzerinde yazılı ismin hürmetine."
+    },
+    {
+        "ayetID": 12,
+        "ayetAR": "وَبِحَقِّ اِسْمِكَ الْمَكْتُوبِ عَلٰى جَبْهَةِ إِسْرَافِيلَ عَلَيْكَ يَا رَبّ",
+        "ayetLAT": "Ve bi hakkı ismikellezî mektûbi alâ cebheti Isrâfîl aleyke yâ Rab.",
+        "ayetTR": "İsrâfîl’in (a.s.) alnında yazılı ismin hürmetine."
+    },
+    {
+        "ayetID": 13,
+        "ayetAR": "وَبِحَقِّ اِسْمِكَ الْمَكْتُوبِ عَلٰى كَفِّ عَزْرَائِيلَ عَلَيْكَ يَا رَبّ",
+        "ayetLAT": "Ve bi hakkı ismikellezî mektûbi alâ keffi Azrâîl aleyke yâ Rab.",
+        "ayetTR": "Azrâil’in (a.s.) avucunda yazılı ismin hürmetine."
+    },
+    {
+        "ayetID": 14,
+        "ayetAR": "وَبِحَقِّ اِسْمِكَ الَّذِي سَمَّيْتَ بِهِ مُنْكَرًا وَنَكِيرًا عَلَيْكَ يَا رَبّ",
+        "ayetLAT": "Ve bi hakkı ismikellezî semmeyte bihî Münker ve Nekîr aleyke yâ Rab.",
+        "ayetTR": "Senin verdiğin Münker ve Nekir ismi hürmetine."
+    },
+    {
+        "ayetID": 15,
+        "ayetAR": "وَبِحَقِّ اِسْمِكَ وَأَسْرَارِ عِبَادِكَ عَلَيْكَ يَا رَبّ",
+        "ayetLAT": "Ve bi hakkı ismik ve esrâri ibâdike aleyke yâ Rab.",
+        "ayetTR": "Kullarının sendeki sırları hürmetine."
+    },
+    {
+        "ayetID": 16,
+        "ayetAR": "وَبِحَقِّ اِسْمِكَ الَّذِي تَمَّ بِهِ الْإِسْلَامُ عَلَيْكَ يَا رَبّ",
+        "ayetLAT": "Ve bi hakkı ismikellezî temme bihil islâm aleyke yâ Rab.",
+        "ayetTR": "İslâm’ı kendisiyle tamamladığın ismin hürmetine."
+    },
+    {
+        "ayetID": 17,
+        "ayetAR": "وَبِحَقِّ اِسْمِكَ الَّذِي تَلَقَّاهُ آدَمُ لَمَّا هَبَطَ مِنَ الْجَنَّةِ فَنَادَاكَ فَلَبَّيْتَ دُعَاءَهُ عَلَيْكَ يَا رَبّ",
+        "ayetLAT": "Ve bi hakkı ismikellezî talakkâhü Âdemu lemmâ hebata mine’l cenneti fe nâdâke fe lebbeyte duâehü aleyke yâ Rab.",
+        "ayetTR": "Âdem’in (a.s.) cennetten indirildiği zaman senden öğrendiği ve senin de kabul ettiğin ismin hürmetine."
+    },
+    {
+        "ayetID": 18,
+        "ayetAR": "وَبِحَقِّ اِسْمِكَ الَّذِي نَادَاكَ بِهِ شِيثُ عَلَيْكَ يَا رَبّ",
+        "ayetLAT": "Ve bi hakkı ismikellezî nâdâke bihî Şît aleyke yâ Rab.",
+        "ayetTR": "Şît’in (a.s.) sana seslendiği ismin hürmetine."
+    },
+    {
+        "ayetID": 19,
+        "ayetAR": "وَبِحَقِّ اِسْمِكَ الَّذِي قُوِّيَ بِهِ حَمَلَةُ الْعَرْشِ عَلَيْكَ يَا رَبّ",
+        "ayetLAT": "Ve bi hakkı ismikellezî kuvviye bihî hamaletul arş aleyke yâ Rab.",
+        "ayetTR": "Arşı taşıyan melekleri kendisiyle kuvvetlendirdiğin ismin hürmetine."
+    },
+    {
+        "ayetID": 20,
+        "ayetAR": "وَبِحَقِّ أَسْمَائِكَ الْمَكْتُوبَاتِ فِي التَّوْرَاةِ وَالْإِنْجِيلِ وَالزَّبُورِ وَالْفُرْقَانِ عَلَيْكَ يَا رَبّ",
+        "ayetLAT": "Ve bi hakkı esmâikellezî mektûbât fi’t Tevrât ve’l İncîl ve’z Zebûr ve’l Furqân aleyke yâ Rab.",
+        "ayetTR": "Tevrat’ta, İncil’de, Zebur’da ve Furkan’da yazılı ismin hürmetine."
+    },
+    {
+        "ayetID": 21,
+        "ayetAR": "وَبِحَقِّ اِسْمِكَ اِلٰى مُنْتَهَى رَحْمَتِكَ عَلٰى عِبَادِكَ عَلَيْكَ يَا رَبّ",
+        "ayetLAT": "Ve bi hakkı ismik ilâ müntehâ rahmetike alâ ibâdike aleyke yâ Rab.",
+        "ayetTR": "Kullarına rahmetini sonuna kadar ulaştırdığın ismin hürmetine."
+    },
+    {
+        "ayetID": 22,
+        "ayetAR": "وَبِحَقِّ تَمَامِ كَلَامِكَ عَلَيْكَ يَا رَبّ",
+        "ayetLAT": "Ve bi hakkı temâmi kelâmike aleyke yâ Rab.",
+        "ayetTR": "Sözlerinin tamamı hürmetine."
+    },
+    {
+        "ayetID": 23,
+        "ayetAR": "وَبِحَقِّ اِسْمِكَ الَّذِي نَادَاكَ بِهِ إِبْرَاهِيمُ فَجَعَلْتَ النَّارَ عَلَيْهِ بَرْدًا وَسَلَامًا عَلَيْكَ يَا رَبّ",
+        "ayetLAT": "Ve bi hakkı ismikellezî nâdâke bihî İbrâhîm fe cealte’n nâra aleyhi berden ve selâmen aleyke yâ Rab.",
+        "ayetTR": "İbrâhim (a.s.) ateşe atıldığında hangi isminle sana seslendi de ateş onun üzerine serin ve selamet olduysa o ismin hürmetine."
+    },
+    {
+        "ayetID": 24,
+        "ayetAR": "وَبِحَقِّ اِسْمِكَ الَّذِي نَادَى بِهِ إِسْمَاعِيلُ فَنَجَّيْتَهُ مِنَ الذَّبْحِ عَلَيْكَ يَا رَبّ",
+        "ayetLAT": "Ve bi hakkı ismikellezî nâdâ bihî İsmâîl fe necceytehû minez zebhi aleyke yâ Rab.",
+        "ayetTR": "İsmâil (a.s.) kurban edilirken hangi isminle sana seslendi de sen onu kesilmekten kurtardıysan o ismin hürmetine."
+    },
+    {
+        "ayetID": 25,
+        "ayetAR": "وَبِحَقِّ اِسْمِكَ الَّذِي نَادَى بِهِ إِسْحَاقُ فَقَضَيْتَ حَاجَتَهُ عَلَيْكَ يَا رَبّ",
+        "ayetLAT": "Ve bi hakkı ismikellezî nâdâ bihî İshâk fe kazaýte hâcetehû aleyke yâ Rab.",
+        "ayetTR": "İshâk (a.s.) hangi isminle sana yalvardı da sen onun ihtiyacını karşıladıysan o ismin hürmetine."
+    },
+    {
+        "ayetID": 26,
+        "ayetAR": "وَبِحَقِّ اِسْمِكَ الَّذِي نَادَاكَ بِهِ هُودٌ عَلَيْكَ يَا رَبّ",
+        "ayetLAT": "Ve bi hakkı ismikellezî nâdâke bihî Hûd aleyke yâ Rab.",
+        "ayetTR": "Hûd (a.s.) hangi isminle sana seslendiyse o ismin hürmetine."
+    },
+    {
+        "ayetID": 27,
+        "ayetAR": "وَبِحَقِّ اِسْمِكَ الَّذِي دَعَاكَ بِهِ يَعْقُوبُ فَرَدَدْتَ عَلَيْهِ بَصَرَهُ وَوَلَدَهُ يُوسُفَ عَلَيْكَ يَا رَبّ",
+        "ayetLAT": "Ve bi hakkı ismikellezî daâke bihî Ya’kûb fe radedde aleyhi basarahû ve veledühû Yûsuf aleyke yâ Rab.",
+        "ayetTR": "Yakub (a.s.) sana hangi isminle dua etti de sen onun gözlerini ve oğlu Yusuf’u ona geri verdiysen o ismin hürmetine."
+    },
+    {
+        "ayetID": 28,
+        "ayetAR": "وَبِحَقِّ اِسْمِكَ الَّذِي نَادَاكَ بِهِ دَاوُ۫دُ فَجَعَلْتَهُ خَل۪يفَةً فِي الْاَرْضِ وَاَلَنْتَ لَهُ الْحَد۪يدَ ف۪ي يَدِهِ عَلَيْكَ يَا رَبّ",
+        "ayetLAT": "Ve bi hakkı ismikellezî nâdâke bihî Dâvûd fe cealtehû halîfeten fi’l ard ve elente lehül hadîde fî yedihî aleyke yâ Rab.",
+        "ayetTR": "Dâvud (a.s.) hangi isminle sana seslendi de sen onu yeryüzünde halife kıldıysan ve demiri onun elinde yumuşattıysan o ismin hürmetine."
+    },
+    {
+        "ayetID": 29,
+        "ayetAR": "وَبِحَقِّ اِسْمِكَ الَّذِي دَعَاكَ بِهِ سُلَيْمَانُ فَاَعْطَيْتَهُ مُلْكًا فِي الْاَرْضِ عَلَيْكَ يَا رَبّ",
+        "ayetLAT": "Ve bi hakkı ismikellezî daâke bihî Süleymân fe a’ṭaytehül mülke fi’l ard aleyke yâ Rab.",
+        "ayetTR": "Süleyman (a.s.) hangi isminle sana dua etti de sen ona yeryüzünde mülk (hükümdarlık) verdiysen o ismin hürmetine."
+    },
+    {
+        "ayetID": 30,
+        "ayetAR": "وَبِحَقِّ اِسْمِكَ الَّذِي نَادَاكَ بِهِ اَيُّو۫بُ فَنَجَّيْتَهُ مِنَ الْغَمِّ الَّذ۪ي كَانَ ف۪يهِ عَلَيْكَ يَا رَبّ",
+        "ayetLAT": "Ve bi hakkı ismikellezî nâdâke bihî Eyyûb fe necceytehû minel gammillezî kâne fîhî aleyke yâ Rab.",
+        "ayetTR": "Eyyûb (a.s.) hangi isminle sana seslendi de sen onu içinde bulunduğu gamdan (sıkıntıdan) kurtardıysan o ismin hürmetine."
+    },
+    {
+        "ayetID": 31,
+        "ayetAR": "وَبِحَقِّ اِسْمِكَ الَّذِي نَادَاكَ بِهِ ع۪يسَى ابْنُ مَرْيَمَ فَاَحْيَيْتَ لَهُ الْمَوْتٰى عَلَيْكَ يَا رَبّ",
+        "ayetLAT": "Ve bi hakkı ismikellezî nâdâke bihî Îsâ ibnu Meryem fe ahyeyte lehül mevtâ aleyke yâ Rab.",
+        "ayetTR": "Meryem oğlu Îsâ (a.s.) hangi isminle sana seslendi de sen onunla ölüyü dirilttiysen o ismin hürmetine."
+    },
+    {
+        "ayetID": 32,
+        "ayetAR": "وَبِحَقِّ اِسْمِكَ الَّذِي نَادَاكَ بِهِ مُوسٰى لَمَّا خَاطَبَكَ عَلَى الطُّورِ عَلَيْكَ يَا رَبّ",
+        "ayetLAT": "Ve bi hakkı ismikellezî nâdâke bihî Mûsâ lemmâ hâtabeke alettûri aleyke yâ Rab.",
+        "ayetTR": "Mûsâ (a.s.) hangi isminle sana seslendi de sen ona Tur’da hitap ettiysen o ismin hürmetine."
+    },
+    {
+        "ayetID": 33,
+        "ayetAR": "وَبِحَقِّ اِسْمِكَ الَّذِي نَادَتْكَ بِهِ اٰسِيَةُ امْرَاَةُ فِرْعَوْنَ فَرَزَقْتَهَا الْجَنَّةَ عَلَيْكَ يَا رَبّ",
+        "ayetLAT": "Ve bi hakkı ismikellezî nâdetke bihî Âsiyetü mraetü Firavne fe razaqtehâ cennete aleyke yâ Rab.",
+        "ayetTR": "Firavun’un karısı Âsiye (a.s.) sana hangi isminle seslendi de sen onu cennette rızıklandırdıysan o ismin hürmetine."
+    },
+    {
+        "ayetID": 34,
+        "ayetAR": "وَبِحَقِّ اِسْمِكَ الَّذِي نَادَاكَ بِهِ بَنُو اِسْرَائ۪يلَ لَمَّا جَاوَزُوا الْبَحْرَ عَلَيْكَ يَا رَبّ",
+        "ayetLAT": "Ve bi hakkı ismikellezî nâdâke bihî Benû Isrâîl lemmâ câvezûl bahr aleyke yâ Rab.",
+        "ayetTR": "İsrâiloğulları sana hangi isminle seslendiler de sen onları denizden geçirdiysen o ismin hürmetine."
+    },
+    {
+        "ayetID": 35,
+        "ayetAR": "وَبِحَقِّ اِسْمِكَ الَّذِي نَادَاكَ بِهِ الْخَضِرُ لَمَّا مَشَى عَلَى الْمَاءِ عَلَيْكَ يَا رَبّ",
+        "ayetLAT": "Ve bi hakkı ismikellezî nâdâke bihî Hıdır lemmâ meşâ alâ mâi aleyke yâ Rab.",
+        "ayetTR": "Hızır (a.s.) hangi isminle sana seslendi de sen onu suyun üzerinde yürüttüysen o ismin hürmetine."
+    },
+    {
+        "ayetID": 36,
+        "ayetAR": "وَبِحَقِّ اِسْمِكَ الَّذِي نَادَاكَ بِهِ سَيِّدُنَا مُحَمَّدٌ يَوْمَ الْغَارِ فَنَجَّيْتَهُ عَلَيْكَ يَا رَبّ",
+        "ayetLAT": "Ve bi hakkı ismikellezî nâdâke bihî seyyidinâ Muhammedün yevme’l ğâr fe necceytehû aleyke yâ Rab.",
+        "ayetTR": "Efendimiz Muhammed (s.a.v.) sana mağarada hangi isminle seslendi de sen onu kurtardıysan o ismin hürmetine."
+    },
+    {
+        "ayetID": 37,
+        "ayetAR": "إِنَّكَ أَنْتَ الْكَرِيمُ الْكَبِيرُ",
+        "ayetLAT": "İnneke entel kerîmü’l kebîr.",
+        "ayetTR": "Şüphesiz ki Sen cömert ve büyüksün."
+    },
+    {
+        "ayetID": 38,
+        "ayetAR": "حَسْبُنَا اللّٰهُ وَنِعْمَ الْوَكِيلُ",
+        "ayetLAT": "Hasbunallâhu ve ni’me’l-vekîl.",
+        "ayetTR": "Bize Allah yeter. O ne güzel vekildir."
+    },
+    {
+        "ayetID": 39,
+        "ayetAR": "وَلَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللّٰهِ الْعَلِيِّ الْعَظِيمِ",
+        "ayetLAT": "Ve lâ havle ve lâ kuvvete illâ billâhil aliyyil azîm.",
+        "ayetTR": "İyilik yapmaya da kötülükten kaçınmaya güç ve kuvvet ancak yüce ve büyük Allah’tandır."
+    },
+    {
+        "ayetID": 40,
+        "ayetAR": "وَصَلَّى اللّٰهُ عَلَيْهِ وَعَلٰى اٰلِهِ وَصَحْبِهِ وَسَلَّمَ",
+        "ayetLAT": "Ve sallallâhu aleyhi ve alâ âlihî ve sahbihî ve sellem.",
+        "ayetTR": "Allah, Efendimiz Muhammed’e, âline ve ashâbına salât ve selâm eylesin."
+    }
+]

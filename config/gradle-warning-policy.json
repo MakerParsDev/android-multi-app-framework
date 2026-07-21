@@ -1,0 +1,32 @@
+{
+  "known_warnings": [
+    {
+      "category": "gradle-deprecation",
+      "expires_on": "2027-01-31",
+      "id": "detekt-reporting-extension-file",
+      "match": "The ReportingExtension.file(String) method has been deprecated.",
+      "owner": "build/quality",
+      "reason": "Detekt Gradle plugin 1.23.8 calls the Gradle API scheduled for removal in Gradle 10; retain visibility until an upstream-compatible stable plugin is adopted.",
+      "source": "io.gitlab.arturbosch.detekt:detekt-gradle-plugin:1.23.8"
+    },
+    {
+      "category": "d8",
+      "expires_on": "2027-01-31",
+      "id": "play-asset-delivery-invalid-stack-map",
+      "match": "asset-delivery-ktx-2.3.0-runtime.jar: D8: Invalid stack map table",
+      "owner": "feature/audio",
+      "reason": "The official Play Asset Delivery integration guide still documents version 2.3.0; keep the warning visible until an official compatible release or verified fallback removal is available.",
+      "source": "com.google.android.play:asset-delivery-ktx:2.3.0"
+    },
+    {
+      "category": "asm-unresolved-classes",
+      "expires_on": "2027-01-31",
+      "id": "android-asm-tooling-classes",
+      "match": "ASM Instrumentation process wasn't able to resolve some classes",
+      "owner": "build/android",
+      "reason": "The unresolved classes are Compose tooling, Window Extensions/Sidecar provided APIs, and sun.misc.Unsafe; preserve the class list in the report and review on every toolchain update.",
+      "source": "Android Gradle Plugin instrumentation classpath"
+    }
+  ],
+  "schema_version": 1
+}

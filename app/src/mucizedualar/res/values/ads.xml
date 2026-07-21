@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="admob_app_id" translatable="false">ca-app-pub-3312485084079132~6594273442</string>
+    <string name="ad_unit_banner" translatable="false">ca-app-pub-3312485084079132/1326500863</string>
+    <string name="ad_unit_interstitial" translatable="false">ca-app-pub-3312485084079132/2887293262</string>
+    <string name="ad_unit_native" translatable="false">ca-app-pub-3312485084079132/5530114227</string>
+    <string name="ad_unit_rewarded" translatable="false">ca-app-pub-3312485084079132/2337799084</string>
+    <string name="ad_unit_rewarded_interstitial" translatable="false">ca-app-pub-3312485084079132/9236051407</string>
+    <string name="ad_unit_open_app" translatable="false">ca-app-pub-3312485084079132/9848633188</string>
+    <string name="ad_unit_banner_home" translatable="false">ca-app-pub-3312485084079132/1326500863</string>
+    <string name="ad_unit_banner_settings" translatable="false">ca-app-pub-3312485084079132/1326500863</string>
+    <string name="ad_unit_banner_content_list" translatable="false">ca-app-pub-3312485084079132/1326500863</string>
+    <string name="ad_unit_banner_content_detail" translatable="false">ca-app-pub-3312485084079132/1326500863</string>
+    <string name="ad_unit_banner_qibla" translatable="false">ca-app-pub-3312485084079132/1326500863</string>
+    <string name="ad_unit_banner_zikir" translatable="false">ca-app-pub-3312485084079132/1326500863</string>
+    <string name="ad_unit_native_feed_home" translatable="false">ca-app-pub-3312485084079132/5530114227</string>
+    <string name="ad_unit_native_feed_content" translatable="false">ca-app-pub-3312485084079132/5530114227</string>
+    <string name="ad_unit_native_feed_zikir" translatable="false">ca-app-pub-3312485084079132/5530114227</string>
+    <string name="ad_unit_interstitial_nav_break" translatable="false">ca-app-pub-3312485084079132/2887293262</string>
+    <string name="ad_unit_open_app_resume" translatable="false">ca-app-pub-3312485084079132/9848633188</string>
+    <string name="ad_unit_rewarded_rewards_screen" translatable="false">ca-app-pub-3312485084079132/2337799084</string>
+    <string name="ad_unit_rewarded_interstitial_history_unlock" translatable="false">ca-app-pub-3312485084079132/9236051407</string>
+</resources>

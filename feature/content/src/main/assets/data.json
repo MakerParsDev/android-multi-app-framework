@@ -1,0 +1,500 @@
+[
+  {
+    "ayetID": 1,
+    "ayetAR": "يٰسٓۜ",
+    "ayetLAT": "Ya sin.",
+    "ayetTR": "Ya-Sin."
+  },
+  {
+    "ayetID": 2,
+    "ayetAR": "وَالْقُرْاٰنِ الْحَك۪يمِۙ",
+    "ayetLAT": "Vel kur'anil hakim.",
+    "ayetTR": "Hakim Kur'an'a ant olsun."
+  },
+  {
+    "ayetID": 3,
+    "ayetAR": "اِنَّكَ لَمِنَ الْمُرْسَل۪ينَۙ",
+    "ayetLAT": "İnneke leminel murselin.",
+    "ayetTR": "Kuşkusuz sen,  gönderilmiş elçilerdensin."
+  },
+  {
+    "ayetID": 4,
+    "ayetAR": "عَلٰى صِرَاطٍ مُسْتَق۪يمٍۜ",
+    "ayetLAT": "Ala sıratın mustekim.",
+    "ayetTR": "Dosdoğru bir yoldasın;"
+  },
+  {
+    "ayetID": 5,
+    "ayetAR": "تَنْز۪يلَ الْعَز۪يزِ الرَّح۪يمِۙ",
+    "ayetLAT": "Tenzilel azizir rahim.",
+    "ayetTR": "Bu Kur'an,  Mutlak Üstün ve Rahmeti Kesintisiz olan tarafından, "
+  },
+  {
+    "ayetID": 6,
+    "ayetAR": "لِتُنْذِرَ قَوْماً مَٓا اُنْذِرَ اٰبَٓاؤُ۬هُمْ فَهُمْ غَافِلُونَ",
+    "ayetLAT": "Li tunzire kavmen ma unzire abauhum fe hum gafilun.",
+    "ayetTR": "Ataları uyarıldığı halde yine de gaflet içinde olan bir halkı uyarman için indirilmiştir."
+  },
+  {
+    "ayetID": 7,
+    "ayetAR": "لَقَدْ حَقَّ الْقَوْلُ عَلٰٓى اَكْثَرِهِمْ فَهُمْ لَا يُؤْمِنُونَ",
+    "ayetLAT": "Lekad hakkal kavlu ala ekserihim fe hum la yu'minun.",
+    "ayetTR": "Ant olsun ki,  onların çoğu üzerine söz hakk oldu. Artık onlar inanmazlar."
+  },
+  {
+    "ayetID": 8,
+    "ayetAR": "اِنَّا جَعَلْنَا ف۪ٓي اَعْنَاقِهِمْ اَغْلَالاً فَهِيَ اِلَى الْاَذْقَانِ فَهُمْ مُقْمَحُونَ",
+    "ayetLAT": "İnna cealna fi a'nakıhim aglalen fe hiye ilel ezkani fe hum mukmehun.",
+    "ayetTR": "Biz,  onların boyunlarına,  çenelerine kadar dayanan demir halkalar geçirdik. Bu nedenle başları sürekli yukarıda kalkık olanlardır."
+  },
+  {
+    "ayetID": 9,
+    "ayetAR": "وَجَعَلْنَا مِنْ بَيْنِ اَيْد۪يهِمْ سَداًّ وَمِنْ خَلْفِهِمْ سَداًّ فَاَغْشَيْنَاهُمْ فَهُمْ لَا يُبْصِرُونَ",
+    "ayetLAT": "Ve cealna min beyni eydihim sedden ve min halfihim sedden fe agşeynahum fe hum la yubsırun.",
+    "ayetTR": "Önlerine ve arkalarına birer set çektik. Böylece onları perdeledik. Artık gerçeği görmezler."
+  },
+  {
+    "ayetID": 10,
+    "ayetAR": "وَسَوَٓاءٌ عَلَيْهِمْ ءَاَنْذَرْتَهُمْ اَمْ لَمْ تُنْذِرْهُمْ لَا يُؤْمِنُونَ",
+    "ayetLAT": "Ve sevaun aleyhim e enzertehum em lem tunzirhum la yu'minun.",
+    "ayetTR": "Uyarsan da uyarmasan da onlar için birdir. Onlar inanmazlar."
+  },
+  {
+    "ayetID": 11,
+    "ayetAR": "اِنَّمَا تُنْذِرُ مَنِ اتَّبَعَ الذِّكْرَ وَخَشِيَ الرَّحْمٰنَ بِالْغَيْبِۚ فَبَشِّرْهُ بِمَغْفِرَةٍ وَاَجْرٍ كَر۪يمٍ",
+    "ayetLAT": "İnnema tunziru menittebeaz zikre ve haşiyer rahmane bil gayb, fe beşşirhu bi magfiretin ve ecrin kerim.",
+    "ayetTR": "Sen ancak Zikir'e uyan ve görmediği halde Rahman'a haşyet duyan kimseyi uyarabilirsin. İşte böylesine bağışlanma ve çok şerefli bir ödülü haber ver."
+  },
+  {
+    "ayetID": 12,
+    "ayetAR": "اِنَّا نَحْنُ نُحْـيِ الْمَوْتٰى وَنَكْتُبُ مَا قَدَّمُوا وَاٰثَارَهُمْۜ وَكُلَّ شَيْءٍ اَحْصَيْنَاهُ ف۪ٓي اِمَامٍ مُب۪ينٍ۟",
+    "ayetLAT": "İnna nahnu nuhyil mevta ve nektubu ma kaddemu ve asarehum ve kulle şey'in ahsaynahu fi imamin mubin.",
+    "ayetTR": "Kuşkusuz ölüleri Biz diriltiriz Biz. Önceden yapıp gönderdiklerini ve geride bıraktıklarını yazarız. Biz her şeyi bir \"imam-ı mübin\"de kayıt altına almışızdır."
+  },
+  {
+    "ayetID": 13,
+    "ayetAR": "وَاضْرِبْ لَهُمْ مَثَلاً اَصْحَابَ الْقَرْيَةِۢ اِذْ جَٓاءَهَا الْمُرْسَلُونَۚ",
+    "ayetLAT": "Vadrıb lehum meselen ashabel karyeh, iz cae hel murselun.",
+    "ayetTR": "Onlara,  o kentin halkını örnek ver. Hani,  onlara resuller gelmişti."
+  },
+  {
+    "ayetID": 14,
+    "ayetAR": "اِذْ اَرْسَلْـنَٓا اِلَيْهِمُ اثْنَيْنِ فَكَذَّبُوهُمَا فَعَزَّزْنَا بِثَالِثٍ فَقَالُٓوا اِنَّٓا اِلَيْكُمْ مُرْسَلُونَ",
+    "ayetLAT": "İz erselna ileyhimusneyni fe kezzebuhuma fe azzezna bi salisin fe kalu inna ileykum murselun.",
+    "ayetTR": "Onlara iki resul göndermiştik. Fakat ikisini de yalanladılar. Bunun üzerine üçüncü ile destekledik. Dediler ki: \"Biz,  size gönderilmiş resulleriz.\""
+  },
+  {
+    "ayetID": 15,
+    "ayetAR": "قَالُوا مَٓا اَنْتُمْ اِلَّا بَشَرٌ مِثْلُنَاۙ وَمَٓا اَنْزَلَ الرَّحْمٰنُ مِنْ شَيْءٍۙ اِنْ اَنْتُمْ اِلَّا تَكْذِبُونَ",
+    "ayetLAT": "Kalu ma entum illa beşerun misluna ve ma enzeler rahmanu min şey'in in entum illa tekzibun.",
+    "ayetTR": "Onlar: \"Siz de bizim gibi birer beşersiniz. Rahman herhangi bir şey indirmedi. Siz sadece yalan söylüyorsunuz.\" dediler."
+  },
+  {
+    "ayetID": 16,
+    "ayetAR": "قَالُوا رَبُّنَا يَعْلَمُ اِنَّٓا اِلَيْكُمْ لَمُرْسَلُونَ",
+    "ayetLAT": "Kalu rabbuna ya'lemu inna ileykum le murselun.",
+    "ayetTR": "\"Rabb'imiz biliyor ki,  biz gerçekten size gönderilmiş resulleriz.\" dediler."
+  },
+  {
+    "ayetID": 17,
+    "ayetAR": "وَمَا عَلَيْنَٓا اِلَّا الْبَلَاغُ الْمُب۪ينُ",
+    "ayetLAT": "Ve ma aleyna illel belagul mubin.",
+    "ayetTR": "\"Bize düşen yalnızca açıkça iletmektir.\""
+  },
+  {
+    "ayetID": 18,
+    "ayetAR": "قَالُٓوا اِنَّا تَطَيَّرْنَا بِكُمْۚ لَئِنْ لَمْ تَنْتَهُوا لَنَرْجُمَنَّكُمْ وَلَيَمَسَّنَّكُمْ مِنَّا عَذَابٌ اَل۪يمٌ",
+    "ayetLAT": "Kalu inna tetayyerna bi kum, le in lem tentehu le nercumennekum ve le yemessennekum minna azabun elim.",
+    "ayetTR": "\"Siz bize kesinlikle uğursuzluk getirdiniz. Eğer vazgeçmezseniz,  kesinlikle sizi taşlarız. Ve bizden size çok acıklı bir azap dokunur.\" dediler."
+  },
+  {
+    "ayetID": 19,
+    "ayetAR": "قَالُوا طَٓائِرُكُمْ مَعَكُمْۜ اَئِنْ ذُكِّرْتُمْۜ بَلْ اَنْتُمْ قَوْمٌ مُسْرِفُونَ",
+    "ayetLAT": "Kalu tairikum meakum, e in zukkirtum, bel entum kavmun musrifun.",
+    "ayetTR": "\"Uğursuzluğunuz kendinizdendir. Size öğüt verildi diye mi? Hayır! Siz müsrif bir halksınız.\" dediler."
+  },
+  {
+    "ayetID": 20,
+    "ayetAR": "وَجَٓاءَ مِنْ اَقْصَا الْمَد۪ينَةِ رَجُلٌ يَسْعٰى قَالَ يَا قَوْمِ اتَّبِعُوا الْمُرْسَل۪ينَۙ",
+    "ayetLAT": "Ve cae min aksal medineti raculun yes'a kale ya kavmittebiul murselin.",
+    "ayetTR": "Şehrin en uzak yerinden bir adam koşarak geldi: \"Ey halkım,  gönderilmiş olan resullere uyun!\" dedi."
+  },
+  {
+    "ayetID": 21,
+    "ayetAR": "اِتَّبِعُوا مَنْ لَا يَسْـَٔلُكُمْ اَجْراً وَهُمْ مُهْتَدُونَ",
+    "ayetLAT": "İttebiu men la yes'elukum ecren ve hum muhtedun.",
+    "ayetTR": "\"Sizden herhangi bir karşılık beklemeyen bu kimselere uyun. Onlar doğru yolda olanlardır.\""
+  },
+  {
+    "ayetID": 22,
+    "ayetAR": "وَمَا لِيَ لَٓا اَعْبُدُ الَّذ۪ي فَطَرَن۪ي وَاِلَيْهِ تُرْجَعُونَ",
+    "ayetLAT": "Ve ma liye la a'budullezi fatarani ve ileyhi turceun.",
+    "ayetTR": "\"Ben,  niçin benim fıtratımı belirleyene kulluk etmeyeyim? Siz de O'na döndürüleceksiniz.\""
+  },
+  {
+    "ayetID": 23,
+    "ayetAR": "ءَاَتَّخِذُ مِنْ دُونِه۪ٓ اٰلِهَةً اِنْ يُرِدْنِ الرَّحْمٰنُ بِضُرٍّ لَا تُغْنِ عَنّ۪ي شَفَاعَتُهُمْ شَيْـٔاً وَلَا يُنْقِذُونِۚ",
+    "ayetLAT": "E ettehızu min dunihi aliheten in yuridnir rahmanu bi durrin la tugni anni şefaatuhum şey'en ve la yunkızun.",
+    "ayetTR": "\"Ben,  O'nun yanı sıra ilahlar edinir miyim? Eğer Rahman,  bana bir zarar dilerse,  onların şefaatinin bana hiçbir yararı olmaz. Onlar beni kurtaramazlar.\""
+  },
+  {
+    "ayetID": 24,
+    "ayetAR": "اِنّ۪ٓي اِذاً لَف۪ي ضَلَالٍ مُب۪ينٍ",
+    "ayetLAT": "İnni izen le fi dalalin mubin.",
+    "ayetTR": "\"Öyle olsaydı ben,  kesinlikle apaçık bir sapkınlık içinde olurdum.\""
+  },
+  {
+    "ayetID": 25,
+    "ayetAR": "اِنّ۪ٓي اٰمَنْتُ بِرَبِّكُمْ فَاسْمَعُونِۜ",
+    "ayetLAT": "İnni amentu bi rabbikum fesmeun.",
+    "ayetTR": "\"Ben,  sizin de Rabb'iniz olana inandım. Beni dinleyin!\""
+  },
+  {
+    "ayetID": 26,
+    "ayetAR": "ق۪يلَ ادْخُلِ الْجَنَّةَۜ قَالَ يَا لَيْتَ قَوْم۪ي يَعْلَمُونَۙ",
+    "ayetLAT": "Kiled hulil cenneh, kale ya leyte kavmi ya'lemun.",
+    "ayetTR": "Ona,  \"Cennete gir!\" denildi. \"Keşke halkım bilseydi;\""
+  },
+  {
+    "ayetID": 27,
+    "ayetAR": "بِمَا غَفَرَ ل۪ي رَبّ۪ي وَجَعَلَن۪ي مِنَ الْمُكْرَم۪ينَ",
+    "ayetLAT": "Bima gafere li rabbi ve cealeni minel mukremin.",
+    "ayetTR": "\"Rabb'imin beni bağışladığını ve ikram edilenlerden yaptığını.\""
+  },
+  {
+    "ayetID": 28,
+    "ayetAR": "وَمَٓا اَنْزَلْنَا عَلٰى قَوْمِه۪ مِنْ بَعْدِه۪ مِنْ جُنْدٍ مِنَ السَّمَٓاءِ وَمَا كُنَّا مُنْزِل۪ينَ",
+    "ayetLAT": "Ve ma enzelna ala kavmihi min ba'dihi min cundin mines semai ve ma kunna munzilin.",
+    "ayetTR": "Ondan sonra,  halkının üzerine gökten hiçbir ordu indirmedik,  indirecek de değildik!"
+  },
+  {
+    "ayetID": 29,
+    "ayetAR": "اِنْ كَانَتْ اِلَّا صَيْحَةً وَاحِدَةً فَاِذَا هُمْ خَامِدُونَ",
+    "ayetLAT": "İn kanet illa sayhaten vahıdetenfe iza hum hamidun.",
+    "ayetTR": "Sadece bir sayha! O zaman onlar sönenler oldular!"
+  },
+  {
+    "ayetID": 30,
+    "ayetAR": "يَا حَسْرَةً عَلَى الْعِبَادِۚ مَا يَأْت۪يهِمْ مِنْ رَسُولٍ اِلَّا كَانُوا بِه۪ يَسْتَهْزِؤُ۫نَ",
+    "ayetLAT": "Ya hasreten alel ıbad, ma ye'tihim min resulin illa kanu bihi yestehziun.",
+    "ayetTR": "Yazıklar olsun o kullara! Kendilerine gelen her resulle alay ettiler."
+  },
+  {
+    "ayetID": 31,
+    "ayetAR": "اَلَمْ يَرَوْا كَمْ اَهْلَكْنَا قَبْلَهُمْ مِنَ الْقُرُونِ اَنَّهُمْ اِلَيْهِمْ لَا يَرْجِعُونَ",
+    "ayetLAT": "E lem yerev kem ehlekna kablehum minel kuruni ennehum ileyhim la yerciun.",
+    "ayetTR": "Kendilerinden önce nice nesilleri yok ettiğimizi ve bir daha geri dönemediklerini düşünmezler mi?"
+  },
+  {
+    "ayetID": 32,
+    "ayetAR": "وَاِنْ كُلٌّ لَمَّا جَم۪يعٌ لَدَيْنَا مُحْضَرُونَ۟",
+    "ayetLAT": "Ve in kullun lemma cemiun ledeyna muhdarun.",
+    "ayetTR": "Onların hepsi de toplanıp kesinlikle karşımızda hazır bulundurulacaklardır."
+  },
+  {
+    "ayetID": 33,
+    "ayetAR": "وَاٰيَةٌ لَهُمُ الْاَرْضُ الْمَيْتَةُۚ اَحْيَيْنَاهَا وَاَخْرَجْنَا مِنْهَا حَباًّ فَمِنْهُ يَأْكُلُونَ",
+    "ayetLAT": "Ve ayetun lehumul ardul meyteh, ahyeynaha ve ahrecna minha habben fe minhu ye'kulun.",
+    "ayetTR": "Ölü toprak,  onlara bir ayettir. Onu canlandırdık ve ondan ürünler çıkardık. Böylece ondan yerler."
+  },
+  {
+    "ayetID": 34,
+    "ayetAR": "وَجَعَلْنَا ف۪يهَا جَنَّاتٍ مِنْ نَخ۪يلٍ وَاَعْنَابٍ وَفَجَّرْنَا ف۪يهَا مِنَ الْعُيُونِۙ",
+    "ayetLAT": "Ve cealna fiha cennatin min nahilin ve a'nabin ve feccerna fiha minel uyun.",
+    "ayetTR": "Orada hurma ve üzüm bahçeleri yaptık. Ve orada pınarlar akıttık."
+  },
+  {
+    "ayetID": 35,
+    "ayetAR": "لِيَأْكُلُوا مِنْ ثَمَرِه۪ۙ وَمَا عَمِلَتْهُ اَيْد۪يهِمْۜ اَفَلَا يَشْكُرُونَ",
+    "ayetLAT": "Li ye'kulu min semerihi ve ma amilethu eydihim, e fe la yeşkurun.",
+    "ayetTR": "Onun ürünlerinden ve elleriyle yaptıklarından yesinler diye. Hala şükretmeyecekler mi?"
+  },
+  {
+    "ayetID": 36,
+    "ayetAR": "سُبْحَانَ الَّذ۪ي خَلَقَ الْاَزْوَاجَ كُلَّهَا مِمَّا تُنْبِتُ الْاَرْضُ وَمِنْ اَنْفُسِهِمْ وَمِمَّا لَا يَعْلَمُونَ",
+    "ayetLAT": "Subhanellezi halakal ezvace kulleha mimma tunbitulardu ve min enfusihim ve mimma la ya'lemun.",
+    "ayetTR": "Yerin bitirdiklerinden,  kendilerinden ve bilemeyecekleri şeylerden çiftler yaratan,  O,  Sübhan'dır."
+  },
+  {
+    "ayetID": 37,
+    "ayetAR": "وَاٰيَةٌ لَهُمُ الَّيْلُۚ نَسْلَخُ مِنْهُ النَّهَارَ فَاِذَا هُمْ مُظْلِمُونَۙ",
+    "ayetLAT": "Ve ayetun lehumul leyl, neslehu minhun nehare fe iza hum muzlimun.",
+    "ayetTR": "Gece de onlar için bir ayettir. Ondan gündüzü çekip alırız da onlar karanlıkta kalırlar."
+  },
+  {
+    "ayetID": 38,
+    "ayetAR": "وَالشَّمْسُ تَجْر۪ي لِمُسْتَقَرٍّ لَهَاۜ ذٰلِكَ تَقْد۪يرُ الْعَز۪يزِ الْعَل۪يمِۜ",
+    "ayetLAT": "Veş şemsu tecri li mustekarrin leha, zalike takdirul azizil alim.",
+    "ayetTR": "Güneş,  kendisi için karar kılınan yörüngesinde akar gider. İşte bu Mutlak Üstün Olan'ın,  Her Şeyi Bilen'in yasasıdır."
+  },
+  {
+    "ayetID": 39,
+    "ayetAR": "وَالْقَمَرَ قَدَّرْنَاهُ مَنَازِلَ حَتّٰى عَادَ كَالْعُرْجُونِ الْقَد۪يمِ",
+    "ayetLAT": "Vel kamere kaddernahu menazile hatta adekel urcunil kadim.",
+    "ayetTR": "Ay'a da menziller takdir ettik. Sonunda kuru bir hurma dalına döner."
+  },
+  {
+    "ayetID": 40,
+    "ayetAR": "لَا الشَّمْسُ يَنْبَغ۪ي لَـهَٓا اَنْ تُدْرِكَ الْقَمَرَ وَلَا الَّيْلُ سَابِقُ النَّهَارِۜ وَكُلٌّ ف۪ي فَلَكٍ يَسْبَحُونَ",
+    "ayetLAT": "Leş şemsu yenbegi leha en tudrikel kamere ve lel leylu sabikun nehar, ve kullun fi felekin yesbehun.",
+    "ayetTR": "Ne Güneş Ay'a erişebilir ve ne de gecenin gündüzü geçmesi mümkün olabilir. Hepsi de bir yörüngede hareket ederler."
+  },
+  {
+    "ayetID": 41,
+    "ayetAR": "وَاٰيَةٌ لَهُمْ اَنَّا حَمَلْنَا ذُرِّيَّتَهُمْ فِي الْفُلْكِ الْمَشْحُونِۙ",
+    "ayetLAT": "Ve ayetun lehum enna hamelna zurriyyetehum fil fulkil meşhun.",
+    "ayetTR": "Onların soyunu dolu gemilerde taşımamız onlar için bir ayettir."
+  },
+  {
+    "ayetID": 42,
+    "ayetAR": "وَخَلَقْنَا لَهُمْ مِنْ مِثْلِه۪ مَا يَرْكَبُونَ",
+    "ayetLAT": "Ve halakna lehum min mislihi ma yerkebun.",
+    "ayetTR": "Onlar için,  onun gibi binecekleri şeyler yarattık."
+  },
+  {
+    "ayetID": 43,
+    "ayetAR": "وَاِنْ نَشَأْ نُغْرِقْهُمْ فَلَا صَر۪يخَ لَهُمْ وَلَا هُمْ يُنْقَذُونَۙ",
+    "ayetLAT": "Ve in neşe' nugrıkhum fe la sariha lehum ve la hum yunkazun.",
+    "ayetTR": "Dilersek onları batırırız. Ne onlara yardım eden bulunur ne de onlar kurtulabilir."
+  },
+  {
+    "ayetID": 44,
+    "ayetAR": "اِلَّا رَحْمَةً مِنَّا وَمَتَاعاً اِلٰى ح۪ينٍ",
+    "ayetLAT": "İlla rahmeten minna ve metaan ila hin.",
+    "ayetTR": "Bizden bir merhamet ve belli bir zamana kadar yararlandırmamız hariçtir."
+  },
+  {
+    "ayetID": 45,
+    "ayetAR": "وَاِذَا ق۪يلَ لَهُمُ اتَّقُوا مَا بَيْنَ اَيْد۪يكُمْ وَمَا خَلْفَكُمْ لَعَلَّكُمْ تُرْحَمُونَ",
+    "ayetLAT": "Ve iza kile lehumutteku ma beyne eydikum ve ma halfekum leallekum turhamun.",
+    "ayetTR": "Onlara: \"Sahip olduğunuz ve olacağınız şeylerde takva sahibi olun. Umulur ki böylece merhamet olunursunuz.\" denildiği zaman;"
+  },
+  {
+    "ayetID": 46,
+    "ayetAR": "وَمَا تَأْت۪يهِمْ مِنْ اٰيَةٍ مِنْ اٰيَاتِ رَبِّهِمْ اِلَّا كَانُوا عَنْهَا مُعْرِض۪ينَ",
+    "ayetLAT": "Ve ma te'tihim min ayetin min ayati rabbihim illa kanu anha mu'ridin.",
+    "ayetTR": "Onlar,  Rabb'lerinin ayetlerinden hangi ayet gelirse gelsin ondan yüz çevirenler oldular."
+  },
+  {
+    "ayetID": 47,
+    "ayetAR": "وَاِذَا ق۪يلَ لَهُمْ اَنْفِقُوا مِمَّا رَزَقَكُمُ اللّٰهُۙ قَالَ الَّذ۪ينَ كَفَرُوا لِلَّذ۪ينَ اٰمَنُٓوا اَنُطْعِمُ مَنْ لَوْ يَشَٓاءُ اللّٰهُ اَطْعَمَهُۗ اِنْ اَنْتُمْ اِلَّا ف۪ي ضَلَالٍ مُب۪ينٍ",
+    "ayetLAT": "Ve iza kile lehum enfiku mimma rezakakumullahu kalellezine keferu lillezine amenu e nut'imu men lev yeşaullahu at'ameh, in entum illa fi dalalin mubin.",
+    "ayetTR": "Onlara: \"Allah'ın sizi rızıklandırdığı şeylerden infak edin.\" dendiği zaman,  Kafirler,  iman edenlere: \"Allah'ın dileseydi doyuracağı kimseyi biz mi doyuracağız? Siz ancak apaçık bir sapkınlık içindesiniz.\" dediler."
+  },
+  {
+    "ayetID": 48,
+    "ayetAR": "وَيَقُولُونَ مَتٰى هٰذَا الْوَعْدُ اِنْ كُنْتُمْ صَادِق۪ينَ",
+    "ayetLAT": "Ve yekulune meta hazel va'du in kuntum sadikin.",
+    "ayetTR": "\"Madem doğru söyleyenlerseniz,  bu vaat ne zaman?\" derler."
+  },
+  {
+    "ayetID": 49,
+    "ayetAR": "مَا يَنْظُرُونَ اِلَّا صَيْحَةً وَاحِدَةً تَأْخُذُهُمْ وَهُمْ يَخِصِّمُونَ",
+    "ayetLAT": "Ma yenzurune illa sayhaten vahıdeten te'huzuhum ve hum yahıssımun.",
+    "ayetTR": "Onlar birbirleri ile çekişirlerken,  onları yakalayacak tek bir çığlıktan başkasını gözlemiyorlar."
+  },
+  {
+    "ayetID": 50,
+    "ayetAR": "فَلَا يَسْتَط۪يعُونَ تَوْصِيَةً وَلَٓا اِلٰٓى اَهْلِهِمْ يَرْجِعُونَ۟",
+    "ayetLAT": "Fe la yestetiune tavsiyeten ve la ila ehlihim yerciun.",
+    "ayetTR": "Artık vasiyette bulunmaya da ailelerine dönmeye de güçleri yetmez."
+  },
+  {
+    "ayetID": 51,
+    "ayetAR": "وَنُفِـخَ فِي الصُّورِ فَاِذَا هُمْ مِنَ الْاَجْدَاثِ اِلٰى رَبِّهِمْ يَنْسِلُونَ",
+    "ayetLAT": "Ve nufiha fis suri fe iza hum minel ecdasi ila rabbihim yensilun.",
+    "ayetTR": "Sur'a üflenmiştir! İşte o zaman onlar,  kabirlerinden Rabb'lerine akın ederler."
+  },
+  {
+    "ayetID": 52,
+    "ayetAR": "قَالُوا يَا وَيْلَنَا مَنْ بَعَثَنَا مِنْ مَرْقَدِنَ۔اۢ هٰذَا مَا وَعَدَ الرَّحْمٰنُ وَصَدَقَ الْمُرْسَلُونَ",
+    "ayetLAT": "Kalu ya veylena men beasena min merkadina, haza ma vaader rahmanuve sadakal murselun.",
+    "ayetTR": "\"Eyvah bize! Yattığımız yerden bizi kim kaldırdı? Bu Rahman'ın uyardığı şeydir. Resuller doğru söylemişler.\" dediler."
+  },
+  {
+    "ayetID": 53,
+    "ayetAR": "اِنْ كَانَتْ اِلَّا صَيْحَةً وَاحِدَةً فَاِذَا هُمْ جَم۪يعٌ لَدَيْنَا مُحْضَرُونَ",
+    "ayetLAT": "İn kanet illa sayhaten vahıdeten fe iza hum cemiun ledeyna muhdarun.",
+    "ayetTR": "Sadece tek bir sayha! İşte o zaman onların tamamı huzurumuza getirilirler."
+  },
+  {
+    "ayetID": 54,
+    "ayetAR": "فَالْيَوْمَ لَا تُظْلَمُ نَفْسٌ شَيْـٔاً وَلَا تُجْزَوْنَ اِلَّا مَا كُنْتُمْ تَعْمَلُونَ",
+    "ayetLAT": "Fel yevme la tuzlemu nefsun şey'en ve la tuczevne illa ma kuntum ta'melun.",
+    "ayetTR": "Artık bugün kişi,  hiçbir haksızlık görmeyecek. Sadece yaptıklarınızın karşılığını göreceksiniz."
+  },
+  {
+    "ayetID": 55,
+    "ayetAR": "اِنَّ اَصْحَابَ الْجَنَّةِ الْيَوْمَ ف۪ي شُغُلٍ فَاكِهُونَۚ",
+    "ayetLAT": "İnne ashabel cennetil yevme fi şugulin fakihun.",
+    "ayetTR": "Kuşkusuz Cennet ehli bugün keyifli bir uğraş içindedir."
+  },
+  {
+    "ayetID": 56,
+    "ayetAR": "هُمْ وَاَزْوَاجُهُمْ ف۪ي ظِلَالٍ عَلَى الْاَرَٓائِكِ مُتَّكِؤُ۫نَ",
+    "ayetLAT": "Hum ve ezvacuhum fi zılalin alel eraiki muttekiun.",
+    "ayetTR": "Onlar ve eşleri gölgeliklerde tahtlar üzerine kurulmuşlardır."
+  },
+  {
+    "ayetID": 57,
+    "ayetAR": "لَهُمْ ف۪يهَا فَاكِهَةٌ وَلَهُمْ مَا يَدَّعُونَۚ",
+    "ayetLAT": "Lehum fiha fakihetun ve lehum ma yeddeun.",
+    "ayetTR": "Orada onlar için meyve ve gönüllerinin çektiği her şey vardır."
+  },
+  {
+    "ayetID": 58,
+    "ayetAR": "سَلَامٌ قَوْلاً مِنْ رَبٍّ رَح۪يمٍ",
+    "ayetLAT": "Selamun kavlen min rabbin rahim.",
+    "ayetTR": "Rahmeti kesintisiz Rabb'den söz selamdır."
+  },
+  {
+    "ayetID": 59,
+    "ayetAR": "وَامْتَازُوا الْيَوْمَ اَيُّهَا الْمُجْرِمُونَ",
+    "ayetLAT": "Vemtazul yevme eyyuhel mucrimun.",
+    "ayetTR": "Ey mücrimler! Bugün ayrılın!"
+  },
+  {
+    "ayetID": 60,
+    "ayetAR": "اَلَمْ اَعْهَدْ اِلَيْكُمْ يَا بَن۪ٓي اٰدَمَ اَنْ لَا تَعْبُدُوا الشَّيْطَانَۚ اِنَّهُ لَكُمْ عَدُوٌّ مُب۪ينٌۙ",
+    "ayetLAT": "E lem a'had ileykum ya beni ademe en la ta'buduş şeytan, innehu lekum aduvvun mubin.",
+    "ayetTR": "Ey ademoğulları! Ben,  size \"Şeytana kulluk etmeyin,  o sizin için apaçık düşmandır,  diye uyarıda bulunmadım mı?\""
+  },
+  {
+    "ayetID": 61,
+    "ayetAR": "وَاَنِ اعْبُدُون۪يۜ هٰذَا صِرَاطٌ مُسْتَق۪يمٌ",
+    "ayetLAT": "Ve eni'buduni, haza sıratun mustekim.",
+    "ayetTR": "Bana kulluk edin. Dosdoğru yol budur."
+  },
+  {
+    "ayetID": 62,
+    "ayetAR": "وَلَقَدْ اَضَلَّ مِنْكُمْ جِبِلاًّ كَث۪يراًۜ اَفَلَمْ تَكُونُوا تَعْقِلُونَ",
+    "ayetLAT": "Ve lekad edalle minkum cibillen kesira, e fe lem tekunu ta'kılun.",
+    "ayetTR": "Ant olsun ki sizden birçoklarını saptırdı. Sizde bunu anlayacak akıl yok muydu?"
+  },
+  {
+    "ayetID": 63,
+    "ayetAR": "هٰذِه۪ جَهَنَّمُ الَّت۪ي كُنْتُمْ تُوعَدُونَ",
+    "ayetLAT": "Hazihi cehennemulleti kuntum tuadun.",
+    "ayetTR": "İşte,  uyarılmış olduğunuz Cehennem budur."
+  },
+  {
+    "ayetID": 64,
+    "ayetAR": "اِصْلَوْهَا الْيَوْمَ بِمَا كُنْتُمْ تَكْفُرُونَ",
+    "ayetLAT": "Islevhel yevme bima kuntum tekfurun.",
+    "ayetTR": "Kafir olduğunuz için bugün oraya girin!"
+  },
+  {
+    "ayetID": 65,
+    "ayetAR": "اَلْيَوْمَ نَخْتِمُ عَلٰٓى اَفْوَاهِهِمْ وَتُكَلِّمُنَٓا اَيْد۪يهِمْ وَتَشْهَدُ اَرْجُلُهُمْ بِمَا كَانُوا يَكْسِبُونَ",
+    "ayetLAT": "El yevme nahtimu ala efvahihim ve tukellimuna eydihim ve teşhedu erculuhum bima kanu yeksibun.",
+    "ayetTR": "Bugün onların ağızlarını kapatırız. Bize elleri konuşur,  ayakları da kazandıkları şeylere tanıklık eder."
+  },
+  {
+    "ayetID": 66,
+    "ayetAR": "وَلَوْ نَشَٓاءُ لَطَمَسْنَا عَلٰٓى اَعْيُنِهِمْ فَاسْتَبَقُوا الصِّرَاطَ فَاَنّٰى يُبْصِرُونَ",
+    "ayetLAT": "Ve lev neşau le tamesna ala a'yunihim festebekus sırata fe enna yubsırun.",
+    "ayetTR": "Eğer dileseydik,  elbette gözlerini kör ederdik de yol bulmak için koşuşturup dururlardı. Yollarını nasıl bulacaklardı ki?"
+  },
+  {
+    "ayetID": 67,
+    "ayetAR": "وَلَوْ نَشَٓاءُ لَمَسَخْنَاهُمْ عَلٰى مَكَانَتِهِمْ فَمَا اسْتَطَاعُوا مُضِياًّ وَلَا يَرْجِعُونَ۟",
+    "ayetLAT": "Ve lev neşau le mesahnahum ala mekanetihim fe mastetau mudiyyen ve la yerciun.",
+    "ayetTR": "Eğer dileseydik,  oldukları yerde sabit bir şekle dönüştürürdük,  ileri gitmeye de geri dönmeye de güç yetiremezlerdi."
+  },
+  {
+    "ayetID": 68,
+    "ayetAR": "وَمَنْ نُعَمِّرْهُ نُنَكِّسْهُ فِي الْخَلْقِۜ اَفَلَا يَعْقِلُونَ",
+    "ayetLAT": "Ve men nuammirhu nunekkishu fil halk, e fe la ya'kılun.",
+    "ayetTR": "Kimin ömrünü uzatırsak,  zamanla yaratılış olarak onu tersine çeviririz. Buna rağmen hala akıllarını kullanmayacaklar mı?"
+  },
+  {
+    "ayetID": 69,
+    "ayetAR": "وَمَا عَلَّمْنَاهُ الشِّعْرَ وَمَا يَنْبَغ۪ي لَهُۜ اِنْ هُوَ اِلَّا ذِكْرٌ وَقُرْاٰنٌ مُب۪ينٌۙ",
+    "ayetLAT": "Ve ma allemnahuş şi're ve ma yenbagi leh, in huve illa zikrun ve kur'anun mubin.",
+    "ayetTR": "Biz ona şiir öğretmedik. Ve bu,  ona yakışmaz da. O,  yalnızca bir Öğüt ve apaçık Kur'an'dır."
+  },
+  {
+    "ayetID": 70,
+    "ayetAR": "لِيُنْذِرَ مَنْ كَانَ حَياًّ وَيَحِقَّ الْقَوْلُ عَلَى الْكَافِر۪ينَ",
+    "ayetLAT": "Li yunzire men kane hayyen ve yehıkkal kavlu alel kafirin.",
+    "ayetTR": "O,  diri olanları uyarmak ve Kafirlerin üzerine Söz'ün hak olması içindir."
+  },
+  {
+    "ayetID": 71,
+    "ayetAR": "اَوَلَمْ يَرَوْا اَنَّا خَلَقْنَا لَهُمْ مِمَّا عَمِلَتْ اَيْد۪ينَٓا اَنْعَاماً فَهُمْ لَهَا مَالِكُونَ",
+    "ayetLAT": "E ve lem yerev enna halakna lehum mimma amilet eydina en'amen fe hum leha malikun.",
+    "ayetTR": "Ellerimizin yaptıklarından,  onlara sahip oldukları hayvanlar yarattığımızı görmüyorlar mı?"
+  },
+  {
+    "ayetID": 72,
+    "ayetAR": "وَذَلَّلْنَاهَا لَهُمْ فَمِنْهَا رَكُوبُهُمْ وَمِنْهَا يَأْكُلُونَ",
+    "ayetLAT": "Ve zellelnaha lehum fe minha rakubuhum ve minha ye'kulun.",
+    "ayetTR": "Bu hayvanları yararlanmalarına sunduk. Kimine biniyor,  kimini de yiyorlar."
+  },
+  {
+    "ayetID": 73,
+    "ayetAR": "وَلَهُمْ ف۪يهَا مَنَافِـعُ وَمَشَارِبُۜ اَفَلَا يَشْكُرُونَ",
+    "ayetLAT": "Ve lehum fiha menafiu ve meşarib, e fe la yeşkurun.",
+    "ayetTR": "Bu hayvanlarda onlar için yararlar ve içecek şeyler vardır. Hala şükretmeyecekler mi?"
+  },
+  {
+    "ayetID": 74,
+    "ayetAR": "وَاتَّخَذُوا مِنْ دُونِ اللّٰهِ اٰلِهَةً لَعَلَّهُمْ يُنْصَرُونَۜ",
+    "ayetLAT": "Vettehazu min dunillahi aliheten leallehum yunsarun.",
+    "ayetTR": "Onlar,  Allah'ın yanı sıra,  kendilerinden yardım umdukları ilahlar edindiler."
+  },
+  {
+    "ayetID": 75,
+    "ayetAR": "لَا يَسْتَط۪يعُونَ نَصْرَهُمْۙ وَهُمْ لَهُمْ جُنْدٌ مُحْضَرُونَ",
+    "ayetLAT": "La yestetiune nasrahum ve hum lehum cundun muhdarun.",
+    "ayetTR": "Oysa bu ilahlar onlara yardım etmeye güç yetiremezler. Ne var ki kendileri onlar için hazır askerlerdir."
+  },
+  {
+    "ayetID": 76,
+    "ayetAR": "فَلَا يَحْزُنْكَ قَوْلُهُمْۢ اِنَّا نَعْلَمُ مَا يُسِرُّونَ وَمَا يُعْلِنُونَ",
+    "ayetLAT": "Fe la yahzunke kavluhum, inna na'lemu ma yusirrune ve ma yu'linun.",
+    "ayetTR": "Artık onların sözleri seni üzmesin. Biz,  onların gizlediklerini de açığa vurduklarını da biliyoruz."
+  },
+  {
+    "ayetID": 77,
+    "ayetAR": "اَوَلَمْ يَرَ الْاِنْسَانُ اَنَّا خَلَقْنَاهُ مِنْ نُطْفَةٍ فَاِذَا هُوَ خَص۪يمٌ مُب۪ينٌ",
+    "ayetLAT": "E ve lem yerel insanu enna halaknahu min nutfetin fe iza huve hasimun mubin.",
+    "ayetTR": "İnsan,  onu bir nutfeden yarattığımızı düşünmüyor mu? Şimdi de Bize apaçık düşman oldu."
+  },
+  {
+    "ayetID": 78,
+    "ayetAR": "وَضَرَبَ لَنَا مَثَلاً وَنَسِيَ خَلْقَهُۜ قَالَ مَنْ يُحْـيِ الْعِظَامَ وَهِيَ رَم۪يمٌ",
+    "ayetLAT": "Ve darebe lena meselen ve nesiye halkah, kale men yuhyil izame ve hiye remim.",
+    "ayetTR": "Nasıl yaratıldığını dikkate almayarak,  bir de Bize örnek veriyor: \"Kemiklerimiz çürüyüp gitmişken,  kim onlara can verecek?\" diyor."
+  },
+  {
+    "ayetID": 79,
+    "ayetAR": "قُلْ يُحْي۪يهَا الَّـذ۪ٓي اَنْشَاَهَٓا اَوَّلَ مَرَّةٍۜ وَهُوَ بِكُلِّ خَلْقٍ عَل۪يمٌۙ",
+    "ayetLAT": "Kul yuhyihellezi enşeeha evvele merreh, ve huve bi kulli halkın alim.",
+    "ayetTR": "De ki: \"Onu ilk defa inşa eden,  ona hayat verecek. Ve O,  yaratmayı çok iyi bilendir.\""
+  },
+  {
+    "ayetID": 80,
+    "ayetAR": "اَلَّذ۪ي جَعَلَ لَكُمْ مِنَ الشَّجَرِ الْاَخْضَرِ نَاراً فَاِذَٓا اَنْتُمْ مِنْهُ تُوقِدُونَ",
+    "ayetLAT": "Ellezi ceale lekum mineş şeceril ahdarinaren fe iza entum minhu tukıdun.",
+    "ayetTR": "Size yemyeşil ağaçtan ateş çıkaran O'dur. Siz,  ondan yakıp duruyorsunuz."
+  },
+  {
+    "ayetID": 81,
+    "ayetAR": "اَوَلَيْسَ الَّذ۪ي خَلَقَ السَّمٰوَاتِ وَالْاَرْضَ بِقَادِرٍ عَلٰٓى اَنْ يَخْلُقَ مِثْلَهُمْۜ بَلٰى وَهُوَ الْخَلَّاقُ الْعَل۪يمُ",
+    "ayetLAT": "E ve leysellezi halakas semavati vel arda bi kadirin ala en yahluka mislehum, bela ve huvel hallakul alim.",
+    "ayetTR": "Gökleri ve yeri yaratanın,  onların benzerlerini de yaratmaya gücü yetmez mi? Evet O,  Yegane Yaratıcı'dır,  Her Şeyi Bilen'dir."
+  },
+  {
+    "ayetID": 82,
+    "ayetAR": "اِنَّـمَٓا اَمْرُهُٓ اِذَٓا اَرَادَ شَيْـٔاً اَنْ يَقُولَ لَهُ كُنْ فَيَكُونُ",
+    "ayetLAT": "İnnema emruhu iza erade şey'en en yekule lehu kun fe yekun.",
+    "ayetTR": "O,  bir şey yaratmak istediğinde,  ona: \"Ol.\" der. O da hemen oluverir."
+  },
+  {
+    "ayetID": 83,
+    "ayetAR": "فَسُبْحَانَ الَّذ۪ي بِيَدِه۪ مَلَكُوتُ كُلِّ شَيْءٍ وَاِلَيْهِ تُرْجَعُونَ",
+    "ayetLAT": "Fe subhanellezi bi yedihi melekutu kulli şey'in ve ileyhi turceun.",
+    "ayetTR": "O,  çok yüce ve çok üstündür. Her şeyin mülkü ve egemenliği O'nun elindedir. Ve O'na döndürüleceksiniz."
+  }
+]

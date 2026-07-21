@@ -1,0 +1,8 @@
+<resources>
+    <string name="auth_title">Nachrichten</string>
+    <string name="auth_description">Melde dich mit deinem Google-Konto an, um Nachrichten zu senden und Antworten zu sehen.</string>
+    <string name="auth_value_short">Nach der Anmeldung kannst du deinen Nachrichtenverlauf verfolgen und Antworten auf einem Bildschirm sehen.</string>
+    <string name="auth_sign_in_google">Mit Google anmelden</string>
+    <string name="auth_sign_in_failed">Anmeldung fehlgeschlagen. Bitte erneut versuchen.</string>
+</resources>
+

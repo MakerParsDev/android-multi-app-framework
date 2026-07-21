@@ -1,0 +1,35 @@
+name: Export Firebase Override Env
+description: Export Firebase override, web client, and Cloudflare R2 values from the workflow environment
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        set -euo pipefail
+
+        write_env_if_present() {
+          local key="$1"
+          local val="${!key:-}"
+          if [ -n "$val" ]; then
+            echo "::add-mask::$val"
+            printf '%s=%s\n' "$key" "$val" >> "$GITHUB_ENV"
+          fi
+        }
+
+        write_env_if_present FIREBASE_CONFIGS_ZIP_BASE64
+        write_env_if_present FIREBASE_WEB_CLIENT_ID
+        write_env_if_present CF_R2_BUCKET
+        write_env_if_present CF_R2_FIREBASE_OBJECT
+        write_env_if_present CF_R2_ACCOUNT_ID
+        write_env_if_present CF_API_TOKEN
+
+        if [ -z "${CF_R2_ACCOUNT_ID:-}" ] && [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+          echo "::add-mask::$CLOUDFLARE_ACCOUNT_ID"
+          printf 'CF_R2_ACCOUNT_ID=%s\n' "$CLOUDFLARE_ACCOUNT_ID" >> "$GITHUB_ENV"
+        fi
+
+        if [ -z "${CF_API_TOKEN:-}" ] && [ -n "${CLOUDFLARE_API_TOKEN:-}" ]; then
+          echo "::add-mask::$CLOUDFLARE_API_TOKEN"
+          printf 'CF_API_TOKEN=%s\n' "$CLOUDFLARE_API_TOKEN" >> "$GITHUB_ENV"
+        fi

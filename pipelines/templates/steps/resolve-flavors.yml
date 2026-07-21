@@ -1,0 +1,86 @@
+parameters:
+  # Accept either:
+  # - manual: targetFlavor = all | <one>
+  # - release: targetFlavors = all | <csv>
+  targetFlavor: ""
+  targetFlavors: ""
+
+steps:
+  - bash: |
+      set -euo pipefail
+      chmod +x ./gradlew
+
+      ALL_JSON="$(./gradlew -q printFlavors | tr -d '\r')"
+      mapfile -t ALL < <(
+        echo "$ALL_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d'
+      )
+
+      if [ "${#ALL[@]}" -eq 0 ]; then
+        echo "printFlavors returned empty list."
+        exit 1
+      fi
+
+      # Resolve input: prefer targetFlavors if set, else use targetFlavor.
+      INPUT="${{ parameters.targetFlavors }}"
+      if [ -z "$INPUT" ]; then
+        INPUT="${{ parameters.targetFlavor }}"
+      fi
+
+      INPUT="$(echo "${INPUT:-}" | tr -d '\r' | sed 's/[[:space:]]//g')"
+      if [ -z "$INPUT" ]; then
+        echo "Missing flavor input. Provide targetFlavor or targetFlavors."
+        exit 1
+      fi
+
+      RESOLVED=()
+      if [ "$INPUT" = "all" ]; then
+        RESOLVED=("${ALL[@]}")
+      elif [[ "$INPUT" == *","* ]]; then
+        IFS=',' read -ra REQ <<< "$INPUT"
+        for r in "${REQ[@]}"; do
+          [ -z "$r" ] && continue
+          ok="false"
+          for f in "${ALL[@]}"; do
+            if [ "$f" = "$r" ]; then ok="true"; break; fi
+          done
+          if [ "$ok" != "true" ]; then
+            echo "Invalid flavor '$r'. Allowed: ${ALL[*]}"
+            exit 1
+          fi
+          RESOLVED+=("$r")
+        done
+      else
+        ok="false"
+        for f in "${ALL[@]}"; do
+          if [ "$f" = "$INPUT" ]; then ok="true"; break; fi
+        done
+        if [ "$ok" != "true" ]; then
+          echo "Invalid flavor '$INPUT'. Allowed: all, ${ALL[*]}"
+          exit 1
+        fi
+        RESOLVED+=("$INPUT")
+      fi
+
+      if [ "${#RESOLVED[@]}" -eq 0 ]; then
+        echo "No flavors resolved."
+        exit 1
+      fi
+
+      # JSON array: ["f1","f2"]
+      out="["
+      first=true
+      for f in "${RESOLVED[@]}"; do
+        if [ "$first" = false ]; then out+=","; fi
+        out+="\"$f\""
+        first=false
+      done
+      out+="]"
+
+      csv="$(IFS=,; echo "${RESOLVED[*]}")"
+      echo "Resolved flavors JSON: $out"
+      echo "Resolved flavors CSV: $csv"
+
+      echo "##vso[task.setvariable variable=RESOLVED_FLAVORS_JSON]$out"
+      echo "##vso[task.setvariable variable=RESOLVED_FLAVORS_CSV]$csv"
+    displayName: Resolve Flavors
+

@@ -1,0 +1,578 @@
+[
+  {
+    "ayetID": 1,
+    "ayetAR": "اِذَا وَقَعَتِ الْوَاقِعَةُۙ",
+    "ayetLAT": "İza ve kaatil vakıah.",
+    "ayetTR": "Olacak olan o müthiş olay gerçekleştiği zaman."
+  },
+  {
+    "ayetID": 2,
+    "ayetAR": "لَيْسَ لِوَقْعَتِهَا كَاذِبَةٌۢ",
+    "ayetLAT": "Leyse li vak'atiha kazibeh.",
+    "ayetTR": "Onun gerçekleşmesini yalanlayan kimse kalmayacak."
+  },
+  {
+    "ayetID": 3,
+    "ayetAR": "خَافِضَةٌ رَافِعَةٌۙ",
+    "ayetLAT": "Hafidatun rafiah.",
+    "ayetTR": "Alçaltıcıdır, yükselticidir."
+  },
+  {
+    "ayetID": 4,
+    "ayetAR": "اِذَا رُجَّتِ الْاَرْضُ رَجاًّۙ",
+    "ayetLAT": "İza ruccetil ardu recca.",
+    "ayetTR": "Yer sarsıldıkça sarsıldığı zaman."
+  },
+  {
+    "ayetID": 5,
+    "ayetAR": "وَبُسَّتِ الْجِبَالُ بَساًّۙ",
+    "ayetLAT": "Ve bussetil cibalu bessa.",
+    "ayetTR": "Dağlar parça parça olup,"
+  },
+  {
+    "ayetID": 6,
+    "ayetAR": "فَكَانَتْ هَبَٓاءً مُنْبَثاًّۙ",
+    "ayetLAT": "Fe kanet hebaen mun bessa.",
+    "ayetTR": "Toz duman haline gelince,"
+  },
+  {
+    "ayetID": 7,
+    "ayetAR": "وَكُنْتُمْ اَزْوَاجاً ثَلٰثَةًۜ",
+    "ayetLAT": "Ve kuntum ezvacen selaseh.",
+    "ayetTR": "Siz o zaman üç sınıfa ayrılacaksınız."
+  },
+  {
+    "ayetID": 8,
+    "ayetAR": "فَاَصْحَابُ الْمَيْمَنَةِ مَٓا اَصْحَابُ الْمَيْمَنَةِۜ",
+    "ayetLAT": "Fe ashabul meymeneti ma ashabul meymeneti.",
+    "ayetTR": "İşte ashabı meymene! Nedir ashabı meymene?"
+  },
+  {
+    "ayetID": 9,
+    "ayetAR": "وَاَصْحَابُ الْمَشْـَٔمَةِ مَٓا اَصْحَابُ الْمَشْـَٔمَةِۜ",
+    "ayetLAT": "Ve ashabul meş'emeti ma ashabul meş'emeti.",
+    "ayetTR": "Ashabı meş'eme! Nedir ashabı meş'eme?"
+  },
+  {
+    "ayetID": 10,
+    "ayetAR": "وَالسَّابِقُونَ السَّابِقُونَۙ",
+    "ayetLAT": "Ves sabikunes sabikun.",
+    "ayetTR": "Ve sabikunlar da sabikunlardır."
+  },
+  {
+    "ayetID": 11,
+    "ayetAR": "اُو۬لٰٓئِكَ الْمُقَرَّبُونَۚ",
+    "ayetLAT": "Ulaikel mukarrebun.",
+    "ayetTR": "İşte onlar, yaklaştırılanlardır."
+  },
+  {
+    "ayetID": 12,
+    "ayetAR": "ف۪ي جَنَّاتِ النَّع۪يمِ",
+    "ayetLAT": "Fi cennatin naim.",
+    "ayetTR": "Naim Cennetlerindedirler."
+  },
+  {
+    "ayetID": 13,
+    "ayetAR": "ثُلَّةٌ مِنَ الْاَوَّل۪ينَۙ",
+    "ayetLAT": "Sulletun minel evvelin.",
+    "ayetTR": "Birçoğu öncekilerden."
+  },
+  {
+    "ayetID": 14,
+    "ayetAR": "وَقَل۪يلٌ مِنَ الْاٰخِر۪ينَۜ",
+    "ayetLAT": "Ve kalilun minel ahirin.",
+    "ayetTR": "Birazı da sonrakilerden."
+  },
+  {
+    "ayetID": 15,
+    "ayetAR": "عَلٰى سُرُرٍ مَوْضُونَةٍۙ",
+    "ayetLAT": "Ala sururin mevdunetin.",
+    "ayetTR": "İşlemeli tahtlar üzerinde."
+  },
+  {
+    "ayetID": 16,
+    "ayetAR": "مُتَّكِـ۪ٔينَ عَلَيْهَا مُتَقَابِل۪ينَ",
+    "ayetLAT": "Muttekiine aleyha mutekabilin.",
+    "ayetTR": "Onların üzerinde karşılıklı yaslanırlar."
+  },
+  {
+    "ayetID": 17,
+    "ayetAR": "يَطُوفُ عَلَيْهِمْ وِلْدَانٌ مُخَلَّدُونَۙ",
+    "ayetLAT": "Yetufu aleyhim vildanun muhalledun.",
+    "ayetTR": "Yaşamları sürekli kılınmış gençler çevrelerinde dolaşırlar."
+  },
+  {
+    "ayetID": 18,
+    "ayetAR": "بِاَكْوَابٍ وَاَبَار۪يقَ وَكَأْسٍ مِنْ مَع۪ينٍۙ",
+    "ayetLAT": "Bi ekvabin ve ebarika ve ke'sin min main.",
+    "ayetTR": "Kaynağından doldurulmuş testiler, ibrikler ve billur kadehler ile."
+  },
+  {
+    "ayetID": 19,
+    "ayetAR": "لَا يُصَدَّعُونَ عَنْهَا وَلَا يُنْزِفُونَۙ",
+    "ayetLAT": "La yusaddeune anha ve la yunzifun.",
+    "ayetTR": "Ondan; başları ağrımaz ve sarhoş olmazlar."
+  },
+  {
+    "ayetID": 20,
+    "ayetAR": "وَفَاكِهَةٍ مِمَّا يَتَخَيَّرُونَۙ",
+    "ayetLAT": "Ve fakihetin mimma yetehayyerun.",
+    "ayetTR": "Ve beğendikleri meyveler,"
+  },
+  {
+    "ayetID": 21,
+    "ayetAR": "وَلَحْمِ طَيْرٍ مِمَّا يَشْتَهُونَۜ",
+    "ayetLAT": "Ve lahmi tayrin mimma yeştehun.",
+    "ayetTR": "Ve canlarının çektiği kuş etleri,"
+  },
+  {
+    "ayetID": 22,
+    "ayetAR": "وَحُورٌ ع۪ينٌۙ",
+    "ayetLAT": "Ve hurun inun.",
+    "ayetTR": "Güzel bakışlı huriler."
+  },
+  {
+    "ayetID": 23,
+    "ayetAR": "كَاَمْثَالِ اللُّؤْلُؤِ۬ الْمَكْنُونِۚ",
+    "ayetLAT": "Ke emsalil lu'luil meknun.",
+    "ayetTR": "Korunmuş inci gibi."
+  },
+  {
+    "ayetID": 24,
+    "ayetAR": "جَزَٓاءً بِمَا كَانُوا يَعْمَلُونَ",
+    "ayetLAT": "Cezaen bi ma kanu ya'melun.",
+    "ayetTR": "Yaptıkları iyi şeylere karşılık olarak."
+  },
+  {
+    "ayetID": 25,
+    "ayetAR": "لَا يَسْمَعُونَ ف۪يهَا لَغْواً وَلَا تَأْث۪يماًۙ",
+    "ayetLAT": "La yesmeune fiha lagven ve la te'sima.",
+    "ayetTR": "Orada boş, anlamsız ve günaha sokan şeyler duymazlar."
+  },
+  {
+    "ayetID": 26,
+    "ayetAR": "اِلَّا ق۪يلاً سَلَاماً سَلَاماً",
+    "ayetLAT": "İlla kilen selamen selama.",
+    "ayetTR": "Söz olarak yalnızca; selam, selam sözü söylenir."
+  },
+  {
+    "ayetID": 27,
+    "ayetAR": "وَاَصْحَابُ الْيَم۪ينِ مَٓا اَصْحَابُ الْيَم۪ينِۜ",
+    "ayetLAT": "Ve ashabul yemini ma ashabul yemin.",
+    "ayetTR": "Sağın adamları! Nedir sağın adamları?"
+  },
+  {
+    "ayetID": 28,
+    "ayetAR": "ف۪ي سِدْرٍ مَخْضُودٍۙ",
+    "ayetLAT": "Fi sidrin mahdud.",
+    "ayetTR": "Dikensiz sedir ağaçları içindedirler."
+  },
+  {
+    "ayetID": 29,
+    "ayetAR": "وَطَلْحٍ مَنْضُودٍۙ",
+    "ayetLAT": "Ve talhın mendud.",
+    "ayetTR": "Salkım salkım muz ağaçları,"
+  },
+  {
+    "ayetID": 30,
+    "ayetAR": "وَظِلٍّ مَمْدُودٍۙ",
+    "ayetLAT": "Ve zıllin memdud.",
+    "ayetTR": "Uzamış gölgeler,"
+  },
+  {
+    "ayetID": 31,
+    "ayetAR": "وَمَٓاءٍ مَسْكُوبٍۙ",
+    "ayetLAT": "Ve main meskub.",
+    "ayetTR": "Ve çağlayan sular,"
+  },
+  {
+    "ayetID": 32,
+    "ayetAR": "وَفَاكِهَةٍ كَث۪يرَةٍۙ",
+    "ayetLAT": "Ve fakihetin kesirah",
+    "ayetTR": "Her türden meyveler,"
+  },
+  {
+    "ayetID": 33,
+    "ayetAR": "لَا مَقْطُوعَةٍ وَلَا مَمْنُوعَةٍۙ",
+    "ayetLAT": "La maktuatin ve la memnuah.",
+    "ayetTR": "Tükenmeyen ve yasaklanmayan,"
+  },
+  {
+    "ayetID": 34,
+    "ayetAR": "وَفُرُشٍ مَرْفُوعَةٍۜ",
+    "ayetLAT": "Ve furuşin merfuah.",
+    "ayetTR": "Kabartılmış döşeklerdedirler."
+  },
+  {
+    "ayetID": 35,
+    "ayetAR": "اِنَّٓا اَنْشَأْنَاهُنَّ اِنْشَٓاءًۙ",
+    "ayetLAT": "İnna enşe'na hunne inşaa.",
+    "ayetTR": "Biz, onları yeni bir düzenleme ile düzenledik."
+  },
+  {
+    "ayetID": 36,
+    "ayetAR": "فَجَعَلْنَاهُنَّ اَبْكَاراًۙ",
+    "ayetLAT": "Fe cealna hunne ebkaran.",
+    "ayetTR": "Onları dokunulmamışlar yaptık."
+  },
+  {
+    "ayetID": 37,
+    "ayetAR": "عُـرُباً اَتْـرَاباًۙ",
+    "ayetLAT": "Uruben etraba.",
+    "ayetTR": "Sahibini yadırgamayan."
+  },
+  {
+    "ayetID": 38,
+    "ayetAR": "لِاَصْحَـابِ الْيَم۪ينِۜ ۟",
+    "ayetLAT": "Li ashabil yemin.",
+    "ayetTR": "Sağın adamları için."
+  },
+  {
+    "ayetID": 39,
+    "ayetAR": "ثُلَّةٌ مِنَ الْاَوَّل۪ينَۙ",
+    "ayetLAT": "Sulletun minel evvelin.",
+    "ayetTR": "Bir kısmı öncekilerdendir."
+  },
+  {
+    "ayetID": 40,
+    "ayetAR": "وَثُلَّةٌ مِنَ الْاٰخِر۪ينَۜ",
+    "ayetLAT": "Ve sulletun minel ahırin.",
+    "ayetTR": "Bir kısmı sonrakilerdendir."
+  },
+  {
+    "ayetID": 41,
+    "ayetAR": "وَاَصْحَابُ الشِّمَالِۙ مَٓا اَصْحَابُ الشِّمَالِۜ",
+    "ayetLAT": "Ve ashabuş şimali ma ashabuş şimal.",
+    "ayetTR": "Ve solun adamları! Nedir solun adamları?"
+  },
+  {
+    "ayetID": 42,
+    "ayetAR": "ف۪ي سَمُومٍ وَحَم۪يمٍۙ",
+    "ayetLAT": "Fi semumin ve hamim.",
+    "ayetTR": "Kavurucu bir azap ve kaynar su içindedirler."
+  },
+  {
+    "ayetID": 43,
+    "ayetAR": "وَظِلٍّ مِنْ يَحْمُومٍۙ",
+    "ayetLAT": "Ve zıllin min yahmum.",
+    "ayetTR": "Ve kara bir dumanın gölgesinde,"
+  },
+  {
+    "ayetID": 44,
+    "ayetAR": "لَا بَارِدٍ وَلَا كَر۪يمٍ",
+    "ayetLAT": "La baridin ve la kerim.",
+    "ayetTR": "Serin olmayan, faydası olamayan!"
+  },
+  {
+    "ayetID": 45,
+    "ayetAR": "اِنَّهُمْ كَانُوا قَبْلَ ذٰلِكَ مُتْرَف۪ينَۚ",
+    "ayetLAT": "İnnehum kanu kable zalike mutrefin.",
+    "ayetTR": "Çünkü onlar bundan önce varlık içinde zevklerine dalmışlardı."
+  },
+  {
+    "ayetID": 46,
+    "ayetAR": "وَكَانُوا يُصِرُّونَ عَلَى الْحِنْثِ الْعَظ۪يمِۚ",
+    "ayetLAT": "Ve kanu yusirrune alel hınsil azim.",
+    "ayetTR": "Büyük ihanette ısrar ediyorlardı."
+  },
+  {
+    "ayetID": 47,
+    "ayetAR": "وَكَانُوا يَقُولُونَ اَئِذَا مِتْنَا وَكُنَّا تُرَاباً وَعِظَاماً ءَاِنَّا لَمَبْعُوثُونَۙ",
+    "ayetLAT": "Ve kanu yekulune e iza mitna ve kunna turaben ve iza men e inna le meb'usun.",
+    "ayetTR": "Ve \"Biz ölüp, toprak ve kemik yığını olduktan sonra mı yeniden diriltileceğiz?\" diyorlardı."
+  },
+  {
+    "ayetID": 48,
+    "ayetAR": "اَوَاٰبَٓاؤُ۬نَا الْاَوَّلُونَ",
+    "ayetLAT": "E ve abaunel evvelun.",
+    "ayetTR": "\"Bizden önce ölmüş olan atalarımız da mı?\""
+  },
+  {
+    "ayetID": 49,
+    "ayetAR": "قُلْ اِنَّ الْاَوَّل۪ينَ وَالْاٰخِر۪ينَۙ",
+    "ayetLAT": "Kul innel evveline vel ahirin.",
+    "ayetTR": "De ki: \"Öncekiler de sonrakiler de diriltilecekler.\""
+  },
+  {
+    "ayetID": 50,
+    "ayetAR": "لَمَجْمُوعُونَ اِلٰى م۪يقَاتِ يَوْمٍ مَعْلُومٍ",
+    "ayetLAT": "Le mecmuune ila mikati yevmin ma'lum.",
+    "ayetTR": "Bilinen günün belli olan zamanında kesinlikle toplanmış olacaklar."
+  },
+  {
+    "ayetID": 51,
+    "ayetAR": "ثُمَّ اِنَّكُمْ اَيُّهَا الضَّٓالُّونَ الْمُكَذِّبُونَۙ",
+    "ayetLAT": "Summe innekum eyyuhed dallunel mukezzibun.",
+    "ayetTR": "Sonra siz, ey gerçekten sapkınlıkta olan yalancılar!"
+  },
+  {
+    "ayetID": 52,
+    "ayetAR": "لَاٰكِلُونَ مِنْ شَجَرٍ مِنْ زَقُّومٍۙ",
+    "ayetLAT": "Le akilune min şecerin min zakkumin.",
+    "ayetTR": "Kesinlikle zakkum ağacından yiyecek olanlarsınız!"
+  },
+  {
+    "ayetID": 53,
+    "ayetAR": "فَمَالِـؤُ۫نَ مِنْهَا الْبُطُونَۚ",
+    "ayetLAT": "Fe ma liune minhel butun.",
+    "ayetTR": "Karınlarınızı onunla dolduracaksınız!"
+  },
+  {
+    "ayetID": 54,
+    "ayetAR": "فَشَارِبُونَ عَلَيْهِ مِنَ الْحَم۪يمِۚ",
+    "ayetLAT": "Fe şaribune aleyhi minel hamim.",
+    "ayetTR": "Sonra da onun üzerine kaynar sudan içeceksiniz."
+  },
+  {
+    "ayetID": 55,
+    "ayetAR": "فَشَارِبُونَ شُرْبَ الْه۪يمِۜ",
+    "ayetLAT": "Fe şaribune şurbel him.",
+    "ayetTR": "Hem de susuz kalmış develerin içişi gibi içeceksiniz."
+  },
+  {
+    "ayetID": 56,
+    "ayetAR": "هٰذَا نُزُلُهُمْ يَوْمَ الدّ۪ينِۜ",
+    "ayetLAT": "Haza nuzuluhum yevmed din.",
+    "ayetTR": "İşte bu, Din Günü'nde onların ziyafetleridir."
+  },
+  {
+    "ayetID": 57,
+    "ayetAR": "نَحْنُ خَلَقْنَاكُمْ فَلَوْلَا تُصَدِّقُونَ۟",
+    "ayetLAT": "Nahnu halaknakum fe lev la tusaddikun.",
+    "ayetTR": "Sizi Biz yarattık. Bu gerçeği hala kabul etmeyecek misiniz?"
+  },
+  {
+    "ayetID": 58,
+    "ayetAR": "اَفَرَاَيْتُمْ مَا تُمْنُونَۜ",
+    "ayetLAT": "E fe reeytum ma tumnun.",
+    "ayetTR": "Öyleyse akıttığınız şeyin ne olduğunu hiç düşündünüz mü?"
+  },
+  {
+    "ayetID": 59,
+    "ayetAR": "ءَاَنْتُمْ تَخْلُقُونَهُٓ اَمْ نَحْنُ الْخَالِقُونَ",
+    "ayetLAT": "E entum tahlukunehu em nahnul halikun.",
+    "ayetTR": "Onu siz mi yaratıyorsunuz, yoksa yaratan Biz miyiz?"
+  },
+  {
+    "ayetID": 60,
+    "ayetAR": "نَحْنُ قَدَّرْنَا بَيْنَكُمُ الْمَوْتَ وَمَا نَحْنُ بِمَسْبُوق۪ينَۙ",
+    "ayetLAT": "Nahnu kadderna beynekumul mevte ve ma nahnu bi mes- bukin.",
+    "ayetTR": "Aranızda ölümü Biz takdir ettik. Kimse Bizi engelleyemez."
+  },
+  {
+    "ayetID": 61,
+    "ayetAR": "عَلٰٓى اَنْ نُبَدِّلَ اَمْثَالَكُمْ وَنُنْشِئَكُمْ ف۪ي مَا لَا تَعْلَمُونَ",
+    "ayetLAT": "Ala en nubeddile emsalekum ve nunşiekum fi ma la ta'lemun.",
+    "ayetTR": "Yapınızı değiştirip, sizi bilmediğiniz bir şekilde, yeniden yapma gücünden yoksun değiliz."
+  },
+  {
+    "ayetID": 62,
+    "ayetAR": "وَلَقَدْ عَلِمْتُمُ النَّشْاَةَ الْاُو۫لٰى فَلَوْلَا تَذَكَّرُونَ",
+    "ayetLAT": "Ve lekad alimtumunneş etel ula fe lev la tezekkerun.",
+    "ayetTR": "Ant olsun ki ilk meydana getirmeyi bildiniz. Düşünüp öğüt almanız gerekmez mi?"
+  },
+  {
+    "ayetID": 63,
+    "ayetAR": "اَفَرَاَيْتُمْ مَا تَحْرُثُونَۜ",
+    "ayetLAT": "E fe reeytum ma tahrusun.",
+    "ayetTR": "Ektiklerinizi görmüyor musunuz?"
+  },
+  {
+    "ayetID": 64,
+    "ayetAR": "ءَاَنْتُمْ تَزْرَعُونَهُٓ اَمْ نَحْنُ الزَّارِعُونَ",
+    "ayetLAT": "E entum tezre unehu em nahnuz zariun.",
+    "ayetTR": "Onu siz mi yetiştiriyorsunuz, yoksa Biz mi?"
+  },
+  {
+    "ayetID": 65,
+    "ayetAR": "لَوْ نَشَٓاءُ لَجَعَلْنَاهُ حُطَاماً فَظَلْتُمْ تَفَكَّهُونَ",
+    "ayetLAT": "Lev neşau le cealnahu hutamen fe zaltum tefekkehun.",
+    "ayetTR": "Dileseydik kesinlikle onu çer-çöp yapardık da siz şaşırıp kalırdınız."
+  },
+  {
+    "ayetID": 66,
+    "ayetAR": "اِنَّا لَمُغْرَمُونَۙ",
+    "ayetLAT": "İnna le mugremun.",
+    "ayetTR": "\"Gerçekten borçlandık;\""
+  },
+  {
+    "ayetID": 67,
+    "ayetAR": "بَلْ نَحْنُ مَحْرُومُونَ",
+    "ayetLAT": "Bel nahnu mahrumun.",
+    "ayetTR": "\"Doğrusu, yoksun bırakıldık.\""
+  },
+  {
+    "ayetID": 68,
+    "ayetAR": "اَفَرَاَيْتُمُ الْمَٓاءَ الَّذ۪ي تَشْرَبُونَۜ",
+    "ayetLAT": "E fe reeytumul maellezi teşrebun.",
+    "ayetTR": "Peki, içtiğiniz suya hiç baktınız mı?"
+  },
+  {
+    "ayetID": 69,
+    "ayetAR": "ءَاَنْتُمْ اَنْزَلْتُمُوهُ مِنَ الْمُزْنِ اَمْ نَحْنُ الْمُنْزِلُونَ",
+    "ayetLAT": "E entum enzeltumuhu minel muzni em nahnul munzilun.",
+    "ayetTR": "Onu bulutlardan indiren siz misiniz, yoksa indiren Biz miyiz?"
+  },
+  {
+    "ayetID": 70,
+    "ayetAR": "لَوْ نَشَٓاءُ جَعَلْنَاهُ اُجَاجاً فَلَوْلَا تَشْكُرُونَ",
+    "ayetLAT": "Lev neşau cealnahu ucacen fe levla teşkurun.",
+    "ayetTR": "Eğer dileseydik onu tuzlu yapardık. Buna şükretmeniz gerekmez mi?"
+  },
+  {
+    "ayetID": 71,
+    "ayetAR": "اَفَرَاَيْتُمُ النَّارَ الَّت۪ي تُورُونَۜ",
+    "ayetLAT": "E fe reeytumun narelleti turun.",
+    "ayetTR": "Yaktığınız o ateşe baktınız mı hiç?"
+  },
+  {
+    "ayetID": 72,
+    "ayetAR": "ءَاَنْتُمْ اَنْشَأْتُمْ شَجَرَتَـهَٓا اَمْ نَحْنُ الْمُنْشِؤُ۫نَ",
+    "ayetLAT": "E entum enşe'tum şecereteha em nahnul munşiun.",
+    "ayetTR": "Onun ağacını siz mi yetiştirdiniz, yoksa yetiştiren Biz miyiz?"
+  },
+  {
+    "ayetID": 73,
+    "ayetAR": "نَحْنُ جَعَلْنَاهَا تَذْكِرَةً وَمَتَاعاً لِلْمُقْو۪ينَۚ",
+    "ayetLAT": "Nahnu cealnaha tezkireten ve metaan lil mukvin.",
+    "ayetTR": "Biz, onu bir hatırlatma ve ihtiyaç sahipleri için bir yararlanma kaynağı yaptık."
+  },
+  {
+    "ayetID": 74,
+    "ayetAR": "فَسَبِّحْ بِاسْمِ رَبِّكَ الْعَظ۪يمِ۟",
+    "ayetLAT": "Fe sebbih bismi rabbikel azim.",
+    "ayetTR": "O halde Azim Rabb'inin adını tesbih et."
+  },
+  {
+    "ayetID": 75,
+    "ayetAR": "فَلَٓا اُقْسِمُ بِمَوَاقِـعِ النُّجُومِۙ",
+    "ayetLAT": "Fe la uksimu bi mevakiin nucum.",
+    "ayetTR": "Hayır, yıldızların yerleri üzerine yemin ederim;"
+  },
+  {
+    "ayetID": 76,
+    "ayetAR": "وَاِنَّهُ لَقَسَمٌ لَوْ تَعْلَمُونَ عَظ۪يمٌۙ",
+    "ayetLAT": "Ve innehu le kasemun lev ta'lemune azim.",
+    "ayetTR": "Eğer bilirseniz bu yüce bir yemindir."
+  },
+  {
+    "ayetID": 77,
+    "ayetAR": "اِنَّهُ لَقُرْاٰنٌ كَر۪يمٌۙ",
+    "ayetLAT": "İnnehu le kur'anun kerim.",
+    "ayetTR": "Kuşkusuz o, kesinlikle Kerim bir Kur'an'dır."
+  },
+  {
+    "ayetID": 78,
+    "ayetAR": "ف۪ي كِتَابٍ مَكْنُونٍۙ",
+    "ayetLAT": "Fi kitabin meknun.",
+    "ayetTR": "Korunmuş bir Kitap'tadır."
+  },
+  {
+    "ayetID": 79,
+    "ayetAR": "لَا يَمَسُّهُٓ اِلَّا الْمُطَهَّرُونَۜ",
+    "ayetLAT": "La yemessuhu illel mutahherun.",
+    "ayetTR": "Ona arındırılmış olanlardan başkası dokunamaz."
+  },
+  {
+    "ayetID": 80,
+    "ayetAR": "تَنْز۪يلٌ مِنْ رَبِّ الْعَالَم۪ينَ",
+    "ayetLAT": "Tenzilun min rabbil alemin.",
+    "ayetTR": "O, Alemlerin Rabb'inden indirilmedir."
+  },
+  {
+    "ayetID": 81,
+    "ayetAR": "اَفَبِهٰذَا الْحَد۪يثِ اَنْتُمْ مُدْهِنُونَۙ",
+    "ayetLAT": "E fe bi hazel hadisi entum mudhinun.",
+    "ayetTR": "Böyle bir hadisi mi hafife alıyorsunuz?"
+  },
+  {
+    "ayetID": 82,
+    "ayetAR": "وَتَجْعَلُونَ رِزْقَـكُمْ اَنَّكُمْ تُكَذِّبُونَ",
+    "ayetLAT": "Ve tec'alune rızkakum ennekum tukezzibun.",
+    "ayetTR": "Verilen rızıklara yalanlayarak mı karşılık veriyorsunuz?"
+  },
+  {
+    "ayetID": 83,
+    "ayetAR": "فَلَوْلَٓا اِذَا بَلَغَتِ الْحُلْقُومَۙ",
+    "ayetLAT": "Fe lev la iza belegatil hulkume.",
+    "ayetTR": "Can boğaza dayandığı zaman;"
+  },
+  {
+    "ayetID": 84,
+    "ayetAR": "وَاَنْتُمْ ح۪ينَئِذٍ تَنْظُرُونَۙ",
+    "ayetLAT": "Ve entum hine izin tenzurun.",
+    "ayetTR": "O zaman bakınıp durursunuz."
+  },
+  {
+    "ayetID": 85,
+    "ayetAR": "وَنَحْنُ اَقْرَبُ اِلَيْهِ مِنْكُمْ وَلٰـكِنْ لَا تُبْصِرُونَ",
+    "ayetLAT": "Ve nahnu akrabu ileyhi minkum ve lakin la tubsirun",
+    "ayetTR": "Biz ona sizden daha yakınız fakat siz göremezsiniz."
+  },
+  {
+    "ayetID": 86,
+    "ayetAR": "فَلَوْلَٓا اِنْ كُنْتُمْ غَيْرَ مَد۪ين۪ينَۙ",
+    "ayetLAT": "Fe lev la in kuntum gayre medinin.",
+    "ayetTR": "Mademki hesap sorulacak kimseler değilsiniz,"
+  },
+  {
+    "ayetID": 87,
+    "ayetAR": "تَرْجِعُونَـهَٓا اِنْ كُنْتُمْ صَادِق۪ينَ",
+    "ayetLAT": "Terciuneha in kuntum sadikin.",
+    "ayetTR": "Eğer doğrulardansanız, onu geri çevirmeniz gerekmez mi?"
+  },
+  {
+    "ayetID": 88,
+    "ayetAR": "فَاَمَّٓا اِنْ كَانَ مِنَ الْمُقَرَّب۪ينَۙ",
+    "ayetLAT": "Fe emma in kane minel mukarrebine.",
+    "ayetTR": "Fakat eğer o, yaklaştırılanlardan ise,"
+  },
+  {
+    "ayetID": 89,
+    "ayetAR": "فَرَوْحٌ وَرَيْحَانٌ وَجَنَّتُ نَع۪يمٍ",
+    "ayetLAT": "Fe revhun ve reyhanun ve cennetu naim.",
+    "ayetTR": "O takdirde, rahat bir hayat, huzur, güzel kokulu rızık ve nimetlerle dolu bir Cennet vardır."
+  },
+  {
+    "ayetID": 90,
+    "ayetAR": "وَاَمَّٓا اِنْ كَانَ مِنْ اَصْحَابِ الْيَم۪ينِۙ",
+    "ayetLAT": "Ve emma in kane min ashabil yemin.",
+    "ayetTR": "Ve eğer o, sağın adamlarından1 ise,"
+  },
+  {
+    "ayetID": 91,
+    "ayetAR": "فَسَلَامٌ لَكَ مِنْ اَصْحَابِ الْيَم۪ينِ",
+    "ayetLAT": "Fe selamun leke min ashabil yemin.",
+    "ayetTR": "O zaman sağın adamlarından, \"Sana selam olsun.\""
+  },
+  {
+    "ayetID": 92,
+    "ayetAR": "وَاَمَّٓا اِنْ كَانَ مِنَ الْمُكَذِّب۪ينَ الضَّٓالّ۪ينَۙ",
+    "ayetLAT": "Ve emma in kane minel mukezzibined dallin.",
+    "ayetTR": "Ama sapkınlıkta olan yalanlayıcılardan ise,"
+  },
+  {
+    "ayetID": 93,
+    "ayetAR": "فَنُزُلٌ مِنْ حَم۪يمٍۙ",
+    "ayetLAT": "Fe nuzulun min hamim.",
+    "ayetTR": "O zaman kaynar sudan bir ziyafet vardır!"
+  },
+  {
+    "ayetID": 94,
+    "ayetAR": "وَتَصْلِيَةُ جَح۪يمٍۙ",
+    "ayetLAT": "Ve tasliyetu cahim.",
+    "ayetTR": "Ve Cehennem'e atılma vardır."
+  },
+  {
+    "ayetID": 95,
+    "ayetAR": "اِنَّ هٰذَا لَهُوَ حَقُّ الْيَق۪ينِۚ",
+    "ayetLAT": "İnne haza le huve hakkul yakin.",
+    "ayetTR": "Kuşkusuz bu bildirdiklerimiz kesin olarak gerçektir."
+  },
+  {
+    "ayetID": 96,
+    "ayetAR": "فَسَبِّـحْ بِاسْمِ رَبِّكَ الْعَظ۪يمِ",
+    "ayetLAT": "Fe sebbih bismi rabbikel azim.",
+    "ayetTR": "O halde Azim Rabb'inin adını tesbih et."
+  }
+]

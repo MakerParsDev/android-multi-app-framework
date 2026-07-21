@@ -1,0 +1,33 @@
+<resources>
+    <string name="billing_subscription_title">Subscription</string>
+    <string name="billing_subscription_description">Choose a prepaid plan for ad-free access. You can continue using the app with ads without purchasing.</string>
+
+    <string name="billing_active_title">Your subscription is active</string>
+    <string name="billing_active_subtitle">Enjoy an ad-free experience</string>
+
+    <string name="billing_error_prefix">Error: %s</string>
+    <string name="billing_error_connecting">Connecting to payment service, please try again</string>
+    <string name="billing_error_reconnecting">Reconnecting to payment service, please try again</string>
+    <string name="billing_error_unsupported">Subscriptions are not supported on this device. Please update Google Play and try again.</string>
+    <string name="billing_plans_loading">Loading plans…</string>
+    <string name="billing_selected_badge">Selected</string>
+    <string name="billing_subscribe">Buy on Google Play</string>
+
+    <string name="billing_feature_no_ads">All ads are removed</string>
+    <string name="billing_feature_continuous">Uninterrupted listening experience</string>
+    <string name="billing_feature_no_open_ad">No app open ads</string>
+    <string name="billing_feature_cancel_anytime">Does not auto-renew</string>
+    <string name="billing_disclosure_title">Important subscription details</string>
+    <string name="billing_disclosure_body">These plans are prepaid and do not renew automatically. The selected fee is charged once through Google Play for the chosen duration. When the period ends, ad-free access ends as well. You can keep using the app with ads without purchasing.</string>
+    <string name="billing_disclosure_footer">Purchases and payments are handled through Google Play.</string>
+
+    <string name="billing_plan_daily">Daily</string>
+    <string name="billing_plan_weekly">Weekly</string>
+    <string name="billing_plan_monthly">Monthly</string>
+    <string name="billing_plan_2_months">2 months</string>
+    <string name="billing_plan_3_months">3 months</string>
+    <string name="billing_plan_6_months">6 months</string>
+    <string name="billing_plan_yearly">Yearly</string>
+    <string name="billing_plan_generic">Plan</string>
+    <string name="billing_back">Back</string>
+</resources>

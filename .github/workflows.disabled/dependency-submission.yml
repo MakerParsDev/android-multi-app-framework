@@ -1,0 +1,35 @@
+name: Dependency Submission
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  dependency-submission:
+    name: Generate and Submit Dependency Graph
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Submit dependency graph
+        id: submit_graph
+        uses: gradle/actions/dependency-submission@v5
+        continue-on-error: true
+
+      - name: Dependency graph submission notice
+        if: steps.submit_graph.outcome == 'failure'
+        run: |
+          echo "::warning::Dependency submission failed. Repository Dependency Graph is likely disabled."
+          echo "::warning::Enable it from repository Settings > Security > Code security and analysis > Dependency graph."

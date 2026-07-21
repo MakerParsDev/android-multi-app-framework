@@ -1,0 +1,33 @@
+<resources>
+    <string name="billing_subscription_title">Abonnement</string>
+    <string name="billing_subscription_description">Wähle einen Prepaid-Plan für werbefreien Zugriff. Du kannst die App auch ohne Kauf mit Werbung weiter nutzen.</string>
+
+    <string name="billing_active_title">Dein Abonnement ist aktiv</string>
+    <string name="billing_active_subtitle">Genieße ein werbefreies Erlebnis</string>
+
+    <string name="billing_error_prefix">Fehler: %s</string>
+    <string name="billing_error_connecting">Verbindung zum Zahlungsdienst wird hergestellt, bitte versuche es erneut</string>
+    <string name="billing_error_reconnecting">Verbindung zum Zahlungsdienst wird erneut hergestellt, bitte versuche es erneut</string>
+    <string name="billing_error_unsupported">Abonnements werden auf diesem Gerät nicht unterstützt. Bitte Google Play aktualisieren und erneut versuchen.</string>
+    <string name="billing_plans_loading">Pläne werden geladen…</string>
+    <string name="billing_selected_badge">Ausgewählt</string>
+    <string name="billing_subscribe">Bei Google Play kaufen</string>
+
+    <string name="billing_feature_no_ads">Alle Anzeigen werden entfernt</string>
+    <string name="billing_feature_continuous">Ununterbrochenes Hörerlebnis</string>
+    <string name="billing_feature_no_open_ad">Keine App-Startanzeigen</string>
+    <string name="billing_feature_cancel_anytime">Verlängert sich nicht automatisch</string>
+    <string name="billing_disclosure_title">Wichtige Abo-Hinweise</string>
+    <string name="billing_disclosure_body">Diese Pläne sind Prepaid-Pläne und verlängern sich nicht automatisch. Der ausgewählte Betrag wird einmalig über Google Play für den gewählten Zeitraum berechnet. Nach Ablauf endet auch der werbefreie Zugriff. Die App kann weiterhin ohne Kauf mit Werbung genutzt werden.</string>
+    <string name="billing_disclosure_footer">Käufe und Zahlungen werden über Google Play abgewickelt.</string>
+
+    <string name="billing_plan_daily">Täglich</string>
+    <string name="billing_plan_weekly">Wöchentlich</string>
+    <string name="billing_plan_monthly">Monatlich</string>
+    <string name="billing_plan_2_months">2 Monate</string>
+    <string name="billing_plan_3_months">3 Monate</string>
+    <string name="billing_plan_6_months">6 Monate</string>
+    <string name="billing_plan_yearly">Jährlich</string>
+    <string name="billing_plan_generic">Plan</string>
+    <string name="billing_back">Zuruck</string>
+</resources>

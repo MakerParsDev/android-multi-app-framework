@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "ES2022",
+    "noEmit": false,
+    "outDir": ".test-dist",
+    "rootDir": "src",
+    "sourceMap": true
+  },
+  "include": [
+    "src/appCheck.ts",
+    "src/deviceRegistration.ts",
+    "src/health.ts"
+  ]
+}

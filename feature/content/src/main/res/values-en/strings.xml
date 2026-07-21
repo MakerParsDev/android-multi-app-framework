@@ -1,0 +1,18 @@
+<resources>
+    <string name="content_empty_title">Content is being prepared</string>
+    <string name="content_empty_subtitle">Custom content for this app will be added soon.</string>
+
+    <string name="content_mode_arabic">Arabic</string>
+    <string name="content_mode_latin">Latin</string>
+    <string name="content_mode_turkish">Translation</string>
+    <string name="content_error_friendly">Content could not be loaded. Please try again.</string>
+    <string name="content_retry">Retry</string>
+    <string name="content_verse_copied">Verse copied to clipboard</string>
+    <string name="miracles_default_title">Miracle Prayers</string>
+    <string name="miracles_section_description">Description</string>
+    <string name="miracles_section_besmele">Basmala</string>
+    <string name="miracles_section_prayer">Prayer</string>
+    <string name="miracles_section_arabic">@string/content_mode_arabic</string>
+    <string name="miracles_section_latin_pronunciation">Latin Pronunciation</string>
+    <string name="miracles_play_all_audio">Listen to All</string>
+</resources>

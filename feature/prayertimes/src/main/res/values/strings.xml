@@ -1,0 +1,89 @@
+<resources>
+    <string name="prayertimes_title">Namaz Vakitleri</string>
+    <string name="prayertimes_next_prayer">Sıradaki vakit: %1$s (%2$s)</string>
+    <string name="prayertimes_next_prayer_title">Bir Sonraki Vakit</string>
+    <string name="prayertimes_countdown_label">Kalan:</string>
+    <string name="prayertimes_refresh">Yenile</string>
+    <string name="prayertimes_change_location">Konumu değiştir</string>
+    <string name="prayertimes_use_device_location">Konuma göre bul</string>
+    <string name="prayertimes_mode_auto">Otomatik</string>
+    <string name="prayertimes_mode_manual">Manuel</string>
+    <string name="prayertimes_location_not_set">Konum seçilmedi</string>
+    <string name="prayertimes_location_label">Konum: %1$s</string>
+    <string name="prayertimes_loading">Yükleniyor…</string>
+    <string name="prayertimes_error">Veri alınamadı, son cache gösteriliyor olabilir.</string>
+    <string name="prayertimes_pick_country">Ülke</string>
+    <string name="prayertimes_pick_city">Şehir</string>
+    <string name="prayertimes_pick_district">İlçe</string>
+    <string name="prayertimes_change_country">Ülkeyi değiştir</string>
+    <string name="prayertimes_change_city">Şehri değiştir</string>
+    <string name="prayertimes_save_selection">Seçimi kaydet</string>
+    <string name="prayertimes_select_required">Lütfen ülke, şehir ve ilçe seçin.</string>
+    <string name="prayertimes_saved">Konum kaydedildi.</string>
+    <string name="prayertimes_resolve_failed">Konum otomatik eşleştirilemedi. Manuel seçin.</string>
+    <string name="prayertimes_permission_needed">Konum izni gerekli.</string>
+    <string name="prayertimes_selection_refresh_needed">Konum seçimini yenileyin.</string>
+    <string name="prayertimes_refresh_failed">Veri yenilenemedi.</string>
+    <string name="prayertimes_location_found">Konum bulundu: %1$s</string>
+    <string name="prayertimes_no_data">Henüz vakit verisi yok.</string>
+    <string name="prayertimes_resolving_location">Konumunuz aranıyor. GPS/son bilinen konumdan en uygun şehir-ilçe eşleştiriliyor…</string>
+    <string name="prayertimes_auto_mode_hint">Konum izni verdiyseniz otomatik bulmayı yeniden denemek için “Konuma göre bul” düğmesini kullanın.</string>
+    <string name="prayertimes_location_provider_attribution">Konum eşleştirme: © OpenStreetMap katkıda bulunanları</string>
+    <string name="prayertimes_resolved_confirmation_title">Bulunan konum: %1$s</string>
+    <string name="prayertimes_resolved_confirmation_desc">Bu konum doğruysa devam edin, değilse manuel seçim ekranına geçin.</string>
+    <string name="prayertimes_resolved_confirmation_yes">Doğru, devam et</string>
+    <string name="prayertimes_resolved_confirmation_no">Hayır, manuel seç</string>
+    <string name="prayertimes_back">Geri</string>
+
+    <string name="prayertimes_imsak">İmsak</string>
+    <string name="prayertimes_sahur_imsak">Sahur/İmsak</string>
+    <string name="prayertimes_gunes">Güneş</string>
+    <string name="prayertimes_sabah_gunes">Sabah (Güneş)</string>
+    <string name="prayertimes_ogle">Öğle</string>
+    <string name="prayertimes_ikindi">İkindi</string>
+    <string name="prayertimes_aksam">Akşam</string>
+    <string name="prayertimes_yatsi">Yatsı</string>
+    <string name="prayertimes_iftar">İftar</string>
+    <string name="prayertimes_today">Bugün</string>
+    <string name="prayertimes_next_7_days">Önümüzdeki 7 Gün</string>
+
+    <string name="prayertimes_alarm_title">Vakit Hatırlatmaları</string>
+    <string name="prayertimes_alarm_desc">Namaz vakti için yerel bildirim planla</string>
+    <string name="prayertimes_alarm_enabled">Alarm açık</string>
+    <string name="prayertimes_alarm_disabled">Alarm kapalı</string>
+    <string name="prayertimes_alarm_offset_value">%1$d dk önce bildir</string>
+    <string name="prayertimes_alarm_prayers">Hatırlatılacak vakitler</string>
+    <string name="prayertimes_alarm_sound_title">Alarm sesi</string>
+    <string name="prayertimes_alarm_sound_default">Sistem varsayılanı</string>
+    <string name="prayertimes_alarm_sound_test">Sesi test et</string>
+
+    <string name="prayertimes_step_country">⅓ Ülke seçimi</string>
+    <string name="prayertimes_step_city">⅔ Şehir seçimi</string>
+    <string name="prayertimes_step_district">3/3 İlçe seçimi</string>
+    <string name="prayertimes_search_label">Ara</string>
+    <string name="prayertimes_previous_day">Önceki gün</string>
+    <string name="prayertimes_next_day">Sonraki gün</string>
+
+    <string name="prayertimes_open_qibla">Kıble pusulasını aç</string>
+    <string name="prayertimes_open_location_settings">Konum ayarlarını aç</string>
+    <string name="prayertimes_open_rewards">Ödülleri aç</string>
+    <string name="prayertimes_open_alarm_settings">Alarm ayarlarını aç</string>
+    <string name="prayertimes_app_logo_desc">Uygulama logosu</string>
+    <string name="prayertimes_ramadan_progress">Ramazan ilerleyişi: %1$d/%2$d</string>
+
+    <string name="prayer_alarm_channel_name">Namaz Vakti Hatırlatmaları</string>
+    <string name="prayer_alarm_channel_description">İmsak, iftar ve namaz vakti bildirimleri</string>
+    <string name="prayer_alarm_imsak_title">İmsak Vakti</string>
+    <string name="prayer_alarm_imsak_body">Sahur için son vakit: %1$s</string>
+    <string name="prayer_alarm_iftar_title">İftar Vakti</string>
+    <string name="prayer_alarm_iftar_body">İftar vakti geldi: %1$s</string>
+    <string name="prayer_alarm_generic_title">%1$s Vakti</string>
+    <string name="prayer_alarm_generic_body">%1$s için vakit geldi (%2$s)</string>
+    <string name="prayer_alarm_action_open">Uygulamayı Aç</string>
+    <string name="prayer_alarm_summary_title">Namaz Alarmları</string>
+    <string name="prayer_alarm_summary_desc">Aktif vakit bildirimleri</string>
+
+    <string name="prayertimes_widget_desc">Sıradaki namaz vaktini gösterir.</string>
+    <item type="string" name="prayertimes_widget_title">@string/prayertimes_title</item>
+    <string name="prayertimes_widget_no_next">Sıradaki vakit yok</string>
+</resources>

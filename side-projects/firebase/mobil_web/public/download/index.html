@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hizli Indirme | Parsfilo</title>
+  <meta name="description" content="Parsfilo uygulamalarina hizli indirme merkezi.">
+  <link rel="canonical" href="https://parsfilo.com/download/">
+  <link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+  <main class="container">
+    <header class="hero">
+      <p class="kicker">Parsfilo</p>
+      <h1>Hizli indirme merkezi</h1>
+      <p class="lead">Bir uygulamayi secin, Play Store sayfasina dogrudan yonlenin.</p>
+    </header>
+
+    <section class="toolbar">
+      <select id="appSelect">
+        <option value="">Uygulama secin</option>
+      </select>
+      <button id="openBtn" class="primary" type="button">Play Store'u ac</button>
+      <a class="btn" href="/apps/">Uygulama listesi</a>
+    </section>
+
+    <section id="notice" class="card muted"></section>
+  </main>
+
+  <script type="module">
+    import { fetchApps, playUrl } from "/assets/apps.js";
+
+    const select = document.getElementById("appSelect");
+    const openBtn = document.getElementById("openBtn");
+    const notice = document.getElementById("notice");
+    const params = new URLSearchParams(window.location.search);
+
+    function goToPlay(packageName) {
+      window.location.href = playUrl(packageName);
+    }
+
+    openBtn.addEventListener("click", () => {
+      if (!select.value) return;
+      goToPlay(select.value);
+    });
+
+    fetchApps()
+      .then((apps) => {
+        apps.forEach((app) => {
+          const option = document.createElement("option");
+          option.value = app.packageName;
+          option.textContent = app.appName;
+          select.appendChild(option);
+        });
+
+        const byPackage = params.get("package");
+        if (byPackage && apps.some((app) => app.packageName === byPackage)) {
+          select.value = byPackage;
+          notice.textContent = "Yonlendiriliyor...";
+          setTimeout(() => goToPlay(byPackage), 200);
+          return;
+        }
+
+        notice.textContent = "Isterseniz /download/?package=com.parsfilo.ornek formatinda dogrudan yonlendirme kullanabilirsiniz.";
+      })
+      .catch((error) => {
+        console.error(error);
+        notice.textContent = "Uygulama listesi alinamadi.";
+      });
+  </script>
+</body>
+</html>

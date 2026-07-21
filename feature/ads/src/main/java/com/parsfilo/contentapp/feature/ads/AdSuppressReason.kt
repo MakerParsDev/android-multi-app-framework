@@ -1,0 +1,26 @@
+package com.parsfilo.contentapp.feature.ads
+
+enum class AdSuppressReason(val analyticsValue: String) {
+    NO_CONSENT("no_consent"),
+    CONSENT_ERROR("consent_error"),
+    CONSENT_MISSING("consent_missing"),
+    CONSENT_RETRY_BACKOFF("consent_retry_backoff"),
+    REPORT_STALE("report_stale"),
+    PRIVACY_LIMITED("privacy_limited"),
+    PREMIUM("premium"),
+    REWARDED_FREE("rewarded_free"),
+    COOLDOWN("cooldown"),
+    SESSION_CAP("session_cap"),
+    ROUTE_BLOCKED("route_blocked"),
+    RAPID_REPEAT("rapid_repeat"),
+    RESUME_SPAM("resume_spam"),
+    COLD_START("cold_start"),
+    CONTENT_IN_PROGRESS("content_in_progress"),
+    PLACEMENT_DISABLED("placement_disabled"),
+    INTRO_SKIPPED("intro_skipped"),
+    NOT_LOADED("not_loaded"),
+    LOAD_FAILURE("load_failure"),
+    ACTIVITY_UNAVAILABLE("activity_unavailable"),
+    APP_LIFECYCLE("app_lifecycle"),
+    AD_GATE("ad_gate"),
+}

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 9.0.1" type="baseline" client="gradle" dependencies="false" name="AGP (9.0.1)" variant="all" version="9.0.1">
+
+    <issue
+        id="NoOp"
+        message="This call result is unused: valueOf"
+        errorLine1="                com.parsfilo.contentapp.core.model.DisplayMode.valueOf(mode)"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/parsfilo/contentapp/core/datastore/PreferencesDataSource.kt"
+            line="50"
+            column="17"/>
+    </issue>
+
+</issues>

@@ -1,0 +1,652 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 9.0.1" type="baseline" client="gradle" dependencies="true" name="AGP (9.0.1)" variant="all" version="9.0.1">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;tamamlandı&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;counter_daily_goal_progress&quot;>%1$s / %2$s · %3$d tamamlandı&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="8"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;sec&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;counter_duration_minutes_seconds&quot;>%1$d min %2$d sec&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-en/strings.xml"
+            line="41"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;kez&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;share_text_template&quot;>🤲 %1$d kez %2$s zikri yaptım\n%3$s\n\n📊 Bugün toplam: %4$s zikir\n\n📿 Zikirmatik uygulamasıyla zikir alışkanlığı edinin\nhttps://play.google.com/store/apps/details?id=com.parsfilo.zikirmatik&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="92"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.prayertimes_next_prayer` appears to be unused"
+        errorLine1="    &lt;string name=&quot;prayertimes_next_prayer&quot;>Sıradaki vakit: %1$s (%2$s)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../feature/prayertimes/src/main/res/values/strings.xml"
+            line="4"
+            column="13"/>
+    </issue>
+
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.auth_sign_in_failed` appears to be unused"
+        errorLine1="    &lt;string name=&quot;auth_sign_in_failed&quot;>Giriş başarısız oldu. Lütfen tekrar deneyin.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../feature/auth/src/main/res/values/strings.xml"
+            line="6"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.prayertimes_refresh` appears to be unused"
+        errorLine1="    &lt;string name=&quot;prayertimes_refresh&quot;>Yenile&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../feature/prayertimes/src/main/res/values/strings.xml"
+            line="7"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.messages_has_reply` appears to be unused"
+        errorLine1="    &lt;string name=&quot;messages_has_reply&quot;>Yanıt var&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../feature/messages/src/main/res/values/strings.xml"
+            line="9"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.bismillah` appears to be unused"
+        errorLine1="    &lt;string name=&quot;bismillah&quot;>بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="12"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.prayertimes_location_not_set` appears to be unused"
+        errorLine1="    &lt;string name=&quot;prayertimes_location_not_set&quot;>Konum seçilmedi&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../feature/prayertimes/src/main/res/values/strings.xml"
+            line="12"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.loading` appears to be unused"
+        errorLine1="    &lt;string name=&quot;loading&quot;>Yükleniyor…&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="13"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.prayertimes_location_label` appears to be unused"
+        errorLine1="    &lt;string name=&quot;prayertimes_location_label&quot;>Konum: %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../feature/prayertimes/src/main/res/values/strings.xml"
+            line="13"
+            column="13"/>
+    </issue>
+
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.error_generic` appears to be unused"
+        errorLine1="    &lt;string name=&quot;error_generic&quot;>Bir hata oluştu&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="14"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.prayertimes_loading` appears to be unused"
+        errorLine1="    &lt;string name=&quot;prayertimes_loading&quot;>Yükleniyor…&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../feature/prayertimes/src/main/res/values/strings.xml"
+            line="14"
+            column="13"/>
+    </issue>
+
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.error_network` appears to be unused"
+        errorLine1="    &lt;string name=&quot;error_network&quot;>İnternet bağlantısı yok&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="15"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.prayertimes_error` appears to be unused"
+        errorLine1="    &lt;string name=&quot;prayertimes_error&quot;>Veri alınamadı, son cache gösteriliyor olabilir.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../feature/prayertimes/src/main/res/values/strings.xml"
+            line="15"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.error_retry` appears to be unused"
+        errorLine1="    &lt;string name=&quot;error_retry&quot;>Tekrar dene&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="16"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.quran_reciter` appears to be unused"
+        errorLine1="    &lt;string name=&quot;quran_reciter&quot;>Kari&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../feature/quran/src/main/res/values/strings.xml"
+            line="17"
+            column="13"/>
+    </issue>
+
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.prayertimes_change_country` appears to be unused"
+        errorLine1="    &lt;string name=&quot;prayertimes_change_country&quot;>Ülkeyi değiştir&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../feature/prayertimes/src/main/res/values/strings.xml"
+            line="19"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.share_app_message` appears to be unused"
+        errorLine1="    &lt;string name=&quot;share_app_message&quot;>📖 %1$s uygulamasını kullanıyorum, çok beğendim!\n\nSen de indir: %2$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="19"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.prayertimes_change_city` appears to be unused"
+        errorLine1="    &lt;string name=&quot;prayertimes_change_city&quot;>Şehri değiştir&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../feature/prayertimes/src/main/res/values/strings.xml"
+            line="20"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.share_chooser_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;share_chooser_title&quot;>Uygulamayı Paylaş&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="20"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.whatsapp_not_installed` appears to be unused"
+        errorLine1="    &lt;string name=&quot;whatsapp_not_installed&quot;>WhatsApp yüklü değil&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="21"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.prayertimes_select_required` appears to be unused"
+        errorLine1="    &lt;string name=&quot;prayertimes_select_required&quot;>Lütfen ülke, şehir ve ilçe seçin.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../feature/prayertimes/src/main/res/values/strings.xml"
+            line="22"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.quran_audio_play` appears to be unused"
+        errorLine1="    &lt;string name=&quot;quran_audio_play&quot;>Oynat&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../feature/quran/src/main/res/values/strings.xml"
+            line="22"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.prayertimes_saved` appears to be unused"
+        errorLine1="    &lt;string name=&quot;prayertimes_saved&quot;>Konum kaydedildi.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../feature/prayertimes/src/main/res/values/strings.xml"
+            line="23"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.quran_audio_pause` appears to be unused"
+        errorLine1="    &lt;string name=&quot;quran_audio_pause&quot;>Duraklat&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../feature/quran/src/main/res/values/strings.xml"
+            line="23"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.audio_loading` appears to be unused"
+        errorLine1="    &lt;string name=&quot;audio_loading&quot;>Ses yükleniyor…&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="24"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.quran_audio_download` appears to be unused"
+        errorLine1="    &lt;string name=&quot;quran_audio_download&quot;>İndir&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../feature/quran/src/main/res/values/strings.xml"
+            line="24"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.audio_play` appears to be unused"
+        errorLine1="    &lt;string name=&quot;audio_play&quot;>Oynat&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="25"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.quran_audio_downloaded` appears to be unused"
+        errorLine1="    &lt;string name=&quot;quran_audio_downloaded&quot;>İndirildi&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../feature/quran/src/main/res/values/strings.xml"
+            line="25"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.audio_pause` appears to be unused"
+        errorLine1="    &lt;string name=&quot;audio_pause&quot;>Duraklat&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="26"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.audio_error` appears to be unused"
+        errorLine1="    &lt;string name=&quot;audio_error&quot;>Ses yüklenemedi&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="27"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.quran_ayah_label` appears to be unused"
+        errorLine1="    &lt;string name=&quot;quran_ayah_label&quot;>Ayet %d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../feature/quran/src/main/res/values/strings.xml"
+            line="27"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.display_mode_arabic` appears to be unused"
+        errorLine1="    &lt;string name=&quot;display_mode_arabic&quot;>Arapça&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="30"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.display_mode_turkish` appears to be unused"
+        errorLine1="    &lt;string name=&quot;display_mode_turkish&quot;>Türkçe&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="31"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.display_mode_latin` appears to be unused"
+        errorLine1="    &lt;string name=&quot;display_mode_latin&quot;>Latin&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="32"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.quran_audio_download_progress` appears to be unused"
+        errorLine1="    &lt;string name=&quot;quran_audio_download_progress&quot;>İndiriliyor %% %d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../feature/quran/src/main/res/values/strings.xml"
+            line="33"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.quran_ayah_actions` appears to be unused"
+        errorLine1="    &lt;string name=&quot;quran_ayah_actions&quot;>Ayet işlemleri&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../feature/quran/src/main/res/values/strings.xml"
+            line="34"
+            column="13"/>
+    </issue>
+
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.sign_in_google` appears to be unused"
+        errorLine1="    &lt;string name=&quot;sign_in_google&quot;>Google ile Giriş Yap&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="39"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.prayertimes_gunes` appears to be unused"
+        errorLine1="    &lt;string name=&quot;prayertimes_gunes&quot;>Güneş&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../feature/prayertimes/src/main/res/values/strings.xml"
+            line="40"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.sign_in_description` appears to be unused"
+        errorLine1="    &lt;string name=&quot;sign_in_description&quot;>Mesaj göndermek ve yanıtları görmek için Google hesabınızla giriş yapın.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="40"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.sign_in_failed` appears to be unused"
+        errorLine1="    &lt;string name=&quot;sign_in_failed&quot;>Giriş başarısız oldu. Lütfen tekrar deneyin.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="41"
+            column="13"/>
+    </issue>
+
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.prayertimes_today` appears to be unused"
+        errorLine1="    &lt;string name=&quot;prayertimes_today&quot;>Bugün&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../feature/prayertimes/src/main/res/values/strings.xml"
+            line="47"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.prayertimes_next_7_days` appears to be unused"
+        errorLine1="    &lt;string name=&quot;prayertimes_next_7_days&quot;>Önümüzdeki 7 Gün&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../feature/prayertimes/src/main/res/values/strings.xml"
+            line="48"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.messages_has_reply` appears to be unused"
+        errorLine1="    &lt;string name=&quot;messages_has_reply&quot;>Yanıt var&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="50"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.subscription_description` appears to be unused"
+        errorLine1="    &lt;string name=&quot;subscription_description&quot;>Reklamsız deneyim için bir plan seçin.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="61"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.subscription_coming_soon` appears to be unused"
+        errorLine1="    &lt;string name=&quot;subscription_coming_soon&quot;>Yakında aktif olacak&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="62"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.billing_unavailable` appears to be unused"
+        errorLine1="    &lt;string name=&quot;billing_unavailable&quot;>Satın alma hizmeti kullanılamıyor&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="63"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.rewards_description` appears to be unused"
+        errorLine1="    &lt;string name=&quot;rewards_description&quot;>Reklam izleyerek geçici olarak reklamsız kullanım kazanın.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="67"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.message_detail_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;message_detail_title&quot;>Mesaj Detayı&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="70"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.notification_detail_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;notification_detail_title&quot;>Bildirim Detayı&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="71"
+            column="13"/>
+    </issue>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</issues>

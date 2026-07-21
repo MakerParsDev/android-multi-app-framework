@@ -1,0 +1,52 @@
+name: admob-weekly-optimization-$(Date:yyyyMMdd)$(Rev:.r)
+
+trigger: none
+pr: none
+
+schedules:
+  - cron: '30 5 * * 1'
+    displayName: Weekly AdMob optimization report
+    branches:
+      include:
+        - main
+    always: true
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  - group: android-multi-app-framework-prod
+  - name: DOPPLER_PROJECT
+    value: android-multi-app-framework
+  - name: DOPPLER_CONFIG
+    value: prod
+
+steps:
+  - checkout: self
+    clean: true
+    fetchDepth: 0
+
+  - template: /pipelines/templates/steps/security-gate.yml
+    parameters:
+      mode: history
+      selfTest: false
+
+  - bash: bash scripts/azure/install-doppler.sh
+    displayName: Install Doppler CLI
+
+  - bash: bash scripts/azure/doppler-run.sh bash scripts/azure/admob-health.sh
+    displayName: Generate weekly AdMob optimization report
+    env:
+      DOPPLER_TOKEN: $(DOPPLER_TOKEN)
+      DOPPLER_PROJECT: $(DOPPLER_PROJECT)
+      DOPPLER_CONFIG: $(DOPPLER_CONFIG)
+      ADMOB_HEALTH_MODE: weekly
+      ADMOB_WEEKLY_JSON: $(Build.ArtifactStagingDirectory)/admob-weekly-optimization.json
+      ADMOB_WEEKLY_MARKDOWN: $(Build.ArtifactStagingDirectory)/admob-weekly-optimization.md
+
+  - task: PublishPipelineArtifact@1
+    displayName: Publish weekly AdMob report
+    inputs:
+      targetPath: $(Build.ArtifactStagingDirectory)
+      artifact: admob-weekly-optimization
+      publishLocation: pipeline

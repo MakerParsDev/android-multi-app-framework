@@ -1,0 +1,8 @@
+# Functions build output
+lib/
+
+# Dependencies
+node_modules/
+
+# Generated traceable build metadata
+src/generated/buildMetadata.ts

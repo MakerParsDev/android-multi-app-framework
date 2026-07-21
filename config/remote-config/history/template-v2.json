@@ -1,0 +1,262 @@
+{
+  "version": {
+    "versionNumber": "2",
+    "updateTime": "2026-03-13T20:18:49.318542Z",
+    "updateUser": {
+      "email": "makerpars@gmail.com"
+    },
+    "updateOrigin": "REST_API",
+    "updateType": "FORCED_UPDATE",
+    "etag": "etag-462747480927-2"
+  },
+  "conditions": [],
+  "parameters": {
+    "ads_banner_enabled": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "valueType": "STRING"
+    },
+    "ads_native_enabled": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "valueType": "STRING"
+    },
+    "ads_app_open_enabled": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "valueType": "STRING"
+    },
+    "ads_interstitial_enabled": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "valueType": "STRING"
+    },
+    "ads_rewarded_enabled": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "valueType": "STRING"
+    },
+    "ads_rewarded_interstitial_enabled": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "valueType": "STRING"
+    },
+    "ads_interstitial_frequency_cap_ms": {
+      "defaultValue": {
+        "value": "90000"
+      },
+      "valueType": "STRING"
+    },
+    "ads_interstitial_relaxed_frequency_cap_ms": {
+      "defaultValue": {
+        "value": "240000"
+      },
+      "valueType": "STRING"
+    },
+    "ads_interstitial_relaxed_packages_csv": {
+      "defaultValue": {
+        "value": ""
+      },
+      "valueType": "STRING"
+    },
+    "ads_app_open_cooldown_ms": {
+      "defaultValue": {
+        "value": "120000"
+      },
+      "valueType": "STRING"
+    },
+    "ads_app_open_resume_gap_ms": {
+      "defaultValue": {
+        "value": "15000"
+      },
+      "valueType": "STRING"
+    },
+    "ads_app_open_max_per_session": {
+      "defaultValue": {
+        "value": "2"
+      },
+      "valueType": "STRING"
+    },
+    "ads_interstitial_max_per_session": {
+      "defaultValue": {
+        "value": "5"
+      },
+      "valueType": "STRING"
+    },
+    "ads_rewarded_interstitial_min_interval_ms": {
+      "defaultValue": {
+        "value": "900000"
+      },
+      "valueType": "STRING"
+    },
+    "ads_rewarded_interstitial_max_per_session": {
+      "defaultValue": {
+        "value": "2"
+      },
+      "valueType": "STRING"
+    },
+    "ads_rewarded_interstitial_intro_required": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "valueType": "STRING"
+    },
+    "ads_native_pool_max": {
+      "defaultValue": {
+        "value": "2"
+      },
+      "valueType": "STRING"
+    },
+    "ads_native_ttl_ms": {
+      "defaultValue": {
+        "value": "1800000"
+      },
+      "valueType": "STRING"
+    },
+    "ads_native_exact_placement_only": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "valueType": "STRING"
+    },
+    "ads_interstitial_placements_disabled_csv": {
+      "defaultValue": {
+        "value": ""
+      },
+      "valueType": "STRING"
+    },
+    "ads_banner_placements_disabled_csv": {
+      "defaultValue": {
+        "value": ""
+      },
+      "valueType": "STRING"
+    },
+    "ads_native_placements_disabled_csv": {
+      "defaultValue": {
+        "value": ""
+      },
+      "valueType": "STRING"
+    },
+    "ads_app_open_placements_disabled_csv": {
+      "defaultValue": {
+        "value": ""
+      },
+      "valueType": "STRING"
+    },
+    "ads_rewarded_placements_disabled_csv": {
+      "defaultValue": {
+        "value": ""
+      },
+      "valueType": "STRING"
+    },
+    "ads_rewarded_interstitial_placements_disabled_csv": {
+      "defaultValue": {
+        "value": ""
+      },
+      "valueType": "STRING"
+    },
+    "ads_app_open_route_blocklist_csv": {
+      "defaultValue": {
+        "value": "subscription,rewards,settings"
+      },
+      "valueType": "STRING"
+    },
+    "ads_interstitial_route_blocklist_csv": {
+      "defaultValue": {
+        "value": "subscription,rewards,settings"
+      },
+      "valueType": "STRING"
+    },
+    "audio_base_url": {
+      "defaultValue": {
+        "value": "https://contentapp-content-api.oaslananka.workers.dev/api/audio"
+      },
+      "valueType": "STRING"
+    },
+    "audio_manifest_url": {
+      "defaultValue": {
+        "value": "https://contentapp-content-api.oaslananka.workers.dev/api/audio-manifest"
+      },
+      "valueType": "STRING"
+    },
+    "other_apps_url": {
+      "defaultValue": {
+        "value": "https://contentapp-content-api.oaslananka.workers.dev/api/other-apps"
+      },
+      "valueType": "STRING"
+    },
+    "min_supported_version_code": {
+      "defaultValue": {
+        "value": "1"
+      },
+      "valueType": "STRING"
+    },
+    "latest_version_code": {
+      "defaultValue": {
+        "value": "1"
+      },
+      "valueType": "STRING"
+    },
+    "update_mode": {
+      "defaultValue": {
+        "value": "none"
+      },
+      "valueType": "STRING"
+    },
+    "update_title_tr": {
+      "defaultValue": {
+        "value": "Güncelleme gerekli"
+      },
+      "valueType": "STRING"
+    },
+    "update_message_tr": {
+      "defaultValue": {
+        "value": "Devam etmek için lütfen uygulamayı güncelleyin."
+      },
+      "valueType": "STRING"
+    },
+    "update_title_en": {
+      "defaultValue": {
+        "value": "Update required"
+      },
+      "valueType": "STRING"
+    },
+    "update_message_en": {
+      "defaultValue": {
+        "value": "Please update the app to continue."
+      },
+      "valueType": "STRING"
+    },
+    "update_button_tr": {
+      "defaultValue": {
+        "value": "Güncelle"
+      },
+      "valueType": "STRING"
+    },
+    "update_button_en": {
+      "defaultValue": {
+        "value": "Update"
+      },
+      "valueType": "STRING"
+    },
+    "later_button_tr": {
+      "defaultValue": {
+        "value": "Daha sonra"
+      },
+      "valueType": "STRING"
+    },
+    "later_button_en": {
+      "defaultValue": {
+        "value": "Later"
+      },
+      "valueType": "STRING"
+    }
+  },
+  "parameterGroups": {}
+}

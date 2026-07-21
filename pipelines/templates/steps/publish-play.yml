@@ -1,0 +1,93 @@
+parameters:
+  updatePlayListing: false
+  track: internal
+  allowBundleFallback: true
+
+steps:
+  - bash: |
+      set -euo pipefail
+      chmod +x ./gradlew
+
+      if [ "${RESOLVED_FLAVORS_JSON:-}" = "" ]; then
+        echo "RESOLVED_FLAVORS_JSON is missing. Did resolve-flavors.yml run?"
+        exit 1
+      fi
+
+      if [ "${PLAY_SERVICE_ACCOUNT_JSON:-}" = "" ]; then
+        echo "Missing PLAY_SERVICE_ACCOUNT_JSON (path). Ensure setup-secrets.yml ran with needPlayServiceAccount=true."
+        exit 1
+      fi
+      if [ ! -f "${PLAY_SERVICE_ACCOUNT_JSON}" ]; then
+        echo "PLAY_SERVICE_ACCOUNT_JSON path does not exist: ${PLAY_SERVICE_ACCOUNT_JSON}"
+        exit 1
+      fi
+
+      TRACK="${{ parameters.track }}"
+      ALLOW_BUNDLE_FALLBACK="${{ parameters.allowBundleFallback }}"
+      if [ -z "$TRACK" ]; then
+        echo "Missing 'track' parameter for publish-play.yml (expected internal/production/etc)."
+        exit 1
+      fi
+      echo "Play track: $TRACK"
+
+      mapfile -t FLAVORS < <(
+        echo "$RESOLVED_FLAVORS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d'
+      )
+
+      ensure_aab_for() {
+        local flavor="$1"
+        local cap
+        cap="$(tr '[:lower:]' '[:upper:]' <<< "${flavor:0:1}")${flavor:1}"
+        local dir="app/build/outputs/bundle/${flavor}Release"
+        if ls "${dir}"/*.aab >/dev/null 2>&1; then
+          return 0
+        fi
+        if [ "$ALLOW_BUNDLE_FALLBACK" != "true" ]; then
+          echo "AAB not found for '${flavor}' and allowBundleFallback=false."
+          echo "Expected: ${dir}/*.aab"
+          exit 1
+        fi
+        echo "AAB not found for '${flavor}'. Running bundle${cap}Release..."
+        ./gradlew "bundle${cap}Release" --stacktrace --no-daemon --max-workers=2
+        if ! ls "${dir}"/*.aab >/dev/null 2>&1; then
+          echo "AAB not found. bundle${cap}Release was not executed."
+          echo "Expected: ${dir}/*.aab"
+          exit 1
+        fi
+      }
+
+      for flavor in "${FLAVORS[@]}"; do
+        [ -z "$flavor" ] && continue
+        ensure_aab_for "$flavor"
+      done
+
+      echo "Bundle directory listing:"
+      ls -R app/build/outputs/bundle || true
+
+      UPDATE_LISTING="${{ parameters.updatePlayListing }}"
+      TASKS=()
+      for flavor in "${FLAVORS[@]}"; do
+        [ -z "$flavor" ] && continue
+        cap="$(tr '[:lower:]' '[:upper:]' <<< "${flavor:0:1}")${flavor:1}"
+
+        if [ "$UPDATE_LISTING" = "true" ]; then
+          if [ ! -d "app/src/${flavor}/play" ]; then
+            echo "updatePlayListing=true but missing directory: app/src/${flavor}/play"
+            echo "Bootstrap once locally with: ./gradlew :app:bootstrap${cap}ReleaseListing"
+            exit 1
+          fi
+          TASKS+=("publish${cap}ReleaseListing")
+        fi
+
+        TASKS+=("publish${cap}ReleaseBundle")
+      done
+
+      echo "Publishing tasks: ${TASKS[*]}"
+      ./gradlew "${TASKS[@]}" -PPLAY_TRACK="$TRACK" --stacktrace --no-daemon --max-workers=2
+    displayName: Publish to Play Console
+    env:
+      PLAY_SERVICE_ACCOUNT_JSON: $(PLAY_SERVICE_ACCOUNT_JSON)
+      KEYSTORE_FILE: $(KEYSTORE_FILE)
+      KEYSTORE_PASSWORD: $(KEYSTORE_PASSWORD)
+      KEY_ALIAS: $(KEY_ALIAS)
+      KEY_PASSWORD: $(KEY_PASSWORD)

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 9.0.1" type="baseline" client="gradle" dependencies="false" name="AGP (9.0.1)" variant="all" version="9.0.1">
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 28 (current min is 24): `android.content.pm.PackageInfo#getLongVersionCode`"
+        errorLine1="        packageInfo.versionName ?: packageInfo.longVersionCode.toString()"
+        errorLine2="                                               ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/parsfilo/contentapp/core/firebase/push/PushRegistrationManager.kt"
+            line="71"
+            column="48"/>
+    </issue>
+
+    <issue
+        id="SyntheticAccessor"
+        message="Access to `private` method `useConnection` of class `HttpPushRegistrationSenderKt` requires synthetic accessor"
+        errorLine1="            connection.useConnection {"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/parsfilo/contentapp/core/firebase/push/HttpPushRegistrationSender.kt"
+            line="37"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="SyntheticAccessor"
+        message="Access to `private` method `toJson` of class `HttpPushRegistrationSenderKt` requires synthetic accessor"
+        errorLine1="                val body = payload.toJson().toString()"
+        errorLine2="                           ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/parsfilo/contentapp/core/firebase/push/HttpPushRegistrationSender.kt"
+            line="38"
+            column="28"/>
+    </issue>
+
+    <issue
+        id="SyntheticAccessor"
+        message="Access to `private` method `readAppVersion` of class `PushRegistrationManagerKt` requires synthetic accessor"
+        errorLine1="                appVersion = readAppVersion(context),"
+        errorLine2="                             ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/parsfilo/contentapp/core/firebase/push/PushRegistrationManager.kt"
+            line="42"
+            column="30"/>
+    </issue>
+
+    <issue
+        id="SyntheticAccessor"
+        message="Access to `private` method `fetchTokenSuspend` of class `PushRegistrationManagerKt` requires synthetic accessor"
+        errorLine1="        return runCatching { firebaseMessaging.fetchTokenSuspend() }"
+        errorLine2="                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/parsfilo/contentapp/core/firebase/push/PushRegistrationManager.kt"
+            line="62"
+            column="30"/>
+    </issue>
+
+</issues>

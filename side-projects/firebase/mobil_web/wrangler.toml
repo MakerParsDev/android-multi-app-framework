@@ -1,0 +1,6 @@
+# Cloudflare Pages — Parsfilo Mobile Web (static site)
+# Deploy: npx wrangler pages deploy public --project-name=parsfilo-web
+# Or connect GitHub repo via Cloudflare Dashboard for auto-deploy.
+
+name = "parsfilo-web"
+pages_build_output_dir = "public"

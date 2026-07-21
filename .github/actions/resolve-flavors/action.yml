@@ -1,0 +1,84 @@
+name: Resolve Flavors
+description: Validates and resolves flavor input to JSON and CSV
+
+inputs:
+  target_flavors:
+    description: 'all or comma-separated flavor names'
+    required: true
+    default: 'all'
+
+outputs:
+  resolved_json:
+    description: 'JSON array of resolved flavor names'
+    value: ${{ steps.resolve.outputs.resolved_json }}
+  resolved_csv:
+    description: 'CSV of resolved flavor names'
+    value: ${{ steps.resolve.outputs.resolved_csv }}
+
+runs:
+  using: composite
+  steps:
+    - id: resolve
+      shell: bash
+      run: |
+        set -euo pipefail
+        chmod +x ./gradlew
+
+        ALL_JSON="$(./gradlew -q printFlavors | tr -d '\r')"
+        mapfile -t ALL < <(
+          echo "$ALL_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d'
+        )
+
+        INPUT="${{ inputs.target_flavors }}"
+        INPUT="$(echo "${INPUT:-}" | tr -d '\r' | sed 's/[[:space:]]//g')"
+
+        RESOLVED=()
+        add_unique_resolved() {
+          local candidate="$1"
+          for existing in "${RESOLVED[@]}"; do
+            if [ "$existing" = "$candidate" ]; then
+              return 0
+            fi
+          done
+          RESOLVED+=("$candidate")
+        }
+        if [ "$INPUT" = "all" ]; then
+          RESOLVED=("${ALL[@]}")
+        elif [[ "$INPUT" == *","* ]]; then
+          IFS=',' read -ra REQ <<< "$INPUT"
+          for r in "${REQ[@]}"; do
+            [ -z "$r" ] && continue
+            ok="false"
+            for f in "${ALL[@]}"; do
+              if [ "$f" = "$r" ]; then ok="true"; break; fi
+            done
+            if [ "$ok" != "true" ]; then
+              echo "Invalid flavor '$r'. Allowed: ${ALL[*]}"
+              exit 1
+            fi
+            add_unique_resolved "$r"
+          done
+        else
+          ok="false"
+          for f in "${ALL[@]}"; do
+            if [ "$f" = "$INPUT" ]; then ok="true"; break; fi
+          done
+          if [ "$ok" != "true" ]; then
+            echo "Invalid flavor '$INPUT'. Allowed: all, ${ALL[*]}"
+            exit 1
+          fi
+          add_unique_resolved "$INPUT"
+        fi
+
+        out="["
+        first=true
+        for f in "${RESOLVED[@]}"; do
+          if [ "$first" = false ]; then out+=","; fi
+          out+="\"$f\""
+          first=false
+        done
+        out+="]"
+
+        csv="$(IFS=,; echo "${RESOLVED[*]}")"
+        echo "resolved_json=$out" >> "$GITHUB_OUTPUT"
+        echo "resolved_csv=$csv" >> "$GITHUB_OUTPUT"

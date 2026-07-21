@@ -1,0 +1,295 @@
+name: quality-gate-$(Date:yyyyMMdd)$(Rev:.r)
+
+# PR validation enabled. Push CI remains disabled.
+trigger: none
+pr:
+  branches:
+    include:
+      - "*"
+
+variables:
+  GRADLE_OPTS: -Djava.awt.headless=true -Dorg.gradle.workers.max=2 -Dorg.gradle.daemon=false
+  GRADLE_USER_HOME: $(Agent.ToolsDirectory)/.gradle
+  ANDROID_SDK_ROOT: $(Agent.ToolsDirectory)/android-sdk
+  ANDROID_HOME: $(Agent.ToolsDirectory)/android-sdk
+  RUN_CONNECTED_TESTS: "false"
+
+jobs:
+  - job: AnalyzeImpact
+    displayName: Analyze Impact
+    pool:
+      name: MSI
+      demands:
+        - Agent.Name -equals msi
+    steps:
+      - checkout: self
+        fetchDepth: 0
+
+      - template: templates/steps/setup-android.yml
+
+      - bash: |
+          set -euo pipefail
+
+          build_json_array() {
+            local -a arr=("$@")
+            if [ "${#arr[@]}" -eq 0 ]; then
+              echo "[]"
+              return
+            fi
+
+            local out="["
+            local first=true
+            for item in "${arr[@]}"; do
+              [ -z "$item" ] && continue
+              if [ "$first" = false ]; then out+=","; fi
+              out+="\"$item\""
+              first=false
+            done
+            out+="]"
+            echo "$out"
+          }
+
+          if [[ "${BUILD_REASON:-}" == "PullRequest" && -n "${SYSTEM_PULLREQUEST_TARGETBRANCH:-}" ]]; then
+            TARGET_BRANCH="${SYSTEM_PULLREQUEST_TARGETBRANCH#refs/heads/}"
+            git fetch origin "$TARGET_BRANCH" --depth=1 || true
+            CHANGED_FILES="$(git diff --name-only "origin/$TARGET_BRANCH"...HEAD || true)"
+          elif git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
+            CHANGED_FILES="$(git diff --name-only HEAD~1 HEAD || true)"
+          else
+            CHANGED_FILES="$(git ls-files)"
+          fi
+
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          HAS_CODE="false"
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            case "$file" in
+              *.kt|*.kts|*.java|*.xml|*.gradle|*.properties|*.ts|*.mjs|package.json|package-lock.json|*"/src/"*|buildSrc/*|gradle/*|side-projects/*|scripts/ci/*|scripts/azure/*)
+                HAS_CODE="true"
+                break
+                ;;
+            esac
+          done <<< "$CHANGED_FILES"
+
+          if [ "$HAS_CODE" != "true" ]; then
+            echo "##vso[task.setvariable variable=hasCode;isOutput=true]false"
+            echo "##vso[task.setvariable variable=flavoursJson;isOutput=true][]"
+            exit 0
+          fi
+
+          # Run printFlavors once and expose it as an output variable.
+          ALL_FLAVOURS_JSON="$(./gradlew -q printFlavors | tr -d '\r')"
+          if [ -z "$ALL_FLAVOURS_JSON" ] || [ "$ALL_FLAVOURS_JSON" = "[]" ]; then
+            echo "printFlavors returned empty list."
+            exit 1
+          fi
+          echo "##vso[task.setvariable variable=allFlavoursJson;isOutput=true]$ALL_FLAVOURS_JSON"
+
+          if [[ "${BUILD_REASON:-}" == "Manual" ]]; then
+            echo "Manual run detected. Forcing quality jobs for all flavours."
+            echo "##vso[task.setvariable variable=hasCode;isOutput=true]true"
+            echo "##vso[task.setvariable variable=flavoursJson;isOutput=true]$ALL_FLAVOURS_JSON"
+            exit 0
+          fi
+
+          mapfile -t ALL_FLAVOURS < <(
+            echo "$ALL_FLAVOURS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d'
+          )
+
+          COMMON_CHANGED="false"
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            case "$file" in
+              buildSrc/*|core/*|feature/*|gradle/*|app/build.gradle.kts|app/src/main/*|build.gradle.kts|settings.gradle.kts|gradle.properties)
+                COMMON_CHANGED="true"
+                break
+                ;;
+            esac
+          done <<< "$CHANGED_FILES"
+
+          SELECTED=()
+          if [ "$COMMON_CHANGED" = "true" ]; then
+            SELECTED=("${ALL_FLAVOURS[@]}")
+          else
+            for flavour in "${ALL_FLAVOURS[@]}"; do
+              if grep -q "^app/src/${flavour}/" <<< "$CHANGED_FILES"; then
+                SELECTED+=("$flavour")
+              fi
+            done
+          fi
+
+          SELECTED_JSON="$(build_json_array "${SELECTED[@]}")"
+
+          echo "Detected flavours: $SELECTED_JSON"
+          echo "##vso[task.setvariable variable=hasCode;isOutput=true]true"
+          echo "##vso[task.setvariable variable=flavoursJson;isOutput=true]$SELECTED_JSON"
+        name: setvars
+        displayName: Detect Changed Flavours
+
+  - job: SideProjectQuality
+    displayName: Firebase and Cloudflare Side-project Quality
+    dependsOn: AnalyzeImpact
+    condition: and(succeeded(), eq(dependencies.AnalyzeImpact.outputs['setvars.hasCode'], 'true'))
+    pool:
+      name: MSI
+      demands:
+        - Agent.Name -equals msi
+    steps:
+      - checkout: self
+        fetchDepth: 0
+
+      - template: templates/steps/setup-android.yml
+
+      - task: UseNode@1
+        displayName: Setup Node.js 22
+        inputs:
+          version: '22.x'
+          checkLatest: false
+
+      - bash: bash scripts/ci/run_side_project_quality.sh --install
+        displayName: Verify Firebase and Cloudflare side projects
+
+  - job: StaticAnalysis
+    displayName: Detekt & Ktlint
+    dependsOn: AnalyzeImpact
+    condition: and(succeeded(), eq(dependencies.AnalyzeImpact.outputs['setvars.hasCode'], 'true'))
+    variables:
+      ALL_FLAVOURS_JSON: $[ dependencies.AnalyzeImpact.outputs['setvars.allFlavoursJson'] ]
+    pool:
+      name: MSI
+      demands:
+        - Agent.Name -equals msi
+    steps:
+      - checkout: self
+        fetchDepth: 0
+
+      - template: templates/steps/setup-android.yml
+
+      - bash: |
+          set -euo pipefail
+          ./gradlew detekt ktlintCheck --stacktrace --no-daemon --max-workers=2
+        displayName: Run Static Analysis
+
+      - bash: |
+          set -euo pipefail
+          mkdir -p "$(Build.ArtifactStagingDirectory)/detekt"
+          find . -type d -path "*/build/reports/detekt" -exec cp -R {} "$(Build.ArtifactStagingDirectory)/detekt/" \; || true
+        displayName: Collect Detekt Reports
+        condition: always()
+
+      - task: PublishPipelineArtifact@1
+        displayName: Publish Detekt Reports
+        condition: always()
+        inputs:
+          targetPath: $(Build.ArtifactStagingDirectory)/detekt
+          artifact: detekt-report
+
+  - job: ValidateAndUnitTest
+    displayName: Validate Flavour Versions & Unit Tests
+    dependsOn: AnalyzeImpact
+    condition: and(succeeded(), eq(dependencies.AnalyzeImpact.outputs['setvars.hasCode'], 'true'))
+    pool:
+      name: MSI
+      demands:
+        - Agent.Name -equals msi
+    steps:
+      - checkout: self
+        fetchDepth: 0
+
+      - template: templates/steps/setup-android.yml
+
+      - bash: |
+          set -euo pipefail
+          ./gradlew :app:validateFlavorVersions test --stacktrace --no-daemon --max-workers=2
+        displayName: Run Version Validation and Unit Tests
+
+  - job: ConnectedSmokeTests
+    displayName: Optional Connected Smoke Tests
+    dependsOn:
+      - AnalyzeImpact
+      - ValidateAndUnitTest
+    condition: and(succeeded(), eq(dependencies.AnalyzeImpact.outputs['setvars.hasCode'], 'true'), eq(variables['RUN_CONNECTED_TESTS'], 'true'))
+    pool:
+      name: MSI
+      demands:
+        - Agent.Name -equals msi
+    steps:
+      - checkout: self
+        fetchDepth: 0
+
+      - template: templates/steps/setup-android.yml
+
+      - bash: |
+          set -euo pipefail
+          adb start-server
+          if [ -z "$(adb devices | awk 'NR>1 && $2 == \"device\" {print $1}')" ]; then
+            echo "No connected emulator/device detected. Configure one before setting RUN_CONNECTED_TESTS=true."
+            exit 1
+          fi
+          ./gradlew :app:connectedAmenerrasuluDebugAndroidTest --stacktrace --no-daemon --max-workers=2
+        displayName: Run Connected Smoke Tests
+
+  - job: AndroidLint
+    displayName: Android Lint (Dynamic Flavours)
+    dependsOn: AnalyzeImpact
+    condition: and(succeeded(), eq(dependencies.AnalyzeImpact.outputs['setvars.hasCode'], 'true'), ne(dependencies.AnalyzeImpact.outputs['setvars.flavoursJson'], '[]'))
+    pool:
+      name: MSI
+      demands:
+        - Agent.Name -equals msi
+    variables:
+      FLAVOURS_JSON: $[ dependencies.AnalyzeImpact.outputs['setvars.flavoursJson'] ]
+      ALL_FLAVOURS_JSON: $[ dependencies.AnalyzeImpact.outputs['setvars.allFlavoursJson'] ]
+    steps:
+      - checkout: self
+        fetchDepth: 0
+
+      - template: templates/steps/setup-android.yml
+
+      - bash: |
+          set -euo pipefail
+          mapfile -t FLAVOURS < <(
+            echo "$(FLAVOURS_JSON)" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d'
+          )
+          FLAVOURS_CSV="$(IFS=,; echo "${FLAVOURS[*]}")"
+
+          python3 scripts/ci/materialize_firebase_configs.py \
+            --flavors "$FLAVOURS_CSV" \
+            --mode warn \
+            --allow-existing
+
+          TASKS=()
+          for flavour in "${FLAVOURS[@]}"; do
+            [ -z "$flavour" ] && continue
+            FLAVOUR_CAP="$(tr '[:lower:]' '[:upper:]' <<< "${flavour:0:1}")${flavour:1}"
+            TASKS+=("lint${FLAVOUR_CAP}Debug")
+          done
+
+          if [ "${#TASKS[@]}" -eq 0 ]; then
+            echo "No lint task detected."
+            exit 0
+          fi
+
+          echo "Running lint tasks: ${TASKS[*]}"
+          ./gradlew "${TASKS[@]}" --stacktrace --no-daemon --max-workers=2
+        displayName: Run Dynamic Lint Tasks
+        env:
+          FIREBASE_CONFIGS_ZIP_BASE64: $(FIREBASE_CONFIGS_ZIP_BASE64)
+
+      - bash: |
+          set -euo pipefail
+          mkdir -p "$(Build.ArtifactStagingDirectory)/lint"
+          if [ -d "$(System.DefaultWorkingDirectory)/app/build/reports" ]; then
+            cp -R "$(System.DefaultWorkingDirectory)/app/build/reports/." "$(Build.ArtifactStagingDirectory)/lint/"
+          fi
+        displayName: Collect Lint Reports
+        condition: always()
+
+      - task: PublishPipelineArtifact@1
+        displayName: Publish Lint Reports
+        condition: always()
+        inputs:
+          targetPath: $(Build.ArtifactStagingDirectory)/lint
+          artifact: lint-reports

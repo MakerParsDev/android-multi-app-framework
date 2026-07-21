@@ -1,0 +1,28 @@
+---
+parameters:
+  - name: mode
+    type: string
+    default: history
+  - name: selfTest
+    type: boolean
+    default: false
+
+steps:
+  - bash: |
+      set -euo pipefail
+      args=(--mode '${{ parameters.mode }}')
+      if [ '${{ parameters.selfTest }}' = 'true' ]; then
+        args+=(--self-test)
+      fi
+      bash scripts/ci/security_gate.sh "${args[@]}"
+
+      if [ "${BUILD_REASON:-}" = "PullRequest" ]; then
+        target_ref="${SYSTEM_PULLREQUEST_TARGETBRANCH:-refs/heads/main}"
+        target_branch="${target_ref#refs/heads/}"
+        git fetch --no-tags origin \
+          "+refs/heads/${target_branch}:refs/remotes/origin/${target_branch}"
+        bash scripts/ci/run_secret_scan.sh \
+          --mode range \
+          --base-ref "refs/remotes/origin/${target_branch}"
+      fi
+    displayName: Secret and tracked-credential security gate

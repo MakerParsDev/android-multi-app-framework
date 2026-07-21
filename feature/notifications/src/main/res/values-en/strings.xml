@@ -1,0 +1,16 @@
+<resources>
+    <string name="notifications_title">Notifications</string>
+    <string name="notifications_empty">No notifications yet</string>
+    <string name="notifications_empty_hint">New notifications will appear here.</string>
+    <string name="notifications_permission_disabled_title">Notification permission disabled</string>
+    <string name="notifications_permission_disabled_hint">Enable notification permission to see new notifications.</string>
+    <string name="notifications_empty_cta">Open Notification Settings</string>
+    <string name="notifications_error">Error: %s</string>
+    <string name="notifications_action_mark_all_read">Mark all as read</string>
+    <string name="notifications_action_delete_all">Delete all</string>
+    <string name="notifications_dialog_close">Close</string>
+    <string name="notifications_dialog_mark_unread">Mark as unread</string>
+    <string name="notifications_dialog_delete">Delete</string>
+    <string name="notifications_state_unread">Unread</string>
+    <string name="notifications_state_read">Read</string>
+</resources>

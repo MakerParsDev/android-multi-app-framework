@@ -1,0 +1,20 @@
+{
+	email {$CADDY_ACME_EMAIL}
+}
+
+{$ADMIN_SUBDOMAIN}.{$PARSFILO_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy admin-notifications:80
+}
+
+{$PARSFILO_DOMAIN}, {$WWW_SUBDOMAIN}.{$PARSFILO_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy mobil-web:80
+}
+
+# Optional API bridge while functions still run on Firebase.
+api.{$PARSFILO_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy {$FIREBASE_FUNCTIONS_BASE_URL}
+}
+

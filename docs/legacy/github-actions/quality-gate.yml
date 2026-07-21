@@ -1,0 +1,184 @@
+name: "Quality Gate"
+
+on:
+    workflow_dispatch:
+
+concurrency:
+    group: quality-${{ github.ref }}
+    cancel-in-progress: true
+
+permissions:
+    contents: read
+    checks: write
+    pull-requests: write
+    security-events: write
+
+env:
+    JAVA_VERSION: "21"
+    JAVA_DISTRIBUTION: "temurin"
+    GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -Dorg.gradle.daemon=false"
+
+jobs:
+    # ─────────────────────────────────────────────────────────────
+    # Job 1: Impact Analysis (Detect which flavours to test)
+    # ─────────────────────────────────────────────────────────────
+    detect-changes:
+        name: "Analyze Impact"
+        runs-on: ubuntu-latest
+        outputs:
+            flavours: ${{ steps.set-matrix.outputs.flavours }}
+            has_code: ${{ steps.filter-code.outputs.code }}
+        steps:
+            - name: Setup Environment
+              uses: ./.github/actions/setup-android
+
+            - name: Detect Code Changes
+              id: filter-code
+              uses: dorny/paths-filter@v3
+              with:
+                  filters: |
+                      code:
+                        - '**/*.kt'
+                        - '**/*.kts'
+                        - '**/*.java'
+                        - '**/*.xml'
+                        - '**/*.gradle'
+                        - '**/*.properties'
+                        - '**/src/**'
+                        - 'buildSrc/**'
+                        - 'gradle/**'
+
+            - name: Generate Matrix
+              id: set-matrix
+              if: steps.filter-code.outputs.code == 'true'
+              shell: bash
+              run: |
+                  BASE_SHA="${{ github.event.pull_request.base.sha }}"
+                  HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+
+                  if ! CHANGED_FILES="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"; then
+                    CHANGED_FILES="$(git diff --name-only HEAD~1 HEAD || true)"
+                  fi
+
+                  echo "Changed files:"
+                  echo "$CHANGED_FILES"
+
+                  ALL_FLAVOURS_JSON="$(./gradlew -q printFlavors)"
+                  echo "Fetched flavors: $ALL_FLAVOURS_JSON"
+
+                  mapfile -t ALL_FLAVOURS < <(echo "$ALL_FLAVOURS_JSON" | tr -d '[]"' | tr ',' '\n' | sed '/^\s*$/d')
+
+                  COMMON_CHANGED=false
+                  while IFS= read -r file; do
+                    case "$file" in
+                      buildSrc/*|core/*|feature/*|gradle/*|app/build.gradle.kts|app/src/main/*|build.gradle.kts|settings.gradle.kts|gradle.properties)
+                        COMMON_CHANGED=true
+                        break
+                        ;;
+                    esac
+                  done <<< "$CHANGED_FILES"
+
+                  if [ "$COMMON_CHANGED" = true ]; then
+                    echo "Common code changed. Running checks for all flavours."
+                    echo "flavours=$ALL_FLAVOURS_JSON" >> "$GITHUB_OUTPUT"
+                    exit 0
+                  fi
+
+                  SELECTED=()
+                  for flavour in "${ALL_FLAVOURS[@]}"; do
+                    if grep -q "^app/src/${flavour}/" <<< "$CHANGED_FILES"; then
+                      SELECTED+=("$flavour")
+                    fi
+                  done
+
+                  if [ ${#SELECTED[@]} -eq 0 ]; then
+                    SELECTED_JSON="[]"
+                  else
+                    SELECTED_JSON="$(printf '"%s",' "${SELECTED[@]}")"
+                    SELECTED_JSON="[${SELECTED_JSON%,}]"
+                  fi
+
+                  echo "Selected flavours: $SELECTED_JSON"
+                  echo "flavours=$SELECTED_JSON" >> "$GITHUB_OUTPUT"
+
+    # ─────────────────────────────────────────────────────────────
+    # Job 2: Static Analysis (Detekt + Ktlint — run once, not per flavor)
+    # ─────────────────────────────────────────────────────────────
+    static-analysis:
+        name: "Detekt & Ktlint"
+        needs: detect-changes
+        if: needs.detect-changes.outputs.has_code == 'true'
+        runs-on: ubuntu-latest
+        timeout-minutes: 20
+
+        steps:
+            - name: Setup Environment
+              uses: ./.github/actions/setup-android
+
+            - name: Detekt
+              run: ./gradlew detekt
+
+            - name: Ktlint
+              run: ./gradlew ktlintCheck
+
+            - name: Upload Detekt Report
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: detekt-report
+                  path: |
+                      **/build/reports/detekt/**
+                  retention-days: 5
+
+    # ─────────────────────────────────────────────────────────────
+    # Job 3: Android Lint (Dynamic Matrix — per flavor)
+    # ─────────────────────────────────────────────────────────────
+    android-lint:
+        name: "Android Lint (${{ matrix.flavour }})"
+        needs: detect-changes
+        if: needs.detect-changes.outputs.has_code == 'true' && needs.detect-changes.outputs.flavours != '[]' && needs.detect-changes.outputs.flavours != ''
+        runs-on: ubuntu-latest
+        timeout-minutes: 30
+        strategy:
+            fail-fast: false
+            matrix:
+                flavour: ${{ fromJson(needs.detect-changes.outputs.flavours) }}
+
+        steps:
+            - name: Setup Environment
+              uses: ./.github/actions/setup-android
+
+            - name: Optional Firebase Config Override
+              if: ${{ secrets.FIREBASE_CONFIGS_ZIP_BASE64 != '' }}
+              shell: bash
+              run: |
+                  echo "${{ secrets.FIREBASE_CONFIGS_ZIP_BASE64 }}" | base64 -d > firebase_configs.zip
+                  unzip -o firebase_configs.zip
+                  rm -f firebase_configs.zip
+
+            - name: Construct Task Name
+              id: task-name
+              run: |
+                  FLAVOUR="${{ matrix.flavour }}"
+                  FLAVOUR_CAPITALIZED="$(tr '[:lower:]' '[:upper:]' <<< ${FLAVOUR:0:1})${FLAVOUR:1}"
+                  echo "capitalized=$FLAVOUR_CAPITALIZED" >> $GITHUB_OUTPUT
+
+            - name: Android Lint
+              run: ./gradlew "lint${{ steps.task-name.outputs.capitalized }}Debug"
+
+            - name: Upload Lint Report
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: lint-report-${{ matrix.flavour }}
+                  path: |
+                      app/build/reports/lint-results-${{ matrix.flavour }}Debug*
+                  retention-days: 5
+
+            - name: 📊 Lint Summary
+              if: always()
+              run: |
+                  echo "## 📋 Android Lint Results" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "**Flavor:** ${{ matrix.flavour }}" >> $GITHUB_STEP_SUMMARY
+                  echo "**Build Type:** Debug" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,146 @@
+name: "Production Release"
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  id-token: write
+
+env:
+  JAVA_VERSION: "21"
+  JAVA_DISTRIBUTION: "temurin"
+  GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -Dorg.gradle.daemon=false"
+
+jobs:
+  # ─────────────────────────────────────────────────────────────
+  # Job 1: Build Signed Release APKs/Bundles
+  # ─────────────────────────────────────────────────────────────
+  build-release:
+    name: "Build Signed Release"
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Setup Environment
+        uses: ./.github/actions/setup-android
+
+      - name: Decode Keystore
+        env:
+          ENCODED_STRING: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$ENCODED_STRING" ]; then
+            echo "::error::KEYSTORE_BASE64 secret is missing!"
+            exit 1
+          fi
+          printf '%s' "$ENCODED_STRING" | tr -d '\r\n\t ' | base64 -d > release.jks
+
+      - name: Optional Firebase Config Override
+        if: ${{ secrets.FIREBASE_CONFIGS_ZIP_BASE64 != '' }}
+        shell: bash
+        run: |
+          echo "${{ secrets.FIREBASE_CONFIGS_ZIP_BASE64 }}" | base64 -d > firebase_configs.zip
+          unzip -o firebase_configs.zip
+          rm -f firebase_configs.zip
+
+      - name: Build All Flavours
+        env:
+          KEYSTORE_FILE: ../release.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew assembleRelease bundleRelease --stacktrace
+
+      - name: Upload APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apks-${{ github.ref_name }}
+          path: app/build/outputs/apk/*/release/*.apk
+          retention-days: 7
+
+      - name: Upload Bundles
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-bundles-${{ github.ref_name }}
+          path: app/build/outputs/bundle/*Release/*.aab
+          retention-days: 7
+
+      - name: 🔒 Cleanup secrets
+        if: always()
+        run: |
+          rm -f release.jks
+          echo "Keystore file cleaned up"
+
+      - name: 📊 Build Summary
+        if: always()
+        run: |
+          echo "## 🚀 Release Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Tag:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          APK_COUNT=$(find app/build/outputs/apk/*/release/*.apk 2>/dev/null | wc -l || echo "0")
+          AAB_COUNT=$(find app/build/outputs/bundle/*Release/*.aab 2>/dev/null | wc -l || echo "0")
+          FLAVOUR_COUNT=$(./gradlew -q printFlavors | tr -d '[]"' | tr ',' '\n' | sed '/^\s*$/d' | wc -l || echo "0")
+
+          echo "### 📦 Build Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- **APKs Built:** $APK_COUNT (${FLAVOUR_COUNT} flavors)" >> $GITHUB_STEP_SUMMARY
+          echo "- **AABs Built:** $AAB_COUNT (${FLAVOUR_COUNT} flavors)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ All artifacts uploaded for 7 days" >> $GITHUB_STEP_SUMMARY
+
+  # ─────────────────────────────────────────────────────────────
+  # Job 2: Publish to Play Store
+  # ─────────────────────────────────────────────────────────────
+  publish-production:
+    name: "Publish to Production"
+    needs: build-release
+    runs-on: ubuntu-latest
+    environment: production # Requires manual approval in GitHub Settings
+    timeout-minutes: 60
+
+    steps:
+      - name: Setup Environment
+        uses: ./.github/actions/setup-android
+
+      - name: Download Bundles
+        uses: actions/download-artifact@v4
+        with:
+          name: release-bundles-${{ github.ref_name }}
+          path: app/build/outputs/bundle/
+
+      - name: Decode Keystore
+        env:
+          ENCODED_STRING: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$ENCODED_STRING" | tr -d '\r\n\t ' | base64 -d > release.jks
+
+      - name: Decode Service Account
+        env:
+          SA_CONTENT: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$SA_CONTENT" ]; then
+             echo "::error::PLAY_SERVICE_ACCOUNT_JSON secret is missing!"
+             exit 1
+          fi
+          printf '%s' "$SA_CONTENT" > service-account.json
+
+      - name: Publish all Bundles
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: service-account.json
+          KEYSTORE_FILE: ../release.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./scripts/build-all-flavours.sh Release publish
+
+      - name: 🔒 Cleanup secrets
+        if: always()
+        run: |
+          rm -f release.jks service-account.json
+          echo "Secrets cleaned up"

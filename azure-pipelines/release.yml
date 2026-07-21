@@ -1,0 +1,102 @@
+name: release-$(Date:yyyyMMdd)$(Rev:.r)
+
+trigger: none
+pr: none
+
+parameters:
+  - name: targetFlavors
+    displayName: Target flavors, comma-separated or all
+    type: string
+    default: all
+  - name: buildType
+    displayName: Build type
+    type: string
+    default: Release
+    values:
+      - Debug
+      - Release
+  - name: doQuality
+    displayName: Run quality checks before build
+    type: boolean
+    default: true
+  - name: doBuild
+    displayName: Build APK/AAB
+    type: boolean
+    default: true
+  - name: doInternalTest
+    displayName: Publish to Play internal track
+    type: boolean
+    default: false
+  - name: doPublish
+    displayName: Publish to Play production track
+    type: boolean
+    default: false
+  - name: updatePlayListing
+    displayName: Update Play listing metadata
+    type: boolean
+    default: false
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  - group: android-multi-app-framework-prod
+  - name: DOPPLER_PROJECT
+    value: android-multi-app-framework
+  - name: DOPPLER_CONFIG
+    value: prod
+  - name: GRADLE_OPTS
+    value: '-Djava.awt.headless=true -Dorg.gradle.workers.max=2 -Dorg.gradle.daemon=false -Dksp.incremental=false'
+
+steps:
+  - checkout: self
+    clean: true
+    fetchDepth: 0
+
+  - template: /pipelines/templates/steps/security-gate.yml
+    parameters:
+      mode: history
+      selfTest: false
+
+  - task: UseNode@1
+    displayName: Setup Node.js 22
+    inputs:
+      version: '22.x'
+      checkLatest: false
+
+  - bash: bash scripts/azure/install-doppler.sh
+    displayName: Install Doppler CLI
+
+  - bash: bash scripts/ci/setup-android-sdk.sh
+    displayName: Setup Android SDK
+
+  - bash: bash scripts/azure/resolve-flavors.sh '${{ parameters.targetFlavors }}'
+    displayName: Resolve flavors
+
+  - bash: bash scripts/azure/doppler-run.sh bash scripts/azure/release.sh
+    displayName: Build / release
+    timeoutInMinutes: 180
+    env:
+      DOPPLER_TOKEN: $(DOPPLER_TOKEN)
+      DOPPLER_PROJECT: $(DOPPLER_PROJECT)
+      DOPPLER_CONFIG: $(DOPPLER_CONFIG)
+      BUILD_TYPE: ${{ parameters.buildType }}
+      DO_QUALITY: ${{ parameters.doQuality }}
+      DO_BUILD: ${{ parameters.doBuild }}
+      DO_INTERNAL_TEST: ${{ parameters.doInternalTest }}
+      DO_PUBLISH: ${{ parameters.doPublish }}
+      UPDATE_PLAY_LISTING: ${{ parameters.updatePlayListing }}
+      RESOLVED_FLAVORS_CSV: $(RESOLVED_FLAVORS_CSV)
+      RESOLVED_FLAVORS_JSON: $(RESOLVED_FLAVORS_JSON)
+
+  - bash: mkdir -p app/build/outputs
+    displayName: Ensure output directory exists
+    condition: always()
+
+  - task: PublishPipelineArtifact@1
+    displayName: Publish build outputs
+    condition: always()
+    inputs:
+      targetPath: 'app/build/outputs'
+      artifact: 'android-build-outputs'
+      publishLocation: pipeline

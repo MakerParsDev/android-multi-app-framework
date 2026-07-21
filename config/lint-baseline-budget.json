@@ -1,0 +1,19 @@
+{
+  "files": {
+    "app/lint-baseline.xml": {
+      "maximum_by_id": {
+        "PluralsCandidate": 3,
+        "UnusedResources": 48
+      },
+      "maximum_issues": 51
+    },
+    "feature/counter/lint-baseline.xml": {
+      "maximum_by_id": {
+        "PluralsCandidate": 3
+      },
+      "maximum_issues": 3
+    }
+  },
+  "maximum_total": 54,
+  "schema_version": 1
+}

@@ -1,0 +1,43 @@
+{
+  "hosting": {
+    "site": "makerpars-oaslananka-mobil",
+    "public": "public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "redirects": [
+      {
+        "source": "/blog",
+        "destination": "/",
+        "type": 301
+      },
+      {
+        "source": "/blog/**",
+        "destination": "/",
+        "type": 301
+      }
+    ],
+    "rewrites": [
+      {
+        "source": "/apps/**",
+        "destination": "/apps/app/index.html"
+      },
+      {
+        "source": "/api/recaptcha/verify",
+        "function": {
+          "functionId": "recaptchaVerify",
+          "region": "europe-west1"
+        }
+      },
+      {
+        "source": "/api/other-apps",
+        "function": {
+          "functionId": "otherAppsFeed",
+          "region": "europe-west1"
+        }
+      }
+    ]
+  }
+}

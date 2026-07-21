@@ -1,0 +1,16 @@
+name: Android CI
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Setup Environment
+      uses: ./.github/actions/setup-android
+
+    - name: Build with Gradle
+      run: ./gradlew build

@@ -1,0 +1,110 @@
+[
+  {
+    "key": "subhanallah",
+    "arabicText": "سُبْحَانَ اللّهِ",
+    "latinText": "Sübhânallah",
+    "turkishMeaning": "Allah'ı tüm noksanlıklardan tenzih ederim",
+    "defaultTarget": 33,
+    "virtue": "Tesbih duasının en faziletlisi. Her söylenişte cennette bir ağaç dikilir.",
+    "virtueSource": "Tirmizî, Daavât, 57"
+  },
+  {
+    "key": "elhamdulillah",
+    "arabicText": "اَلْحَمْدُ لِلّهِ",
+    "latinText": "Elhamdülillâh",
+    "turkishMeaning": "Hamd ve şükür yalnızca Allah'a mahsustur",
+    "defaultTarget": 33,
+    "virtue": "Mizan'ı dolduran hamd. Şükrün en güzel dile getirilişidir.",
+    "virtueSource": "Müslim, Zikr, 34"
+  },
+  {
+    "key": "allahuekber",
+    "arabicText": "اَللّهُ اَكْبَرُ",
+    "latinText": "Allâhü Ekber",
+    "turkishMeaning": "Allah en büyüktür",
+    "defaultTarget": 34,
+    "virtue": "Tekbir, kalpleri Allah'ın azametine bağlar. Namazın özüdür.",
+    "virtueSource": "Buhârî, Ezân, 18"
+  },
+  {
+    "key": "la_ilahe_illallah",
+    "arabicText": "لَا اِلَهَ اِلَّا اللّهُ",
+    "latinText": "Lâ ilâhe illallâh",
+    "turkishMeaning": "Allah'tan başka ilah yoktur",
+    "defaultTarget": 100,
+    "virtue": "Zikirlerin efendisi. Günde 100 kez söyleyen günahlardan arınır.",
+    "virtueSource": "Buhârî, Daavât, 65"
+  },
+  {
+    "key": "la_ilahe_illallah_tam",
+    "arabicText": "لَا اِلَهَ اِلَّا اللّهُ مُحَمَّدٌ رَسُولُ اللّهِ",
+    "latinText": "Lâ ilâhe illallâh Muhammedün Resûlüllâh",
+    "turkishMeaning": "Allah'tan başka ilah yoktur, Muhammed Allah'ın Resulüdür",
+    "defaultTarget": 100,
+    "virtue": "Kelime-i Şehadet; imanın özü ve en büyük ikrar.",
+    "virtueSource": "Müslim, İman, 1"
+  },
+  {
+    "key": "subhanallahi_ve_bihamdihi",
+    "arabicText": "سُبْحَانَ اللّهِ وَبِحَمْدِهِ",
+    "latinText": "Sübhânallâhi ve bihâmdih",
+    "turkishMeaning": "Allah'ı hamd ile tenzih ederim",
+    "defaultTarget": 100,
+    "virtue": "Söylemesi kolay, mizanda ağır gelen iki kelime.",
+    "virtueSource": "Buhârî, Daavât, 65"
+  },
+  {
+    "key": "subhanallahil_azim",
+    "arabicText": "سُبْحَانَ اللّهِ الْعَظِيمِ",
+    "latinText": "Sübhânallâhi'l-azîm",
+    "turkishMeaning": "Yüce Allah'ı tenzih ederim",
+    "defaultTarget": 100,
+    "virtue": "Allah katında en sevilen iki kelimeden biri.",
+    "virtueSource": "Buhârî, Daavât, 65"
+  },
+  {
+    "key": "estagfirullah",
+    "arabicText": "اَسْتَغْفِرُ اللّهَ الْعَظِيمَ وَاَتُوبُ اِلَيْهِ",
+    "latinText": "Estağfirullâhe'l-azîme ve etûbü ileyh",
+    "turkishMeaning": "Yüce Allah'tan bağışlanma diler, O'na tevbe ederim",
+    "defaultTarget": 100,
+    "virtue": "İstiğfar; rızkı açar, sıkıntıları giderir, kalbi arındırır.",
+    "virtueSource": "Ebû Dâvûd, Vitr, 26"
+  },
+  {
+    "key": "la_havle",
+    "arabicText": "لَا حَوْلَ وَلَا قُوَّةَ اِلَّا بِاللّهِ الْعَلِيِّ الْعَظِيمِ",
+    "latinText": "Lâ havle velâ kuvvete illâ billâhi'l-aliyyi'l-azîm",
+    "turkishMeaning": "Güç ve kuvvet yalnızca Yüce ve Büyük Allah'a aittir",
+    "defaultTarget": 33,
+    "virtue": "Cennetin hazinelerinden biri. Darlıkta okunur, şifa verir.",
+    "virtueSource": "Buhârî, Daavât, 50"
+  },
+  {
+    "key": "salavat",
+    "arabicText": "اَللّهُمَّ صَلِّ عَلَى مُحَمَّدٍ وَعَلَى آلِ مُحَمَّدٍ",
+    "latinText": "Allâhümme salli alâ Muhammedin ve alâ âli Muhammed",
+    "turkishMeaning": "Allah'ım! Muhammed'e ve ailesine rahmet eyle",
+    "defaultTarget": 100,
+    "virtue": "Her salavata karşılık 10 kat rahmet iner. Dua makbul olur.",
+    "virtueSource": "Müslim, Salât, 70"
+  },
+  {
+    "key": "bismillah",
+    "arabicText": "بِسْمِ اللّهِ الرَّحْمَنِ الرَّحِيمِ",
+    "latinText": "Bismillâhirrahmânirrahîm",
+    "turkishMeaning": "Rahman ve Rahim olan Allah'ın adıyla",
+    "defaultTarget": 786,
+    "virtue": "Her hayırlı işin başı. Besmele çeken Allah ile başlar.",
+    "virtueSource": "Buhârî, Bed'ü'l-Vahy, 1"
+  },
+  {
+    "key": "ayetelkursi_zikir",
+    "arabicText": "اَللّهُ لَا اِلَهَ اِلَّا هُوَ الْحَيُّ الْقَيُّومُ",
+    "latinText": "Allâhü lâ ilâhe illâ hüve'l-hayyu'l-kayyûm",
+    "turkishMeaning": "Allah'tan başka ilah yoktur; O, diri ve kâimdir",
+    "defaultTarget": 33,
+    "virtue": "Ayetel Kürsi'nin ilk cümlesi. Her namazdan sonra okunması tavsiye edilir.",
+    "virtueSource": "Nesâî, Sehv, 100"
+  }
+]

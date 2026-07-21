@@ -1,0 +1,43 @@
+{
+    "name": "contentapp-notifications",
+    "description": "Timezone-aware notification system for ContentApp",
+    "scripts": {
+        "build": "tsc",
+        "build:watch": "tsc --watch",
+        "verify-env": "node scripts/verify-functions-env.mjs",
+        "test:reset-logic": "npm run build && node scripts/test-reset-logic.js",
+        "serve": "npm run build && firebase emulators:start --only functions --config ../firebase.json",
+        "shell": "npm run build && firebase functions:shell --config ../firebase.json",
+        "start": "npm run shell",
+        "deploy": "node ../../../scripts/ci/deploy_verified_side_project.mjs firebase-functions",
+        "logs": "firebase functions:log",
+        "typecheck": "tsc --noEmit",
+        "lint": "eslint src --max-warnings=0",
+        "test": "npm run build && node scripts/test-reset-logic.js && node --test test/*.test.mjs",
+        "verify": "npm run typecheck && npm run lint && npm test",
+        "predeploy": "npm run verify",
+        "build:metadata": "node scripts/write-build-metadata.mjs",
+        "prebuild": "npm run build:metadata",
+        "pretypecheck": "npm run build:metadata"
+    },
+    "engines": {
+        "node": "22"
+    },
+    "main": "lib/index.js",
+    "dependencies": {
+        "firebase-admin": "^13.7.0",
+        "firebase-functions": "^7.0.5",
+        "google-auth-library": "10.5.0",
+        "googleapis": "^150.0.1"
+    },
+    "devDependencies": {
+        "eslint": "^10.7.0",
+        "firebase-functions-test": "^3.5.0",
+        "typescript": "^5.7.0",
+        "typescript-eslint": "^8.65.0"
+    },
+    "overrides": {
+        "uuid": "^11.1.1"
+    },
+    "private": true
+}

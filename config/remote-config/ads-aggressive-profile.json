@@ -1,0 +1,46 @@
+{
+  "profile": "aggressive_revenue_v1",
+  "description": "Aggressive ad frequency preset for Remote Config",
+  "parameters": {
+    "ads_app_open_enabled": "true",
+    "ads_interstitial_enabled": "true",
+    "ads_banner_enabled": "true",
+    "ads_native_enabled": "true",
+    "ads_rewarded_enabled": "true",
+    "ads_rewarded_max_per_session": "10",
+    "ads_rewarded_interstitial_enabled": "true",
+
+    "ads_app_open_cooldown_ms": "180000",
+    "ads_app_open_resume_gap_ms": "15000",
+    "ads_app_open_max_per_session": "2",
+    "ads_interstitial_frequency_cap_ms": "120000",
+    "ads_interstitial_max_per_session": "5",
+    "ads_interstitial_relaxed_frequency_cap_ms": "90000",
+    "ads_interstitial_relaxed_packages_csv": "",
+    "ads_interstitial_aggressive_preload_packages_csv": "com.parsfilo.namazsurelerivedualarsesli,com.parsfilo.mucizedualar",
+    "ads_app_open_aggressive_preload_packages_csv": "com.parsfilo.namazsurelerivedualarsesli,com.parsfilo.mucizedualar",
+    "ads_reward_offer_routes_csv": "home,content,prayer_list,prayer_detail,quran_sura_list,quran_sura_detail,counter,settings",
+    "ads_interstitial_hot_routes_csv": "content,prayer_list,prayer_detail,miracles_list,miracles_detail",
+    "ads_interstitial_not_loaded_recovery_enabled": "true",
+
+    "ads_rewarded_interstitial_min_interval_ms": "600000",
+    "ads_rewarded_interstitial_max_per_session": "3",
+
+    "ads_native_pool_max": "3",
+    "ads_native_ttl_ms": "1800000",
+    "ads_native_exact_placement_only": "false",
+    "ads_native_banner_fallback_enabled": "true",
+    "ads_native_banner_fallback_packages_csv": "com.parsfilo.namazsurelerivedualarsesli,com.parsfilo.mucizedualar,com.parsfilo.yasinsuresi",
+    "ads_report_freshness_max_hours": "24",
+    "ads_consent_retry_backoff_minutes": "30",
+
+    "ads_app_open_placements_disabled_csv": "",
+    "ads_interstitial_placements_disabled_csv": "",
+    "ads_banner_placements_disabled_csv": "",
+    "ads_native_placements_disabled_csv": "",
+    "ads_rewarded_placements_disabled_csv": "",
+    "ads_rewarded_interstitial_placements_disabled_csv": "",
+    "ads_app_open_route_blocklist_csv": "subscription,rewards,settings",
+    "ads_interstitial_route_blocklist_csv": "subscription,rewards,settings"
+  }
+}

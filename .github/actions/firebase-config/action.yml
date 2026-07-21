@@ -1,0 +1,92 @@
+name: Firebase Config Override
+description: Restores firebase configs from Cloudflare R2 or base64 fallback
+
+inputs:
+  firebase_configs_zip_base64:
+    description: Base64 encoded firebase config archive
+    required: false
+    default: ''
+  cf_r2_account_id:
+    description: Cloudflare account ID
+    required: false
+    default: ''
+  cf_api_token:
+    description: Cloudflare API token
+    required: false
+    default: ''
+  cf_r2_bucket:
+    description: Cloudflare R2 bucket name
+    required: false
+    default: ''
+  cf_r2_firebase_object:
+    description: R2 object key for firebase zip
+    required: false
+    default: ''
+  wrangler_config_path:
+    description: Wrangler config path used for R2 download
+    required: false
+    default: 'side-projects/cloudflare/workers/content-api/wrangler.toml'
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        FIREBASE_CONFIGS_ZIP_BASE64: ${{ inputs.firebase_configs_zip_base64 }}
+        CF_R2_ACCOUNT_ID: ${{ inputs.cf_r2_account_id }}
+        CF_API_TOKEN: ${{ inputs.cf_api_token }}
+        CF_R2_BUCKET: ${{ inputs.cf_r2_bucket }}
+        CF_R2_FIREBASE_OBJECT: ${{ inputs.cf_r2_firebase_object }}
+        WRANGLER_CONFIG_PATH: ${{ inputs.wrangler_config_path }}
+      run: |
+        set -euo pipefail
+        restored_from="none"
+        if [ -n "${CF_R2_ACCOUNT_ID:-}" ] && [ -n "${CF_API_TOKEN:-}" ] && [ -n "${CF_R2_BUCKET:-}" ] && [ -n "${CF_R2_FIREBASE_OBJECT:-}" ]; then
+          export CLOUDFLARE_ACCOUNT_ID="${CF_R2_ACCOUNT_ID}"
+          export CLOUDFLARE_API_TOKEN="${CF_API_TOKEN}"
+          if npx --yes wrangler@4 r2 object get "${CF_R2_BUCKET}/${CF_R2_FIREBASE_OBJECT}" --file firebase_configs.zip --remote --config "${WRANGLER_CONFIG_PATH}"; then
+            restored_from="r2"
+            echo "Firebase configs restored from R2."
+          else
+            echo "::warning::R2 download failed, trying base64 fallback if available."
+          fi
+        fi
+
+        if [ "$restored_from" = "none" ] && [ -n "${FIREBASE_CONFIGS_ZIP_BASE64:-}" ]; then
+          echo "$FIREBASE_CONFIGS_ZIP_BASE64" | base64 -d > firebase_configs.zip
+          restored_from="base64"
+          echo "Firebase configs restored from FIREBASE_CONFIGS_ZIP_BASE64."
+        fi
+
+        if [ "$restored_from" = "none" ]; then
+          echo "No Firebase override secret found. Using repository defaults."
+          exit 0
+        fi        
+
+        mapfile -t ZIP_ENTRIES < <(unzip -Z1 firebase_configs.zip)
+        if [ "${#ZIP_ENTRIES[@]}" -eq 0 ]; then
+          echo "::error::firebase_configs.zip is empty."
+          rm -f firebase_configs.zip
+          exit 1
+        fi
+
+        SAFE_ENTRIES=()
+        for entry in "${ZIP_ENTRIES[@]}"; do
+          if [[ "$entry" =~ ^app/src/[^/]+/google-services\.json$ ]]; then
+            SAFE_ENTRIES+=("$entry")
+          else
+            echo "::error::firebase_configs.zip contains disallowed entry: $entry"
+            echo "::error::Only app/src/<flavor>/google-services.json is allowed."
+            rm -f firebase_configs.zip
+            exit 1
+          fi
+        done
+
+        if [ "${#SAFE_ENTRIES[@]}" -eq 0 ]; then
+          echo "::error::firebase_configs.zip has no allowed entries."
+          rm -f firebase_configs.zip
+          exit 1
+        fi
+
+        unzip -o firebase_configs.zip "${SAFE_ENTRIES[@]}"
+        rm -f firebase_configs.zip

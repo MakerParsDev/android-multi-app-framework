@@ -1,0 +1,45 @@
+services:
+  caddy:
+    image: caddy:2.9-alpine
+    container_name: parsfilo-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    env_file:
+      - .env
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - admin-notifications
+      - mobil-web
+
+  admin-notifications:
+    build:
+      context: ../admin-notifications
+      dockerfile: Dockerfile
+      args:
+        VITE_FIREBASE_API_KEY: ${VITE_FIREBASE_API_KEY}
+        VITE_FIREBASE_AUTH_DOMAIN: ${VITE_FIREBASE_AUTH_DOMAIN}
+        VITE_FIREBASE_PROJECT_ID: ${VITE_FIREBASE_PROJECT_ID}
+        VITE_FIREBASE_APP_ID: ${VITE_FIREBASE_APP_ID}
+        VITE_FIREBASE_MESSAGING_SENDER_ID: ${VITE_FIREBASE_MESSAGING_SENDER_ID}
+        VITE_FIREBASE_STORAGE_BUCKET: ${VITE_FIREBASE_STORAGE_BUCKET}
+        VITE_FIREBASE_FUNCTIONS_REGION: ${VITE_FIREBASE_FUNCTIONS_REGION}
+        VITE_FUNCTIONS_BASE_URL: ${VITE_FUNCTIONS_BASE_URL}
+        VITE_ADMIN_ALLOWED_EMAILS: ${VITE_ADMIN_ALLOWED_EMAILS}
+    container_name: parsfilo-admin-notifications
+    restart: unless-stopped
+
+  mobil-web:
+    build:
+      context: ../firebase/mobil_web
+      dockerfile: Dockerfile
+    container_name: parsfilo-mobil-web
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

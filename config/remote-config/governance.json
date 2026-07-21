@@ -1,0 +1,584 @@
+{
+  "schema_version": 1,
+  "firebase_project_id": "makerpars-oaslananka-mobil",
+  "condition_target": "firebase_app_id",
+  "safe_fallback_requirements": {
+    "updates_enabled": false,
+    "update_emergency_disabled": true,
+    "ads_emergency_disabled": true,
+    "ads_banner_enabled": false,
+    "ads_native_enabled": false,
+    "ads_app_open_enabled": false,
+    "ads_interstitial_enabled": false,
+    "ads_rewarded_enabled": false,
+    "ads_rewarded_interstitial_enabled": false
+  },
+  "rollback": {
+    "minimum_versions_to_retain": 10,
+    "change_owner": "release",
+    "emergency_owner": "platform-oncall",
+    "require_validate_only": true,
+    "require_deployment_impact_review": true
+  },
+  "parameters": {
+    "ads_app_open_aggressive_preload_packages_csv": {
+      "owner": "monetization",
+      "type": "csv",
+      "scope": "flavor",
+      "default": "com.parsfilo.namazsurelerivedualarsesli,com.parsfilo.ismiazamduasi,com.parsfilo.mucizedualar,com.parsfilo.ayetelkursi,com.parsfilo.yasinsuresi,com.parsfilo.kenzularsduasi,com.parsfilo.insirahsuresi",
+      "description": "Comma-separated per-app route, package, or placement policy.",
+      "flavor_default": "com.parsfilo.namazsurelerivedualarsesli,com.parsfilo.ismiazamduasi,com.parsfilo.mucizedualar,com.parsfilo.ayetelkursi,com.parsfilo.yasinsuresi,com.parsfilo.kenzularsduasi,com.parsfilo.insirahsuresi",
+      "client_default": "com.parsfilo.namazsurelerivedualarsesli,com.parsfilo.ismiazamduasi,com.parsfilo.mucizedualar,com.parsfilo.ayetelkursi,com.parsfilo.yasinsuresi,com.parsfilo.kenzularsduasi,com.parsfilo.insirahsuresi"
+    },
+    "ads_app_open_cooldown_ms": {
+      "owner": "monetization",
+      "type": "integer",
+      "scope": "flavor",
+      "default": 120000,
+      "description": "Bounded per-app advertising policy value.",
+      "flavor_default": 120000,
+      "minimum": 60000,
+      "maximum": 3600000,
+      "client_default": 120000
+    },
+    "ads_app_open_enabled": {
+      "owner": "monetization",
+      "type": "boolean",
+      "scope": "flavor",
+      "default": false,
+      "description": "Per-app ad format enablement.",
+      "flavor_default": true,
+      "client_default": true
+    },
+    "ads_app_open_max_per_session": {
+      "owner": "monetization",
+      "type": "integer",
+      "scope": "flavor",
+      "default": 2,
+      "description": "Bounded per-app advertising policy value.",
+      "flavor_default": 2,
+      "minimum": 0,
+      "maximum": 10,
+      "client_default": 2
+    },
+    "ads_app_open_placements_disabled_csv": {
+      "owner": "monetization",
+      "type": "csv",
+      "scope": "flavor",
+      "default": "",
+      "description": "Comma-separated per-app route, package, or placement policy.",
+      "flavor_default": "",
+      "client_default": ""
+    },
+    "ads_app_open_resume_gap_ms": {
+      "owner": "monetization",
+      "type": "integer",
+      "scope": "flavor",
+      "default": 15000,
+      "description": "Bounded per-app advertising policy value.",
+      "flavor_default": 15000,
+      "minimum": 0,
+      "maximum": 1800000,
+      "client_default": 15000
+    },
+    "ads_app_open_route_blocklist_csv": {
+      "owner": "monetization",
+      "type": "csv",
+      "scope": "flavor",
+      "default": "subscription,rewards,settings",
+      "description": "Comma-separated per-app route, package, or placement policy.",
+      "flavor_default": "subscription,rewards,settings",
+      "client_default": "subscription,rewards,settings"
+    },
+    "ads_banner_enabled": {
+      "owner": "monetization",
+      "type": "boolean",
+      "scope": "flavor",
+      "default": false,
+      "description": "Per-app ad format enablement.",
+      "flavor_default": true,
+      "client_default": true
+    },
+    "ads_banner_placements_disabled_csv": {
+      "owner": "monetization",
+      "type": "csv",
+      "scope": "flavor",
+      "default": "",
+      "description": "Comma-separated per-app route, package, or placement policy.",
+      "flavor_default": "",
+      "client_default": ""
+    },
+    "ads_consent_retry_backoff_minutes": {
+      "owner": "monetization",
+      "type": "integer",
+      "scope": "flavor",
+      "default": 30,
+      "description": "Bounded per-app advertising policy value.",
+      "flavor_default": 30,
+      "minimum": 1,
+      "maximum": 180,
+      "client_default": 30
+    },
+    "ads_emergency_disabled": {
+      "owner": "monetization",
+      "type": "boolean",
+      "scope": "flavor",
+      "default": true,
+      "description": "Per-app emergency switch that disables every governed ad format.",
+      "flavor_default": false,
+      "client_default": false
+    },
+    "ads_global_emergency_disabled": {
+      "owner": "monetization",
+      "type": "boolean",
+      "scope": "global",
+      "default": false,
+      "description": "Global emergency switch that disables every governed ad format.",
+      "client_default": false
+    },
+    "ads_interstitial_aggressive_preload_packages_csv": {
+      "owner": "monetization",
+      "type": "csv",
+      "scope": "flavor",
+      "default": "com.parsfilo.namazsurelerivedualarsesli,com.parsfilo.ismiazamduasi,com.parsfilo.mucizedualar,com.parsfilo.ayetelkursi,com.parsfilo.yasinsuresi,com.parsfilo.kenzularsduasi,com.parsfilo.insirahsuresi",
+      "description": "Comma-separated per-app route, package, or placement policy.",
+      "flavor_default": "com.parsfilo.namazsurelerivedualarsesli,com.parsfilo.ismiazamduasi,com.parsfilo.mucizedualar,com.parsfilo.ayetelkursi,com.parsfilo.yasinsuresi,com.parsfilo.kenzularsduasi,com.parsfilo.insirahsuresi",
+      "client_default": "com.parsfilo.namazsurelerivedualarsesli,com.parsfilo.ismiazamduasi,com.parsfilo.mucizedualar,com.parsfilo.ayetelkursi,com.parsfilo.yasinsuresi,com.parsfilo.kenzularsduasi,com.parsfilo.insirahsuresi"
+    },
+    "ads_interstitial_enabled": {
+      "owner": "monetization",
+      "type": "boolean",
+      "scope": "flavor",
+      "default": false,
+      "description": "Per-app ad format enablement.",
+      "flavor_default": true,
+      "client_default": true
+    },
+    "ads_interstitial_frequency_cap_ms": {
+      "owner": "monetization",
+      "type": "integer",
+      "scope": "flavor",
+      "default": 90000,
+      "description": "Bounded per-app advertising policy value.",
+      "flavor_default": 90000,
+      "minimum": 60000,
+      "maximum": 3600000,
+      "client_default": 90000
+    },
+    "ads_interstitial_hot_routes_csv": {
+      "owner": "monetization",
+      "type": "csv",
+      "scope": "flavor",
+      "default": "content,prayer_list,prayer_detail,miracles_list,miracles_detail",
+      "description": "Comma-separated per-app route, package, or placement policy.",
+      "flavor_default": "content,prayer_list,prayer_detail,miracles_list,miracles_detail",
+      "client_default": "content,prayer_list,prayer_detail,miracles_list,miracles_detail"
+    },
+    "ads_interstitial_max_per_session": {
+      "owner": "monetization",
+      "type": "integer",
+      "scope": "flavor",
+      "default": 5,
+      "description": "Bounded per-app advertising policy value.",
+      "flavor_default": 5,
+      "minimum": 0,
+      "maximum": 20,
+      "client_default": 5
+    },
+    "ads_interstitial_not_loaded_recovery_enabled": {
+      "owner": "monetization",
+      "type": "boolean",
+      "scope": "flavor",
+      "default": true,
+      "description": "Per-app advertising behavior switch.",
+      "flavor_default": true,
+      "client_default": true
+    },
+    "ads_interstitial_placements_disabled_csv": {
+      "owner": "monetization",
+      "type": "csv",
+      "scope": "flavor",
+      "default": "",
+      "description": "Comma-separated per-app route, package, or placement policy.",
+      "flavor_default": "",
+      "client_default": ""
+    },
+    "ads_interstitial_pool_max": {
+      "owner": "monetization",
+      "type": "integer",
+      "scope": "flavor",
+      "default": 2,
+      "description": "Bounded per-app advertising policy value.",
+      "flavor_default": 2,
+      "minimum": 1,
+      "maximum": 3,
+      "client_default": 2
+    },
+    "ads_interstitial_relaxed_frequency_cap_ms": {
+      "owner": "monetization",
+      "type": "integer",
+      "scope": "flavor",
+      "default": 240000,
+      "description": "Bounded per-app advertising policy value.",
+      "flavor_default": 240000,
+      "minimum": 60000,
+      "maximum": 3600000,
+      "client_default": 240000
+    },
+    "ads_interstitial_relaxed_packages_csv": {
+      "owner": "monetization",
+      "type": "csv",
+      "scope": "flavor",
+      "default": "",
+      "description": "Comma-separated per-app route, package, or placement policy.",
+      "flavor_default": "",
+      "client_default": ""
+    },
+    "ads_interstitial_route_blocklist_csv": {
+      "owner": "monetization",
+      "type": "csv",
+      "scope": "flavor",
+      "default": "subscription,rewards,settings",
+      "description": "Comma-separated per-app route, package, or placement policy.",
+      "flavor_default": "subscription,rewards,settings",
+      "client_default": "subscription,rewards,settings"
+    },
+    "ads_native_banner_fallback_enabled": {
+      "owner": "monetization",
+      "type": "boolean",
+      "scope": "flavor",
+      "default": false,
+      "description": "Per-app advertising behavior switch.",
+      "flavor_default": false,
+      "client_default": false
+    },
+    "ads_native_banner_fallback_packages_csv": {
+      "owner": "monetization",
+      "type": "csv",
+      "scope": "flavor",
+      "default": "com.parsfilo.namazsurelerivedualarsesli,com.parsfilo.mucizedualar,com.parsfilo.yasinsuresi",
+      "description": "Comma-separated per-app route, package, or placement policy.",
+      "flavor_default": "com.parsfilo.namazsurelerivedualarsesli,com.parsfilo.mucizedualar,com.parsfilo.yasinsuresi",
+      "client_default": "com.parsfilo.namazsurelerivedualarsesli,com.parsfilo.mucizedualar,com.parsfilo.yasinsuresi"
+    },
+    "ads_native_enabled": {
+      "owner": "monetization",
+      "type": "boolean",
+      "scope": "flavor",
+      "default": false,
+      "description": "Per-app ad format enablement.",
+      "flavor_default": true,
+      "client_default": true
+    },
+    "ads_native_exact_placement_only": {
+      "owner": "monetization",
+      "type": "boolean",
+      "scope": "flavor",
+      "default": false,
+      "description": "Per-app advertising behavior switch.",
+      "flavor_default": false,
+      "client_default": false
+    },
+    "ads_native_placements_disabled_csv": {
+      "owner": "monetization",
+      "type": "csv",
+      "scope": "flavor",
+      "default": "",
+      "description": "Comma-separated per-app route, package, or placement policy.",
+      "flavor_default": "",
+      "client_default": ""
+    },
+    "ads_native_pool_max": {
+      "owner": "monetization",
+      "type": "integer",
+      "scope": "flavor",
+      "default": 2,
+      "description": "Bounded per-app advertising policy value.",
+      "flavor_default": 2,
+      "minimum": 1,
+      "maximum": 4,
+      "client_default": 2
+    },
+    "ads_native_ttl_ms": {
+      "owner": "monetization",
+      "type": "integer",
+      "scope": "flavor",
+      "default": 1800000,
+      "description": "Bounded per-app advertising policy value.",
+      "flavor_default": 1800000,
+      "minimum": 300000,
+      "maximum": 21600000,
+      "client_default": 1800000
+    },
+    "ads_report_freshness_max_hours": {
+      "owner": "monetization",
+      "type": "integer",
+      "scope": "flavor",
+      "default": 24,
+      "description": "Bounded per-app advertising policy value.",
+      "flavor_default": 24,
+      "minimum": 1,
+      "maximum": 168,
+      "client_default": 24
+    },
+    "ads_reward_offer_routes_csv": {
+      "owner": "monetization",
+      "type": "csv",
+      "scope": "flavor",
+      "default": "home,content,prayer_list,prayer_detail,quran_sura_list,quran_sura_detail,counter,settings",
+      "description": "Comma-separated per-app route, package, or placement policy.",
+      "flavor_default": "home,content,prayer_list,prayer_detail,quran_sura_list,quran_sura_detail,counter,settings",
+      "client_default": "home,content,prayer_list,prayer_detail,quran_sura_list,quran_sura_detail,counter,settings"
+    },
+    "ads_rewarded_enabled": {
+      "owner": "monetization",
+      "type": "boolean",
+      "scope": "flavor",
+      "default": false,
+      "description": "Per-app ad format enablement.",
+      "flavor_default": true,
+      "client_default": true
+    },
+    "ads_rewarded_interstitial_enabled": {
+      "owner": "monetization",
+      "type": "boolean",
+      "scope": "flavor",
+      "default": false,
+      "description": "Per-app ad format enablement.",
+      "flavor_default": true,
+      "client_default": true
+    },
+    "ads_rewarded_interstitial_intro_required": {
+      "owner": "monetization",
+      "type": "boolean",
+      "scope": "flavor",
+      "default": true,
+      "description": "Per-app advertising behavior switch.",
+      "flavor_default": true,
+      "client_default": true
+    },
+    "ads_rewarded_interstitial_max_per_session": {
+      "owner": "monetization",
+      "type": "integer",
+      "scope": "flavor",
+      "default": 2,
+      "description": "Bounded per-app advertising policy value.",
+      "flavor_default": 2,
+      "minimum": 0,
+      "maximum": 10,
+      "client_default": 2
+    },
+    "ads_rewarded_interstitial_min_interval_ms": {
+      "owner": "monetization",
+      "type": "integer",
+      "scope": "flavor",
+      "default": 900000,
+      "description": "Bounded per-app advertising policy value.",
+      "flavor_default": 900000,
+      "minimum": 0,
+      "maximum": 86400000,
+      "client_default": 900000
+    },
+    "ads_rewarded_interstitial_placements_disabled_csv": {
+      "owner": "monetization",
+      "type": "csv",
+      "scope": "flavor",
+      "default": "",
+      "description": "Comma-separated per-app route, package, or placement policy.",
+      "flavor_default": "",
+      "client_default": ""
+    },
+    "ads_rewarded_max_per_session": {
+      "owner": "monetization",
+      "type": "integer",
+      "scope": "flavor",
+      "default": 10,
+      "description": "Bounded per-app advertising policy value.",
+      "flavor_default": 10,
+      "minimum": 0,
+      "maximum": 20,
+      "client_default": 10
+    },
+    "ads_rewarded_placements_disabled_csv": {
+      "owner": "monetization",
+      "type": "csv",
+      "scope": "flavor",
+      "default": "",
+      "description": "Comma-separated per-app route, package, or placement policy.",
+      "flavor_default": "",
+      "client_default": ""
+    },
+    "ads_rewarded_pool_max": {
+      "owner": "monetization",
+      "type": "integer",
+      "scope": "flavor",
+      "default": 2,
+      "description": "Bounded per-app advertising policy value.",
+      "flavor_default": 2,
+      "minimum": 1,
+      "maximum": 3,
+      "client_default": 2
+    },
+    "audio_base_url": {
+      "owner": "content-platform",
+      "type": "url",
+      "scope": "global",
+      "default": "https://contentapp-content-api.oaslananka.workers.dev/api/audio",
+      "description": "Shared HTTPS content-service endpoint.",
+      "client_default": "https://contentapp-content-api.oaslananka.workers.dev/api/audio"
+    },
+    "audio_manifest_url": {
+      "owner": "content-platform",
+      "type": "url",
+      "scope": "global",
+      "default": "https://contentapp-content-api.oaslananka.workers.dev/api/audio-manifest",
+      "description": "Shared HTTPS content-service endpoint.",
+      "client_default": "https://contentapp-content-api.oaslananka.workers.dev/api/audio-manifest"
+    },
+    "later_button_en": {
+      "owner": "release",
+      "type": "string",
+      "scope": "global",
+      "default": "Later",
+      "description": "Localized update-dialog copy.",
+      "client_default": "Later"
+    },
+    "later_button_tr": {
+      "owner": "release",
+      "type": "string",
+      "scope": "global",
+      "default": "Daha sonra",
+      "description": "Localized update-dialog copy.",
+      "client_default": "Daha sonra"
+    },
+    "latest_version_code": {
+      "owner": "release",
+      "type": "integer",
+      "scope": "flavor",
+      "default": 1,
+      "description": "Latest production versionCode used as the update boundary.",
+      "flavor_default": 1,
+      "derive": "play_production_version_code",
+      "minimum": 1,
+      "maximum": 2100000000,
+      "client_default": 1
+    },
+    "min_supported_version_code": {
+      "owner": "release",
+      "type": "integer",
+      "scope": "flavor",
+      "default": 1,
+      "description": "Lowest supported production versionCode; older builds hard-block.",
+      "flavor_default": 1,
+      "derive": "min_supported_version_code",
+      "minimum": 1,
+      "maximum": 2100000000,
+      "client_default": 1
+    },
+    "other_apps_url": {
+      "owner": "content-platform",
+      "type": "url",
+      "scope": "global",
+      "default": "https://contentapp-content-api.oaslananka.workers.dev/api/other-apps",
+      "description": "Shared HTTPS content-service endpoint.",
+      "client_default": "https://contentapp-content-api.oaslananka.workers.dev/api/other-apps"
+    },
+    "remote_config_schema_version": {
+      "owner": "platform",
+      "type": "integer",
+      "scope": "global",
+      "default": 1,
+      "description": "Source-controlled Remote Config schema version.",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "update_button_en": {
+      "owner": "release",
+      "type": "string",
+      "scope": "global",
+      "default": "Update",
+      "description": "Localized update-dialog copy.",
+      "client_default": "Update"
+    },
+    "update_button_tr": {
+      "owner": "release",
+      "type": "string",
+      "scope": "global",
+      "default": "Güncelle",
+      "description": "Localized update-dialog copy.",
+      "client_default": "Güncelle"
+    },
+    "update_emergency_disabled": {
+      "owner": "release",
+      "type": "boolean",
+      "scope": "flavor",
+      "default": true,
+      "description": "Per-app emergency kill switch for update prompts.",
+      "flavor_default": false,
+      "client_default": false
+    },
+    "update_global_emergency_disabled": {
+      "owner": "release",
+      "type": "boolean",
+      "scope": "global",
+      "default": false,
+      "description": "Global kill switch for all update prompts.",
+      "client_default": false
+    },
+    "update_message_en": {
+      "owner": "release",
+      "type": "string",
+      "scope": "global",
+      "default": "Please update the app to continue.",
+      "description": "Localized update-dialog copy.",
+      "client_default": "Please update the app to continue."
+    },
+    "update_message_tr": {
+      "owner": "release",
+      "type": "string",
+      "scope": "global",
+      "default": "Devam etmek için lütfen uygulamayı güncelleyin.",
+      "description": "Localized update-dialog copy.",
+      "client_default": "Devam etmek için lütfen uygulamayı güncelleyin."
+    },
+    "update_mode": {
+      "owner": "release",
+      "type": "enum",
+      "scope": "flavor",
+      "default": "none",
+      "description": "Update behavior below latest: none disables prompts, soft shows a dismissible prompt, and hard blocks until update.",
+      "flavor_default": "none",
+      "allowed_values": [
+        "none",
+        "soft",
+        "hard"
+      ],
+      "client_default": "none"
+    },
+    "update_title_en": {
+      "owner": "release",
+      "type": "string",
+      "scope": "global",
+      "default": "Update required",
+      "description": "Localized update-dialog copy.",
+      "client_default": "Update required"
+    },
+    "update_title_tr": {
+      "owner": "release",
+      "type": "string",
+      "scope": "global",
+      "default": "Güncelleme gerekli",
+      "description": "Localized update-dialog copy.",
+      "client_default": "Güncelleme gerekli"
+    },
+    "updates_enabled": {
+      "owner": "release",
+      "type": "boolean",
+      "scope": "flavor",
+      "default": false,
+      "description": "Enables update policy evaluation for a matched production app.",
+      "flavor_default": true,
+      "client_default": false
+    }
+  }
+}

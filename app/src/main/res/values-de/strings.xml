@@ -1,0 +1,58 @@
+<resources>
+    <string name="nav_home">Startseite</string>
+    <string name="nav_premium">Abo</string>
+    <string name="nav_apps">Apps</string>
+    <item type="string" name="nav_messages">@string/messages_title</item>
+    <item type="string" name="nav_alerts">@string/notifications_title</item>
+
+    <string name="bismillah">بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ</string>
+    <string name="loading">Wird geladen…</string>
+    <string name="error_generic">Ein Fehler ist aufgetreten</string>
+    <string name="error_network">Keine Internetverbindung</string>
+    <string name="error_retry">Erneut versuchen</string>
+
+    <string name="share_app_message">📖 Ich nutze die App %1$s und finde sie sehr gut!\n\nHier herunterladen: %2$s</string>
+    <string name="share_chooser_title">App teilen</string>
+    <string name="whatsapp_not_installed">WhatsApp ist nicht installiert</string>
+
+    <string name="audio_loading">Audio wird geladen…</string>
+    <string name="audio_play">Abspielen</string>
+    <string name="audio_pause">Pause</string>
+    <string name="audio_error">Audio konnte nicht geladen werden</string>
+
+    <string name="display_mode_arabic">Arabisch</string>
+    <string name="display_mode_turkish">Türkisch</string>
+    <string name="display_mode_latin">Latein</string>
+
+    <string name="settings_dark_mode">Dunkelmodus</string>
+
+    <string name="sign_in_google">Mit Google anmelden</string>
+    <string name="sign_in_description">Melde dich mit deinem Google-Konto an, um Nachrichten zu senden und Antworten zu sehen.</string>
+    <string name="sign_in_failed">Anmeldung fehlgeschlagen. Bitte erneut versuchen.</string>
+
+    <string name="messages_title">Nachrichten</string>
+    <string name="messages_empty">Noch keine Nachrichten</string>
+    <string name="messages_empty_hint">Tippe unten rechts auf den Button, um eine Nachricht zu senden.</string>
+    <string name="messages_send">Nachricht senden</string>
+    <string name="messages_subject">Betreff</string>
+    <string name="messages_body">Deine Nachricht</string>
+    <string name="messages_has_reply">Antwort vorhanden</string>
+    <string name="send">Senden</string>
+    <string name="cancel">Abbrechen</string>
+
+    <string name="notifications_title">Benachrichtigungen</string>
+    <string name="notifications_empty">Noch keine Benachrichtigungen</string>
+    <string name="notifications_empty_hint">Neue Benachrichtigungen werden hier angezeigt.</string>
+
+    <string name="subscription_title">Abonnement</string>
+    <string name="subscription_description">Wähle einen Plan für ein werbefreies Erlebnis.</string>
+    <string name="subscription_coming_soon">Demnächst verfügbar</string>
+    <string name="billing_unavailable">Abrechnungsdienst ist nicht verfügbar</string>
+
+    <string name="rewards_title">Belohnungsanzeigen</string>
+    <string name="rewards_description">Sieh dir Anzeigen an und nutze die App vorübergehend werbefrei.</string>
+
+    <string name="message_detail_title">Nachrichtendetails</string>
+    <string name="notification_detail_title">Benachrichtigungsdetails</string>
+</resources>
+

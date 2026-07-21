@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "source": "Google Play Android Publisher API production track",
+  "captured_at": "2026-07-13T12:20:00+03:00",
+  "apps": [
+    {
+      "flavor": "amenerrasulu",
+      "package": "com.parsfilo.amenerrasulu",
+      "production_version_code": 52
+    },
+    {
+      "flavor": "ayetelkursi",
+      "package": "com.parsfilo.ayetelkursi",
+      "production_version_code": 80
+    },
+    {
+      "flavor": "bereketduasi",
+      "package": "com.parsfilo.bereketduasi",
+      "production_version_code": 29
+    },
+    {
+      "flavor": "esmaulhusna",
+      "package": "com.parsfilo.esmaulhusna",
+      "production_version_code": 48
+    },
+    {
+      "flavor": "fetihsuresi",
+      "package": "com.parsfilo.fetihsuresi",
+      "production_version_code": 35
+    },
+    {
+      "flavor": "insirahsuresi",
+      "package": "com.parsfilo.insirahsuresi",
+      "production_version_code": 30
+    },
+    {
+      "flavor": "ismiazamduasi",
+      "package": "com.parsfilo.ismiazamduasi",
+      "production_version_code": 35
+    },
+    {
+      "flavor": "kenzularsduasi",
+      "package": "com.parsfilo.kenzularsduasi",
+      "production_version_code": 34
+    },
+    {
+      "flavor": "kible",
+      "package": "com.parsfilo.kible",
+      "production_version_code": 51
+    },
+    {
+      "flavor": "kuran_kerim",
+      "package": "com.parsfilo.kuran_kerim",
+      "production_version_code": 57
+    },
+    {
+      "flavor": "mucizedualar",
+      "package": "com.parsfilo.mucizedualar",
+      "production_version_code": 77
+    },
+    {
+      "flavor": "namazsurelerivedualarsesli",
+      "package": "com.parsfilo.namazsurelerivedualarsesli",
+      "production_version_code": 96
+    },
+    {
+      "flavor": "namazvakitleri",
+      "package": "com.parsfilo.namazvakitleri",
+      "production_version_code": 43
+    },
+    {
+      "flavor": "nazarayeti",
+      "package": "com.parsfilo.nazarayeti",
+      "production_version_code": 27
+    },
+    {
+      "flavor": "vakiasuresi",
+      "package": "com.parsfilo.vakiasuresi",
+      "production_version_code": 31
+    },
+    {
+      "flavor": "yasinsuresi",
+      "package": "com.parsfilo.yasinsuresi",
+      "production_version_code": 81
+    },
+    {
+      "flavor": "zikirmatik",
+      "package": "com.parsfilo.zikirmatik",
+      "production_version_code": 31
+    }
+  ]
+}

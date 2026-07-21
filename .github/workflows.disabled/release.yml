@@ -1,0 +1,413 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_flavors:
+        description: 'Target flavors (comma-separated) or "all"'
+        required: true
+        default: 'all'
+        type: string
+      update_play_listing:
+        description: 'Update Play listing/metadata/screenshots/release-notes'
+        required: false
+        default: false
+        type: boolean
+      publish_to_play:
+        description: 'Publish to Play Console (selected track)'
+        required: false
+        default: false
+        type: boolean
+      publish_track:
+        description: 'Play publish track (used when publish_to_play=true)'
+        required: false
+        default: production
+        type: choice
+        options:
+          - production
+          - internal
+
+concurrency:
+  group: ${{ github.event.inputs.publish_to_play == 'true' && 'play-publish-global' || format('{0}-{1}', github.workflow, github.ref) }}
+  cancel-in-progress: ${{ github.event.inputs.publish_to_play != 'true' }}
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx6g -Djava.awt.headless=true -Dorg.gradle.daemon=false -Dksp.incremental=false
+  JAVA_VERSION: '21'
+  ANDROID_API_LEVEL: 36
+
+jobs:
+  build-release:
+    name: Build Signed Release AAB
+    runs-on: ubuntu-latest
+    env:
+      KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      PLAY_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
+      PUSH_REGISTRATION_URL: ${{ secrets.PUSH_REGISTRATION_URL }}
+      PURCHASE_VERIFICATION_URL: ${{ secrets.PURCHASE_VERIFICATION_URL }}
+      FIREBASE_WEB_CLIENT_ID: ${{ secrets.FIREBASE_WEB_CLIENT_ID }}
+      FIREBASE_CONFIGS_ZIP_BASE64: ${{ secrets.FIREBASE_CONFIGS_ZIP_BASE64 }}
+      CF_R2_ACCOUNT_ID: ${{ secrets.CF_R2_ACCOUNT_ID }}
+      CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+      CF_R2_BUCKET: ${{ secrets.CF_R2_BUCKET }}
+      CF_R2_FIREBASE_OBJECT: ${{ secrets.CF_R2_FIREBASE_OBJECT }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    outputs:
+      resolved_flavors_json: ${{ steps.resolve.outputs.resolved_json }}
+      resolved_flavors_csv: ${{ steps.resolve.outputs.resolved_csv }}
+      auto_bump_done: ${{ steps.auto_bump.outputs.done }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - uses: android-actions/setup-android@v4
+        with:
+          accept-android-sdk-licenses: false
+          log-accepted-android-sdk-licenses: false
+
+      - name: Install Android SDK packages
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          sdkmanager --sdk_root="$SDK_ROOT" \
+            "platform-tools" \
+            "platforms;android-${ANDROID_API_LEVEL}" \
+            "build-tools;36.0.0"
+
+      - name: Accept Android SDK licenses (non-interactive)
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          set +o pipefail
+          yes | sdkmanager --licenses --sdk_root="$SDK_ROOT" >/dev/null
+          set -o pipefail
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Resolve Flavors
+        id: resolve
+        uses: ./.github/actions/resolve-flavors
+        with:
+          target_flavors: ${{ github.event.inputs.target_flavors }}
+
+      - name: Export resolved flavors env
+        run: |
+          echo "RESOLVED_FLAVORS_JSON=${{ steps.resolve.outputs.resolved_json }}" >> "$GITHUB_ENV"
+          echo "RESOLVED_FLAVORS_CSV=${{ steps.resolve.outputs.resolved_csv }}" >> "$GITHUB_ENV"
+
+      - name: Validate CI apps catalog (strict for publish flavors)
+        if: github.event.inputs.publish_to_play == 'true'
+        run: python3 ./scripts/ci/validate_ci_apps_catalog.py --mode strict --target-flavors "${{ steps.resolve.outputs.resolved_csv }}"
+
+      - name: Validate AdMob inventory (warn)
+        if: github.event.inputs.publish_to_play != 'true'
+        run: python3 ./scripts/ci/validate_admob_inventory.py --mode warn --target-flavors "${{ steps.resolve.outputs.resolved_csv }}"
+
+      - name: Validate app-ads.txt (warn)
+        if: github.event.inputs.publish_to_play != 'true'
+        run: python3 ./scripts/ci/validate_app_ads_txt.py --mode warn
+
+      - name: Validate AdMob inventory (strict for publish flavors)
+        if: github.event.inputs.publish_to_play == 'true'
+        run: python3 ./scripts/ci/validate_admob_inventory.py --mode strict --target-flavors "${{ steps.resolve.outputs.resolved_csv }}"
+
+      - name: Validate app-ads.txt (strict for publish)
+        if: github.event.inputs.publish_to_play == 'true'
+        run: python3 ./scripts/ci/validate_app_ads_txt.py --mode strict
+
+      - name: Verify env contract
+        uses: ./.github/actions/verify-env-contract
+
+      - name: Export firebase override + web client env
+        uses: ./.github/actions/export-firebase-override-env
+
+      - name: Firebase Config Override (R2 preferred, Base64 fallback)
+        uses: ./.github/actions/firebase-config
+        with:
+          firebase_configs_zip_base64: ${{ env.FIREBASE_CONFIGS_ZIP_BASE64 }}
+          cf_r2_account_id: ${{ env.CF_R2_ACCOUNT_ID }}
+          cf_api_token: ${{ env.CF_API_TOKEN }}
+          cf_r2_bucket: ${{ env.CF_R2_BUCKET }}
+          cf_r2_firebase_object: ${{ env.CF_R2_FIREBASE_OBJECT }}
+
+      - name: Validate Google Sign-In Config (strict for publish)
+        if: github.event.inputs.publish_to_play == 'true'
+        uses: ./.github/actions/verify-google-signin-config
+        with:
+          flavors: ${{ steps.resolve.outputs.resolved_csv }}
+          require_web_client_id: 'true'
+
+      - name: Validate Google Sign-In Config
+        if: github.event.inputs.publish_to_play != 'true'
+        uses: ./.github/actions/verify-google-signin-config
+        with:
+          flavors: ${{ steps.resolve.outputs.resolved_csv }}
+
+      - name: Resolve release values
+        uses: ./.github/actions/resolve-release-secrets
+        with:
+          require_play_service_account: ${{ github.event.inputs.publish_to_play == 'true' && 'true' || 'false' }}
+
+      - name: Validate Release Signing Values
+        run: |
+          set -euo pipefail
+          [ -n "$KEYSTORE_BASE64" ] || { echo "::error::Missing required env: KEYSTORE_BASE64"; exit 1; }
+          [ -n "$KEYSTORE_PASSWORD" ] || { echo "::error::Missing required env: KEYSTORE_PASSWORD"; exit 1; }
+          [ -n "$KEY_ALIAS" ] || { echo "::error::Missing required env: KEY_ALIAS"; exit 1; }
+          [ -n "$KEY_PASSWORD" ] || { echo "::error::Missing required env: KEY_PASSWORD"; exit 1; }
+          [ -n "$PUSH_REGISTRATION_URL" ] || { echo "::error::Missing required env: PUSH_REGISTRATION_URL"; exit 1; }
+          [ -n "$PURCHASE_VERIFICATION_URL" ] || { echo "::error::Missing required env: PURCHASE_VERIFICATION_URL"; exit 1; }
+
+      - name: Decode Keystore
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > "${{ runner.temp }}/release.jks"
+          echo "KEYSTORE_FILE=${{ runner.temp }}/release.jks" >> "$GITHUB_ENV"
+
+      - name: Decode Play Service Account (for auto-bump)
+        if: github.event.inputs.publish_to_play == 'true'
+        uses: ./.github/actions/decode-play-service-account
+        with:
+          output_path: ${{ runner.temp }}/service-account.json
+
+      - name: Verify Play service account project
+        if: github.event.inputs.publish_to_play == 'true'
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ runner.temp }}/service-account.json
+        run: |
+          python3 ./scripts/ci/verify_play_service_account_project.py \
+            --expected-project-id makerpars-oaslananka-mobil
+
+      - name: Auto-bump Play versionCodes (selected flavors)
+        id: auto_bump
+        if: github.event.inputs.publish_to_play == 'true'
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ runner.temp }}/service-account.json
+        run: |
+          set -euo pipefail
+          [ -f "$PLAY_SERVICE_ACCOUNT_JSON" ] || { echo "::error::PLAY_SERVICE_ACCOUNT_JSON missing"; exit 1; }
+          echo "::notice::Auto-bump starting (track=${{ github.event.inputs.publish_track }}, flavors=${{ steps.resolve.outputs.resolved_csv }})"
+          python3 -m pip install --quiet google-api-python-client google-auth
+          python3 ./scripts/ci/fetch_play_version_codes.py \
+            --flavors "${{ steps.resolve.outputs.resolved_csv }}" \
+            --tracks all \
+            --suggest-next \
+            --apply-to-app-versions \
+            --sync-version-names
+          echo "::notice::Auto-bump completed (track=${{ github.event.inputs.publish_track }}, flavors=${{ steps.resolve.outputs.resolved_csv }})"
+          echo "done=true" >> "$GITHUB_OUTPUT"
+
+      - name: Notice release artifact may use repo versionCodes (publish disabled)
+        if: github.event.inputs.publish_to_play != 'true'
+        run: |
+          echo "::warning::Release AAB artifact is being built without Play publish auto-bump (publish_to_play=false)."
+          echo "::warning::If you later upload this artifact manually to Play, versionCode may already be used."
+
+      - name: Build Release AAB
+        run: |
+          set -euo pipefail
+          mapfile -t FLAVORS < <(echo '${{ steps.resolve.outputs.resolved_json }}' | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d')
+          TASKS=()
+          for flavor in "${FLAVORS[@]}"; do
+            [ -z "$flavor" ] && continue
+            cap="$(tr '[:lower:]' '[:upper:]' <<< "${flavor:0:1}")${flavor:1}"
+            TASKS+=("bundle${cap}Release")
+          done
+          echo "Running: ${TASKS[*]}"
+          ./gradlew clean "${TASKS[@]}" --stacktrace --no-daemon --max-workers=2
+
+      - name: Upload AAB Artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ github.event.inputs.publish_to_play == 'true' && 'release-bundles' || 'release-bundles-nonpublishable-versioncode' }}
+          path: app/build/outputs/bundle/
+          retention-days: 30
+
+      - name: Upload bumped app-versions.properties
+        if: github.event.inputs.publish_to_play == 'true'
+        uses: actions/upload-artifact@v6
+        with:
+          name: bumped-app-versions
+          path: app-versions.properties
+          retention-days: 7
+
+      - name: Cleanup Secrets
+        if: always()
+        run: rm -f "${{ runner.temp }}/release.jks" "${{ runner.temp }}/service-account.json"
+
+  publish-production:
+    name: Publish to Play Console (${{ github.event.inputs.publish_track }})
+    needs: build-release
+    if: github.event.inputs.publish_to_play == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      PLAY_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
+      PUSH_REGISTRATION_URL: ${{ secrets.PUSH_REGISTRATION_URL }}
+      PURCHASE_VERIFICATION_URL: ${{ secrets.PURCHASE_VERIFICATION_URL }}
+      FIREBASE_WEB_CLIENT_ID: ${{ secrets.FIREBASE_WEB_CLIENT_ID }}
+      FIREBASE_CONFIGS_ZIP_BASE64: ${{ secrets.FIREBASE_CONFIGS_ZIP_BASE64 }}
+      CF_R2_ACCOUNT_ID: ${{ secrets.CF_R2_ACCOUNT_ID }}
+      CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+      CF_R2_BUCKET: ${{ secrets.CF_R2_BUCKET }}
+      CF_R2_FIREBASE_OBJECT: ${{ secrets.CF_R2_FIREBASE_OBJECT }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Download AAB Artifacts
+        uses: actions/download-artifact@v6
+        with:
+          name: release-bundles
+          path: app/build/outputs/bundle
+
+      - name: Download bumped app-versions.properties
+        uses: actions/download-artifact@v6
+        with:
+          name: bumped-app-versions
+          path: TEMP_OUT/release-sync
+
+      - name: Restore bumped app-versions.properties for publish
+        run: |
+          set -euo pipefail
+          cp "TEMP_OUT/release-sync/app-versions.properties" "./app-versions.properties"
+          echo "::notice::Restored bumped app-versions.properties from build job for publish"
+
+      - name: Verify env contract
+        uses: ./.github/actions/verify-env-contract
+
+      - name: Export firebase override + web client env
+        uses: ./.github/actions/export-firebase-override-env
+
+      - name: Firebase Config Override (R2 preferred, Base64 fallback)
+        uses: ./.github/actions/firebase-config
+        with:
+          firebase_configs_zip_base64: ${{ env.FIREBASE_CONFIGS_ZIP_BASE64 }}
+          cf_r2_account_id: ${{ env.CF_R2_ACCOUNT_ID }}
+          cf_api_token: ${{ env.CF_API_TOKEN }}
+          cf_r2_bucket: ${{ env.CF_R2_BUCKET }}
+          cf_r2_firebase_object: ${{ env.CF_R2_FIREBASE_OBJECT }}
+
+      - name: Validate Google Sign-In Config
+        uses: ./.github/actions/verify-google-signin-config
+        with:
+          flavors: ${{ needs.build-release.outputs.resolved_flavors_csv }}
+          require_web_client_id: 'true'
+
+      - name: Resolve release values
+        uses: ./.github/actions/resolve-release-secrets
+
+      - name: Decode Secrets
+        run: |
+          set -euo pipefail
+          [ -n "$KEYSTORE_BASE64" ] || { echo "::error::Missing required env: KEYSTORE_BASE64"; exit 1; }
+          [ -n "$KEYSTORE_PASSWORD" ] || { echo "::error::Missing required env: KEYSTORE_PASSWORD"; exit 1; }
+          [ -n "$KEY_ALIAS" ] || { echo "::error::Missing required env: KEY_ALIAS"; exit 1; }
+          [ -n "$KEY_PASSWORD" ] || { echo "::error::Missing required env: KEY_PASSWORD"; exit 1; }
+          [ -n "$PUSH_REGISTRATION_URL" ] || { echo "::error::Missing required env: PUSH_REGISTRATION_URL"; exit 1; }
+          [ -n "$PURCHASE_VERIFICATION_URL" ] || { echo "::error::Missing required env: PURCHASE_VERIFICATION_URL"; exit 1; }
+          [ -n "${PLAY_SERVICE_ACCOUNT_JSON_BASE64:-}" ] || { echo "::error::Missing required env: PLAY_SERVICE_ACCOUNT_JSON_BASE64"; exit 1; }
+          echo "$KEYSTORE_BASE64" | base64 -d > "${{ runner.temp }}/release.jks"
+          echo "KEYSTORE_FILE=${{ runner.temp }}/release.jks" >> "$GITHUB_ENV"
+          echo "PUSH_REGISTRATION_URL=$PUSH_REGISTRATION_URL" >> "$GITHUB_ENV"
+
+      - name: Decode Play Service Account
+        uses: ./.github/actions/decode-play-service-account
+        with:
+          output_path: ${{ runner.temp }}/service-account.json
+
+      - name: Verify Play service account project
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ runner.temp }}/service-account.json
+        run: |
+          python3 ./scripts/ci/verify_play_service_account_project.py \
+            --expected-project-id makerpars-oaslananka-mobil
+
+      - name: Guard auto-bump marker before publish
+        if: github.event.inputs.publish_to_play == 'true'
+        run: |
+          set -euo pipefail
+          if [ "${{ needs.build-release.outputs.auto_bump_done }}" != "true" ]; then
+            echo "::error::Auto-bump marker missing. versionCode bump was not confirmed before Play publish."
+            echo "::error::Track=${{ github.event.inputs.publish_track }}, flavors=${{ needs.build-release.outputs.resolved_flavors_csv }}"
+            exit 1
+          fi
+
+      - name: Publish to Play Console
+        if: needs.build-release.outputs.auto_bump_done == 'true'
+        run: |
+          set -euo pipefail
+          chmod +x ./gradlew
+          RESOLVED_JSON='${{ needs.build-release.outputs.resolved_flavors_json }}'
+          mapfile -t FLAVORS < <(echo "$RESOLVED_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d')
+          UPDATE_LISTING="${{ github.event.inputs.update_play_listing }}"
+          TASKS=()
+          for flavor in "${FLAVORS[@]}"; do
+            [ -z "$flavor" ] && continue
+            cap="$(tr '[:lower:]' '[:upper:]' <<< "${flavor:0:1}")${flavor:1}"
+            if [ "$UPDATE_LISTING" = "true" ]; then
+              if [ ! -d "app/src/${flavor}/play" ]; then
+                echo "updatePlayListing=true but missing: app/src/${flavor}/play"
+                exit 1
+              fi
+              TASKS+=("publish${cap}ReleaseListing")
+            fi
+            TASKS+=("publish${cap}ReleaseBundle")
+          done
+          echo "Publishing: ${TASKS[*]}"
+          max_attempts=3
+          attempt=1
+          delay_seconds=20
+          while true; do
+            log_file="$(mktemp)"
+            set +e
+            ./gradlew clean "${TASKS[@]}" -PPLAY_TRACK=${{ github.event.inputs.publish_track }} --stacktrace --no-daemon --max-workers=2 2>&1 | tee "$log_file"
+            status=${PIPESTATUS[0]}
+            set -e
+            if [ "$status" -eq 0 ]; then
+              rm -f "$log_file"
+              break
+            fi
+            if ! grep -Eiq "Connection reset|SocketException|Read timed out|timed out|HTTP 429|HTTP 5[0-9]{2}" "$log_file"; then
+              echo "Publish failed with non-transient error. Not retrying."
+              rm -f "$log_file"
+              exit "$status"
+            fi
+            rm -f "$log_file"
+            if [ "$attempt" -ge "$max_attempts" ]; then
+              echo "Publish failed after ${max_attempts} attempts."
+              exit "$status"
+            fi
+            echo "Transient publish error detected. Retrying in ${delay_seconds}s (attempt ${attempt}/${max_attempts})..."
+            sleep "$delay_seconds"
+            attempt=$((attempt + 1))
+            delay_seconds=$((delay_seconds * 2))
+          done
+
+      - name: Cleanup Secrets
+        if: always()
+        run: rm -f "${{ runner.temp }}/release.jks" "${{ runner.temp }}/service-account.json"

@@ -1,0 +1,72 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Admin panel access control:
+    // single source of truth is /admins/{uid} documents.
+    function isAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    match /user_messages/{messageId} {
+      allow read, delete: if isOwner(resource.data.userId);
+      allow update: if isOwner(resource.data.userId)
+        && request.resource.data.userId == resource.data.userId;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+    }
+
+    // devices/ — Server-owned collection.
+    // Android clients register through the App Check-protected backend endpoint;
+    // only Admin SDK / service-account writes bypass these client rules.
+    match /devices/{deviceId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // admins/ — Bildirim yönetim paneli erişim whitelist'i.
+    // { uid, email, createdAt } gibi alanlarla tutulabilir.
+    // Client write kapalı; seed işlemleri Console/Admin SDK ile yapılır.
+    match /admins/{adminUid} {
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == adminUid);
+      allow write: if false;
+    }
+
+    // scheduled_events/ — Yönetim paneli yalnız admin kullanıcılar tarafından düzenlenir.
+    match /scheduled_events/{eventId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /purchase_verifications/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /ad_performance_reports/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /coverage_reports/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /subscription_summary/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // Default deny for all other collections.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,695 @@
+[
+  {
+    "duaIsim": "Allah",
+    "duaLatinOkunus": "Allah",
+    "duaArapca": "اللَّهُ",
+    "duaAciklama": "Tek yaratıcının özel ismi, varlığı zorunlu olan, bütün kemâl sıfatları kendisinde toplayan hakiki ma‘bûd.",
+    "duaBesmele": "Allah"
+  },
+  {
+    "duaIsim": "er-Rahmân",
+    "duaLatinOkunus": "er-Rahmân",
+    "duaArapca": "الرَّحْمنُ",
+    "duaAciklama": "Sonsuz merhametiyle lütuf ve ihsanda bulunan.",
+    "duaBesmele": "er-Rahmân"
+  },
+  {
+    "duaIsim": "er-Rahîm",
+    "duaLatinOkunus": "er-Rahîm",
+    "duaArapca": "الرَّحِيمُ",
+    "duaAciklama": "Rahmetiyle her şeyi kuşatan.",
+    "duaBesmele": "er-Rahîm"
+  },
+  {
+    "duaIsim": "el-Melik",
+    "duaLatinOkunus": "el-Melik",
+    "duaArapca": "الْمَلِكُ",
+    "duaAciklama": "Bütün varlıkların sahibi/hükümdârı.",
+    "duaBesmele": "el-Melik"
+  },
+  {
+    "duaIsim": "el-Kuddûs",
+    "duaLatinOkunus": "el-Kuddûs",
+    "duaArapca": "الْقُدُّوسُ",
+    "duaAciklama": "Eksiklik ve kusurlardan münezzeh/uzak olan, bütün kemâl sıfatları kendisinde toplayan.",
+    "duaBesmele": "el-Kuddûs"
+  },
+  {
+    "duaIsim": "es-Selâm",
+    "duaLatinOkunus": "es-Selâm",
+    "duaArapca": "السَّلاَمُ",
+    "duaAciklama": "Esenlik ve selâmet veren, yaratılmışlara özgü değişikliklerden ve yok oluştan münezzeh olan.",
+    "duaBesmele": "es-Selâm"
+  },
+  {
+    "duaIsim": "el-Mü’min",
+    "duaLatinOkunus": "el-Mü’min",
+    "duaArapca": "الْمُؤْمِنُ",
+    "duaAciklama": "Bütün mahlûkâta emniyet/güven veren ve kendisine güvenilen.",
+    "duaBesmele": "el-Mü’min"
+  },
+  {
+    "duaIsim": "el-Müheymin",
+    "duaLatinOkunus": "el-Müheymin",
+    "duaArapca": "الْمُهَيْمِنُ",
+    "duaAciklama": "Kâinatın bütün işlerini gözetip yöneten, her şeyi hükmü altına alan.",
+    "duaBesmele": "el-Müheymin"
+  },
+  {
+    "duaIsim": "el-Azîz",
+    "duaLatinOkunus": "el-Azîz",
+    "duaArapca": "الْعَزِيزُ",
+    "duaAciklama": "Ulu, galip, her şeye üstün gelen izzet sahibi.",
+    "duaBesmele": "el-Azîz"
+  },
+  {
+    "duaIsim": "el-Cebbâr",
+    "duaLatinOkunus": "el-Cebbâr",
+    "duaArapca": "الْجَبَّارُ",
+    "duaAciklama": "Dilediğini yaptırma gücüne sahip olan, her şeyi tasarrufu altına alan ve irâdesini her durumda yürüten.",
+    "duaBesmele": "el-Cebbâr"
+  },
+  {
+    "duaIsim": "el-Mütekebbir",
+    "duaLatinOkunus": "el-Mütekebbir",
+    "duaArapca": "الْمُتَكَبِّرُ",
+    "duaAciklama": "Büyüklüğünü izhar eden, son derece ulu, yüce.",
+    "duaBesmele": "el-Mütekebbir"
+  },
+  {
+    "duaIsim": "el-Hâlik",
+    "duaLatinOkunus": "el-Hâlik",
+    "duaArapca": "الْخَالِقُ",
+    "duaAciklama": "Her şeyin yaratıcısı, hikmeti gereği her şeyi ölçülü yaratan.",
+    "duaBesmele": "el-Hâlik"
+  },
+  {
+    "duaIsim": "el-Bâri’",
+    "duaLatinOkunus": "el-Bâri’",
+    "duaArapca": "الْبَارِئُ",
+    "duaAciklama": "Yoktan yaratan, maddesi ve örneği olmadan îcat eden.",
+    "duaBesmele": "el-Bâri’"
+  },
+  {
+    "duaIsim": "el-Musavvir",
+    "duaLatinOkunus": "el-Musavvir",
+    "duaArapca": "الْمُصَوِّرُ",
+    "duaAciklama": "Varlığa şekil ve sûret veren.",
+    "duaBesmele": "el-Musavvir"
+  },
+  {
+    "duaIsim": "el-Gaffâr",
+    "duaLatinOkunus": "el-Gaffâr",
+    "duaArapca": "الْغَفَّارُ",
+    "duaAciklama": "Kusur ve günahları örten, çokça bağışlayan.",
+    "duaBesmele": "el-Gaffâr"
+  },
+  {
+    "duaIsim": "el-Kahhâr",
+    "duaLatinOkunus": "el-Kahhâr",
+    "duaArapca": "الْقَهَّارُ",
+    "duaAciklama": "Yenilmeyen, dilediğini yerine getiren, kendisine her şeyin boyun eğdiği yegâne kudret ve tasarruf sahibi.",
+    "duaBesmele": "el-Kahhâr"
+  },
+  {
+    "duaIsim": "el-Vehhâb",
+    "duaLatinOkunus": "el-Vehhâb",
+    "duaArapca": "الْوَهَّابُ",
+    "duaAciklama": "Karşılıksız olarak çokça nimet veren ve ihsanda bulunan.",
+    "duaBesmele": "el-Vehhâb"
+  },
+  {
+    "duaIsim": "er-Rezzâk",
+    "duaLatinOkunus": "er-Rezzâk",
+    "duaArapca": "الرَّزَّاقُ",
+    "duaAciklama": "Maddî ve manevî bol rızık veren, her türlü rızık imkânlarını yaratan.",
+    "duaBesmele": "er-Rezzâk"
+  },
+  {
+    "duaIsim": "el-Fettâh",
+    "duaLatinOkunus": "el-Fettâh",
+    "duaArapca": "الْفَتَّاحُ",
+    "duaAciklama": "Hayır kapılarını açan, hükmüyle adaleti sağlayan.",
+    "duaBesmele": "el-Fettâh"
+  },
+  {
+    "duaIsim": "el-Alîm",
+    "duaLatinOkunus": "el-Alîm",
+    "duaArapca": "الْعَلِيمُ",
+    "duaAciklama": "İlmi her şeyi kuşatan.",
+    "duaBesmele": "el-Alîm"
+  },
+  {
+    "duaIsim": "el-Kâbız",
+    "duaLatinOkunus": "el-Kâbız",
+    "duaArapca": "الْقَابِضُ",
+    "duaAciklama": "Her şeyi teslim alan, hikmeti gereği rızkı ve her türlü nimeti ölçülü veren, eceli gelenlerin ruhlarını teslim alan.",
+    "duaBesmele": "el-Kâbız"
+  },
+  {
+    "duaIsim": "el-Bâsıt",
+    "duaLatinOkunus": "el-Bâsıt",
+    "duaArapca": "الْبَاسِطُ",
+    "duaAciklama": "Rızkı ve her türlü rızık imkânını genişleten, ömürleri uzatan.",
+    "duaBesmele": "el-Bâsıt"
+  },
+  {
+    "duaIsim": "el-Hâfıd",
+    "duaLatinOkunus": "el-Hâfıd",
+    "duaArapca": "الْخَافِضُ",
+    "duaAciklama": "Kâfirleri ve zalimleri alçaltan.",
+    "duaBesmele": "el-Hâfıd"
+  },
+  {
+    "duaIsim": "er-Râfi`",
+    "duaLatinOkunus": "er-Râfi`",
+    "duaArapca": "الرَّافِعُ",
+    "duaAciklama": "Müminleri yükselten, izzetli ve şerefli kılan.",
+    "duaBesmele": "er-Râfi`"
+  },
+  {
+    "duaIsim": "el-Muizz",
+    "duaLatinOkunus": "el-Muizz",
+    "duaArapca": "الْمُعِزُّ",
+    "duaAciklama": "Yücelten, güçlü ve aziz kılan.",
+    "duaBesmele": "el-Muizz"
+  },
+  {
+    "duaIsim": "el-Müzill",
+    "duaLatinOkunus": "el-Müzill",
+    "duaArapca": "الْمُذِلُّ",
+    "duaAciklama": "Boyun eğdiren, değersiz kılan.",
+    "duaBesmele": "el-Müzill"
+  },
+  {
+    "duaIsim": "es-Semî`",
+    "duaLatinOkunus": "es-Semî`",
+    "duaArapca": "السَّمِيعُ",
+    "duaAciklama": "Her şeyi işiten.",
+    "duaBesmele": "es-Semî`"
+  },
+  {
+    "duaIsim": "el-Basîr",
+    "duaLatinOkunus": "el-Basîr",
+    "duaArapca": "الْبَصِيرُ",
+    "duaAciklama": "Her şeyi gören.",
+    "duaBesmele": "el-Basîr"
+  },
+  {
+    "duaIsim": "el-Hakem",
+    "duaLatinOkunus": "el-Hakem",
+    "duaArapca": "الْحَكَمُ",
+    "duaAciklama": "Nihaî hükmü veren.",
+    "duaBesmele": "el-Hakem"
+  },
+  {
+    "duaIsim": "el-Adl",
+    "duaLatinOkunus": "el-Adl",
+    "duaArapca": "الْعَدْلُ",
+    "duaAciklama": "Adaletli, her şeyi yerli yerinde yapan.",
+    "duaBesmele": "el-Adl"
+  },
+  {
+    "duaIsim": "el-Latîf",
+    "duaLatinOkunus": "el-Latîf",
+    "duaArapca": "اللَّطِيفُ",
+    "duaAciklama": "En gizli ve ince hususları dahi bilen, lütufta bulunan, zâtı duyularla algılanamayan, fiillerini rıfk ile gerçekleştiren.",
+    "duaBesmele": "el-Latîf"
+  },
+  {
+    "duaIsim": "el-Habîr",
+    "duaLatinOkunus": "el-Habîr",
+    "duaArapca": "الْخَبِيرُ",
+    "duaAciklama": "Gizli ve açık her şeyden haberdar olan, dilediğini haber veren.",
+    "duaBesmele": "el-Habîr"
+  },
+  {
+    "duaIsim": "el-Halîm",
+    "duaLatinOkunus": "el-Halîm",
+    "duaArapca": "الْحَلِيمُ",
+    "duaAciklama": "Sabırlı, acele ve kızgınlıkla muamele etmeyen, kudreti olduğu hâlde hemen cezalandırmayan.",
+    "duaBesmele": "el-Halîm"
+  },
+  {
+    "duaIsim": "el-Azîm",
+    "duaLatinOkunus": "el-Azîm",
+    "duaArapca": "الْعَظِيمُ",
+    "duaAciklama": "Zât ve sıfatları bakımından pek yüce olan, azametli olan.",
+    "duaBesmele": "el-Azîm"
+  },
+  {
+    "duaIsim": "el-Gafûr",
+    "duaLatinOkunus": "el-Gafûr",
+    "duaArapca": "الْغَفُورُ",
+    "duaAciklama": "Çok affedici ve bağışlayıcı olan.",
+    "duaBesmele": "el-Gafûr"
+  },
+  {
+    "duaIsim": "eş-Şekûr",
+    "duaLatinOkunus": "eş-Şekûr",
+    "duaArapca": "الشَّكُورُ",
+    "duaAciklama": "Yapılan iyi amellerin karşılığını bolca veren.",
+    "duaBesmele": "eş-Şekûr"
+  },
+  {
+    "duaIsim": "el-Aliyy",
+    "duaLatinOkunus": "el-Aliyy",
+    "duaArapca": "الْعَلِيُّ",
+    "duaAciklama": "Yücelik ve hükümranlıkta kendisine eşit veya kendisinden daha üstün bir varlık bulunmayan.",
+    "duaBesmele": "el-Aliyy"
+  },
+  {
+    "duaIsim": "el-Kebîr",
+    "duaLatinOkunus": "el-Kebîr",
+    "duaArapca": "الْكَبِيرُ",
+    "duaAciklama": "Zâtının ve sıfatlarının mahiyeti bilinemeyecek kadar büyük ve ulu olan.",
+    "duaBesmele": "el-Kebîr"
+  },
+  {
+    "duaIsim": "el-Hafîz",
+    "duaLatinOkunus": "el-Hafîz",
+    "duaArapca": "الْحَفِيظُ",
+    "duaAciklama": "Her şey gözetiminde olan, koruyan ve kâinatı dengede tutan.",
+    "duaBesmele": "el-Hafîz"
+  },
+  {
+    "duaIsim": "el-Mukît",
+    "duaLatinOkunus": "el-Mukît",
+    "duaArapca": "الْمُقِيتُ",
+    "duaAciklama": "Mahlukatın gıdasını yaratıp veren, güç yetiren ve koruyup gözeten.",
+    "duaBesmele": "el-Mukît"
+  },
+  {
+    "duaIsim": "el-Hasîb",
+    "duaLatinOkunus": "el-Hasîb",
+    "duaArapca": "الْحَسِيبُ",
+    "duaAciklama": "Hesaba çeken, her şeyin neticesini bilen.",
+    "duaBesmele": "el-Hasîb"
+  },
+  {
+    "duaIsim": "el-Celîl",
+    "duaLatinOkunus": "el-Celîl",
+    "duaArapca": "الْجَلِيلُ",
+    "duaAciklama": "Hiçbir kayıt ve kıyas kabul etmeksizin azamet sahibi, kıymeti ve mertebesi en yüce olan.",
+    "duaBesmele": "el-Celîl"
+  },
+  {
+    "duaIsim": "el-Kerîm",
+    "duaLatinOkunus": "el-Kerîm",
+    "duaArapca": "الْكَرِيمُ",
+    "duaAciklama": "Çok cömert, nimet ve ihsanı bol olan.",
+    "duaBesmele": "el-Kerîm"
+  },
+  {
+    "duaIsim": "er-Rakîb",
+    "duaLatinOkunus": "er-Rakîb",
+    "duaArapca": "الرَّقِيبُ",
+    "duaAciklama": "Gözeten, koruyan ve bütün işler murakabesi/kontrolü altında olan.",
+    "duaBesmele": "er-Rakîb"
+  },
+  {
+    "duaIsim": "el-Mücîb",
+    "duaLatinOkunus": "el-Mücîb",
+    "duaArapca": "الْمُجِيبُ",
+    "duaAciklama": "Dua ve dilekleri kabul eden.",
+    "duaBesmele": "el-Mücîb"
+  },
+  {
+    "duaIsim": "el-Vâsi`",
+    "duaLatinOkunus": "el-Vâsi`",
+    "duaArapca": "الْوَاسِعُ",
+    "duaAciklama": "İlmi, rahmeti ve kudreti her şeyi kuşatan.",
+    "duaBesmele": "el-Vâsi`"
+  },
+  {
+    "duaIsim": "el-Hakîm",
+    "duaLatinOkunus": "el-Hakîm",
+    "duaArapca": "الْحَكِيمُ",
+    "duaAciklama": "Her işi, emri ve yasağı yerli yerinde olan.",
+    "duaBesmele": "el-Hakîm"
+  },
+  {
+    "duaIsim": "el-Vedûd",
+    "duaLatinOkunus": "el-Vedûd",
+    "duaArapca": "الْوَدُودُ",
+    "duaAciklama": "Müminleri seven ve onlar tarafından da sevilen.",
+    "duaBesmele": "el-Vedûd"
+  },
+  {
+    "duaIsim": "el-Mecîd",
+    "duaLatinOkunus": "el-Mecîd",
+    "duaArapca": "الْمَجِيدُ",
+    "duaAciklama": "Her türlü eksiklikten münezzeh, lütuf ve ikramı bol olan.",
+    "duaBesmele": "el-Mecîd"
+  },
+  {
+    "duaIsim": "el-Bâis",
+    "duaLatinOkunus": "el-Bâis",
+    "duaArapca": "الْبَاعِثُ",
+    "duaAciklama": "Ölüleri dirilten, peygamberler gönderen.",
+    "duaBesmele": "el-Bâis"
+  },
+  {
+    "duaIsim": "eş-Şehîd",
+    "duaLatinOkunus": "eş-Şehîd",
+    "duaArapca": "الشَّهِيدُ",
+    "duaAciklama": "Her şeye muttali olan, kendisine hiçbir şey gizli kalmayan.",
+    "duaBesmele": "eş-Şehîd"
+  },
+  {
+    "duaIsim": "el-Hakk",
+    "duaLatinOkunus": "el-Hakk",
+    "duaArapca": "الْحَقُّ",
+    "duaAciklama": "Bizzat ve sürekli olarak var olan, varlığı kendinden olan, uluhiyet ve rububiyeti gerçek olan.",
+    "duaBesmele": "el-Hakk"
+  },
+  {
+    "duaIsim": "el-Vekîl",
+    "duaLatinOkunus": "el-Vekîl",
+    "duaArapca": "الْوَكِيلُ",
+    "duaAciklama": "Bütün yaratıkların işlerinin görülmesinde güvenilip dayanılan, bu konuda tam yeterli olan.",
+    "duaBesmele": "el-Vekîl"
+  },
+  {
+    "duaIsim": "el-Kavî",
+    "duaLatinOkunus": "el-Kavî",
+    "duaArapca": "الْقَوِيُّ",
+    "duaAciklama": "Gücü ve kuvveti her şeye yeten.",
+    "duaBesmele": "el-Kavî"
+  },
+  {
+    "duaIsim": "el-Metîn",
+    "duaLatinOkunus": "el-Metîn",
+    "duaArapca": "الْمَتِينُ",
+    "duaAciklama": "Âcizliği, zafiyeti ve güçsüzlüğü olmayan, güçlü olan.",
+    "duaBesmele": "el-Metîn"
+  },
+  {
+    "duaIsim": "el-Velî",
+    "duaLatinOkunus": "el-Velî",
+    "duaArapca": "الْوَلِيُّ",
+    "duaAciklama": "Müminlere dost ve yardımcı olan.",
+    "duaBesmele": "el-Velî"
+  },
+  {
+    "duaIsim": "el-Hamîd",
+    "duaLatinOkunus": "el-Hamîd",
+    "duaArapca": "الْحَمِيدُ",
+    "duaAciklama": "Çok övülen, bütün övgülere ve övgülerin en yücesine layık olan.",
+    "duaBesmele": "el-Hamîd"
+  },
+  {
+    "duaIsim": "el-Muhsî",
+    "duaLatinOkunus": "el-Muhsî",
+    "duaArapca": "الْمُحْصِي",
+    "duaAciklama": "Gizli ve âşikâr her şeyin ölçü ve sayısını bütün ayrıntılarıyla bilen.",
+    "duaBesmele": "el-Muhsî"
+  },
+  {
+    "duaIsim": "el-Mübdi’",
+    "duaLatinOkunus": "el-Mübdi’",
+    "duaArapca": "الْمُبْدِئُ",
+    "duaAciklama": "Her şeyi yoktan var eden.",
+    "duaBesmele": "el-Mübdi’"
+  },
+  {
+    "duaIsim": "el-Muîd",
+    "duaLatinOkunus": "el-Muîd",
+    "duaArapca": "الْمُعِيدُ",
+    "duaAciklama": "Varlıkları ölümlerinden sonra tekrar yaratan.",
+    "duaBesmele": "el-Muîd"
+  },
+  {
+    "duaIsim": "el-Muhyî",
+    "duaLatinOkunus": "el-Muhyî",
+    "duaArapca": "الْمُحْيِي",
+    "duaAciklama": "Hayat veren, yaşatan ve dirilten.",
+    "duaBesmele": "el-Muhyî"
+  },
+  {
+    "duaIsim": "el-Mümît",
+    "duaLatinOkunus": "el-Mümît",
+    "duaArapca": "الْمُمِيتُ",
+    "duaAciklama": "Öldüren, canları kabzeden.",
+    "duaBesmele": "el-Mümît"
+  },
+  {
+    "duaIsim": "el-Hayy",
+    "duaLatinOkunus": "el-Hayy",
+    "duaArapca": "الْحَيُّ",
+    "duaAciklama": "Ezelî ve ebedî olarak diri ve ölümsüz olan.",
+    "duaBesmele": "el-Hayy"
+  },
+  {
+    "duaIsim": "el-Kayyûm",
+    "duaLatinOkunus": "el-Kayyûm",
+    "duaArapca": "الْقَيُّومُ",
+    "duaAciklama": "Varlığı kendinden olan, her şeyin varlığı kendisine bağlı olan, kâinatı idare eden.",
+    "duaBesmele": "el-Kayyûm"
+  },
+  {
+    "duaIsim": "el-Vâcid",
+    "duaLatinOkunus": "el-Vâcid",
+    "duaArapca": "الْوَاجِدُ",
+    "duaAciklama": "Her şeyi bilen, hiçbir şeye muhtaç olmayan, emrini ve isteğini daima gerçekleştiren.",
+    "duaBesmele": "el-Vâcid"
+  },
+  {
+    "duaIsim": "el-Mâcid",
+    "duaLatinOkunus": "el-Mâcid",
+    "duaArapca": "الْمَاجِدُ",
+    "duaAciklama": "Şânı yüce ve sonsuz kerem sahibi olan.",
+    "duaBesmele": "el-Mâcid"
+  },
+  {
+    "duaIsim": "el-Vâhid",
+    "duaLatinOkunus": "el-Vâhid",
+    "duaArapca": "الْوَاحِدُ",
+    "duaAciklama": "Bir, tek, yegâne varlık; zâtında, ilah ve rab oluşunda ortağı olmayan.",
+    "duaBesmele": "el-Vâhid"
+  },
+  {
+    "duaIsim": "es-Samed",
+    "duaLatinOkunus": "es-Samed",
+    "duaArapca": "الصَّمَدُ",
+    "duaAciklama": "Herkesin kendisine muhtaç olduğu, kendisi ise kimseye muhtaç olmayan, ezelî ve ebedî olan.",
+    "duaBesmele": "es-Samed"
+  },
+  {
+    "duaIsim": "el-Kâdir",
+    "duaLatinOkunus": "el-Kâdir",
+    "duaArapca": "الْقَادِرُ",
+    "duaAciklama": "Her şeye gücü yeten.",
+    "duaBesmele": "el-Kâdir"
+  },
+  {
+    "duaIsim": "el-Muktedir",
+    "duaLatinOkunus": "el-Muktedir",
+    "duaArapca": "الْمُقْتَدِرُ",
+    "duaAciklama": "Güç ve kuvvetinde hiçbir sınır olmayan.",
+    "duaBesmele": "el-Muktedir"
+  },
+  {
+    "duaIsim": "el-Mukaddim",
+    "duaLatinOkunus": "el-Mukaddim",
+    "duaArapca": "الْمُقَدِّمُ",
+    "duaAciklama": "Hikmeti gereği istediğini öne alan, ileri geçiren.",
+    "duaBesmele": "el-Mukaddim"
+  },
+  {
+    "duaIsim": "el-Muahhir",
+    "duaLatinOkunus": "el-Muahhir",
+    "duaArapca": "الْمُؤَخِّرُ",
+    "duaAciklama": "Hikmeti gereği dilediğini geriye bırakan.",
+    "duaBesmele": "el-Muahhir"
+  },
+  {
+    "duaIsim": "el-Evvel",
+    "duaLatinOkunus": "el-Evvel",
+    "duaArapca": "الأَوَّلُ",
+    "duaAciklama": "Varlığının başlangıcı olmayan, ezelî olan.",
+    "duaBesmele": "el-Evvel"
+  },
+  {
+    "duaIsim": "el-Âhir",
+    "duaLatinOkunus": "el-Âhir",
+    "duaArapca": "الآخِرُ",
+    "duaAciklama": "Varlığının sonu olmayan, ebedî olan.",
+    "duaBesmele": "el-Âhir"
+  },
+  {
+    "duaIsim": "ez-Zâhir",
+    "duaLatinOkunus": "ez-Zâhir",
+    "duaArapca": "الظَّاهِرُ",
+    "duaAciklama": "Varlığını ve birliğini belgeleyen birçok delilin bulunması açısından varlığı açık olan.",
+    "duaBesmele": "ez-Zâhir"
+  },
+  {
+    "duaIsim": "el-Bâtın",
+    "duaLatinOkunus": "el-Bâtın",
+    "duaArapca": "الْبَاطِنُ",
+    "duaAciklama": "Zâtı itibarıyla gizli olan, bütün gizlilikleri bilen.",
+    "duaBesmele": "el-Bâtın"
+  },
+  {
+    "duaIsim": "el-Vâlî",
+    "duaLatinOkunus": "el-Vâlî",
+    "duaArapca": "الْوَالِي",
+    "duaAciklama": "Kâinatı yöneten, onlar için gerekli olan her şeyi üstlenen.",
+    "duaBesmele": "el-Vâlî"
+  },
+  {
+    "duaIsim": "el-Müteâlî",
+    "duaLatinOkunus": "el-Müteâlî",
+    "duaArapca": "الْمُتَعَالِي",
+    "duaAciklama": "Noksanlıklardan berî, aşkın ve yüce olan.",
+    "duaBesmele": "el-Müteâlî"
+  },
+  {
+    "duaIsim": "el-Berr",
+    "duaLatinOkunus": "el-Berr",
+    "duaArapca": "الْبَرُّ",
+    "duaAciklama": "Çokça iyilik eden.",
+    "duaBesmele": "el-Berr"
+  },
+  {
+    "duaIsim": "et-Tevvâb",
+    "duaLatinOkunus": "et-Tevvâb",
+    "duaArapca": "التَّوَّابُ",
+    "duaAciklama": "Kullarını tövbelerini kabul eden.",
+    "duaBesmele": "et-Tevvâb"
+  },
+  {
+    "duaIsim": "el-Müntakım",
+    "duaLatinOkunus": "el-Müntakım",
+    "duaArapca": "الْمُنْتَقِمُ",
+    "duaAciklama": "Suçluları yaptıklarına karşılık cezalandıran.",
+    "duaBesmele": "el-Müntakım"
+  },
+  {
+    "duaIsim": "el-Afüvv",
+    "duaLatinOkunus": "el-Afüvv",
+    "duaArapca": "الْعَفُوُّ",
+    "duaAciklama": "Çokça affeden.",
+    "duaBesmele": "el-Afüvv"
+  },
+  {
+    "duaIsim": "er-Raûf",
+    "duaLatinOkunus": "er-Raûf",
+    "duaArapca": "الرَّؤُوفُ",
+    "duaAciklama": "Merhameti ve şefkati çok olan.",
+    "duaBesmele": "er-Raûf"
+  },
+  {
+    "duaIsim": "Mâlikü’l-mülk",
+    "duaLatinOkunus": "Mâlikü’l-mülk",
+    "duaArapca": "مَالِكُ الْمُلْكِ",
+    "duaAciklama": "Mülkün gerçek sahibi, tüm mevcûdâtı idare eden.",
+    "duaBesmele": "Mâlikü’l-mülk"
+  },
+  {
+    "duaIsim": "Zü’l-celâli ve’l-ikrâm",
+    "duaLatinOkunus": "Zü’l-celâli ve’l-ikrâm",
+    "duaArapca": "ذُو الْجَلاَلِ وَالإِكْرَامِ",
+    "duaAciklama": "Sonsuz yücelik ve ikram sahibi olan.",
+    "duaBesmele": "Zü’l-celâli ve’l-ikrâm"
+  },
+  {
+    "duaIsim": "el-Muksit",
+    "duaLatinOkunus": "el-Muksit",
+    "duaArapca": "الْمُقْسِطُ",
+    "duaAciklama": "Adaleti gerçekleştiren, hakkaniyetle hükmeden.",
+    "duaBesmele": "el-Muksit"
+  },
+  {
+    "duaIsim": "el-Câmi‘",
+    "duaLatinOkunus": "el-Câmi‘",
+    "duaArapca": "الْجَامِعُ",
+    "duaAciklama": "Dünya ve ahirette bütün mahlûkâtı bir araya getirme kudretine sahip olan.",
+    "duaBesmele": "el-Câmi‘"
+  },
+  {
+    "duaIsim": "el-Ganî",
+    "duaLatinOkunus": "el-Ganî",
+    "duaArapca": "الْغَنِيُّ",
+    "duaAciklama": "Hiçbir şeye ihtiyacı olmayan.",
+    "duaBesmele": "el-Ganî"
+  },
+  {
+    "duaIsim": "el-Muğnî",
+    "duaLatinOkunus": "el-Muğnî",
+    "duaArapca": "الْمُغْنِي",
+    "duaAciklama": "İhtiyaçtan kurtaran zengin kılan.",
+    "duaBesmele": "el-Muğnî"
+  },
+  {
+    "duaIsim": "el-Mâni`",
+    "duaLatinOkunus": "el-Mâni`",
+    "duaArapca": "الْمَانِعُ",
+    "duaAciklama": "Hikmeti gereği engel koyan, mâni olan.",
+    "duaBesmele": "el-Mâni`"
+  },
+  {
+    "duaIsim": "ed-Dârr",
+    "duaLatinOkunus": "ed-Dârr",
+    "duaArapca": "الضَّارُّ",
+    "duaAciklama": "Hikmeti gereği elem ve zarar verici şeyleri yaratan.",
+    "duaBesmele": "ed-Dârr"
+  },
+  {
+    "duaIsim": "en-Nâfi`",
+    "duaLatinOkunus": "en-Nâfi`",
+    "duaArapca": "النَّافِعُ",
+    "duaAciklama": "Hayrı ve faydayı yaratan ve veren.",
+    "duaBesmele": "en-Nâfi`"
+  },
+  {
+    "duaIsim": "en-Nûr",
+    "duaLatinOkunus": "en-Nûr",
+    "duaArapca": "النُّورُ",
+    "duaAciklama": "Nurlandıran, her şeyi aydınlatan, kalplere nur ve iman veren.",
+    "duaBesmele": "en-Nûr"
+  },
+  {
+    "duaIsim": "el-Hâdî",
+    "duaLatinOkunus": "el-Hâdî",
+    "duaArapca": "الْهَادِي",
+    "duaAciklama": "Doğru yolu gösteren, hidâyete erdiren.",
+    "duaBesmele": "el-Hâdî"
+  },
+  {
+    "duaIsim": "el-Bedî`",
+    "duaLatinOkunus": "el-Bedî`",
+    "duaArapca": "الْبَدِيعُ",
+    "duaAciklama": "Örneksiz ve benzersiz olarak yoktan yaratan.",
+    "duaBesmele": "el-Bedî`"
+  },
+  {
+    "duaIsim": "el-Bâkî",
+    "duaLatinOkunus": "el-Bâkî",
+    "duaArapca": "الْبَاقِي",
+    "duaAciklama": "Varlığı sürekli olan, ebedî, sonsuz olan.",
+    "duaBesmele": "el-Bâkî"
+  },
+  {
+    "duaIsim": "el-Vâris",
+    "duaLatinOkunus": "el-Vâris",
+    "duaArapca": "الْوَارِثُ",
+    "duaAciklama": "Varlığının sonunun bulunmaması vasfıyla kâinatın gerçek sahibi.",
+    "duaBesmele": "el-Vâris"
+  },
+  {
+    "duaIsim": "er-Reşîd",
+    "duaLatinOkunus": "er-Reşîd",
+    "duaArapca": "الرَّشِيدُ",
+    "duaAciklama": "Yol gösteren, her işi isabetli olan.",
+    "duaBesmele": "er-Reşîd"
+  },
+  {
+    "duaIsim": "es-Sabûr",
+    "duaLatinOkunus": "es-Sabûr",
+    "duaArapca": "الصَّبُورُ",
+    "duaAciklama": "Günahkârları hemen cezalandırmayıp onlara mühlet tanıyan.",
+    "duaBesmele": "es-Sabûr"
+  }
+]

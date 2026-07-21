@@ -1,0 +1,54 @@
+---
+name: security-audit-$(Date:yyyyMMdd)$(Rev:.r)
+
+trigger: none
+pr: none
+
+schedules:
+  - cron: '30 2 * * 1'
+    displayName: Weekly full-history secret and supply-chain audit
+    branches:
+      include:
+        - main
+    always: true
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  - name: GRADLE_OPTS
+    value: >-
+      -Djava.awt.headless=true
+      -Dorg.gradle.workers.max=1
+      -Dorg.gradle.daemon=false
+
+steps:
+  - checkout: self
+    clean: true
+    fetchDepth: 0
+
+  - template: /pipelines/templates/steps/security-gate.yml
+    parameters:
+      mode: history
+      selfTest: true
+
+  - bash: bash scripts/ci/setup-android-sdk.sh
+    displayName: Setup Android SDK
+
+  - bash: |
+      set -euo pipefail
+      ./gradlew auditDependencyCatalog validateSupplyChainPolicy \
+        --stacktrace --warning-mode all --no-daemon --max-workers=1
+    displayName: Enforce dependency and wrapper supply-chain policy
+
+  - bash: python3 scripts/ci/collect_quality_reports.py
+    displayName: Collect security reports
+    condition: always()
+
+  - task: PublishPipelineArtifact@1
+    displayName: Publish security reports
+    condition: always()
+    inputs:
+      targetPath: 'build/quality-reports'
+      artifact: 'security-audit-reports'
+      publishLocation: pipeline

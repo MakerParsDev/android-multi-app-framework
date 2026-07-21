@@ -1,0 +1,16 @@
+name: Verify Env Contract
+description: Verifies committed env template contract for GitHub Actions runtime values
+
+inputs:
+  verify_script:
+    description: Path to verification script
+    required: false
+    default: scripts/ci/verify_env_contract.sh
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        set -euo pipefail
+        bash "${{ inputs.verify_script }}"

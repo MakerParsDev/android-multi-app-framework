@@ -1,0 +1,41 @@
+root = true
+
+[*]
+charset = utf-8
+indent_style = space
+indent_size = 4
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.kt]
+indent_size = 4
+max_line_length = off
+ktlint_function_naming_ignore_when_annotated_with = Composable
+ktlint_standard_annotation = disabled
+ktlint_standard_argument-list-wrapping = disabled
+ktlint_standard_chain-method-continuation = disabled
+ktlint_standard_class-signature = disabled
+ktlint_standard_function-expression-body = disabled
+ktlint_standard_function-signature = disabled
+ktlint_standard_multiline-expression-wrapping = disabled
+ktlint_standard_no-empty-first-line-in-class-body = disabled
+ktlint_standard_trailing-comma-on-call-site = disabled
+ktlint_standard_trailing-comma-on-declaration-site = disabled
+
+[*.kts]
+indent_size = 4
+continuation_indent_size = 8
+max_line_length = off
+
+[*.xml]
+indent_size = 4
+
+[*.gradle]
+indent_size = 4
+
+[*.json]
+indent_size = 2
+
+[*.yaml]
+indent_size = 2

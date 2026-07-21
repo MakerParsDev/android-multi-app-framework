@@ -1,0 +1,21 @@
+{
+  "catalog_inline_version_allowlist": [],
+  "catalog_prerelease_allowlist": [],
+  "review_cadence_days": 30,
+  "schema_version": 1,
+  "stable_only": true,
+  "transitive_prerelease_allowlist": [
+    {
+      "coordinate": "androidx.privacysandbox.ads:*",
+      "expires_on": "2027-01-31",
+      "owner": "feature/ads",
+      "reason": "Google Mobile Ads SDK 25.x resolves Privacy Sandbox Ads beta artifacts transitively."
+    },
+    {
+      "coordinate": "com.google.android.gms:play-services-identity-credentials",
+      "expires_on": "2027-01-31",
+      "owner": "core/auth",
+      "reason": "AndroidX Credentials Play Services integration resolves this prerelease artifact transitively."
+    }
+  ]
+}

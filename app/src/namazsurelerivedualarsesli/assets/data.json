@@ -1,0 +1,790 @@
+[
+  {
+    "ayetSayisi": 1,
+    "ayetler": [
+      {
+        "ayetAR": "  اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ ۚ لَا تَأْخُذُهُ سِنَةٌ وَلَا نَوْمٌ ۚ لَهُ مَا فِي السَّمَاوَاتِ وَمَا فِي الْأَرْضِ ۗ مَنْ ذَا الَّذِي يَشْفَعُ عِنْدَهُ إِلَّا بِإِذْنِهِ ۚ يَعْلَمُ مَا بَيْنَ أَيْدِيهِمْ وَمَا خَلْفَهُمْ ۖ وَلَا يُحِيطُونَ بِشَيْءٍ مِنْ عِلْمِهِ إِلَّا بِمَا شَاءَ ۚ وَسِعَ كُرْسِيُّهُ السَّمَاوَاتِ وَالْأَرْضَ ۖ وَلَا يَئُودُهُ حِفْظُهُمَا ۚ وَهُوَ الْعَلِيُّ الْعَظِيمُ",
+        "ayetEN": "  Allah - there is no deity except Him, the Ever-Living, the Sustainer of [all] existence. Neither drowsiness overtakes Him nor sleep. To Him belongs whatever is in the heavens and whatever is on the earth. Who is it that can intercede with Him except by His permission? He knows what is [presently] before them and what will be after them, and they encompass not a thing of His knowledge except for what He wills. His Kursi extends over the heavens and the earth, and their preservation tires Him not. And He is the Most High, the Most Great.",
+        "ayetID": 1,
+        "ayetLAT": "  Allâhü lâ ilâhe illâ hüvel hayyül kayyûm, lâ te'huzühu sinetün velâ nevm, lehu mâ fissemâvâti ve ma fil'ard, men zellezi yeşfeu indehu illâ bi'iznih, ya'lemü mâ beyne eydiyhim vemâ halfehüm, velâ yü-hîtûne bi'şey'im min ilmihî illâ bima şâe vesia kürsiyyühüssemâvâti vel'ard, velâ yeûdühû hıfzuhümâ ve hüvel aliyyül azim.",
+        "ayetTR": "   Allah'tan başka hiçbir İlah yoktur. O, daima yaşayan, daima duran, bütün varlıkları ayakta tutandır. O'nu ne gaflet basar, ne de uyku. Göklerdeki ve yerdeki herşey O'nundur. O'nun izni olmadan huzurunda şefaat etmek kimin haddine! Onların önlerinde ve arkalarında ne varsa hepsini bilir. Onlar ise, O'nun dilediği kadarından başka ilminden hiçbir şey kavrayamazlar. O'nun hükümdarlığı, bütün gökleri ve yeri kucaklamıştır. Her ikisini görüp gözetmek, ona bir ağırlık da vermez. O, çok yüce, çok büyüktür."
+      }
+    ],
+    "sureAdiAR": "سورة الكرسي",
+    "sureAdiEN": "Surah Ayetel Kürsi",
+    "sureAdiTR": "Ayetel Kürsi",
+    "sureID": 0,
+    "sureMedya": "AYETELKURSI"
+  },
+  {
+    "ayetSayisi": 7,
+    "ayetler": [
+      {
+        "ayetAR": "  بِسْمِ اللَّهِ الرَّحْمٰنِ الرَّحِيمِ",
+        "ayetEN": "  In the name of Allah, the Entirely Merciful, the Especially Merciful.",
+        "ayetID": 1,
+        "ayetLAT": "  Bismillahirrahmanirrahim",
+        "ayetTR": "   Rahmân ve Rahîm olan Allah'ın adıyla."
+      },
+      {
+        "ayetAR": "  اَلرَّحْمٰنِ الرَّحٖيمِۙ",
+        "ayetEN": "  Praise be to Allah, the Lord of all the worlds.",
+        "ayetID": 2,
+        "ayetLAT": "  Elhamdü lillahi rabbil alemin",
+        "ayetTR": "   Hamd, âlemlerin Rabbi olan Allah’a mahsustur."
+      },
+      {
+        "ayetAR": "  اَلرَّحْمٰنِ الرَّح۪يمِۙ",
+        "ayetEN": "  The Entirely Merciful, the Especially Merciful.",
+        "ayetID": 3,
+        "ayetLAT": "  Er-Rahmânir-Rahîm",
+        "ayetTR": "   (O,) Er-Rahmân ve Er-Rahîm’dir."
+      },
+      {
+        "ayetAR": "  مَالِكِ يَوْمِ الدّ۪ينِۜ",
+        "ayetEN": "  Sovereign of the Day of Recompense.",
+        "ayetID": 4,
+        "ayetLAT": "  Mâliki yevmiddin",
+        "ayetTR": "   Din (Ahiret) Gününün sahibidir."
+      },
+      {
+        "ayetAR": "  اِيَّاكَ نَعْبُدُ وَاِيَّاكَ نَسْتَع۪ينُۜ",
+        "ayetEN": "  It is You we worship and You we ask for help.",
+        "ayetID": 5,
+        "ayetLAT": "  İyyâke na'budu ve iyyâke nesteîn",
+        "ayetTR": "   Biz, yalnız sana ibadet eder ve yalnız senden yardım dileriz."
+      },
+      {
+        "ayetAR": "  اِهْدِنَا الصِّرَاطَ الْمُسْتَق۪يمَۙ",
+        "ayetEN": "  Guide us to the straight path -",
+        "ayetID": 6,
+        "ayetLAT": "  İhdinas-siratal müstakîm",
+        "ayetTR": "   Bizi sırat-ı mustakime/dosdoğru yola hidayet et."
+      },
+      {
+        "ayetAR": "  صِرَاطَ الَّذ۪ينَ اَنْعَمْتَ عَلَيْهِمْۙ غَيْرِ الْمَغْضُوبِ عَلَيْهِمْ وَلَا الضَّٓالّ۪ينَ",
+        "ayetEN": "  The path of those upon whom You have bestowed favor, not of those who have evoked [Your] anger or of those who are astray.",
+        "ayetID": 7,
+        "ayetLAT": "  Siratallezîne en'amte aleyhim ğayril mağdûbi aleyhim ve leddâllîn",
+        "ayetTR": "   Kendisine nimet verdiklerinin yoluna (ilet). Gazaba uğramış ve sapkınların (yoluna) değil."
+      }
+    ],
+    "sureAdiAR": "سورة الفاتحة",
+    "sureAdiEN": "Surah Fatiha",
+    "sureAdiTR": "Fatiha Suresi",
+    "sureID": 1,
+    "sureMedya": "FATIHA"
+  },
+  {
+    "ayetSayisi": 5,
+    "ayetler": [
+      {
+        "ayetAR": "  اَلَمْ تَرَ كَيْفَ فَعَلَ رَبُّكَ بِاَصْحَابِ الْف۪يلِۜ",
+        "ayetEN": "  Have you not considered, [O Muhammad], how your Lord dealt with the companions of the elephant?",
+        "ayetID": 1,
+        "ayetLAT": "  E lem tera keyfe fe'ale rabbüke bi ashabil fiyl",
+        "ayetTR": "   Rabbinin fil sahiplerine yaptığını görmedin mi?"
+      },
+      {
+        "ayetAR": "  أَلَمْ يَجْعَلْ كَيْدَهُمْ فِي تَضْلِيلٍ",
+        "ayetEN": "  Did He not make their plan into misguidance?",
+        "ayetID": 2,
+        "ayetLAT": "  Elem yec'al keydehum fî tedlîl",
+        "ayetTR": "   Onların (Kâbe’yi yıkmak için) kurdukları düzeni boşa çıkarmadı mı?"
+      },
+      {
+        "ayetAR": "  وَاَرْسَلَ عَلَيْهِمْ طَيْرًا اَبَاب۪يلَۙ",
+        "ayetEN": "  And He sent against them birds in flocks,",
+        "ayetID": 3,
+        "ayetLAT": "  Ve ersel aleyhim tayran ebâbîl",
+        "ayetTR": "   Üzerlerine Ebabil kuşlarını gönderdi."
+      },
+      {
+        "ayetAR": "  تَرْم۪يهِمْ بِحِجَارَةٍ مِنْ سِجّ۪يلٍۖۙ",
+        "ayetEN": "  Striking them with stones of hard clay,",
+        "ayetID": 4,
+        "ayetLAT": "  Tarmîhim bi hicâratin min siccîl",
+        "ayetTR": "   Onlara pişirilmiş çamurdan taşlar atıyorlardı."
+      },
+      {
+        "ayetAR": "  فَجَعَلَهُمْ كَعَصْفٍ مَأْكُولٍ",
+        "ayetEN": "  And He made them like eaten straw.",
+        "ayetID": 5,
+        "ayetLAT": "  Fecealehum ke'asfin me'kûl",
+        "ayetTR": "   Onları yenilmiş ekin yaprağı gibi (darmadağın) etti."
+      }
+    ],
+    "sureAdiAR": "سورة الفيل",
+    "sureAdiEN": "Surah Fîl",
+    "sureAdiTR": "Fîl Suresi",
+    "sureID": 2,
+    "sureMedya": "FIL"
+  },
+  {
+    "ayetSayisi": 5,
+    "ayetler": [
+      {
+        "ayetAR": "  قُلْ أَعُوذُ بِرَبِّ الْفَلَقِ",
+        "ayetEN": "  Say, 'I seek refuge in the Lord of daybreak",
+        "ayetID": 1,
+        "ayetLAT": "  Kul e'uzu birabbil felak",
+        "ayetTR": "   De ki: 'Sabahın Rabbine sığınırım,"
+      },
+      {
+        "ayetAR": "  مِنْ شَرِّ مَا خَلَقَ",
+        "ayetEN": "  From the evil of that which He created",
+        "ayetID": 2,
+        "ayetLAT": "  Min şerri ma halak",
+        "ayetTR": "   O'nun yarattıklarının şerrinden,"
+      },
+      {
+        "ayetAR": "  وَمِنْ شَرِّ غَاسِقٍ إِذَا وَقَبَ",
+        "ayetEN": "  And from the evil of darkness when it settles",
+        "ayetID": 3,
+        "ayetLAT": "  Ve min şerri ğasikin iza vekab",
+        "ayetTR": "   Karandığında gecenin şerrinden,"
+      },
+      {
+        "ayetAR": "  وَمِنْ شَرِّ النَّفَّاثَاتِ فِي الْعُقَدِ",
+        "ayetEN": "  And from the evil of the blowers in knots",
+        "ayetID": 4,
+        "ayetLAT": "  Ve min şerri naffasati fil ukad",
+        "ayetTR": "   Ve büyüdüğünde büyücülerin şerrinden,"
+      },
+      {
+        "ayetAR": "  وَمِنْ شَرِّ حَاسِدٍ إِذَا حَسَدَ",
+        "ayetEN": "  And from the evil of an envier when he envies.",
+        "ayetID": 5,
+        "ayetLAT": "  Ve min şerri hasidin iza hased",
+        "ayetTR": "   Ve kıskandığı zaman kıskananın şerrinden."
+      }
+    ],
+    "sureAdiAR": "سورة الفلق",
+    "sureAdiEN": "Surah Felak",
+    "sureAdiTR": "Felak Suresi",
+    "sureID": 3,
+    "sureMedya": "FELAK"
+  },
+  {
+    "ayetSayisi": 6,
+    "ayetler": [
+      {
+        "ayetAR": "  قُلْ أَعُوذُ بِرَبِّ النَّاسِ",
+        "ayetEN": "  Say, 'I seek refuge in the Lord of mankind,",
+        "ayetID": 1,
+        "ayetLAT": "  Kul e'uzu birabbin nas",
+        "ayetTR": "   De ki: 'İnsanların Rabbine sığınırım,"
+      },
+      {
+        "ayetAR": "  مَلِكِ النَّاسِ",
+        "ayetEN": "  The Sovereign of mankind.",
+        "ayetID": 2,
+        "ayetLAT": "  Melikin nas",
+        "ayetTR": "   İnsanların Malikine,"
+      },
+      {
+        "ayetAR": "  إِلَٰهِ النَّاسِ",
+        "ayetEN": "  The God of mankind,",
+        "ayetID": 3,
+        "ayetLAT": "  İlahin nas",
+        "ayetTR": "   İnsanların İlahına,"
+      },
+      {
+        "ayetAR": "  مِنْ شَرِّ الْوَسْوَاسِ الْخَنَّاسِ",
+        "ayetEN": "  From the evil of the retreating whisperer -",
+        "ayetID": 4,
+        "ayetLAT": "  Min şerri'l vesvasil hannas",
+        "ayetTR": "   O sinsi vesvesecinin şerrinden,"
+      },
+      {
+        "ayetAR": "  الَّذِي يُوَسْوِسُ فِي صُدُورِ النَّاسِ",
+        "ayetEN": "  Who whispers [evil] into the breasts of mankind -",
+        "ayetID": 5,
+        "ayetLAT": "  Ellezi yüvesvisu fi sudurin nas",
+        "ayetTR": "   Ki insanların göğüslerine vesvese verir."
+      },
+      {
+        "ayetAR": "  مِنَ الْجِنَّةِ وَالنَّاسِ",
+        "ayetEN": "  From among the jinn and mankind.",
+        "ayetID": 6,
+        "ayetLAT": "  Mineddjeneti ven nas",
+        "ayetTR": "   İnsanların ve cinlerin sinsi vesvesecisinden."
+      }
+    ],
+    "sureAdiAR": "سورة الناس",
+    "sureAdiEN": "Surah Nas",
+    "sureAdiTR": "Nas Suresi",
+    "sureID": 4,
+    "sureMedya": "NAS"
+  },
+  {
+    "ayetSayisi": 3,
+    "ayetler": [
+      {
+        "ayetAR": "  لِإِيلَافِ قُرَيْشٍ",
+        "ayetEN": "  For the accustomed security of the Quraysh -",
+        "ayetID": 1,
+        "ayetLAT": "  Liılefi kureyş",
+        "ayetTR": "   Kureyş'in ilâfı (bir araya gelip kışın ve yazın ticaret yapmaları) için"
+      },
+      {
+        "ayetAR": "  إِلَافِهِمْ رِحْلَةَ الشِّتَاءِ وَالصَّيْفِ",
+        "ayetEN": "  Their accustomed security [in] the caravan of winter and summer -",
+        "ayetID": 2,
+        "ayetLAT": "  İlefi him rehletesshitaai vessayf",
+        "ayetTR": "   Onların ilâfı, kış ve yaz seferlerine çıkmaları içindir."
+      },
+      {
+        "ayetAR": "  فَلْيَعْبُدُوا رَبَّ هَٰذَا الْبَيْتِ",
+        "ayetEN": "  Let them worship the Lord of this House,",
+        "ayetID": 3,
+        "ayetLAT": "  Felya'budu rabbe hâzel beyt",
+        "ayetTR": "   Öyleyse bu evin Rabbine kulluk etsinler."
+      }
+    ],
+    "sureAdiAR": "سورة الكوثر",
+    "sureAdiEN": "Surah Kureysh",
+    "sureAdiTR": "Kureyş Suresi",
+    "sureID": 5,
+    "sureMedya": "KUREYS"
+  },
+  {
+    "ayetSayisi": 6,
+    "ayetler": [
+      {
+        "ayetAR": "  قُلْ يَا أَيُّهَا الْكَافِرُونَ",
+        "ayetEN": "  Say, 'O disbelievers,",
+        "ayetID": 1,
+        "ayetLAT": "  Kul ya eyyühel kafirun",
+        "ayetTR": "   De ki: 'Ey kâfirler!"
+      },
+      {
+        "ayetAR": "  لَا أَعْبُدُ مَا تَعْبُدُونَ",
+        "ayetEN": "  I do not worship what you worship.",
+        "ayetID": 2,
+        "ayetLAT": "  La a'budu ma ta'budun",
+        "ayetTR": "   Ben sizin taptıklarınıza tapmam."
+      },
+      {
+        "ayetAR": "  وَلَا أَنْتُمْ عَابِدُونَ مَا أَعْبُدُ",
+        "ayetEN": "  Nor are you worshippers of what I worship.",
+        "ayetID": 3,
+        "ayetLAT": "  Ve la entum abidunema a'bud",
+        "ayetTR": "   Siz de benim taptığıma tapmazsınız."
+      },
+      {
+        "ayetAR": "  وَلَا أَنَا عَابِدٌ مَا عَبَدْتُمْ",
+        "ayetEN": "  Nor will I be a worshipper of what you worship.",
+        "ayetID": 4,
+        "ayetLAT": "  Ve la ene abidumma abedtum",
+        "ayetTR": "   Ben de sizin taptıklarınıza tapmam."
+      },
+      {
+        "ayetAR": "  وَلَا أَنْتُمْ عَابِدُونَ مَا أَعْبُدُ",
+        "ayetEN": "  Nor will you be worshippers of what I worship.",
+        "ayetID": 5,
+        "ayetLAT": "  Ve la entum abiduna ma a'bud",
+        "ayetTR": "   Siz de benim taptığıma tapmazsınız."
+      },
+      {
+        "ayetAR": "  لَكُمْ دِينُكُمْ وَلِيَ دِينِ",
+        "ayetEN": "  For you is your religion, and for me is my religion.'",
+        "ayetID": 6,
+        "ayetLAT": "  Lekum dinukum veliye din",
+        "ayetTR": "   Sizin dininiz size, benim dinim bana."
+      }
+    ],
+    "sureAdiAR": "سورة الكافرون",
+    "sureAdiEN": "Surah Kafirun",
+    "sureAdiTR": "Kafirun Suresi",
+    "sureID": 6,
+    "sureMedya": "KAFIRUN"
+  },
+  {
+    "ayetSayisi": 3,
+    "ayetler": [
+      {
+        "ayetAR": "  إِنَّا أَعْطَيْنَاكَ الْكَوْثَرَ",
+        "ayetEN": "  Indeed, We have granted you, [O Muhammad], al-Kawthar.",
+        "ayetID": 1,
+        "ayetLAT": "  İnna a'tayna kelkevser",
+        "ayetTR": "   Andolsun, Biz sana Kevser'i verdik."
+      },
+      {
+        "ayetAR": "  فَصَلِّ لِرَبِّكَ وَانْحَرْ",
+        "ayetEN": "  So pray to your Lord and sacrifice [to Him alone].",
+        "ayetID": 2,
+        "ayetLAT": "  Fe'salli li rabbike venhar",
+        "ayetTR": "   Öyleyse Rabbin için namaz kıl ve kurban kes."
+      },
+      {
+        "ayetAR": "  إِنَّ شَانِئَكَ هُوَ الْأَبْتَرُ",
+        "ayetEN": "  Indeed, your enemy is the one cut off.",
+        "ayetID": 3,
+        "ayetLAT": "  İnne şanieke hüvel ebter",
+        "ayetTR": "   Şüphesiz, senin düşmanın kesinlikle kesilip yok olacak."
+      }
+    ],
+    "sureAdiAR": "سورة الكوثر",
+    "sureAdiEN": "Surah Kevser",
+    "sureAdiTR": "Kevser Suresi",
+    "sureID": 7,
+    "sureMedya": "KEVSER"
+  },
+  {
+    "ayetSayisi": 7,
+    "ayetler": [
+      {
+        "ayetAR": "  أَرَأَيْتَ الَّذِي يُكَذِّبُ بِالدِّينِ",
+        "ayetEN": "  Have you seen the one who denies the Recompense?",
+        "ayetID": 1,
+        "ayetLAT": "  Eraeytellezî yukazzibu bid din",
+        "ayetTR": "   Görmedin mi, din hakkında yalanlayanı?"
+      },
+      {
+        "ayetAR": "  فَذَٰلِكَ الَّذِي يَدُعُّ الْيَتِيمَ",
+        "ayetEN": "  For that is the one who drives away the orphan",
+        "ayetID": 2,
+        "ayetLAT": "  Fazelekez zalikeillezî yedu'ul yetime",
+        "ayetTR": "   İşte o, yetimi itip kakandır."
+      },
+      {
+        "ayetAR": "  وَلَا يَحُضُّ عَلَىٰ طَعَامِ الْمِسْكِينِ",
+        "ayetEN": "  And does not encourage the feeding of the poor.",
+        "ayetID": 3,
+        "ayetLAT": "  Ve la yahuddu ala ta'amil miskeen",
+        "ayetTR": "   Ve yoksulu doyurmaya teşvik etmez."
+      },
+      {
+        "ayetAR": "  فَوَيْلٌ لِلْمُصَلِّينَ",
+        "ayetEN": "  So woe to those who pray",
+        "ayetID": 4,
+        "ayetLAT": "  Feveylun lil müsallîn",
+        "ayetTR": "   Artık vay o namaz kılanlara!"
+      },
+      {
+        "ayetAR": "  الَّذِينَ هُمْ عَنْ صَلَاتِهِمْ سَاهُونَ",
+        "ayetEN": "  Those who are heedless of their prayer -",
+        "ayetID": 5,
+        "ayetLAT": "  Ellezîne hüm an salatihim sâhun",
+        "ayetTR": "   Onlar ki, namazlarından gafildirler."
+      },
+      {
+        "ayetAR": "  الَّذِينَ هُمْ يُرَاءُونَ",
+        "ayetEN": "  Those who make show [of their deeds]",
+        "ayetID": 6,
+        "ayetLAT": "  Ellezîne hüm yurâun",
+        "ayetTR": "   Onlar ki, gösteriş yaparlar."
+      },
+      {
+        "ayetAR": "  وَيَمْنَعُونَ الْمَاعُونَ",
+        "ayetEN": "  And withhold [simple] assistance.",
+        "ayetID": 7,
+        "ayetLAT": "  Ve yemneunel ma'un",
+        "ayetTR": "   Ve yardımı menederler."
+      }
+    ],
+    "sureAdiAR": "سورة الماعون",
+    "sureAdiEN": "Surah Maun",
+    "sureAdiTR": "Maun Suresi",
+    "sureID": 8,
+    "sureMedya": "MAUN"
+  },
+  {
+    "ayetSayisi": 3,
+    "ayetler": [
+      {
+        "ayetAR": "  إِذَا جَاءَ نَصْرُ اللَّهِ وَالْفَتْحُ",
+        "ayetEN": "  When the victory of Allah has come and the conquest,",
+        "ayetID": 1,
+        "ayetLAT": "  İza câe nasrullahi vel feth",
+        "ayetTR": "   Allah'ın yardımı ve fetih geldiğinde,"
+      },
+      {
+        "ayetAR": "  وَرَأَيْتَ النَّاسَ يَدْخُلُونَ فِي دِينِ اللَّهِ أَفْوَاجًا",
+        "ayetEN": "  And you see the people entering into the religion of Allah in multitudes,",
+        "ayetID": 2,
+        "ayetLAT": "  Ve raeyten nâse yedhulûne fî dînillahi efvâcâ",
+        "ayetTR": "   Ve insanların Allah'ın dinine hızla girdiklerini gördüğünde,"
+      },
+      {
+        "ayetAR": "  فَسَبِّحْ بِحَمْدِ رَبِّكَ وَاسْتَغْفِرْهُ إِنَّهُ كَانَ تَوَّابًا",
+        "ayetEN": "  Then exalt [Him] with praise of your Lord and ask forgiveness of Him. Indeed, He is ever Accepting of repentance.",
+        "ayetID": 3,
+        "ayetLAT": "  Fesebbih bihamdi rabbike veesteğfirhü innehu kâne tevvâbâ",
+        "ayetTR": "   Öyleyse Rabbine hamd ile tesbih et ve O'ndan bağışlanma dile. Çünkü O, tevbeleri çok kabul edendir."
+      }
+    ],
+    "sureAdiAR": "سورة النصر",
+    "sureAdiEN": "Surah Nasr",
+    "sureAdiTR": "Nasr Suresi",
+    "sureID": 9,
+    "sureMedya": "NASR"
+  },
+  {
+    "ayetSayisi": 4,
+    "ayetler": [
+      {
+        "ayetAR": "  قُلْ هُوَ اللَّهُ أَحَدٌ",
+        "ayetEN": "  Say, 'He is Allah, [who is] One,",
+        "ayetID": 1,
+        "ayetLAT": "  Kul hüvallâhü ehad",
+        "ayetTR": "   De ki: 'O, Allah birdir."
+      },
+      {
+        "ayetAR": "  اللَّهُ الصَّمَدُ",
+        "ayetEN": "  Allah, the Eternal Refuge.",
+        "ayetID": 2,
+        "ayetLAT": "  Allâhüssamed",
+        "ayetTR": "   Allah, sameddir."
+      },
+      {
+        "ayetAR": "  لَمْ يَلِدْ وَلَمْ يُولَدْ",
+        "ayetEN": "  He neither begets nor is born,",
+        "ayetID": 3,
+        "ayetLAT": "  Lem yelid ve lem yûled",
+        "ayetTR": "   O, doğurmamıştır ve doğmamıştır."
+      },
+      {
+        "ayetAR": "  وَلَمْ يَكُن لَّهُ كُفُوًا أَحَدٌ",
+        "ayetEN": "  Nor is there to Him any equivalent.",
+        "ayetID": 4,
+        "ayetLAT": "  Ve lem yekün lehû küfüven ehad",
+        "ayetTR": "   Ve O'na hiçbir şey denk olmamıştır."
+      }
+    ],
+    "sureAdiAR": "سورة الإخلاص",
+    "sureAdiEN": "Surah İhlas",
+    "sureAdiTR": "İhlas Suresi",
+    "sureID": 10,
+    "sureMedya": "IHLAS"
+  },
+  {
+    "ayetSayisi": 5,
+    "ayetler": [
+      {
+        "ayetAR": "  تَبَّتْ يَدَا أَبِي لَهَبٍ وَتَبَّ",
+        "ayetEN": "  May the hands of Abu Lahab be ruined, and ruined is he.",
+        "ayetID": 1,
+        "ayetLAT": "  Tebbet yedâbiy lehûn vel tebb",
+        "ayetTR": "   Onun eli kurusun, kurusun!"
+      },
+      {
+        "ayetAR": "  مَا أَغْنَىٰ عَنْهُ مَالُهُ وَمَا كَسَبَ",
+        "ayetEN": "  His wealth will not avail him or that which he gained.",
+        "ayetID": 2,
+        "ayetLAT": "  Mâ ağnâ anhû mâlûhu ve mâ keseb",
+        "ayetTR": "   Malı ve kazandığı kendisine fayda vermedi."
+      },
+      {
+        "ayetAR": "  سَيَصْلَىٰ نَارًا ذَاتَ لَهَبٍ",
+        "ayetEN": "  He will [enter to] burn in a Fire of [blazing] flame",
+        "ayetID": 3,
+        "ayetLAT": "  Sayesinde alevli ateşe girecektir.",
+        "ayetTR": "   Ona alevli ateşte bir tutuşturucu ile birlikte girecektir."
+      },
+      {
+        "ayetAR": "  وَامْرَأَتُهُ حَمَّالَةَ الْحَطَبِ",
+        "ayetEN": "  And his wife [as well] - the carrier of firewood.",
+        "ayetID": 4,
+        "ayetLAT": "  Ve emraetühû hammeletel hatab",
+        "ayetTR": "   Ve karısı da odun taşıyıcısıdır."
+      },
+      {
+        "ayetAR": "  فِي جِيدِهَا حَبْلٌ مِّن مَّسَدٍ",
+        "ayetEN": "  Around her neck is a rope of [twisted] fiber.",
+        "ayetID": 5,
+        "ayetLAT": "  Fî cîdihâ hablum min mesed",
+        "ayetTR": "   Boynunda bir ipten başka bir şey taşımaz."
+      }
+    ],
+    "sureAdiAR": "سورة التكاثر",
+    "sureAdiEN": "Surah Tabbet",
+    "sureAdiTR": "Tebbet Suresi",
+    "sureID": 11,
+    "sureMedya": "TEBBET"
+  },
+  {
+    "ayetSayisi": 5,
+    "ayetler": [
+      {
+        "ayetAR": "  سُبْحَانَكَ",
+        "ayetEN": "  Exalted are You,",
+        "ayetID": 1,
+        "ayetLAT": "  Sübhâneke",
+        "ayetTR": "   Seni noksan sıfatlardan tenzih ederim."
+      },
+      {
+        "ayetAR": "  اللَّهُمَّ وَبِحَمْدِكَ",
+        "ayetEN": "  O Allah, and with Your praise.",
+        "ayetID": 2,
+        "ayetLAT": "  Allahümme ve bihamdike",
+        "ayetTR": "   Ey Allah 'ım! Seni hamd ile tesbih ederim."
+      },
+      {
+        "ayetAR": "  وَتَبَارَكَ اسْمُكَ",
+        "ayetEN": "  And blessed is Your name.",
+        "ayetID": 3,
+        "ayetLAT": "  Ve tebârekesmüke",
+        "ayetTR": "   Ve senin ismin mübarek."
+      },
+      {
+        "ayetAR": "  وَتَعَالَى جَدُّكَ",
+        "ayetEN": "  And exalted is Your majesty.",
+        "ayetID": 4,
+        "ayetLAT": "  Ve teâlâ ceddüke",
+        "ayetTR": "   Ve senin yüceliğin."
+      },
+      {
+        "ayetAR": "  وَلَا إِلَٰهَ غَيْرُكَ",
+        "ayetEN": "  And there is no deity besides You.",
+        "ayetID": 5,
+        "ayetLAT": "  Ve lâ ilâhe ğayruk",
+        "ayetTR": "   Senden başka ilah yoktur."
+      }
+    ],
+    "sureAdiAR": "سورة الفاتحة",
+    "sureAdiEN": "Surah Sübhaneke",
+    "sureAdiTR": "Sübhaneke Duası",
+    "sureID": 12,
+    "sureMedya": "SUBHANEKE"
+  },
+  {
+    "ayetSayisi": 4,
+    "ayetler": [
+      {
+        "ayetAR": "  التَّحِيَّاتُ لِلَّهِ وَالصَّلَوَاتُ وَالطَّيِّبَاتُ",
+        "ayetEN": "  All compliments, prayers and good words are due to Allah.",
+        "ayetID": 1,
+        "ayetLAT": "  Ettehiyyâtü lillâhi vessalavâtü vettayyibât",
+        "ayetTR": "   Allah'a karşı olan selam ve ibadetler, hayırlar ve salâvatlar O'na mahsustur."
+      },
+      {
+        "ayetAR": "  السَّلَامُ عَلَيْكَ أَيُّهَا النَّبِيُّ وَرَحْمَةُ اللَّهِ وَبَرَكَاتُهُ",
+        "ayetEN": "  Peace be upon you, O Prophet, and Allah's mercy and blessings.",
+        "ayetID": 2,
+        "ayetLAT": "  Es-selâmü aleyke eyyühen nebiyyü ve rahmetullâhi ve berakâtüh",
+        "ayetTR": "   Ey Nebi! Allah'ın selamı, rahmeti ve bereketi üzerine olsun."
+      },
+      {
+        "ayetAR": "  السَّلَامُ عَلَيْنَا وَعَلَى عِبَادِ اللَّهِ الصَّالِحِينَ",
+        "ayetEN": "  Peace be upon us and on the righteous servants of Allah.",
+        "ayetID": 3,
+        "ayetLAT": "  Es-selâmü aleynâ ve alâ ibâdillâhis sâlihîn",
+        "ayetTR": "   Salih kullarının üzerine de selam olsun."
+      },
+      {
+        "ayetAR": "  أَشْهَدُ أَنْ لَا إِلَٰهَ إِلَّا اللَّهُ وَأَشْهَدُ أَنَّ مُحَمَّدًا عَبْدُهُ وَرَسُولُهُ",
+        "ayetEN": "  I bear witness that there is no god but Allah, and I bear witness that Muhammad is His servant and Messenger.",
+        "ayetID": 4,
+        "ayetLAT": "  Eşhedü en lâ ilâhe illallâh ve eşhedü enne Muhammeden abdühû ve resûlüh",
+        "ayetTR": "   Şehadet ederim ki, Allah'tan başka ilah yoktur. Ve yine şehadet ederim ki, Muhammed O'nun kulu ve elçisidir."
+      }
+    ],
+    "sureAdiAR": "سورة الفاتحة",
+    "sureAdiEN": "Surah Ettahiyyatü",
+    "sureAdiTR": "Ettahiyyatü Duası",
+    "sureID": 13,
+    "sureMedya": "ETTAHIYYATU"
+  },
+  {
+    "ayetSayisi": 3,
+    "ayetler": [
+      {
+        "ayetAR": "  اللَّهُمَّ صَلِّ عَلَىٰ مُحَمَّدٍ وَعَلَىٰ آلِ مُحَمَّدٍ",
+        "ayetEN": "  O Allah, bless Muhammad and the family of Muhammad.",
+        "ayetID": 1,
+        "ayetLAT": "  Allâhümme salli alâ Muhammedin ve alâ âli Muhammed",
+        "ayetTR": "   Allah'ım! Muhammed'e ve Muhammed'in âline salât eyle."
+      },
+      {
+        "ayetAR": "  كَمَا صَلَّيْتَ عَلَىٰ إِبْرَاهِيمَ وَعَلَىٰ آلِ إِبْرَاهِيمَ",
+        "ayetEN": "  As You blessed Ibrahim and the family of Ibrahim.",
+        "ayetID": 2,
+        "ayetLAT": "  Kemâ sallayte alâ İbrâhîme ve alâ âli İbrâhîm",
+        "ayetTR": "   İbrahim'e ve İbrahim'in âline salât eyle."
+      },
+      {
+        "ayetAR": "  إِنَّكَ حَمِيدٌ مَجِيدٌ",
+        "ayetEN": "  Indeed, You are praiseworthy and glorious.",
+        "ayetID": 3,
+        "ayetLAT": "  İnneke hamîdün mecîd",
+        "ayetTR": "   Şüphesiz Sen, övgüye lâyık, yücesin."
+      }
+    ],
+    "sureAdiAR": "سورة الفاتحة",
+    "sureAdiEN": "Surah Allahümme Salli",
+    "sureAdiTR": "Allahümme Salli Duası",
+    "sureID": 14,
+    "sureMedya": "ALLAHUMMESALLI"
+  },
+  {
+    "ayetSayisi": 3,
+    "ayetler": [
+      {
+        "ayetAR": "  اللَّهُمَّ بَارِكْ عَلَىٰ مُحَمَّدٍ وَعَلَىٰ آلِ مُحَمَّدٍ",
+        "ayetEN": "  O Allah, bless Muhammad and the family of Muhammad.",
+        "ayetID": 1,
+        "ayetLAT": "  Allâhümme bârik alâ Muhammedin ve alâ âli Muhammed",
+        "ayetTR": "   Allah'ım! Muhammed'e ve Muhammed'in âline bereket ihsan eyle."
+      },
+      {
+        "ayetAR": "  كَمَا بَارَكْتَ عَلَىٰ إِبْرَاهِيمَ وَعَلَىٰ آلِ إِبْرَاهِيمَ",
+        "ayetEN": "  As You blessed Ibrahim and the family of Ibrahim.",
+        "ayetID": 2,
+        "ayetLAT": "  Kemâ bârekte alâ İbrâhîme ve alâ âli İbrâhîm",
+        "ayetTR": "   İbrahim'e ve İbrahim'in âline bereket ihsan eyle."
+      },
+      {
+        "ayetAR": "  إِنَّكَ حَمِيدٌ مَجِيدٌ",
+        "ayetEN": "  Indeed, You are praiseworthy and glorious.",
+        "ayetID": 3,
+        "ayetLAT": "  İnneke hamîdün mecîd",
+        "ayetTR": "   Şüphesiz Sen, övgüye lâyık, yücesin."
+      }
+    ],
+    "sureAdiAR": "سورة الفاتحة",
+    "sureAdiEN": "Surah Allahümme Barik",
+    "sureAdiTR": "Allahümme Barik Duası",
+    "sureID": 15,
+    "sureMedya": "ALLAHUMMEBARIK"
+  },
+  {
+    "ayetSayisi": 1,
+    "ayetler": [
+      {
+        "ayetAR": "  رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ",
+        "ayetEN": "  Our Lord, give us in this world [that which is] good and in the Hereafter [that which is] good and protect us from the punishment of the Fire.",
+        "ayetID": 1,
+        "ayetLAT": "  Rabbena âtina fid dunyâ haseneten ve fil âhireti haseneten ve kınâ azâbennâr",
+        "ayetTR": "   Rabbimiz! Bize dünyada iyilik ver, âhirette de iyilik ver ve bizi ateş azabından koru."
+      }
+    ],
+    "sureAdiAR": "سورة الفاتحة",
+    "sureAdiEN": "Surah Rabbena",
+    "sureAdiTR": "Rabbena Atina Duası",
+    "sureID": 16,
+    "sureMedya": "RABBENAATINA"
+  },
+  {
+    "ayetSayisi": 1,
+    "ayetler": [
+      {
+        "ayetAR": "  رَبَّنَا اغْفِرْ لِي وَلِوَالِدَيَّ وَلِلْمُؤْمِنِينَ يَوْمَ يَقُومُ الْحِسَابُ",
+        "ayetEN": "  Our Lord, forgive me and my parents and the believers the Day the account is established.",
+        "ayetID": 1,
+        "ayetLAT": "  Rabbena firli ve li vâlideyye ve lil mü'minîne yevme yekûmul hisâb",
+        "ayetTR": "   Rabbimiz! Beni, anne ve babamı ve inananları hesap gününde bağışla."
+      }
+    ],
+    "sureAdiAR": "سورة الفاتحة",
+    "sureAdiEN": "Surah Rabbena Firli",
+    "sureAdiTR": "Rabbena Firli Duası",
+    "sureID": 17,
+    "sureMedya": "RABBENAFIRLI"
+  },
+  {
+    "ayetSayisi": 1,
+    "ayetler": [
+      {
+        "ayetAR": "  اللَّهُمَّ إِنَّا نَسْتَعِينُكَ",
+        "ayetEN": "  O Allah, we seek Your help.",
+        "ayetID": 1,
+        "ayetLAT": "  Allâhümme innâ nesteînüke",
+        "ayetTR": "   Allah'ım! Sana sığınırız."
+      },
+      {
+        "ayetAR": "  وَنَسْتَغْفِرُكَ وَنَسْتَهْدِيكَ",
+        "ayetEN": "  We ask for Your forgiveness, and we repent to You.",
+        "ayetID": 2,
+        "ayetLAT": "  ve nestağfirüke ve nestehdîke.",
+        "ayetTR": "   Sana istiğfar eder, bağışlanma dileriz ve sana yöneliriz."
+      },
+      {
+        "ayetAR": "  وَنُؤْمِنُ بِكَ وَنَتَوَكَّلُ عَلَيْكَ",
+        "ayetEN": "  We believe in You and turn to You.",
+        "ayetID": 3,
+        "ayetLAT": "  Ve nü'minü bike ve netûbü ileyke.",
+        "ayetTR": "   Sana inanır ve sana yöneliriz."
+      },
+      {
+        "ayetAR": "  وَنَتَوَكَّلُ عَلَيْكَ",
+        "ayetEN": "  We rely on You.",
+        "ayetID": 4,
+        "ayetLAT": "  Ve netevekkelü aleyke",
+        "ayetTR": "   Sana dayanırız."
+      },
+      {
+        "ayetAR": "  وَنُثْنِي عَلَيْكَ الْخَيْرَ كُلَّهُ نُشْكُرُكَ",
+        "ayetEN": "  We are grateful to You and thank You.",
+        "ayetID": 5,
+        "ayetLAT": "  ve nüsnî aleykel-hayra küllehû neşkürüke",
+        "ayetTR": "   Sana şükrederiz ve sana minnettarız."
+      },
+      {
+        "ayetAR": "  وَلَا نَكْفُرُكَ",
+        "ayetEN": "  We do not deny You.",
+        "ayetID": 6,
+        "ayetLAT": "  ve lâ nekfürük",
+        "ayetTR": "   Sana nankörlük etmeyiz."
+      },
+      {
+        "ayetAR": "  وَنَخْلَعُ وَنَتْرُكُ مَنْ يَفْجُرُكَ",
+        "ayetEN": "  We stand up and leave those who oppose You.",
+        "ayetID": 7,
+        "ayetLAT": "  ve nahleu ve netrükü men yefcürük.",
+        "ayetTR": "   Sana kıyam et ve sana karşı geleni terk et."
+      }
+    ],
+    "sureAdiAR": "سورة الفاتحة",
+    "sureAdiEN": "Surah Kunut 1",
+    "sureAdiTR": "Kunut Duası 1",
+    "sureID": 18,
+    "sureMedya": "KUNUT1"
+  },
+  {
+    "ayetSayisi": 5,
+    "ayetler": [
+      {
+        "ayetAR": "  اللَّهُمَّ إِيَّاكَ نَعْبُدُ",
+        "ayetEN": "  O Allah, we worship You only.",
+        "ayetID": 1,
+        "ayetLAT": "  Allâhümme iyyâke na'büdü",
+        "ayetTR": "   Allah'ım! Yalnız Sana kulluk ederiz."
+      },
+      {
+        "ayetAR": "  وَلَكَ نُصَلِّي وَنَسْجُدُ",
+        "ayetEN": "  We pray to You and prostrate ourselves before You.",
+        "ayetID": 2,
+        "ayetLAT": "  Ve lâke nüsallî ve nascûdü",
+        "ayetTR": "   Yalnız Sana ibadet eder, yalnız Sana secde ederiz."
+      },
+      {
+        "ayetAR": "  وَإِلَيْكَ نَصَعَ وَنَحْفِدُ",
+        "ayetEN": "  We run towards You and serve You.",
+        "ayetID": 3,
+        "ayetLAT": "  Ve ileyke nas'â ve nahfidü",
+        "ayetTR": "   Yalnız Sana yönelir, yalnız Sana yalvarırız."
+      },
+      {
+        "ayetAR": "  وَنَرْجُو رَحْمَتَكَ وَنَخْشَى عَذَابَكَ",
+        "ayetEN": "  We hope for Your mercy and fear Your punishment.",
+        "ayetID": 4,
+        "ayetLAT": "  Ve nercû rahmeteke ve nahşâ azâbeke",
+        "ayetTR": "   Rahmetini umar, azabından korkarız."
+      },
+      {
+        "ayetAR": "  إِنَّ عَذَابَكَ بِالْكُفَّارِ مُلْحَقٌ",
+        "ayetEN": "  Surely, Your punishment will be inflicted on the disbelievers.",
+        "ayetID": 5,
+        "ayetLAT": "  İnnâ azâbeke bil kuffâri mulhık",
+        "ayetTR": "   Şüphesiz kafirlerin azabı helak edicidir."
+      }
+    ],
+    "sureAdiAR": "سورة الفاتحة",
+    "sureAdiEN": "Surah Kunut 2",
+    "sureAdiTR": "Kunut Duası 2",
+    "sureID": 19,
+    "sureMedya": "KUNUT2"
+  }
+]
