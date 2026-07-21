@@ -1,0 +1,176 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  workflow-policy:
+    name: Workflow Policy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install workflow policy dependency
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --no-deps -r scripts/ci/requirements-workflow-policy.txt
+
+      - name: Test workflow policy
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/workflow_policy_test.py
+
+      - name: Validate active workflows and actions
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/workflow_policy.py --repo .
+
+  repository-security:
+    name: Repository Security
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Validate tracked sensitive files
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/validate_tracked_sensitive_files.py
+
+      - name: Verify environment contract
+        run: |
+          set -euo pipefail
+          bash scripts/ci/verify_env_contract.sh
+
+      - name: Test secret-free Firebase CI placeholders
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/generate_ci_google_services_test.py
+
+      - name: Scan repository for secrets
+        run: |
+          set -euo pipefail
+          bash scripts/ci/run_secret_scan.sh --mode dir --report-dir build/reports/security
+
+  android-quality:
+    name: Android Quality
+    needs: [workflow-policy, repository-security]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: '21'
+          check-latest: false
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+        with:
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
+
+      - name: Set up pinned Android SDK
+        run: |
+          set -euo pipefail
+          bash scripts/ci/setup-android-sdk.sh
+
+      - name: Validate application catalogs and toolchain
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/validate_ci_apps_catalog.py --mode strict --target-flavors all
+          python3 scripts/ci/validate_admob_inventory.py --mode warn --target-flavors all
+          python3 scripts/ci/validate_android_toolchain_config.py
+
+      - name: Run static analysis and unit tests
+        run: |
+          set -euo pipefail
+          chmod +x ./gradlew
+          ./gradlew detekt ktlintCheck testDebugUnitTest validateFlavorVersions --continue --no-daemon --stacktrace --max-workers=2
+
+  representative-builds:
+    name: Build ${{ matrix.flavor }}
+    needs: [workflow-policy, repository-security, android-quality]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        flavor: [kuran_kerim, namazvakitleri, kible, zikirmatik]
+    env:
+      FLAVOR: ${{ matrix.flavor }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: '21'
+          check-latest: false
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+        with:
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
+
+      - name: Set up pinned Android SDK
+        run: |
+          set -euo pipefail
+          bash scripts/ci/setup-android-sdk.sh
+
+      - name: Generate CI-only Firebase placeholder
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/generate_ci_google_services.py --flavors "$FLAVOR"
+
+      - name: Lint representative flavor
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x ./gradlew
+          cap="${FLAVOR^}"
+          ./gradlew "lint${cap}Debug" --no-daemon --stacktrace --max-workers=2
+
+      - name: Assemble representative flavor
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x ./gradlew
+          cap="${FLAVOR^}"
+          ./gradlew "assemble${cap}Debug" --no-daemon --stacktrace --max-workers=2
+
+      - name: Remove CI-only Firebase placeholder
+        if: always()
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/generate_ci_google_services.py --clean --flavors "$FLAVOR"

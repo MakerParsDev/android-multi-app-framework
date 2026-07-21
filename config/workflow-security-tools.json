@@ -1,0 +1,16 @@
+{
+  "actionlint": {
+    "version": "1.7.12",
+    "asset": "actionlint_1.7.12_linux_amd64.tar.gz",
+    "url": "https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz",
+    "sha256": "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8",
+    "binary": "actionlint"
+  },
+  "zizmor": {
+    "version": "1.27.0",
+    "asset": "zizmor-x86_64-unknown-linux-gnu.tar.gz",
+    "url": "https://github.com/zizmorcore/zizmor/releases/download/v1.27.0/zizmor-x86_64-unknown-linux-gnu.tar.gz",
+    "sha256": "277f2bd8fd37cf60c42ab7afca6faa884e65440fa31e02b44bdaae60f62a358f",
+    "binary": "zizmor"
+  }
+}

@@ -1,0 +1,92 @@
+name: Security
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  workflow-and-supply-chain:
+    name: Workflow and Supply Chain
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install workflow policy dependency
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --no-deps -r scripts/ci/requirements-workflow-policy.txt
+
+      - name: Install pinned workflow security tools
+        env:
+          WORKFLOW_TOOLS_DIR: ${{ runner.temp }}/workflow-security-tools
+        run: |
+          set -euo pipefail
+          assignments="$(bash scripts/ci/install_workflow_security_tools.sh --bin-dir "$WORKFLOW_TOOLS_DIR")"
+          eval "$assignments"
+          printf 'ACTIONLINT_BIN=%s\n' "$ACTIONLINT_BIN" >> "$GITHUB_ENV"
+          printf 'ZIZMOR_BIN=%s\n' "$ZIZMOR_BIN" >> "$GITHUB_ENV"
+
+      - name: Test workflow security tooling
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/workflow_security_tools_test.py
+
+      - name: Validate workflow syntax
+        run: |
+          set -euo pipefail
+          "$ACTIONLINT_BIN" .github/workflows/*.yml
+
+      - name: Validate workflow policy
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/workflow_policy_test.py
+          python3 scripts/ci/workflow_policy.py --repo .
+
+      - name: Audit workflow security
+        run: |
+          set -euo pipefail
+          "$ZIZMOR_BIN" \
+            --offline \
+            --strict-collection \
+            --min-confidence high \
+            --format github \
+            .github/workflows \
+            .github/actions \
+            .github/dependabot.yml
+
+      - name: Validate dependency catalog policy
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/audit_dependency_catalog.py
+
+      - name: Validate supply-chain policy
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/validate_supply_chain_policy.py
+
+      - name: Validate secret-scan policy
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/validate_secret_scan_policy.py
+          python3 scripts/ci/validate_tracked_sensitive_files.py
+
+      - name: Scan Git history for secrets
+        run: |
+          set -euo pipefail
+          bash scripts/ci/run_secret_scan.sh --mode history --report-dir build/reports/security
