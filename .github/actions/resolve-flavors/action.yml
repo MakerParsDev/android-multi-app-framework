@@ -20,6 +20,8 @@ runs:
   steps:
     - id: resolve
       shell: bash
+      env:
+        TARGET_FLAVORS_INPUT: ${{ inputs.target_flavors }}
       run: |
         set -euo pipefail
         chmod +x ./gradlew
@@ -29,7 +31,7 @@ runs:
           echo "$ALL_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d'
         )
 
-        INPUT="${{ inputs.target_flavors }}"
+        INPUT="${TARGET_FLAVORS_INPUT:-}"
         INPUT="$(echo "${INPUT:-}" | tr -d '\r' | sed 's/[[:space:]]//g')"
 
         RESOLVED=()

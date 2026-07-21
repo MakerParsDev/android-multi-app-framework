@@ -4,6 +4,8 @@ from __future__ import annotations
 import subprocess
 import tempfile
 import textwrap
+
+import yaml
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -109,6 +111,37 @@ def test_pull_request_target_fails() -> None:
     )
 
 
+
+def load_yaml(path: Path) -> dict:
+    document = yaml.safe_load(path.read_text(encoding="utf-8"))
+    assert isinstance(document, dict)
+    return document
+
+
+def test_resolve_flavors_uses_env_for_input() -> None:
+    document = load_yaml(ROOT / ".github/actions/resolve-flavors/action.yml")
+    steps = document["runs"]["steps"]
+    resolve_step = next(step for step in steps if step.get("id") == "resolve")
+    for step in steps:
+        run = step.get("run")
+        if isinstance(run, str):
+            assert "${{" not in run, run
+    assert resolve_step["env"]["TARGET_FLAVORS_INPUT"] == "${{ inputs.target_flavors }}"
+    assert 'INPUT="${TARGET_FLAVORS_INPUT:-}"' in resolve_step["run"]
+
+
+def test_verify_env_contract_uses_fixed_script() -> None:
+    document = load_yaml(ROOT / ".github/actions/verify-env-contract/action.yml")
+    assert "inputs" not in document
+    steps = document["runs"]["steps"]
+    for step in steps:
+        run = step.get("run")
+        if isinstance(run, str):
+            assert "${{" not in run, run
+    verify_env_run = steps[0]["run"]
+    assert 'bash "scripts/ci/verify_env_contract.sh"' in verify_env_run
+
+
 def main() -> int:
     tests = [
         test_secure_fixture_passes,
@@ -117,6 +150,8 @@ def main() -> int:
         test_missing_timeout_fails,
         test_checkout_credentials_fail,
         test_pull_request_target_fails,
+        test_resolve_flavors_uses_env_for_input,
+        test_verify_env_contract_uses_fixed_script,
     ]
     for test in tests:
         test()
