@@ -6,9 +6,19 @@ Only the following GitHub Actions workflows are approved for the active
 - `ci-pr.yml` — secret-free pull-request and `main` Android quality checks.
 - `security.yml` — secret-free workflow, repository, and dependency security checks.
 
-Representative Android builds generate marked, non-production `google-services.json`
-files from committed public app catalogs and remove them after each matrix job.
-They never download or expose production Firebase credentials.
+Human pull requests and `main` pushes resolve the complete flavor matrix from
+`.ci/apps.json`. Every cataloged Android app is linted and assembled in its own
+matrix job. The current catalog contains 17 app flavors; the matrix count is not
+hard-coded, so newly cataloged apps are included automatically.
+
+Each app build generates a marked, non-production `google-services.json` from
+committed public catalogs and removes it after the job. Production Firebase
+credentials are never downloaded or exposed.
+
+Dependabot version updates are consolidated into one monthly Android maintenance
+pull request covering GitHub Actions and Gradle. Dependabot pull requests run the
+workflow/security gates and a lightweight Gradle smoke check, but skip the full
+Android quality and app-build matrix to avoid runner congestion.
 
 Both active workflows must use immutable full commit SHAs for external actions,
 `permissions: contents: read`, bounded job timeouts, checkout with
