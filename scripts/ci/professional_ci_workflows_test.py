@@ -23,6 +23,12 @@ def named_step(job: dict, name: str) -> dict:
     return next(step for step in job["steps"] if step.get("name") == name)
 
 
+def test_ci_gate_runs_professional_workflow_assertions() -> None:
+    workflow = load(".github/workflows/ci-pr.yml")
+    step = named_step(workflow["jobs"]["workflow-policy"], "Test approved GitHub action pins")
+    assert "professional_ci_workflows_test.py" in step["run"]
+
+
 def test_ci_runs_quality_and_flavors_in_parallel() -> None:
     jobs = load(".github/workflows/ci-pr.yml")["jobs"]
     assert jobs["android-quality"]["needs"] == ["workflow-policy", "repository-security"]
@@ -142,9 +148,12 @@ def test_release_is_manual_protected_and_attested() -> None:
         "contents": "read",
         "id-token": "write",
         "attestations": "write",
-        "artifact-metadata": "write",
     }
+    assert "DOPPLER_TOKEN" not in job.get("env", {})
+    validate = named_step(job, "Validate Doppler bootstrap")
+    assert validate["env"]["DOPPLER_TOKEN"] == "${{ secrets.DOPPLER_TOKEN }}"
     build = named_step(job, "Build signed AAB with Doppler")
+    assert build["env"]["DOPPLER_TOKEN"] == "${{ secrets.DOPPLER_TOKEN }}"
     assert "scripts/doppler-run.sh" in build["run"]
     assert "scripts/ci/build_attested_release.sh" in build["run"]
     release_script = (ROOT / "scripts/ci/build_attested_release.sh").read_text(encoding="utf-8")
@@ -160,6 +169,7 @@ def test_release_is_manual_protected_and_attested() -> None:
 
 def main() -> int:
     tests = [
+        test_ci_gate_runs_professional_workflow_assertions,
         test_ci_runs_quality_and_flavors_in_parallel,
         test_ci_enforces_and_uploads_kover_reports,
         test_android_quality_materializes_all_firebase_placeholders_for_kover,

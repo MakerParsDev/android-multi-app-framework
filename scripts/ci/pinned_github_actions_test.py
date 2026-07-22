@@ -60,6 +60,28 @@ def test_wrong_sha_fails() -> None:
     assert "must use approved SHA" in findings[0].message
 
 
+def test_composite_action_pin_is_checked_against_manifest() -> None:
+    approved = "3d3c42e5aac5ba805825da76410c181273ba90b1"
+    repo = write_repo(workflow(f"actions/checkout@{approved}"), {
+        "actions/checkout": {"sha": approved, "version": "v7.0.1"}
+    })
+    action = repo / ".github/actions/example/action.yml"
+    action.parent.mkdir(parents=True)
+    action.write_text(
+        f"""name: Example
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@{'b' * 40}
+""",
+        encoding="utf-8",
+    )
+    findings = validate_pinned_actions(repo)
+    assert len(findings) == 1
+    assert findings[0].path == Path(".github/actions/example/action.yml")
+    assert "must use approved SHA" in findings[0].message
+
+
 def test_repository_workflows_use_only_manifest_pins() -> None:
     assert validate_pinned_actions(ROOT) == []
 
@@ -69,6 +91,7 @@ def main() -> int:
         test_approved_exact_sha_passes,
         test_unknown_action_fails,
         test_wrong_sha_fails,
+        test_composite_action_pin_is_checked_against_manifest,
         test_repository_workflows_use_only_manifest_pins,
     ]
     for test in tests:
