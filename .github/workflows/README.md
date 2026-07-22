@@ -69,8 +69,13 @@ The `CI Required` job is the single branch-protection context for the complete C
 flavor without a repository-level `max-parallel` cap, and produces one
 `baseline-prof.txt` / `startup-prof.txt` pair per release source set. A complete
 17-flavor run can update the single `automation/baseline-profiles` pull request
-through a repository-scoped GitHub App. The matrix has read-only repository
-permissions and receives no production secret.
+through a repository-scoped GitHub App. PR aggregation is enabled only when the
+repository variable `PERFORMANCE_AUTOMATION_ENABLED` is exactly `true`; the App
+client ID must be stored in `PERFORMANCE_AUTOMATION_CLIENT_ID` and its private
+key in `PERFORMANCE_AUTOMATION_PRIVATE_KEY`. Without that explicit enable flag,
+scheduled runs still generate and retain all profile artifacts but skip the
+write-capable aggregation job. The matrix has read-only repository permissions
+and receives no production secret.
 
 Managed-device timing is diagnostic. Release performance comparisons remain the
 responsibility of the serial physical-device workflow. See

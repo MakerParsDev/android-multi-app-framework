@@ -165,6 +165,7 @@ def test_baseline_profiles_workflow_is_full_speed_and_safe() -> None:
     aggregate = workflow["jobs"]["aggregate"]
     assert aggregate["permissions"] == {"contents": "read"}
     assert aggregate["needs"] == ["resolve", "generate"]
+    assert "vars.PERFORMANCE_AUTOMATION_ENABLED == 'true'" in aggregate["if"]
     runs = "\n".join(step.get("run", "") for step in matrix_job["steps"])
     assert "performance_profile_policy.py task" in runs
     assert "generate_ci_google_services.py --clean" in runs
