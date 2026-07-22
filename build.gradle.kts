@@ -814,7 +814,7 @@ kover {
                     "*.di.*",
                 )
                 // Exclude generated Room DAO implementations
-                classes("*_Impl", "*_Impl\$*")
+                classes("*_Impl", $$"*_Impl$*")
             }
         }
         variant("quality") {
