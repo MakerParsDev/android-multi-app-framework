@@ -22,16 +22,16 @@
 
 **Files:**
 - Modify: `app/build.gradle.kts`
-- Create: `app/src/ciSmoke/AndroidManifest.xml`
+- Create: `app/src/debug/AndroidManifest.xml`
 - Modify: `app/src/main/java/com/parsfilo/contentapp/App.kt`
 - Modify: `scripts/ci/professional_ci_workflows_test.py`
 
 **Interfaces:**
-- Produces: build type `ciSmoke`, `BuildConfig.CI_SMOKE`, task suffix `CiSmokeAndroidTest`.
+- Produces: property `ciSmoke`, `BuildConfig.CI_SMOKE`, and placeholder-controlled Firebase metadata on the existing Debug test variant.
 
 - [ ] Add failing assertions for the build type, manifest metadata, and startup guard.
 - [ ] Run `python3 scripts/ci/professional_ci_workflows_test.py`; expect failure.
-- [ ] Add `CI_SMOKE=false` default, a debug-derived `ciSmoke` build type with `CI_SMOKE=true`, the manifest overlay, and an early local-only startup return.
+- [ ] Add `CI_SMOKE=false` default, property-gated Debug overrides and manifest placeholders, plus an early local-only startup return.
 - [ ] Re-run the regression test; expect all tests to pass.
 - [ ] Commit as `feat: add Firebase-safe CI smoke build`.
 
@@ -44,12 +44,12 @@
 - Modify: `scripts/ci/professional_ci_workflows_test.py`
 
 **Interfaces:**
-- Consumes: `ciPixel2Api30Kuran_kerimCiSmokeAndroidTest`.
+- Consumes: `ciPixel2Api30Kuran_kerimDebugAndroidTest -PciSmoke=true`.
 
-- [ ] Add a failing workflow assertion for the `CiSmoke` task and Compose v2 imports.
+- [ ] Add a failing workflow assertion for the property-gated Debug task and Compose v2 imports.
 - [ ] Run the regression test; expect failure.
 - [ ] Update the workflow and test imports.
-- [ ] Run the regression test and `./gradlew ciPixel2Api30Kuran_kerimCiSmokeAndroidTest --dry-run --no-daemon --no-configuration-cache`; expect success.
+- [ ] Run the regression test and `./gradlew ciPixel2Api30Kuran_kerimDebugAndroidTest -PciSmoke=true --dry-run --no-daemon --no-configuration-cache`; expect success.
 - [ ] Commit as `test: run managed device smoke in isolated build`.
 
 ### Task 3: Protected Firebase config source resolver

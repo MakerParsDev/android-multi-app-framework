@@ -136,6 +136,7 @@ def test_managed_device_is_pinned_and_scheduled() -> None:
     assert "test -w /dev/kvm" in kvm
     command = named_step(job, "Run managed-device smoke tests")["run"]
     assert "ciPixel2Api30Kuran_kerimDebugAndroidTest" in command
+    assert "-PciSmoke=true" in command
     assert "swiftshader_indirect" in command
     assert "--no-configuration-cache" in command
     dependency_policy = load("config/dependency-policy.json")
@@ -144,6 +145,33 @@ def test_managed_device_is_pinned_and_scheduled() -> None:
     upload = named_step(job, "Upload managed-device reports")
     assert upload["with"]["retention-days"] == 14
     assert upload["if"] == "always()"
+
+
+def test_ci_smoke_build_disables_remote_firebase_startup() -> None:
+    gradle = (ROOT / "app/build.gradle.kts").read_text(encoding="utf-8")
+    assert 'buildConfigField("boolean", "CI_SMOKE", "false")' in gradle
+    assert 'providers.gradleProperty("ciSmoke")' in gradle
+    assert 'buildConfigField("boolean", "CI_SMOKE", smoke.toString())' in gradle
+
+    manifest = (ROOT / "app/src/debug/AndroidManifest.xml").read_text(encoding="utf-8")
+    for key in (
+        "firebase_performance_collection_deactivated",
+        "firebase_analytics_collection_deactivated",
+        "firebase_crashlytics_collection_enabled",
+        "firebase_messaging_auto_init_enabled",
+        "firebase_data_collection_default_enabled",
+    ):
+        assert key in manifest
+
+    app = (ROOT / "app/src/main/java/com/parsfilo/contentapp/App.kt").read_text(encoding="utf-8")
+    assert "if (BuildConfig.CI_SMOKE)" in app
+    assert "CI smoke startup complete" in app
+
+    for path in (
+        ROOT / "app/src/androidTest/java/com/parsfilo/contentapp/AppLaunchSmokeTest.kt",
+        ROOT / "app/src/androidTest/java/com/parsfilo/contentapp/SimpleInteractionSmokeTest.kt",
+    ):
+        assert "androidx.compose.ui.test.junit4.v2.createAndroidComposeRule" in path.read_text(encoding="utf-8")
 
 
 def test_release_is_manual_protected_and_attested() -> None:
@@ -233,6 +261,7 @@ def main() -> int:
         test_dependency_submission_is_trusted_and_job_scoped,
         test_codeql_uses_manual_kotlin_build_and_cleans_placeholder,
         test_managed_device_is_pinned_and_scheduled,
+        test_ci_smoke_build_disables_remote_firebase_startup,
         test_release_is_manual_protected_and_attested,
         test_ci_exposes_one_required_aggregate_check,
         test_play_internal_builds_attests_and_publishes_one_exact_aab,

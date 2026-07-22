@@ -69,7 +69,7 @@ def test_generates_valid_marked_placeholder() -> None:
             "client_id": "123456789012-ci-placeholder.apps.googleusercontent.com",
             "client_type": 3,
         }
-        assert client["api_key"][0]["current_key"] == "ci-placeholder-not-a-real-api-key"
+        assert client["api_key"][0]["current_key"] == "AIzaSy000000000000000000000000000000000"
         assert target(repo).stat().st_mode & 0o777 == 0o600
 
 

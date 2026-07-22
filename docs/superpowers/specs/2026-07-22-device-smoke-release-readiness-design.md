@@ -12,15 +12,15 @@ The managed-device build compiles with a CI-only `google-services.json`, but app
 
 ## Selected Approach
 
-### 1. Dedicated `ciSmoke` build type
+### 1. Property-gated CI smoke mode
 
-Add a debuggable `ciSmoke` build type initialized from `debug`. It exposes `BuildConfig.CI_SMOKE=true`; all other build types expose `false`. A `src/ciSmoke/AndroidManifest.xml` overlay disables Firebase Performance, Analytics, Crashlytics, Messaging auto-init, and default Firebase data collection before `Application.onCreate`.
+Keep the existing `debug` test variant and enable smoke isolation only when Gradle receives `-PciSmoke=true`. The debug variant then exposes `BuildConfig.CI_SMOKE=true`; ordinary debug and release builds expose `false`. A `src/debug/AndroidManifest.xml` overlay uses manifest placeholders to disable Firebase Performance, Analytics, Crashlytics, Messaging auto-init, and default Firebase data collection before `Application.onCreate`.
 
 `App.onCreate` performs only local logging and root UI prerequisites in CI smoke mode, then returns before App Check, FCM, Remote Config/endpoints, billing connection, audio prefetch, alarms, and app-open ads. Production and ordinary debug behavior remain unchanged.
 
 ### 2. Managed-device workflow
 
-Run `ciPixel2Api30Kuran_kerimCiSmokeAndroidTest`, keep the secret-free placeholder, migrate Compose test rules to the v2 API, and always upload JUnit/HTML reports. A regression test verifies the task name, Firebase deactivation metadata, and smoke guard.
+Run `ciPixel2Api30Kuran_kerimDebugAndroidTest -PciSmoke=true`, keep the secret-free placeholder, migrate Compose test rules to the v2 API, and always upload JUnit/HTML reports. A regression test verifies the task name, Firebase deactivation metadata, and smoke guard.
 
 ### 3. Firebase release source resolver
 

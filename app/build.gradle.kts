@@ -68,6 +68,11 @@ val releaseRevisionValue =
         pick("GITHUB_SHA"),
     ).firstOrNull { !it.isNullOrBlank() }.orEmpty().ifBlank { "local" }
 val releaseTrackValue = pick("PLAY_TRACK").orEmpty().ifBlank { "internal" }
+val ciSmokeEnabled =
+    providers.gradleProperty("ciSmoke").map { raw ->
+        raw.toBooleanStrictOrNull()
+            ?: error("Gradle property ciSmoke must be true or false (resolved='$raw')")
+    }.orElse(false)
 if (pushRegistrationUrlValue.isBlank()) {
     logger.warn("⚠️ PUSH_REGISTRATION_URL is empty. Push registration requests will be skipped.")
 }
@@ -347,11 +352,16 @@ android {
             "RELEASE_TRACK",
             asBuildConfigString(releaseTrackValue),
         )
+        buildConfigField("boolean", "CI_SMOKE", "false")
     }
 
     buildTypes {
         debug {
+            val smoke = ciSmokeEnabled.get()
             buildConfigField("boolean", "USE_TEST_ADS", "true")
+            buildConfigField("boolean", "CI_SMOKE", smoke.toString())
+            manifestPlaceholders["ciSmokeFirebaseDisabled"] = smoke.toString()
+            manifestPlaceholders["ciSmokeFirebaseEnabled"] = (!smoke).toString()
         }
 
         release {
