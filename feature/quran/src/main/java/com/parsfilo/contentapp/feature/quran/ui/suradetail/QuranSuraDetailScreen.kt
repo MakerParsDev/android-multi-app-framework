@@ -45,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalLocale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -205,6 +206,7 @@ fun QuranSuraDetailScreen(
 
             LazyColumn(
                 modifier = Modifier
+                    .testTag("quran_detail")
                     .fillMaxWidth()
                     .weight(1f),
                 contentPadding = PaddingValues(bottom = 0.dp),

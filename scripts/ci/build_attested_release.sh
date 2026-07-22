@@ -18,7 +18,9 @@ python3 scripts/ci/verify_google_signin_config.py \
   --flavors "$RELEASE_FLAVOR" \
   --require-web-client-id
 
-./gradlew ":app:bundle${RELEASE_CAPITALIZED}Release" \
+python3 scripts/ci/performance_profile_policy.py validate-source --flavor "$RELEASE_FLAVOR"
+
+./gradlew ":app:validate${RELEASE_CAPITALIZED}ReleaseBaselineProfileInBundle" \
   --no-daemon \
   --stacktrace \
   --max-workers=2

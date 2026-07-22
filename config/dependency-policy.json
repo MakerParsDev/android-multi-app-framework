@@ -1,6 +1,13 @@
 {
   "catalog_inline_version_allowlist": [],
-  "catalog_prerelease_allowlist": [],
+  "catalog_prerelease_allowlist": [
+    {
+      "alias": "androidx-baselineprofile",
+      "expires_on": "2027-01-31",
+      "owner": "ci/android-performance",
+      "reason": "AGP 9.2 new DSL support is available in Baseline Profile Gradle Plugin 1.5 while stable 1.4.1 rejects the application module."
+    }
+  ],
   "review_cadence_days": 30,
   "schema_version": 1,
   "stable_only": true,

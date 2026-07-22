@@ -1,8 +1,10 @@
 import com.android.build.api.artifact.SingleArtifact
+import com.android.build.api.variant.BuildConfigField
 import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.androidx.baselineprofile)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
@@ -48,10 +50,17 @@ fun asBuildConfigString(value: String): String = "\"" + value.replace("\\", "\\\
 
 fun normalizedTaskName(taskName: String): String = taskName.substringAfterLast(':')
 
+fun isGeneratedPerformanceVariant(normalized: String): Boolean = normalized.contains("BenchmarkRelease") || normalized.contains("NonMinifiedRelease")
+
 fun isReleaseBuildLikeTask(taskName: String): Boolean =
     normalizedTaskName(taskName).let { normalized ->
-        (normalized.startsWith("assemble") || normalized.startsWith("bundle") || normalized.startsWith("publish")) &&
-            normalized.contains("Release")
+        (
+            normalized.startsWith("assemble") ||
+                normalized.startsWith("bundle") ||
+                normalized.startsWith("publish")
+        ) &&
+            normalized.contains("Release") &&
+            !isGeneratedPerformanceVariant(normalized)
     }
 
 fun isReleasePublishTask(taskName: String): Boolean =
@@ -355,6 +364,8 @@ android {
             asBuildConfigString(releaseTrackValue),
         )
         buildConfigField("boolean", "CI_SMOKE", "false")
+        manifestPlaceholders["ciSmokeFirebaseDisabled"] = "false"
+        manifestPlaceholders["ciSmokeFirebaseEnabled"] = "true"
     }
 
     buildTypes {
@@ -436,22 +447,29 @@ android {
     }
 }
 
+baselineProfile {
+    saveInSrc = true
+    automaticGenerationDuringBuild = false
+    mergeIntoMain = false
+}
+
+val appPythonExecutable =
+    rootProject.providers
+        .gradleProperty("pythonExecutable")
+        .orElse(rootProject.providers.environmentVariable("PYTHON"))
+        .orElse(
+            if (System.getProperty("os.name").startsWith("Windows", ignoreCase = true)) {
+                "python"
+            } else {
+                "python3"
+            },
+        )
+
 val validateSystemReceiverManifests =
     tasks.register<ValidateSystemReceiverManifestsTask>("validateSystemReceiverManifests") {
         group = "verification"
         description = "Validate merged system reschedule receivers for both affected flavors"
-        pythonExecutable.set(
-            rootProject.providers
-                .gradleProperty("pythonExecutable")
-                .orElse(rootProject.providers.environmentVariable("PYTHON"))
-                .orElse(
-                    if (System.getProperty("os.name").startsWith("Windows", ignoreCase = true)) {
-                        "python"
-                    } else {
-                        "python3"
-                    },
-                ),
-        )
+        pythonExecutable.set(appPythonExecutable)
         validatorScript.set(
             rootProject.layout.projectDirectory.file("scripts/ci/validate_system_receiver_manifests.py"),
         )
@@ -459,6 +477,17 @@ val validateSystemReceiverManifests =
     }
 
 androidComponents {
+    onVariants(selector().all()) { variant ->
+        if (variant.buildType == "benchmarkRelease" || variant.buildType == "nonMinifiedRelease") {
+            requireNotNull(variant.buildConfigFields).put(
+                "CI_SMOKE",
+                BuildConfigField("boolean", true, "Disable remote services for performance tests"),
+            )
+            variant.manifestPlaceholders.put("ciSmokeFirebaseDisabled", "true")
+            variant.manifestPlaceholders.put("ciSmokeFirebaseEnabled", "false")
+        }
+    }
+
     onVariants(selector().withBuildType("debug")) { variant ->
         when (variant.name) {
             "zikirmatikDebug" ->
@@ -469,6 +498,28 @@ androidComponents {
                 validateSystemReceiverManifests.configure {
                     namazvakitleriManifest.set(variant.artifacts.get(SingleArtifact.MERGED_MANIFEST))
                 }
+        }
+    }
+
+    onVariants(selector().withBuildType("release")) { variant ->
+        val flavorName = variant.productFlavors.single { it.first == "app" }.second
+        val token = variant.name.replaceFirstChar { it.titlecase() }
+        val bundleFile = variant.artifacts.get(SingleArtifact.BUNDLE)
+        tasks.register<Exec>("validate${token}BaselineProfileInBundle") {
+            group = "verification"
+            description = "Validate compiled Baseline Profile metadata in $flavorName release AAB"
+            dependsOn("bundle$token")
+            doFirst {
+                commandLine(
+                    appPythonExecutable.get(),
+                    rootProject.file("scripts/ci/performance_profile_policy.py").absolutePath,
+                    "validate-aab",
+                    "--flavor",
+                    flavorName,
+                    "--aab",
+                    bundleFile.get().asFile.absolutePath,
+                )
+            }
         }
     }
 }
@@ -527,6 +578,8 @@ dependencies {
     implementation(project(":feature:quran"))
 
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.profileinstaller)
+    baselineProfile(project(":performance:benchmark"))
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.activity.compose)

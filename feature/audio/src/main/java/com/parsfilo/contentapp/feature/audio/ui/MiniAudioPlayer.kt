@@ -30,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -104,7 +105,10 @@ fun InlineAudioPlayer(
         // Play/Pause toggle
         IconButton(
             onClick = onPlayPause,
-            modifier = Modifier.size(dimens.iconXl)
+            modifier =
+                Modifier
+                    .testTag("audio_play_pause")
+                    .size(dimens.iconXl),
         ) {
             Icon(
                 imageVector = if (state.isPlaying) {

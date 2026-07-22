@@ -85,6 +85,41 @@ jobs:
           set -euo pipefail
           bash scripts/ci/run_secret_scan.sh --mode dir --report-dir build/reports/security
 
+  performance-contract:
+    name: Performance Contract
+    if: github.event_name != 'pull_request' || github.event.pull_request.user.login != 'dependabot[bot]'
+    needs: [workflow-policy, repository-security]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: '21'
+          check-latest: false
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+        with:
+          cache-read-only: true
+
+      - name: Validate performance contracts
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/performance_profile_policy_test.py
+          python3 scripts/ci/dependency_catalog_audit.py --repo .
+          ./gradlew :performance:benchmark:tasks \
+            --all \
+            --no-daemon \
+            --no-configuration-cache
+
   android-quality:
     name: Android Quality
     if: github.event_name != 'pull_request' || github.event.pull_request.user.login != 'dependabot[bot]'
@@ -295,6 +330,7 @@ jobs:
     needs:
       - workflow-policy
       - repository-security
+      - performance-contract
       - android-quality
       - resolve-apps
       - app-builds
@@ -305,6 +341,7 @@ jobs:
       IS_DEPENDABOT: ${{ github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]' }}
       WORKFLOW_POLICY_RESULT: ${{ needs.workflow-policy.result }}
       REPOSITORY_SECURITY_RESULT: ${{ needs.repository-security.result }}
+      PERFORMANCE_CONTRACT_RESULT: ${{ needs.performance-contract.result }}
       ANDROID_QUALITY_RESULT: ${{ needs.android-quality.result }}
       RESOLVE_APPS_RESULT: ${{ needs.resolve-apps.result }}
       APP_BUILDS_RESULT: ${{ needs.app-builds.result }}
@@ -316,11 +353,13 @@ jobs:
           [[ "$WORKFLOW_POLICY_RESULT" == success ]]
           [[ "$REPOSITORY_SECURITY_RESULT" == success ]]
           if [[ "$IS_DEPENDABOT" == true ]]; then
+            [[ "$PERFORMANCE_CONTRACT_RESULT" == skipped ]]
             [[ "$ANDROID_QUALITY_RESULT" == skipped ]]
             [[ "$RESOLVE_APPS_RESULT" == skipped ]]
             [[ "$APP_BUILDS_RESULT" == skipped ]]
             [[ "$DEPENDABOT_SMOKE_RESULT" == success ]]
           else
+            [[ "$PERFORMANCE_CONTRACT_RESULT" == success ]]
             [[ "$ANDROID_QUALITY_RESULT" == success ]]
             [[ "$RESOLVE_APPS_RESULT" == success ]]
             [[ "$APP_BUILDS_RESULT" == success ]]

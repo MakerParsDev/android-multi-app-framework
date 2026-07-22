@@ -46,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -245,6 +246,7 @@ fun QuranSuraListScreen(
 
             LazyColumn(
                 modifier = Modifier
+                    .testTag("quran_list")
                     .fillMaxWidth()
                     .weight(1f),
                 contentPadding = PaddingValues(bottom = 0.dp),
@@ -257,7 +259,10 @@ fun QuranSuraListScreen(
                         sura = sura,
                         meccanLabel = meccanLabel,
                         medinanLabel = medinanLabel,
-                        modifier = Modifier.clickable { onSuraClick(sura.number) },
+                        modifier =
+                            Modifier
+                                .testTag(if (index == 0) "quran_first_item" else "quran_item_$index")
+                                .clickable { onSuraClick(sura.number) },
                     )
 
                     if (state.shouldShowAds && nativeAdContent != null && (index + 1) % 6 == 0 && index < suras.lastIndex) {

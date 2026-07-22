@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -175,6 +176,7 @@ fun MiraclesListScreen(
 
                 LazyColumn(
                     modifier = Modifier
+                        .testTag("miracles_list")
                         .weight(1f)
                         .fillMaxWidth(),
                     contentPadding = PaddingValues(start = dimens.space12, top = dimens.space16, end = dimens.space12, bottom = dimens.space8),
@@ -187,6 +189,12 @@ fun MiraclesListScreen(
                                 index = index + 1,
                                 variant = variant,
                                 onClick = { onPrayerClick(index) },
+                                modifier =
+                                    if (index == 0) {
+                                        Modifier.testTag("miracles_first_item")
+                                    } else {
+                                        Modifier
+                                    },
                             )
                         }
 
@@ -338,13 +346,14 @@ fun MiraclesListItem(
     prayer: MiraclesPrayer,
     index: Int,
     variant: MiraclesContentVariant,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val dimens = LocalDimens.current
     val colorScheme = MaterialTheme.colorScheme
 
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .background(
                 color = colorScheme.surfaceVariant.copy(alpha = 0.5f),
