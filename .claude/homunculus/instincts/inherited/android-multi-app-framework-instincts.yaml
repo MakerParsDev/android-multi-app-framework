@@ -1,0 +1,478 @@
+# Instincts generated from https://github.com/MakerParsDev/android-multi-app-framework
+# Generated: 2026-07-22T01:15:17.095Z
+# Version: 2.0
+# NOTE: This file supplements (does not replace) any existing curated instincts.
+# High-confidence manually curated instincts should be preserved alongside these.
+
+---
+id: android-multi-app-framework-commit-conventional
+trigger: "when writing a commit message"
+confidence: 0.85
+domain: git
+source: repo-analysis
+source_repo: https://github.com/MakerParsDev/android-multi-app-framework
+---
+
+# Android Multi App Framework Commit Conventional
+
+## Action
+
+Use conventional commit format with prefixes: ci, docs
+
+## Evidence
+
+- 10 commits analyzed
+- Detected conventional commit pattern
+- Examples: docs: design professional full-speed Android CI, ci: enforce approved immutable action pins
+
+---
+id: android-multi-app-framework-commit-length
+trigger: "when writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: https://github.com/MakerParsDev/android-multi-app-framework
+---
+
+# Android Multi App Framework Commit Length
+
+## Action
+
+Keep commit messages concise (~45 characters)
+
+## Evidence
+
+- Average commit message length: 45 chars
+- Based on 10 commits
+
+---
+id: android-multi-app-framework-naming-files
+trigger: "when creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/MakerParsDev/android-multi-app-framework
+---
+
+# Android Multi App Framework Naming Files
+
+## Action
+
+Use snake_case naming convention
+
+## Evidence
+
+- Analyzed file naming patterns in repository
+- Dominant pattern: snake_case
+
+---
+id: android-multi-app-framework-import-relative
+trigger: "when importing modules"
+confidence: 0.75
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/MakerParsDev/android-multi-app-framework
+---
+
+# Android Multi App Framework Import Relative
+
+## Action
+
+Use relative imports for project files
+
+## Evidence
+
+- Import analysis shows relative import pattern
+- Example: import { x } from '../lib/x'
+
+---
+id: android-multi-app-framework-export-style
+trigger: "when exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/MakerParsDev/android-multi-app-framework
+---
+
+# Android Multi App Framework Export Style
+
+## Action
+
+Prefer named exports
+
+## Evidence
+
+- Export pattern analysis
+- Dominant style: named
+
+---
+id: android-multi-app-framework-test-separate
+trigger: "when writing tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/MakerParsDev/android-multi-app-framework
+---
+
+# Android Multi App Framework Test Separate
+
+## Action
+
+Place tests in the tests/ or __tests__/ directory, mirroring src structure
+
+## Evidence
+
+- Separate test directory pattern detected
+- Tests live in dedicated test folders
+
+---
+id: android-multi-app-framework-workflow-feature-development
+trigger: "when implementing a new feature"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/MakerParsDev/android-multi-app-framework
+---
+
+# Android Multi App Framework Workflow Feature Development
+
+## Action
+
+Follow the feature-development workflow:
+1. Add feature implementation
+2. Add tests for feature
+3. Update documentation
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~15x per month
+- Files: **/*.test.*
+
+---
+id: android-multi-app-framework-workflow-add-or-update-ci-workflow
+trigger: "when doing add or update ci workflow"
+confidence: 0.7
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/MakerParsDev/android-multi-app-framework
+---
+
+# Android Multi App Framework Workflow Add Or Update Ci Workflow
+
+## Action
+
+Follow the add-or-update-ci-workflow workflow:
+1. Edit or create a workflow YAML file in .github/workflows/
+2. Update or add supporting scripts in scripts/ci/
+3. Update or add corresponding test scripts in scripts/ci/
+4. Optionally update related documentation
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~4x per month
+- Files: .github/workflows/*.yml, scripts/ci/*.py, scripts/ci/*.sh
+
+---
+id: android-multi-app-framework-workflow-document-or-plan-ci-workflow
+trigger: "when doing document or plan ci workflow"
+confidence: 0.6
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/MakerParsDev/android-multi-app-framework
+---
+
+# Android Multi App Framework Workflow Document Or Plan Ci Workflow
+
+## Action
+
+Follow the document-or-plan-ci-workflow workflow:
+1. Create or update a plan/spec document in docs/superpowers/plans/ or docs/superpowers/specs/
+2. Optionally add or update documentation in .github/workflows/README.md or related docs
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~2x per month
+- Files: docs/superpowers/plans/*.md, docs/superpowers/specs/*.md, .github/workflows/README.md
+
+---
+id: android-multi-app-framework-workflow-test-enhancement-for-ci-workflow
+trigger: "when doing test enhancement for ci workflow"
+confidence: 0.65
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/MakerParsDev/android-multi-app-framework
+---
+
+# Android Multi App Framework Workflow Test Enhancement For Ci Workflow
+
+## Action
+
+Follow the test-enhancement-for-ci-workflow workflow:
+1. Edit or create test scripts in scripts/ci/ (e.g., *_test.py, *_test.sh)
+2. Ensure tests cover new or changed workflow logic
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~3x per month
+- Files: scripts/ci/*_test.py, scripts/ci/*_test.sh
+
+---
+id: android-multi-app-framework-instinct-file-naming
+trigger: "When creating or renaming a file in the codebase"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: MakerParsDev/android-multi-app-framework
+---
+
+# Android Multi App Framework Instinct File Naming
+
+## Action
+
+Name the file using snake_case
+
+## Evidence
+
+- Pattern in namingConventions.files: snake_case
+
+---
+id: android-multi-app-framework-instinct-function-naming
+trigger: "When defining a new function"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: MakerParsDev/android-multi-app-framework
+---
+
+# Android Multi App Framework Instinct Function Naming
+
+## Action
+
+Name the function using camelCase
+
+## Evidence
+
+- Pattern in namingConventions.functions: camelCase
+
+---
+id: android-multi-app-framework-instinct-class-naming
+trigger: "When defining a new class"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: MakerParsDev/android-multi-app-framework
+---
+
+# Android Multi App Framework Instinct Class Naming
+
+## Action
+
+Name the class using PascalCase
+
+## Evidence
+
+- Pattern in namingConventions.classes: PascalCase
+
+---
+id: android-multi-app-framework-instinct-constant-naming
+trigger: "When declaring a constant"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: MakerParsDev/android-multi-app-framework
+---
+
+# Android Multi App Framework Instinct Constant Naming
+
+## Action
+
+Name the constant using SCREAMING_SNAKE_CASE
+
+## Evidence
+
+- Pattern in namingConventions.constants: SCREAMING_SNAKE_CASE
+
+---
+id: android-multi-app-framework-instinct-import-style
+trigger: "When importing modules in Python files"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: MakerParsDev/android-multi-app-framework
+---
+
+# Android Multi App Framework Instinct Import Style
+
+## Action
+
+Use relative imports
+
+## Evidence
+
+- Pattern in importStyle: relative
+
+---
+id: android-multi-app-framework-instinct-export-style
+trigger: "When exporting functions or classes from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: MakerParsDev/android-multi-app-framework
+---
+
+# Android Multi App Framework Instinct Export Style
+
+## Action
+
+Use named exports
+
+## Evidence
+
+- Pattern in exportStyle: named
+
+---
+id: android-multi-app-framework-instinct-test-file-location
+trigger: "When adding or updating test files"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: MakerParsDev/android-multi-app-framework
+---
+
+# Android Multi App Framework Instinct Test File Location
+
+## Action
+
+Place test files in a separate location (e.g., scripts/ci/ for CI-related tests)
+
+## Evidence
+
+- architecture.folderStructure.testLocation: separate
+- Pattern in files: scripts/ci/*_test.py
+
+---
+id: android-multi-app-framework-instinct-test-file-naming
+trigger: "When creating a test script for CI workflows"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: MakerParsDev/android-multi-app-framework
+---
+
+# Android Multi App Framework Instinct Test File Naming
+
+## Action
+
+Name the test file with a *_test.py or *_test.sh suffix
+
+## Evidence
+
+- Pattern in files: scripts/ci/*_test.py
+- Pattern in files: scripts/ci/*_test.sh
+
+---
+id: android-multi-app-framework-instinct-test-coverage
+trigger: "When modifying or adding a CI workflow or supporting script"
+confidence: 0.85
+domain: testing
+source: repo-analysis
+source_repo: MakerParsDev/android-multi-app-framework
+---
+
+# Android Multi App Framework Instinct Test Coverage
+
+## Action
+
+Ensure there is a corresponding test script covering the new or changed logic
+
+## Evidence
+
+- Workflow: test-enhancement-for-ci-workflow
+- Commit sequence: Ensure tests cover new or changed workflow logic
+
+---
+id: android-multi-app-framework-instinct-git-commit-format
+trigger: "When writing a commit message"
+confidence: 0.9
+domain: git
+source: repo-analysis
+source_repo: MakerParsDev/android-multi-app-framework
+---
+
+# Android Multi App Framework Instinct Git Commit Format
+
+## Action
+
+Use the conventional commit format with a prefix (e.g., ci: or docs:) and a message of ~45 characters
+
+## Evidence
+
+- Pattern in commits.type: conventional
+- Pattern in commits.prefixes: [ci, docs]
+- Pattern in commits.averageLength: 45
+- Examples: docs: design professional full-speed Android CI
+
+---
+id: android-multi-app-framework-instinct-add-or-update-ci-workflow
+trigger: "When introducing or modifying a CI workflow for Android builds, tests, or security"
+confidence: 0.95
+domain: workflow
+source: repo-analysis
+source_repo: MakerParsDev/android-multi-app-framework
+---
+
+# Android Multi App Framework Instinct Add Or Update Ci Workflow
+
+## Action
+
+Edit or create a workflow YAML file in .github/workflows/, update/add supporting scripts in scripts/ci/, update/add corresponding test scripts, and optionally update documentation
+
+## Evidence
+
+- Workflow: add-or-update-ci-workflow
+- Files: .github/workflows/*.yml, scripts/ci/*.py, scripts/ci/*.sh, scripts/ci/*_test.py, scripts/ci/*_test.sh
+
+---
+id: android-multi-app-framework-instinct-document-or-plan-ci-workflow
+trigger: "When proposing, designing, or documenting a new CI workflow or improvement"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: MakerParsDev/android-multi-app-framework
+---
+
+# Android Multi App Framework Instinct Document Or Plan Ci Workflow
+
+## Action
+
+Create or update a plan/spec document in docs/superpowers/plans/ or docs/superpowers/specs/, and optionally update .github/workflows/README.md
+
+## Evidence
+
+- Workflow: document-or-plan-ci-workflow
+- Files: docs/superpowers/plans/*.md, docs/superpowers/specs/*.md, .github/workflows/README.md
+
+---
+id: android-multi-app-framework-instinct-test-enhancement-for-ci-workflow
+trigger: "When a CI workflow or supporting script is added or changed"
+confidence: 0.85
+domain: workflow
+source: repo-analysis
+source_repo: MakerParsDev/android-multi-app-framework
+---
+
+# Android Multi App Framework Instinct Test Enhancement For Ci Workflow
+
+## Action
+
+Edit or create test scripts in scripts/ci/ (e.g., *_test.py, *_test.sh) to verify the new or modified logic
+
+## Evidence
+
+- Workflow: test-enhancement-for-ci-workflow
+- Files: scripts/ci/*_test.py, scripts/ci/*_test.sh
+
