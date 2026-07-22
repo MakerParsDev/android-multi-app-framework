@@ -158,6 +158,22 @@ def test_verify_env_contract_uses_fixed_script() -> None:
     assert 'bash "scripts/ci/verify_env_contract.sh"' in verify_env_run
 
 
+def test_baseline_profile_aggregate_uses_app_token_without_job_write_permissions() -> None:
+    workflow = load_yaml(ROOT / ".github/workflows/baseline-profiles.yml")
+    aggregate = workflow["jobs"]["aggregate"]
+    assert aggregate["permissions"] == {"contents": "read"}
+    assert "environment" not in aggregate
+    token_step = next(
+        step for step in aggregate["steps"] if step.get("id") == "app-token"
+    )
+    assert token_step["with"]["permission-contents"] == "write"
+    assert token_step["with"]["permission-pull-requests"] == "write"
+    checkout = next(
+        step for step in aggregate["steps"] if step.get("name") == "Checkout main"
+    )
+    assert checkout["with"]["persist-credentials"] is False
+
+
 def test_performance_contract_inherits_read_only_permissions_without_secrets() -> None:
     workflow = load_yaml(ROOT / ".github/workflows/ci-pr.yml")
     job = workflow["jobs"]["performance-contract"]
@@ -179,6 +195,7 @@ def main() -> int:
         test_resolve_flavors_uses_env_for_input,
         test_verify_env_contract_uses_fixed_script,
         test_performance_contract_inherits_read_only_permissions_without_secrets,
+        test_baseline_profile_aggregate_uses_app_token_without_job_write_permissions,
     ]
     for test in tests:
         test()

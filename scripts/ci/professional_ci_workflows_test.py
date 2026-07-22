@@ -130,6 +130,27 @@ def test_codeql_uses_manual_kotlin_build_and_cleans_placeholder() -> None:
     assert analyze["uses"] == f"github/codeql-action/analyze@{CODEQL_SHA}"
 
 
+def test_baseline_profiles_workflow_is_full_speed_and_safe() -> None:
+    workflow = load(".github/workflows/baseline-profiles.yml")
+    event = workflow.get("on", workflow.get(True))
+    assert "schedule" in event
+    assert "workflow_dispatch" in event
+    assert workflow["permissions"] == {"contents": "read"}
+    matrix_job = workflow["jobs"]["generate"]
+    assert "max-parallel" not in matrix_job["strategy"]
+    assert matrix_job["strategy"]["fail-fast"] is False
+    assert matrix_job["permissions"] == {"contents": "read"}
+    assert matrix_job["needs"] == ["resolve"]
+    aggregate = workflow["jobs"]["aggregate"]
+    assert aggregate["permissions"] == {"contents": "read"}
+    assert aggregate["needs"] == ["resolve", "generate"]
+    runs = "\n".join(step.get("run", "") for step in matrix_job["steps"])
+    assert "performance_profile_policy.py task" in runs
+    assert "generate_ci_google_services.py --clean" in runs
+    assert "swiftshader_indirect" in runs
+    assert "setup-performance-device-sdk.sh" in runs
+
+
 def test_managed_device_is_pinned_and_scheduled() -> None:
     workflow = load(".github/workflows/device-smoke.yml")
     event = workflow.get("on", workflow.get(True))
@@ -316,6 +337,7 @@ def main() -> int:
         test_security_runs_dependency_review_only_for_pull_requests,
         test_dependency_submission_is_trusted_and_job_scoped,
         test_codeql_uses_manual_kotlin_build_and_cleans_placeholder,
+        test_baseline_profiles_workflow_is_full_speed_and_safe,
         test_managed_device_is_pinned_and_scheduled,
         test_ci_smoke_build_disables_remote_firebase_startup,
         test_release_is_manual_protected_and_attested,
