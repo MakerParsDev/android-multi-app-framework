@@ -279,7 +279,9 @@ def test_release_is_manual_protected_and_attested() -> None:
     release_script = (ROOT / "scripts/ci/build_attested_release.sh").read_text(encoding="utf-8")
     assert "restore_firebase_configs.sh" in release_script
     assert "verify_google_signin_config.py" in release_script
-    assert "bundle${RELEASE_CAPITALIZED}Release" in release_script
+    assert "performance_profile_policy.py validate-source" in release_script
+    assert "validate${RELEASE_CAPITALIZED}ReleaseBaselineProfileInBundle" in release_script
+    assert "bundle${RELEASE_CAPITALIZED}Release" not in release_script
     assert "publish" not in release_script.lower()
     attest = named_step(job, "Attest signed AAB")
     assert attest["uses"] == f"actions/attest@{ATTEST_SHA}"
@@ -334,6 +336,9 @@ def test_play_internal_builds_attests_and_publishes_one_exact_aab() -> None:
     assert "build_play_internal_release.sh" in build["run"]
     play_script = (ROOT / "scripts/ci/build_play_internal_release.sh").read_text(encoding="utf-8")
     assert "restore_firebase_configs.sh" in play_script
+    assert "performance_profile_policy.py validate-source" in play_script
+    assert "validate${RELEASE_CAPITALIZED}ReleaseBaselineProfileInBundle" in play_script
+    assert "bundle${RELEASE_CAPITALIZED}Release" not in play_script
     attest = named_step(job, "Attest exact signed AAB")
     assert attest["uses"] == f"actions/attest@{ATTEST_SHA}"
     publish = named_step(job, "Publish exact attested AAB to Play internal")
