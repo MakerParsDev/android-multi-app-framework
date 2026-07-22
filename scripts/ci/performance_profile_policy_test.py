@@ -72,6 +72,45 @@ class PerformanceProfilePolicyTest(unittest.TestCase):
                 )
             self.assertEqual([], validate_aab(aab))
 
+    def test_profile_pair_rejects_comment_only_duplicate_and_malformed_rules(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            directory = expected_profile_dir(root, "kuran_kerim")
+            directory.mkdir(parents=True)
+            baseline = directory / "baseline-prof.txt"
+            startup = directory / "startup-prof.txt"
+
+            baseline.write_text("# generated only\n", encoding="utf-8")
+            startup.write_text("# generated only\n", encoding="utf-8")
+            errors = validate_profile_pair(root, "kuran_kerim", {})
+            self.assertTrue(any("no profile rules" in error for error in errors), errors)
+
+            baseline.write_text("Lcom/parsfilo/A;\nLcom/parsfilo/A;\n", encoding="utf-8")
+            startup.write_text("Lcom/parsfilo/A;\n", encoding="utf-8")
+            errors = validate_profile_pair(root, "kuran_kerim", {})
+            self.assertTrue(any("duplicate profile rule" in error for error in errors), errors)
+
+            baseline.write_text("not-a-profile-rule\nLcom/parsfilo/A;\n", encoding="utf-8")
+            startup.write_text("Lcom/parsfilo/A;\n", encoding="utf-8")
+            errors = validate_profile_pair(root, "kuran_kerim", {})
+            self.assertTrue(any("malformed profile rule" in error for error in errors), errors)
+
+    def test_aab_rejects_empty_compiled_profile_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            aab = Path(tmp) / "app.aab"
+            with zipfile.ZipFile(aab, "w") as archive:
+                archive.writestr(
+                    "BUNDLE-METADATA/com.android.tools.build.profiles/baseline.prof",
+                    b"",
+                )
+                archive.writestr(
+                    "BUNDLE-METADATA/com.android.tools.build.profiles/baseline.profm",
+                    b"metadata",
+                )
+            errors = validate_aab(aab)
+            self.assertEqual(1, len(errors), errors)
+            self.assertIn("empty compiled profile metadata", errors[0])
+
 
 class PerformanceProfileStructureTest(unittest.TestCase):
     def test_macrobenchmarks_define_required_metrics(self) -> None:
@@ -89,7 +128,8 @@ class PerformanceProfileStructureTest(unittest.TestCase):
         self.assertIn("CompilationMode.None", startup)
         self.assertIn("BaselineProfileMode.Require", startup)
         self.assertIn("FrameTimingMetric", frames)
-        self.assertIn("CriticalUserJourneys.run", frames)
+        self.assertIn("CriticalUserJourneys.runFromRoot", frames)
+        self.assertNotIn("CriticalUserJourneys.run(this, config)", frames)
 
     def test_generator_separates_startup_and_other_journeys(self) -> None:
         source = (
@@ -198,6 +238,28 @@ class PerformanceProfileStructureTest(unittest.TestCase):
             "QIBLA_READY", "COUNTER_ROOT", "COUNTER_VALUE", "COUNTER_INCREMENT",
         ):
             self.assertIn(f"const val {tag}", source)
+
+    def test_performance_tags_mark_loaded_surfaces(self) -> None:
+        content = (
+            ROOT / "feature/content/src/main/java/com/parsfilo/contentapp/feature/content/ui/ContentScreen.kt"
+        ).read_text(encoding="utf-8")
+        self.assertGreaterEqual(content.count('.testTag("content_list")'), 2)
+
+        prayer = (
+            ROOT / "feature/prayertimes/src/main/java/com/parsfilo/contentapp/feature/prayertimes/ui/PrayerTimesScreen.kt"
+        ).read_text(encoding="utf-8")
+        self.assertIn("if (!uiState.isRefreshing)", prayer)
+        self.assertIn('.testTag("prayer_times_ready")', prayer)
+
+        qibla = (
+            ROOT / "feature/qibla/src/main/java/com/parsfilo/contentapp/feature/qibla/QiblaScreen.kt"
+        ).read_text(encoding="utf-8")
+        self.assertIn("if (!uiState.isLocationRefreshing)", qibla)
+        self.assertIn('.testTag("qibla_ready")', qibla)
+
+    def test_app_gradle_reuses_python_provider(self) -> None:
+        source = (ROOT / "app/build.gradle.kts").read_text(encoding="utf-8")
+        self.assertIn("pythonExecutable.set(appPythonExecutable)", source)
 
     def test_required_cross_process_tags_are_present(self) -> None:
         required = {

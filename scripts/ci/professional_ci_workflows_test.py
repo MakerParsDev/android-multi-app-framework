@@ -141,11 +141,17 @@ def test_physical_performance_is_manual_and_serial() -> None:
     assert "environment" not in job
     runs = "\n".join(step.get("run", "") for step in job["steps"])
     assert "run_physical_performance.sh" in runs
+    assert "ro.kernel.qemu" in runs
+    assert "emulator-*" in runs
     assert "DOPPLER_TOKEN" not in str(job)
     script = (ROOT / "scripts/ci/run_physical_performance.sh").read_text(encoding="utf-8")
     assert "trap cleanup EXIT" in script
     assert "exactly one authorized Android device" in script
     assert "benchmarkIterations" in script
+    assert "window_animation_scale" in script
+    assert "transition_animation_scale" in script
+    assert "animator_duration_scale" in script
+    assert 'cd "$repo_root"' in script
     assert "--max-workers=1" in script
     actionlint = load(".github/actionlint.yaml")
     assert "android-performance" in actionlint["self-hosted-runner"]["labels"]

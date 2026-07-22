@@ -469,18 +469,7 @@ val validateSystemReceiverManifests =
     tasks.register<ValidateSystemReceiverManifestsTask>("validateSystemReceiverManifests") {
         group = "verification"
         description = "Validate merged system reschedule receivers for both affected flavors"
-        pythonExecutable.set(
-            rootProject.providers
-                .gradleProperty("pythonExecutable")
-                .orElse(rootProject.providers.environmentVariable("PYTHON"))
-                .orElse(
-                    if (System.getProperty("os.name").startsWith("Windows", ignoreCase = true)) {
-                        "python"
-                    } else {
-                        "python3"
-                    },
-                ),
-        )
+        pythonExecutable.set(appPythonExecutable)
         validatorScript.set(
             rootProject.layout.projectDirectory.file("scripts/ci/validate_system_receiver_manifests.py"),
         )

@@ -13,15 +13,24 @@ trap cleanup EXIT
 cat > "$tmp/adb" <<'ADB'
 #!/usr/bin/env bash
 set -euo pipefail
-case "${1:-}" in
+args=("$@")
+if [[ "${args[0]:-}" == "-s" ]]; then
+  serial="${args[1]:-}"
+  args=("${args[@]:2}")
+else
+  serial="${MOCK_SERIAL:-physical-serial}"
+fi
+case "${args[0]:-}" in
   devices)
-    printf 'List of devices attached\nphysical-serial\tdevice product:test model:Pixel_Test device:test transport_id:1\n'
+    printf 'List of devices attached\n%s\tdevice product:test model:Pixel_Test device:test transport_id:1\n' "${MOCK_SERIAL:-physical-serial}"
     ;;
   wait-for-device)
     ;;
   shell)
-    shift
-    case "$*" in
+    args=("${args[@]:1}")
+    case "${args[*]}" in
+      'getprop ro.kernel.qemu') echo "${MOCK_QEMU:-0}" ;;
+      'getprop ro.hardware') echo "${MOCK_HARDWARE:-tensor}" ;;
       'getprop ro.product.model') echo 'Pixel Test' ;;
       'getprop ro.product.manufacturer') echo 'Google' ;;
       'getprop ro.build.fingerprint') echo 'test/fingerprint' ;;
@@ -35,7 +44,7 @@ case "${1:-}" in
     esac
     ;;
   logcat)
-    if [[ "${2:-}" == "-d" ]]; then
+    if [[ "${args[1]:-}" == "-d" ]]; then
       echo 'mock logcat'
     fi
     ;;
@@ -64,6 +73,17 @@ grep -Fq 'benchmarkIterations=5' "$tmp/gradle.log"
 grep -Fq 'StartupBenchmarks' "$tmp/gradle.log"
 grep -Fq -- '--max-workers=1' "$tmp/gradle.log"
 test -s "$out/device-metadata.txt"
+for setting in window_animation_scale transition_animation_scale animator_duration_scale; do
+  grep -Fq "$setting=0.0" "$out/device-metadata.txt"
+done
 test -s "$out/kuran_kerim/logcat.txt"
+test ! -e "$repo_root/app/src/kuran_kerim/google-services.json"
+
+if MOCK_QEMU=1 GRADLE_LOG="$tmp/emulator-gradle.log" ADB="$tmp/adb" GRADLEW="$tmp/gradlew" \
+  bash "$repo_root/scripts/ci/run_physical_performance.sh" kuran_kerim startup 5 "$tmp/emulator-out"; then
+  echo 'ERROR: emulator target was accepted as physical evidence' >&2
+  exit 1
+fi
+test ! -e "$tmp/emulator-gradle.log"
 test ! -e "$repo_root/app/src/kuran_kerim/google-services.json"
 echo 'Physical performance harness contract passed.'

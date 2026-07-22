@@ -1602,6 +1602,9 @@ Create `scripts/ci/run_physical_performance.sh`:
 #!/usr/bin/env bash
 set -euo pipefail
 
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$repo_root"
+
 selection="${1:-all}"
 suite="${2:-all}"
 iterations="${3:-10}"

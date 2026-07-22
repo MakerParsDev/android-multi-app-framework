@@ -183,6 +183,12 @@ fun PrayerTimesScreen(
     nativeAdContent: (@Composable () -> Unit)? = null,
 ) {
     val showAlarmSheetState = remember { mutableStateOf(false) }
+    val performanceReadyModifier =
+        if (!uiState.isRefreshing) {
+            Modifier.testTag("prayer_times_ready")
+        } else {
+            Modifier
+        }
 
     PrayerTimesBackground {
         Scaffold(
@@ -195,8 +201,7 @@ fun PrayerTimesScreen(
             PullToRefreshBox(
                 isRefreshing = uiState.isRefreshing,
                 onRefresh = onRefresh,
-                modifier = Modifier
-                    .testTag("prayer_times_ready")
+                modifier = performanceReadyModifier
                     .fillMaxSize()
                     .padding(innerPadding),
             ) {

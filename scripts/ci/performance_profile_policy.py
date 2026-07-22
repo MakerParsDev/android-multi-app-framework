@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 import zipfile
 from pathlib import Path
@@ -51,12 +52,35 @@ def load_packages(repo: Path) -> dict[str, str]:
     return packages
 
 
+PROFILE_RULE = re.compile(r"^[HSP]*\[*L[^;\s]+;(?:->\S+)?$")
+
+
+def parse_profile_rules(path: Path) -> tuple[list[str], list[str]]:
+    rules: list[str] = []
+    errors: list[str] = []
+    seen: set[str] = set()
+    for line_number, raw in enumerate(
+        path.read_text(encoding="utf-8").splitlines(), start=1
+    ):
+        rule = raw.strip()
+        if not rule or rule.startswith("#"):
+            continue
+        if not PROFILE_RULE.fullmatch(rule):
+            errors.append(f"malformed profile rule at {path}:{line_number}: {rule}")
+            continue
+        if rule in seen:
+            errors.append(f"duplicate profile rule at {path}:{line_number}: {rule}")
+            continue
+        seen.add(rule)
+        rules.append(rule)
+    if not rules:
+        errors.append(f"no profile rules in {path}")
+    return rules, errors
+
+
 def normalized_rules(path: Path) -> set[str]:
-    return {
-        line.strip()
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if line.strip() and not line.lstrip().startswith("#")
-    }
+    rules, _ = parse_profile_rules(path)
+    return set(rules)
 
 
 def validate_profile_pair(
@@ -74,8 +98,11 @@ def validate_profile_pair(
     if errors:
         return errors
 
-    baseline_rules = normalized_rules(baseline)
-    startup_rules = normalized_rules(startup)
+    baseline_list, baseline_errors = parse_profile_rules(baseline)
+    startup_list, startup_errors = parse_profile_rules(startup)
+    errors.extend(f"[{flavor}] {error}" for error in baseline_errors + startup_errors)
+    baseline_rules = set(baseline_list)
+    startup_rules = set(startup_list)
     if not startup_rules.issubset(baseline_rules):
         errors.append(f"[{flavor}] startup profile is not a subset of baseline profile")
 
@@ -97,13 +124,19 @@ def validate_aab(aab: Path) -> list[str]:
         return [f"AAB does not exist: {aab}"]
     try:
         with zipfile.ZipFile(aab) as archive:
-            names = set(archive.namelist())
+            entries = {entry.filename: entry for entry in archive.infolist()}
     except zipfile.BadZipFile:
         return [f"AAB is not a readable ZIP archive: {aab}"]
-    return [
+    errors = [
         f"AAB missing compiled profile metadata: {name}"
-        for name in sorted(required - names)
+        for name in sorted(required - entries.keys())
     ]
+    errors.extend(
+        f"AAB has empty compiled profile metadata: {name}"
+        for name in sorted(required & entries.keys())
+        if entries[name].file_size == 0
+    )
+    return errors
 
 
 def parse_args() -> argparse.Namespace:

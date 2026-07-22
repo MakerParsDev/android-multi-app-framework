@@ -60,12 +60,26 @@ jobs:
         run: |
           set -euo pipefail
           command -v adb
-          count="$(adb devices | awk 'NR > 1 && $2 == "device" { count++ } END { print count + 0 }')"
-          [[ "$count" -eq 1 ]] || {
-            echo "::error::Physical performance runner requires exactly one authorized Android device; found $count"
+          mapfile -t devices < <(adb devices | awk 'NR > 1 && $2 == "device" { print $1 }')
+          [[ "${#devices[@]}" -eq 1 ]] || {
+            echo "::error::Physical performance runner requires exactly one authorized Android device; found ${#devices[@]}"
             adb devices -l
             exit 1
           }
+          serial="${devices[0]}"
+          case "$serial" in
+            emulator-*|localhost:*|127.0.0.1:*)
+              echo "::error::Emulator serial cannot produce physical performance evidence: $serial"
+              exit 1
+              ;;
+          esac
+          qemu="$(adb -s "$serial" shell getprop ro.kernel.qemu | tr -d '\r')"
+          hardware="$(adb -s "$serial" shell getprop ro.hardware | tr -d '\r')"
+          if [[ "$qemu" == "1" || "$hardware" =~ ^(ranchu|goldfish|cuttlefish|vbox86)$ ]]; then
+            echo "::error::Emulated Android target cannot produce physical performance evidence: serial=$serial hardware=$hardware"
+            adb devices -l
+            exit 1
+          fi
 
       - name: Run serial physical benchmarks
         env:

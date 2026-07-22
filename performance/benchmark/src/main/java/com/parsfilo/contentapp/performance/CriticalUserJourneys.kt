@@ -10,6 +10,10 @@ internal object CriticalUserJourneys {
 
     fun run(scope: MacrobenchmarkScope, config: PerformanceConfig) {
         startup(scope, config)
+        runFromRoot(scope, config)
+    }
+
+    fun runFromRoot(scope: MacrobenchmarkScope, config: PerformanceConfig) {
         when (config.family) {
             PerformanceFamily.AUDIO_CONTENT -> audioContent(scope, config)
             PerformanceFamily.QURAN -> quran(scope, config)

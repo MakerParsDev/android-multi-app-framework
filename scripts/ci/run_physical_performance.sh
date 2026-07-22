@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$repo_root"
+
 selection="${1:-all}"
 suite="${2:-all}"
 iterations_raw="${3:-10}"
@@ -81,32 +84,44 @@ if [[ "${#devices[@]}" -ne 1 ]]; then
   exit 1
 fi
 export ANDROID_SERIAL="${devices[0]}"
+case "$ANDROID_SERIAL" in
+  emulator-*|localhost:*|127.0.0.1:*)
+    echo "ERROR: emulator serial is not valid physical performance evidence: $ANDROID_SERIAL" >&2
+    exit 1
+    ;;
+esac
+qemu="$("$adb_bin" -s "$ANDROID_SERIAL" shell getprop ro.kernel.qemu | tr -d '\r')"
+hardware="$("$adb_bin" -s "$ANDROID_SERIAL" shell getprop ro.hardware | tr -d '\r')"
+if [[ "$qemu" == "1" || "$hardware" =~ ^(ranchu|goldfish|cuttlefish|vbox86)$ ]]; then
+  echo "ERROR: emulated Android target is not valid physical performance evidence: serial=$ANDROID_SERIAL hardware=$hardware" >&2
+  exit 1
+fi
 
 mkdir -p "$out"
-"$adb_bin" wait-for-device
-"$adb_bin" shell input keyevent KEYCODE_WAKEUP >/dev/null 2>&1 || true
-"$adb_bin" shell wm dismiss-keyguard >/dev/null 2>&1 || true
+"$adb_bin" -s "$ANDROID_SERIAL" wait-for-device
+"$adb_bin" -s "$ANDROID_SERIAL" shell input keyevent KEYCODE_WAKEUP >/dev/null 2>&1 || true
+"$adb_bin" -s "$ANDROID_SERIAL" shell wm dismiss-keyguard >/dev/null 2>&1 || true
 
 {
   echo "serial=$ANDROID_SERIAL"
-  echo "model=$("$adb_bin" shell getprop ro.product.model | tr -d '\r')"
-  echo "manufacturer=$("$adb_bin" shell getprop ro.product.manufacturer | tr -d '\r')"
-  echo "fingerprint=$("$adb_bin" shell getprop ro.build.fingerprint | tr -d '\r')"
-  echo "api=$("$adb_bin" shell getprop ro.build.version.sdk | tr -d '\r')"
-  echo "abi=$("$adb_bin" shell getprop ro.product.cpu.abi | tr -d '\r')"
+  echo "model=$("$adb_bin" -s "$ANDROID_SERIAL" shell getprop ro.product.model | tr -d '\r')"
+  echo "manufacturer=$("$adb_bin" -s "$ANDROID_SERIAL" shell getprop ro.product.manufacturer | tr -d '\r')"
+  echo "fingerprint=$("$adb_bin" -s "$ANDROID_SERIAL" shell getprop ro.build.fingerprint | tr -d '\r')"
+  echo "api=$("$adb_bin" -s "$ANDROID_SERIAL" shell getprop ro.build.version.sdk | tr -d '\r')"
+  echo "abi=$("$adb_bin" -s "$ANDROID_SERIAL" shell getprop ro.product.cpu.abi | tr -d '\r')"
   echo "iterations=$iterations"
   echo "selection=$selection"
   echo "suite=$suite"
   echo '--- battery ---'
-  "$adb_bin" shell dumpsys battery
+  "$adb_bin" -s "$ANDROID_SERIAL" shell dumpsys battery
   echo '--- thermal ---'
-  "$adb_bin" shell dumpsys thermalservice
+  "$adb_bin" -s "$ANDROID_SERIAL" shell dumpsys thermalservice
   echo '--- storage ---'
-  "$adb_bin" shell df /data
+  "$adb_bin" -s "$ANDROID_SERIAL" shell df /data
   echo '--- animation scales ---'
   for setting in window_animation_scale transition_animation_scale animator_duration_scale; do
     printf '%s=' "$setting"
-    "$adb_bin" shell settings get global "$setting" | tr -d '\r'
+    "$adb_bin" -s "$ANDROID_SERIAL" shell settings get global "$setting" | tr -d '\r'
   done
 } > "$out/device-metadata.txt"
 
@@ -120,7 +135,7 @@ for flavor in "${flavors[@]}"; do
     performance/benchmark/build/reports/androidTests/connected
 
   python3 scripts/ci/generate_ci_google_services.py --flavors "$flavor"
-  "$adb_bin" logcat -c || true
+  "$adb_bin" -s "$ANDROID_SERIAL" logcat -c || true
 
   args=(
     "-PciSmoke=true"
@@ -144,7 +159,7 @@ for flavor in "${flavors[@]}"; do
   cp -R performance/benchmark/build/outputs/connected_android_test_additional_output/. "$flavor_out/" 2>/dev/null || true
   cp -R performance/benchmark/build/outputs/androidTest-results/. "$flavor_out/androidTest-results/" 2>/dev/null || true
   cp -R performance/benchmark/build/reports/androidTests/. "$flavor_out/androidTest-reports/" 2>/dev/null || true
-  "$adb_bin" logcat -d -v threadtime > "$flavor_out/logcat.txt" || true
+  "$adb_bin" -s "$ANDROID_SERIAL" logcat -d -v threadtime > "$flavor_out/logcat.txt" || true
 
   if [[ "$gradle_rc" -ne 0 ]]; then
     echo "ERROR: physical performance benchmark failed for $flavor" >&2

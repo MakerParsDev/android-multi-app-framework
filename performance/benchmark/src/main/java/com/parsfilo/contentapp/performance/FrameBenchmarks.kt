@@ -27,7 +27,7 @@ class FrameBenchmarks {
                 waitForTag(config, PerformanceTags.APP_ROOT)
             },
             measureBlock = {
-                CriticalUserJourneys.run(this, config)
+                CriticalUserJourneys.runFromRoot(this, config)
             },
         )
     }

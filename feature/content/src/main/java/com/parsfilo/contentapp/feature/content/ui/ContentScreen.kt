@@ -223,6 +223,7 @@ fun ContentScreen(
                     // Verse Cards + Native Ads (her 5 ayetten sonra)
                     LazyColumn(
                         modifier = Modifier
+                            .testTag("content_list")
                             .weight(1f)
                             .fillMaxWidth(),
                         contentPadding = PaddingValues(horizontal = dimens.space6, vertical = dimens.space2)

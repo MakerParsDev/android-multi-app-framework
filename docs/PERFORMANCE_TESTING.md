@@ -49,8 +49,10 @@ android-performance
 ```
 
 It must expose exactly one authorized, non-personal Android device through ADB.
-The runner and device are dedicated to benchmark work. Do not sign into personal
-accounts, restore personal backups, or store user data on the device.
+The harness rejects emulator serials, `ro.kernel.qemu=1`, and known virtual
+hardware identifiers before collecting evidence. The runner and device are
+dedicated to benchmark work. Do not sign into personal accounts, restore
+personal backups, or store user data on the device.
 
 Keep the measurement environment stable:
 

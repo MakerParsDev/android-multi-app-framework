@@ -230,9 +230,11 @@ Additional journey:
 
 - open the primary content;
 - expose the audio control;
-- start playback using local packaged content;
-- verify the player enters a non-idle state;
-- stop or pause before cleanup.
+- exercise the play/pause control using local packaged content;
+- return only after the UI reaches an idle state.
+
+Functional playback-state assertions remain in device/instrumentation tests so
+profile collection does not depend on media timing or external audio state.
 
 #### Qur'an application
 
@@ -287,9 +289,10 @@ Additional journey:
 
 - open the counter;
 - increment a bounded number of times;
-- verify the displayed count;
-- recreate or relaunch once to exercise persisted state;
-- restore the original state after measurement.
+- verify the displayed count after each bounded interaction.
+
+Persistence and process-recreation behavior remain in dedicated device tests;
+Macrobenchmark avoids mutating durable counter state between timing iterations.
 
 ## 7. Stable Test Interface
 
@@ -515,14 +518,13 @@ Inputs:
 
 - flavor or `all`;
 - benchmark suite (`startup`, `frames`, or `all`);
-- comparison baseline reference;
 - diagnostic iteration override within a bounded range.
 
 The workflow:
 
 - verifies the physical runner contract;
 - runs each selected flavor serially on the attached device to avoid device contention;
-- captures benchmark JSON, traces, logcat, device metadata, and summary Markdown;
+- captures benchmark JSON, traces, logcat, and device metadata;
 - uploads artifacts for 30 days;
 - does not use release signing or Play publication credentials.
 
@@ -585,9 +587,11 @@ Each physical benchmark job stores:
 - trace files;
 - logcat;
 - device metadata;
-- commit and flavor metadata;
-- Markdown summary;
-- comparison result when a baseline is supplied.
+- commit and flavor metadata.
+
+The initial observation phase intentionally retains raw evidence only. Automated
+baseline comparisons and generated summaries are introduced later as a reviewed
+threshold-policy change after three stable physical runs per flavor.
 
 Artifacts must not contain:
 
