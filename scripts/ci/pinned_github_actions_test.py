@@ -82,6 +82,20 @@ runs:
     assert "must use approved SHA" in findings[0].message
 
 
+def test_performance_automation_actions_are_approved() -> None:
+    manifest = json.loads(
+        (ROOT / "config/pinned-github-actions.json").read_text(encoding="utf-8")
+    )
+    assert manifest["actions/download-artifact"] == {
+        "sha": "3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c",
+        "version": "v8.0.1",
+    }
+    assert manifest["actions/create-github-app-token"] == {
+        "sha": "bcd2ba49218906704ab6c1aa796996da409d3eb1",
+        "version": "v3.2.0",
+    }
+
+
 def test_repository_workflows_use_only_manifest_pins() -> None:
     assert validate_pinned_actions(ROOT) == []
 
@@ -92,6 +106,7 @@ def main() -> int:
         test_unknown_action_fails,
         test_wrong_sha_fails,
         test_composite_action_pin_is_checked_against_manifest,
+        test_performance_automation_actions_are_approved,
         test_repository_workflows_use_only_manifest_pins,
     ]
     for test in tests:

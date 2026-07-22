@@ -41,6 +41,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -174,6 +175,7 @@ fun PrayerDetailScreen(
                 // Verse Cards + Native Ads (her 5 ayetten sonra)
                 LazyColumn(
                     modifier = Modifier
+                        .testTag("content_detail")
                         .weight(1f)
                         .fillMaxWidth(),
                     contentPadding = PaddingValues(horizontal = dimens.space6, vertical = dimens.space2)

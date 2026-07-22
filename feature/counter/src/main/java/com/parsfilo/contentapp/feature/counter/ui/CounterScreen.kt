@@ -41,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -198,7 +199,10 @@ fun CounterScreen(
     }
 
     Scaffold(
-        modifier = Modifier.fillMaxSize(),
+        modifier =
+            Modifier
+                .testTag("counter_root")
+                .fillMaxSize(),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         contentWindowInsets = WindowInsets.safeDrawing.only(
             WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
@@ -281,7 +285,10 @@ fun CounterScreen(
                         latinText = selectedZikir?.latinText.orEmpty(),
                         currentCount = uiState.currentCount,
                         onTap = onCounterTapped,
-                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                        modifier =
+                            Modifier
+                                .testTag("counter_increment")
+                                .align(Alignment.CenterHorizontally),
                         contentDescription = pluralStringResource(
                             R.plurals.counter_content_description_fab,
                             uiState.currentCount,
@@ -390,6 +397,7 @@ private fun CurrentCountSection(
         ) {
             Text(
                 text = currentCount.toString(),
+                modifier = Modifier.testTag("counter_value"),
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
                 fontSize = 48.sp,

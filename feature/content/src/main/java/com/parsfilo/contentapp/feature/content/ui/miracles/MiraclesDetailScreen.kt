@@ -37,6 +37,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -143,6 +144,7 @@ fun MiraclesDetailScreen(
 
                 LazyColumn(
                     modifier = Modifier
+                        .testTag("miracles_detail")
                         .weight(1f)
                         .fillMaxWidth(),
                     contentPadding = PaddingValues(horizontal = dimens.space12, vertical = dimens.space12)

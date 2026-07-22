@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -146,6 +147,7 @@ fun ContentScreen(
             val showInlineFeedAds = uiState.shouldShowAds && shouldPreferInlineFeedAds(verses.size)
             Column(
                 modifier = Modifier
+                    .testTag("content_detail")
                     .fillMaxSize()
                     .background(colorScheme.background)
                     .animateContentSize(
@@ -181,6 +183,7 @@ fun ContentScreen(
                     // Placeholder for flavors with no content yet
                     Box(
                         modifier = Modifier
+                            .testTag("content_list")
                             .weight(1f)
                             .fillMaxWidth(),
                         contentAlignment = Alignment.Center
@@ -220,6 +223,7 @@ fun ContentScreen(
                     // Verse Cards + Native Ads (her 5 ayetten sonra)
                     LazyColumn(
                         modifier = Modifier
+                            .testTag("content_list")
                             .weight(1f)
                             .fillMaxWidth(),
                         contentPadding = PaddingValues(horizontal = dimens.space6, vertical = dimens.space2)
@@ -229,7 +233,13 @@ fun ContentScreen(
                                 VerseItem(
                                     verse = verse,
                                     displayMode = uiState.displayMode,
-                                    fontSize = uiState.fontSize
+                                    fontSize = uiState.fontSize,
+                                    modifier =
+                                        if (index == 0) {
+                                            Modifier.testTag("content_first_item")
+                                        } else {
+                                            Modifier
+                                        },
                                 )
                             }
 

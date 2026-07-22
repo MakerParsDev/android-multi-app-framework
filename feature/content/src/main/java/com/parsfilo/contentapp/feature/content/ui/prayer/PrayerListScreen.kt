@@ -40,6 +40,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -148,6 +149,7 @@ fun PrayerListScreen(
                 // Liste
                 LazyColumn(
                     modifier = Modifier
+                        .testTag("content_list")
                         .weight(1f)
                         .fillMaxWidth(),
                     contentPadding = PaddingValues(start = dimens.space12, top = dimens.space16, end = dimens.space12, bottom = dimens.space8),
@@ -159,6 +161,12 @@ fun PrayerListScreen(
                                 prayer = prayer,
                                 onClick = { onPrayerClick(prayer.sureID) },
                                 showVerseCount = showVerseCount,
+                                modifier =
+                                    if (index == 0) {
+                                        Modifier.testTag("content_first_item")
+                                    } else {
+                                        Modifier
+                                    },
                             )
                         }
 
@@ -312,6 +320,7 @@ fun PrayerListItem(
     prayer: Prayer,
     onClick: () -> Unit,
     showVerseCount: Boolean = true,
+    modifier: Modifier = Modifier,
 ) {
     val dimens = LocalDimens.current
     val colorScheme = MaterialTheme.colorScheme
@@ -323,7 +332,7 @@ fun PrayerListItem(
     }
 
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .background(
                 color = colorScheme.surfaceVariant.copy(alpha = 0.5f),

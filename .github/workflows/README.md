@@ -11,6 +11,8 @@ and must not be re-enabled by copying or renaming them.
 | Dependency Submission | dependency/build changes on `main`, manual | submit resolved Gradle dependency graph | trusted `main` only |
 | CodeQL | human PR, `main`, weekly, manual | Java/Kotlin manual-build analysis | one representative flavor |
 | Device Smoke | nightly, manual | two instrumentation smoke tests on a Gradle Managed Device | one flavor, one ATD |
+| Baseline Profiles | weekly, manual | generate variant-scoped profiles for all 17 flavors and update one automation PR | full-speed managed-device matrix |
+| Physical Performance | manual | serial startup/frame benchmarks on one dedicated Android device | self-hosted `android-performance` runner |
 | Attested Release Artifact | manual | signed AAB, checksum, upload, provenance | protected `production` environment |
 
 Human pull requests and `main` pushes resolve the complete flavor matrix from
@@ -60,3 +62,21 @@ minimum job-level permissions.
 ## Required aggregate check
 
 The `CI Required` job is the single branch-protection context for the complete CI workflow. It succeeds only when policy/security pass and either the full human/main Android path or the lightweight Dependabot path completes with the expected results.
+
+## Android performance automation
+
+`Baseline Profiles` resolves the live app catalog, launches every selected
+flavor without a repository-level `max-parallel` cap, and produces one
+`baseline-prof.txt` / `startup-prof.txt` pair per release source set. A complete
+17-flavor run can update the single `automation/baseline-profiles` pull request
+through a repository-scoped GitHub App. PR aggregation is enabled only when the
+repository variable `PERFORMANCE_AUTOMATION_ENABLED` is exactly `true`; the App
+client ID must be stored in `PERFORMANCE_AUTOMATION_CLIENT_ID` and its private
+key in `PERFORMANCE_AUTOMATION_PRIVATE_KEY`. Without that explicit enable flag,
+scheduled runs still generate and retain all profile artifacts but skip the
+write-capable aggregation job. The matrix has read-only repository permissions
+and receives no production secret.
+
+Managed-device timing is diagnostic. Release performance comparisons remain the
+responsibility of the serial physical-device workflow. See
+`docs/PERFORMANCE_TESTING.md` for the device, measurement, and artifact contract.

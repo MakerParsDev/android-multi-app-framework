@@ -30,6 +30,20 @@ def test_ci_gate_runs_professional_workflow_assertions() -> None:
     assert "professional_ci_workflows_test.py" in step["run"]
 
 
+def test_ci_has_lightweight_performance_contract() -> None:
+    workflow = load(".github/workflows/ci-pr.yml")
+    job = workflow["jobs"]["performance-contract"]
+    assert job["name"] == "Performance Contract"
+    assert job["needs"] == ["workflow-policy", "repository-security"]
+    assert "permissions" not in job
+    assert "secrets" not in job
+    runs = "\n".join(step.get("run", "") for step in job["steps"])
+    assert "performance_profile_policy_test.py" in runs
+    assert ":performance:benchmark:tasks" in runs
+    assert "connectedAndroidTest" not in runs
+    assert "generateBaselineProfile" not in runs
+
+
 def test_ci_runs_quality_and_flavors_in_parallel() -> None:
     jobs = load(".github/workflows/ci-pr.yml")["jobs"]
     assert jobs["android-quality"]["needs"] == ["workflow-policy", "repository-security"]
@@ -116,6 +130,55 @@ def test_codeql_uses_manual_kotlin_build_and_cleans_placeholder() -> None:
     assert analyze["uses"] == f"github/codeql-action/analyze@{CODEQL_SHA}"
 
 
+def test_physical_performance_is_manual_and_serial() -> None:
+    workflow = load(".github/workflows/physical-performance.yml")
+    event = workflow.get("on", workflow.get(True))
+    assert set(event) == {"workflow_dispatch"}
+    job = workflow["jobs"]["benchmark"]
+    assert job["runs-on"] == ["self-hosted", "android-performance"]
+    assert "strategy" not in job
+    assert job["permissions"] == {"contents": "read"}
+    assert "environment" not in job
+    runs = "\n".join(step.get("run", "") for step in job["steps"])
+    assert "run_physical_performance.sh" in runs
+    assert "ro.kernel.qemu" in runs
+    assert "emulator-*" in runs
+    assert "DOPPLER_TOKEN" not in str(job)
+    script = (ROOT / "scripts/ci/run_physical_performance.sh").read_text(encoding="utf-8")
+    assert "trap cleanup EXIT" in script
+    assert "exactly one authorized Android device" in script
+    assert "benchmarkIterations" in script
+    assert "window_animation_scale" in script
+    assert "transition_animation_scale" in script
+    assert "animator_duration_scale" in script
+    assert 'cd "$repo_root"' in script
+    assert "--max-workers=1" in script
+    actionlint = load(".github/actionlint.yaml")
+    assert "android-performance" in actionlint["self-hosted-runner"]["labels"]
+
+
+def test_baseline_profiles_workflow_is_full_speed_and_safe() -> None:
+    workflow = load(".github/workflows/baseline-profiles.yml")
+    event = workflow.get("on", workflow.get(True))
+    assert "schedule" in event
+    assert "workflow_dispatch" in event
+    assert workflow["permissions"] == {"contents": "read"}
+    matrix_job = workflow["jobs"]["generate"]
+    assert "max-parallel" not in matrix_job["strategy"]
+    assert matrix_job["strategy"]["fail-fast"] is False
+    assert matrix_job["permissions"] == {"contents": "read"}
+    assert matrix_job["needs"] == ["resolve"]
+    aggregate = workflow["jobs"]["aggregate"]
+    assert aggregate["permissions"] == {"contents": "read"}
+    assert aggregate["needs"] == ["resolve", "generate"]
+    assert "vars.PERFORMANCE_AUTOMATION_ENABLED == 'true'" in aggregate["if"]
+    runs = "\n".join(step.get("run", "") for step in matrix_job["steps"])
+    assert "performance_profile_policy.py task" in runs
+    assert "generate_ci_google_services.py --clean" in runs
+    assert "swiftshader_indirect" in runs
+    assert "setup-performance-device-sdk.sh" in runs
+
+
 def test_managed_device_is_pinned_and_scheduled() -> None:
     workflow = load(".github/workflows/device-smoke.yml")
     event = workflow.get("on", workflow.get(True))
@@ -160,7 +223,7 @@ def test_ci_smoke_build_disables_remote_firebase_startup() -> None:
     assert 'gradleProperty("ciSmoke")' in gradle
     assert 'buildConfigField("boolean", "CI_SMOKE", smoke.toString())' in gradle
 
-    manifest = (ROOT / "app/src/debug/AndroidManifest.xml").read_text(encoding="utf-8")
+    manifest = (ROOT / "app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
     disabled_metadata = (
         "firebase_performance_collection_deactivated",
         "firebase_analytics_collection_deactivated",
@@ -222,7 +285,9 @@ def test_release_is_manual_protected_and_attested() -> None:
     release_script = (ROOT / "scripts/ci/build_attested_release.sh").read_text(encoding="utf-8")
     assert "restore_firebase_configs.sh" in release_script
     assert "verify_google_signin_config.py" in release_script
-    assert "bundle${RELEASE_CAPITALIZED}Release" in release_script
+    assert "performance_profile_policy.py validate-source" in release_script
+    assert "validate${RELEASE_CAPITALIZED}ReleaseBaselineProfileInBundle" in release_script
+    assert "bundle${RELEASE_CAPITALIZED}Release" not in release_script
     assert "publish" not in release_script.lower()
     attest = named_step(job, "Attest signed AAB")
     assert attest["uses"] == f"actions/attest@{ATTEST_SHA}"
@@ -242,6 +307,7 @@ def test_ci_exposes_one_required_aggregate_check() -> None:
     assert job["needs"] == [
         "workflow-policy",
         "repository-security",
+        "performance-contract",
         "android-quality",
         "resolve-apps",
         "app-builds",
@@ -250,6 +316,7 @@ def test_ci_exposes_one_required_aggregate_check() -> None:
     command = named_step(job, "Enforce aggregate CI result")["run"]
     assert "WORKFLOW_POLICY_RESULT" in command
     assert "APP_BUILDS_RESULT" in command
+    assert "PERFORMANCE_CONTRACT_RESULT" in command
     assert "DEPENDABOT_SMOKE_RESULT" in command
 
 
@@ -275,6 +342,9 @@ def test_play_internal_builds_attests_and_publishes_one_exact_aab() -> None:
     assert "build_play_internal_release.sh" in build["run"]
     play_script = (ROOT / "scripts/ci/build_play_internal_release.sh").read_text(encoding="utf-8")
     assert "restore_firebase_configs.sh" in play_script
+    assert "performance_profile_policy.py validate-source" in play_script
+    assert "validate${RELEASE_CAPITALIZED}ReleaseBaselineProfileInBundle" in play_script
+    assert "bundle${RELEASE_CAPITALIZED}Release" not in play_script
     attest = named_step(job, "Attest exact signed AAB")
     assert attest["uses"] == f"actions/attest@{ATTEST_SHA}"
     publish = named_step(job, "Publish exact attested AAB to Play internal")
@@ -300,6 +370,8 @@ def main() -> int:
         test_security_runs_dependency_review_only_for_pull_requests,
         test_dependency_submission_is_trusted_and_job_scoped,
         test_codeql_uses_manual_kotlin_build_and_cleans_placeholder,
+        test_baseline_profiles_workflow_is_full_speed_and_safe,
+        test_physical_performance_is_manual_and_serial,
         test_managed_device_is_pinned_and_scheduled,
         test_ci_smoke_build_disables_remote_firebase_startup,
         test_release_is_manual_protected_and_attested,

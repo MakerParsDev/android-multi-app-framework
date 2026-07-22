@@ -65,6 +65,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -362,6 +363,12 @@ private fun QiblaScreenContent(
     }
     val showCalibration =
         uiState.sensorAccuracy == SensorManager.SENSOR_STATUS_UNRELIABLE || uiState.sensorAccuracy == SensorManager.SENSOR_STATUS_ACCURACY_LOW
+    val performanceReadyModifier =
+        if (!uiState.isLocationRefreshing) {
+            Modifier.testTag("qibla_ready")
+        } else {
+            Modifier
+        }
     val confidenceColor = when (uiState.confidenceLevel) {
         QiblaConfidenceLevel.EXCELLENT -> Color(0xFF2E7D32)
         QiblaConfidenceLevel.GOOD -> Color(0xFF388E3C)
@@ -370,7 +377,7 @@ private fun QiblaScreenContent(
     }
 
     Box(
-        modifier = Modifier
+        modifier = performanceReadyModifier
             .fillMaxSize()
             .background(
                 brush = Brush.verticalGradient(
