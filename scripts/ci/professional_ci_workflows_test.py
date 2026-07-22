@@ -110,6 +110,11 @@ def test_codeql_uses_manual_kotlin_build_and_cleans_placeholder() -> None:
 
 
 def test_managed_device_is_pinned_and_scheduled() -> None:
+    workflow = load(".github/workflows/device-smoke.yml")
+    event = workflow.get("on", workflow.get(True))
+    assert event["schedule"] == [{"cron": "41 2 * * *"}]
+    assert "workflow_dispatch" in event
+
     gradle = (ROOT / "app/build.gradle.kts").read_text(encoding="utf-8")
     for value in (
         'create("ciPixel2Api30")',
@@ -118,7 +123,6 @@ def test_managed_device_is_pinned_and_scheduled() -> None:
         'systemImageSource = "aosp-atd"',
     ):
         assert value in gradle
-    workflow = load(".github/workflows/device-smoke.yml")
     job = workflow["jobs"]["managed-device-smoke"]
     command = named_step(job, "Run managed-device smoke tests")["run"]
     assert "ciPixel2Api30Kuran_kerimDebugAndroidTest" in command
