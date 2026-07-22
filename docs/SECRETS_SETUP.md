@@ -325,3 +325,10 @@ GitHub stores only one bootstrap secret in that environment:
 - `DOPPLER_TOKEN`: a read-only service token scoped to project `android-multi-app-framework`, config `prod`.
 
 The workflow installs checksum-verified Doppler CLI 3.76.1, calls `scripts/doppler-run.sh`, materializes the signing keystore and Firebase config only for the requested flavor, builds one signed AAB, deletes temporary secret files, writes a SHA-256 checksum, uploads both files for 7/14/30 days, and creates a GitHub artifact attestation. It does not publish to Google Play.
+
+
+## Google Play internal release
+
+The manual `Play Internal Release` workflow uses the protected GitHub environment `production` and its single bootstrap secret `DOPPLER_TOKEN`. Doppler provides the signing keystore, Firebase archive, and Play service-account JSON. The workflow queries every Play track, updates the selected flavor to the next available versionCode in the ephemeral runner, builds one signed AAB, creates a SHA-256 checksum and GitHub attestation, uploads that exact file with the Android Publisher API, verifies Google Play returned the same SHA-256, and assigns the uploaded version only to the `internal` track. Production track publication is deliberately unsupported.
+
+The environment allows deployments only from `main`. Rotate the read-only Doppler service token before its configured expiration and never store Play JSON or keystore material as GitHub repository secrets.

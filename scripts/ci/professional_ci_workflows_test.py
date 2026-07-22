@@ -127,12 +127,20 @@ def test_managed_device_is_pinned_and_scheduled() -> None:
         'device = "Pixel 2"',
         'apiLevel = 30',
         'systemImageSource = "aosp-atd"',
+        'testedAbi = "x86_64"',
     ):
         assert value in gradle
     job = workflow["jobs"]["managed-device-smoke"]
+    kvm = named_step(job, "Enable KVM acceleration")["run"]
+    assert "99-kvm4all.rules" in kvm
+    assert "test -w /dev/kvm" in kvm
     command = named_step(job, "Run managed-device smoke tests")["run"]
     assert "ciPixel2Api30Kuran_kerimDebugAndroidTest" in command
     assert "swiftshader_indirect" in command
+    assert "--no-configuration-cache" in command
+    dependency_policy = load("config/dependency-policy.json")
+    allowlist = {entry["coordinate"] for entry in dependency_policy["transitive_prerelease_allowlist"]}
+    assert "com.google.testing.platform:android-device-provider-local" in allowlist
     upload = named_step(job, "Upload managed-device reports")
     assert upload["with"]["retention-days"] == 14
     assert upload["if"] == "always()"
@@ -167,6 +175,54 @@ def test_release_is_manual_protected_and_attested() -> None:
     assert upload["with"]["if-no-files-found"] == "error"
 
 
+
+def test_ci_exposes_one_required_aggregate_check() -> None:
+    job = load(".github/workflows/ci-pr.yml")["jobs"]["ci-required"]
+    assert job["name"] == "CI Required"
+    assert job["if"] == "always()"
+    assert job["needs"] == [
+        "workflow-policy",
+        "repository-security",
+        "android-quality",
+        "resolve-apps",
+        "app-builds",
+        "dependabot-smoke",
+    ]
+    command = named_step(job, "Enforce aggregate CI result")["run"]
+    assert "WORKFLOW_POLICY_RESULT" in command
+    assert "APP_BUILDS_RESULT" in command
+    assert "DEPENDABOT_SMOKE_RESULT" in command
+
+
+def test_play_internal_builds_attests_and_publishes_one_exact_aab() -> None:
+    workflow = load(".github/workflows/play-internal.yml")
+    event = workflow.get("on", workflow.get(True))
+    assert list(event) == ["workflow_dispatch"]
+    job = workflow["jobs"]["publish-internal"]
+    assert job["environment"] == "production"
+    assert job["permissions"] == {
+        "contents": "read",
+        "id-token": "write",
+        "attestations": "write",
+    }
+    dependencies = named_step(job, "Install pinned Play publisher dependencies")
+    assert "--require-hashes" in dependencies["run"]
+    assert "requirements-play-publisher.lock" in dependencies["run"]
+    build = named_step(job, "Build one signed AAB with next Play version code")
+    assert "scripts/doppler-run.sh" in build["run"]
+    assert "build_play_internal_release.sh" in build["run"]
+    attest = named_step(job, "Attest exact signed AAB")
+    assert attest["uses"] == f"actions/attest@{ATTEST_SHA}"
+    publish = named_step(job, "Publish exact attested AAB to Play internal")
+    assert "publish_play_internal.py" in publish["run"]
+    assert "--track internal" in publish["run"]
+    assert publish["env"]["AAB_PATH"] == "${{ steps.artifact.outputs.subject_path }}"
+    assert publish["env"]["DOPPLER_TOKEN"] == "${{ secrets.DOPPLER_TOKEN }}"
+    upload = named_step(job, "Upload AAB, checksum, and publication report")
+    assert upload["uses"] == f"actions/upload-artifact@{UPLOAD_SHA}"
+    assert upload["if"] == "always()"
+
+
 def main() -> int:
     tests = [
         test_ci_gate_runs_professional_workflow_assertions,
@@ -178,6 +234,8 @@ def main() -> int:
         test_codeql_uses_manual_kotlin_build_and_cleans_placeholder,
         test_managed_device_is_pinned_and_scheduled,
         test_release_is_manual_protected_and_attested,
+        test_ci_exposes_one_required_aggregate_check,
+        test_play_internal_builds_attests_and_publishes_one_exact_aab,
     ]
     for test in tests:
         test()

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -19,6 +20,8 @@ def main() -> int:
     root = Path(__file__).resolve().parents[2]
     try:
         flavors = load_flavors(root)
+        apps = json.loads((root / ".ci/apps.json").read_text(encoding="utf-8"))
+        package_by_flavor = {entry["flavor"]: entry["package"] for entry in apps}
         retention = int(args.retention_days)
     except (RuntimeError, ValueError) as error:
         print(f"ERROR: {error}", file=sys.stderr)
@@ -33,7 +36,12 @@ def main() -> int:
         print("ERROR: retention days must be one of 7, 14, or 30", file=sys.stderr)
         return 1
     print(f"flavor={args.flavor}")
+    package_name = package_by_flavor.get(args.flavor)
+    if not isinstance(package_name, str) or not package_name.strip():
+        print(f"ERROR: missing package name for flavor {args.flavor!r}", file=sys.stderr)
+        return 1
     print(f"capitalized={args.flavor[0].upper() + args.flavor[1:]}")
+    print(f"package_name={package_name}")
     print(f"retention_days={retention}")
     return 0
 

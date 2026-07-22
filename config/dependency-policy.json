@@ -16,6 +16,12 @@
       "expires_on": "2027-01-31",
       "owner": "core/auth",
       "reason": "AndroidX Credentials Play Services integration resolves this prerelease artifact transitively."
+    },
+    {
+      "coordinate": "com.google.testing.platform:android-device-provider-local",
+      "expires_on": "2027-01-31",
+      "owner": "ci/android-test",
+      "reason": "AGP 9.2 managed devices require Google Unified Test Platform local device provider 0.0.9-alpha04 transitively."
     }
   ]
 }

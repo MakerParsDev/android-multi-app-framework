@@ -37,6 +37,8 @@ jobs:
           set -euo pipefail
           python3 scripts/ci/pinned_github_actions_test.py
           python3 scripts/ci/pinned_github_actions.py --repo .
+          python3 scripts/ci/ecc_bundle_policy_test.py
+          python3 scripts/ci/ecc_bundle_policy.py --repo .
 
       - name: Install pinned workflow security tools
         env:

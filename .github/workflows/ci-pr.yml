@@ -35,6 +35,8 @@ jobs:
           python3 scripts/ci/pinned_github_actions_test.py
           python3 scripts/ci/pinned_github_actions.py --repo .
           python3 scripts/ci/professional_ci_workflows_test.py
+          python3 scripts/ci/ecc_bundle_policy_test.py
+          python3 scripts/ci/ecc_bundle_policy.py --repo .
 
       - name: Test workflow policy
         run: |
@@ -286,3 +288,41 @@ jobs:
           set -euo pipefail
           chmod +x ./gradlew
           ./gradlew help validateFlavorVersions --no-daemon --stacktrace --max-workers=2
+
+  ci-required:
+    name: CI Required
+    if: always()
+    needs:
+      - workflow-policy
+      - repository-security
+      - android-quality
+      - resolve-apps
+      - app-builds
+      - dependabot-smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      IS_DEPENDABOT: ${{ github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]' }}
+      WORKFLOW_POLICY_RESULT: ${{ needs.workflow-policy.result }}
+      REPOSITORY_SECURITY_RESULT: ${{ needs.repository-security.result }}
+      ANDROID_QUALITY_RESULT: ${{ needs.android-quality.result }}
+      RESOLVE_APPS_RESULT: ${{ needs.resolve-apps.result }}
+      APP_BUILDS_RESULT: ${{ needs.app-builds.result }}
+      DEPENDABOT_SMOKE_RESULT: ${{ needs.dependabot-smoke.result }}
+    steps:
+      - name: Enforce aggregate CI result
+        run: |
+          set -euo pipefail
+          [[ "$WORKFLOW_POLICY_RESULT" == success ]]
+          [[ "$REPOSITORY_SECURITY_RESULT" == success ]]
+          if [[ "$IS_DEPENDABOT" == true ]]; then
+            [[ "$ANDROID_QUALITY_RESULT" == skipped ]]
+            [[ "$RESOLVE_APPS_RESULT" == skipped ]]
+            [[ "$APP_BUILDS_RESULT" == skipped ]]
+            [[ "$DEPENDABOT_SMOKE_RESULT" == success ]]
+          else
+            [[ "$ANDROID_QUALITY_RESULT" == success ]]
+            [[ "$RESOLVE_APPS_RESULT" == success ]]
+            [[ "$APP_BUILDS_RESULT" == success ]]
+            [[ "$DEPENDABOT_SMOKE_RESULT" == skipped ]]
+          fi

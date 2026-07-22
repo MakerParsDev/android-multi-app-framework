@@ -1,28 +1,26 @@
-# ECC for Codex CLI
+# Codex repository baseline
 
-This supplements the root `AGENTS.md` with a repo-local ECC baseline.
+This repository keeps only deterministic, reviewable Codex settings under version control.
 
-## Repo Skill
+## Repository skill
 
-- Repo-generated Codex skill: `.agents/skills/android-multi-app-framework/SKILL.md`
-- Claude-facing companion skill: `.claude/skills/android-multi-app-framework/SKILL.md`
-- Keep user-specific credentials and private MCPs in `~/.codex/config.toml`, not in this repo.
+- Repo skill: `.agents/skills/android-multi-app-framework/SKILL.md`
+- Claude-facing companion: `.claude/skills/android-multi-app-framework/SKILL.md`
 
-## MCP Baseline
+## Security boundary
 
-Treat `.codex/config.toml` as the default ECC-safe baseline for work in this repository.
-The generated baseline enables GitHub, Context7, Exa, Memory, Playwright, and Sequential Thinking.
+Keep credentials and optional MCP server definitions in `~/.codex/config.toml`, not in this repository.
 
-## Multi-Agent Support
+The tracked `.codex/config.toml` must not launch `npx -y` packages, use mutable `@latest` references, or define remote MCP endpoints. Repository workflows enforce this boundary with `scripts/ci/ecc_bundle_policy.py`.
+
+## Multi-agent roles
 
 - Explorer: read-only evidence gathering
 - Reviewer: correctness, security, and regression review
 - Docs researcher: API and release-note verification
 
-## Workflow Files
+## Workflow scaffolds
 
 - `.claude/commands/feature-development.md`
 - `.claude/commands/add-or-update-ci-workflow.md`
 - `.claude/commands/document-or-plan-ci-workflow.md`
-
-Use these workflow files as reusable task scaffolds when the detected repository workflows recur.

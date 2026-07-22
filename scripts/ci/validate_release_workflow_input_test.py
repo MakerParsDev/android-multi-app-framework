@@ -22,6 +22,7 @@ def test_valid_input() -> None:
     assert result.returncode == 0, result.stderr
     assert "flavor=kuran_kerim" in result.stdout
     assert "capitalized=Kuran_kerim" in result.stdout
+    assert "package_name=com.parsfilo.kuran_kerim" in result.stdout
     assert "retention_days=14" in result.stdout
 
 
