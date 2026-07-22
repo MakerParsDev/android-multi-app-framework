@@ -226,6 +226,10 @@ def test_release_is_manual_protected_and_attested() -> None:
     assert "publish" not in release_script.lower()
     attest = named_step(job, "Attest signed AAB")
     assert attest["uses"] == f"actions/attest@{ATTEST_SHA}"
+    prepare = named_step(job, "Prepare AAB and checksum")["run"]
+    assert 'artifact_name="$(basename "$artifact")"' in prepare
+    assert '(cd dist && sha256sum "$artifact_name" > "${artifact_name}.sha256")' in prepare
+    assert 'sha256sum "$artifact" > "${artifact}.sha256"' not in prepare
     upload = named_step(job, "Upload signed AAB and checksum")
     assert upload["with"]["if-no-files-found"] == "error"
 
@@ -278,6 +282,10 @@ def test_play_internal_builds_attests_and_publishes_one_exact_aab() -> None:
     assert "--track internal" in publish["run"]
     assert publish["env"]["AAB_PATH"] == "${{ steps.artifact.outputs.subject_path }}"
     assert publish["env"]["DOPPLER_TOKEN"] == "${{ secrets.DOPPLER_TOKEN }}"
+    prepare = named_step(job, "Prepare exact AAB and checksum")["run"]
+    assert 'artifact_name="$(basename "$artifact")"' in prepare
+    assert '(cd dist && sha256sum "$artifact_name" > "${artifact_name}.sha256")' in prepare
+    assert 'sha256sum "$artifact" > "${artifact}.sha256"' not in prepare
     upload = named_step(job, "Upload AAB, checksum, and publication report")
     assert upload["uses"] == f"actions/upload-artifact@{UPLOAD_SHA}"
     assert upload["if"] == "always()"

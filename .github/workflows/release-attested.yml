@@ -118,7 +118,8 @@ jobs:
           short_sha="${GITHUB_SHA:0:12}"
           artifact="dist/${RELEASE_FLAVOR}-${short_sha}.aab"
           cp -- "${aabs[0]}" "$artifact"
-          sha256sum "$artifact" > "${artifact}.sha256"
+          artifact_name="$(basename "$artifact")"
+          (cd dist && sha256sum "$artifact_name" > "${artifact_name}.sha256")
           printf 'subject_path=%s\n' "$artifact" >> "$GITHUB_OUTPUT"
 
       - name: Attest signed AAB
