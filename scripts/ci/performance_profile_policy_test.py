@@ -3,8 +3,17 @@ from __future__ import annotations
 
 import json
 import re
+import tempfile
 import unittest
+import zipfile
 from pathlib import Path
+
+from performance_profile_policy import (
+    expected_profile_dir,
+    gradle_flavor_token,
+    validate_aab,
+    validate_profile_pair,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 EXPECTED = [
@@ -26,6 +35,42 @@ EXPECTED = [
     "yasinsuresi",
     "zikirmatik",
 ]
+
+
+class PerformanceProfilePolicyTest(unittest.TestCase):
+    def test_gradle_flavor_token_preserves_underscore(self) -> None:
+        self.assertEqual("Kuran_kerim", gradle_flavor_token("kuran_kerim"))
+
+    def test_profile_pair_requires_startup_subset(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            directory = expected_profile_dir(root, "kuran_kerim")
+            directory.mkdir(parents=True)
+            (directory / "baseline-prof.txt").write_text(
+                "Lcom/parsfilo/A;\nLcom/parsfilo/B;\n", encoding="utf-8"
+            )
+            (directory / "startup-prof.txt").write_text(
+                "Lcom/parsfilo/A;\n", encoding="utf-8"
+            )
+            self.assertEqual([], validate_profile_pair(root, "kuran_kerim", {}))
+            (directory / "startup-prof.txt").write_text(
+                "Lcom/parsfilo/C;\n", encoding="utf-8"
+            )
+            self.assertTrue(validate_profile_pair(root, "kuran_kerim", {}))
+
+    def test_aab_requires_compiled_profile_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            aab = Path(tmp) / "app.aab"
+            with zipfile.ZipFile(aab, "w") as archive:
+                archive.writestr(
+                    "BUNDLE-METADATA/com.android.tools.build.profiles/baseline.prof",
+                    b"profile",
+                )
+                archive.writestr(
+                    "BUNDLE-METADATA/com.android.tools.build.profiles/baseline.profm",
+                    b"metadata",
+                )
+            self.assertEqual([], validate_aab(aab))
 
 
 class PerformanceProfileStructureTest(unittest.TestCase):
@@ -104,6 +149,13 @@ class PerformanceProfileStructureTest(unittest.TestCase):
         self.assertEqual("ci/android-performance", entry["owner"])
         self.assertEqual("2027-01-31", entry["expires_on"])
         self.assertGreaterEqual(len(entry["reason"]), 12)
+
+    def test_release_variants_register_aab_profile_validation(self) -> None:
+        source = (ROOT / "app/build.gradle.kts").read_text(encoding="utf-8")
+        self.assertIn("SingleArtifact.BUNDLE", source)
+        self.assertIn("BaselineProfileInBundle", source)
+        self.assertIn("performance_profile_policy.py", source)
+        self.assertIn('"validate-aab"', source)
 
     def test_app_consumer_preserves_all_release_task_validation(self) -> None:
         source = (ROOT / "app/build.gradle.kts").read_text(encoding="utf-8")

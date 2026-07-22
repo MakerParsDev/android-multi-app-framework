@@ -450,6 +450,18 @@ baselineProfile {
     mergeIntoMain = false
 }
 
+val appPythonExecutable =
+    rootProject.providers
+        .gradleProperty("pythonExecutable")
+        .orElse(rootProject.providers.environmentVariable("PYTHON"))
+        .orElse(
+            if (System.getProperty("os.name").startsWith("Windows", ignoreCase = true)) {
+                "python"
+            } else {
+                "python3"
+            },
+        )
+
 val validateSystemReceiverManifests =
     tasks.register<ValidateSystemReceiverManifestsTask>("validateSystemReceiverManifests") {
         group = "verification"
@@ -483,6 +495,28 @@ androidComponents {
                 validateSystemReceiverManifests.configure {
                     namazvakitleriManifest.set(variant.artifacts.get(SingleArtifact.MERGED_MANIFEST))
                 }
+        }
+    }
+
+    onVariants(selector().withBuildType("release")) { variant ->
+        val flavorName = variant.productFlavors.single { it.first == "app" }.second
+        val token = variant.name.replaceFirstChar { it.titlecase() }
+        val bundleFile = variant.artifacts.get(SingleArtifact.BUNDLE)
+        tasks.register<Exec>("validate${token}BaselineProfileInBundle") {
+            group = "verification"
+            description = "Validate compiled Baseline Profile metadata in $flavorName release AAB"
+            dependsOn("bundle$token")
+            doFirst {
+                commandLine(
+                    appPythonExecutable.get(),
+                    rootProject.file("scripts/ci/performance_profile_policy.py").absolutePath,
+                    "validate-aab",
+                    "--flavor",
+                    flavorName,
+                    "--aab",
+                    bundleFile.get().asFile.absolutePath,
+                )
+            }
         }
     }
 }
