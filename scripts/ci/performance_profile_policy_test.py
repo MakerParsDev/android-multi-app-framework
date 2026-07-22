@@ -29,6 +29,23 @@ EXPECTED = [
 
 
 class PerformanceProfileStructureTest(unittest.TestCase):
+    def test_macrobenchmarks_define_required_metrics(self) -> None:
+        startup = (
+            ROOT
+            / "performance/benchmark/src/main/java/com/parsfilo/contentapp/performance/StartupBenchmarks.kt"
+        ).read_text(encoding="utf-8")
+        frames = (
+            ROOT
+            / "performance/benchmark/src/main/java/com/parsfilo/contentapp/performance/FrameBenchmarks.kt"
+        ).read_text(encoding="utf-8")
+        self.assertIn("StartupTimingMetric", startup)
+        self.assertIn("StartupMode.COLD", startup)
+        self.assertIn("StartupMode.WARM", startup)
+        self.assertIn("CompilationMode.None", startup)
+        self.assertIn("BaselineProfileMode.Require", startup)
+        self.assertIn("FrameTimingMetric", frames)
+        self.assertIn("CriticalUserJourneys.run", frames)
+
     def test_generator_separates_startup_and_other_journeys(self) -> None:
         source = (
             ROOT
