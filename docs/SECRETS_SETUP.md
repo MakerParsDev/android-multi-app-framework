@@ -316,6 +316,16 @@ FIREBASE_WEB_CLIENT_ID
 Bu script zorunlu CI adımı değildir; tam uygulama derlemesi gerektiğinde geçici lokal bootstrap adımı olarak düşünülmelidir.
 
 
+## Firebase archive source order for protected releases
+
+Protected release workflows receive all runtime values through Doppler and restore the selected flavor with `scripts/ci/restore_firebase_configs.sh`:
+
+1. `FIREBASE_CONFIGS_ZIP_BASE64` when present.
+2. Otherwise the complete R2 quartet: `CF_R2_ACCOUNT_ID`, `CF_API_TOKEN`, `CF_R2_BUCKET`, `CF_R2_FIREBASE_OBJECT`.
+3. Fail closed when neither source is complete.
+
+The R2 path installs Wrangler from the committed content-api `package-lock.json`, downloads into a `0700` temporary directory, validates the archive through the same allowlisted materializer, and removes the archive on every exit path. GitHub still stores only the environment-scoped `DOPPLER_TOKEN` bootstrap secret.
+
 ## GitHub protected attested release
 
 The active `Attested Release Artifact` workflow is manual and uses the GitHub environment `production`.
