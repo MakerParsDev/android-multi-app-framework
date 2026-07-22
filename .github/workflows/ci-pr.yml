@@ -125,6 +125,26 @@ jobs:
           chmod +x ./gradlew
           ./gradlew detekt ktlintCheck testDebugUnitTest validateFlavorVersions --continue --no-daemon --stacktrace --max-workers=2
 
+      - name: Run Kover quality gate
+        run: |
+          set -euo pipefail
+          ./gradlew             koverVerifyQuality             koverXmlReportQuality             koverHtmlReportQuality             validateCriticalCoverage             --continue             --no-daemon             --stacktrace             --max-workers=2
+
+      - name: Upload quality reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: android-quality-reports-${{ github.sha }}
+          path: |
+            build/reports/kover/
+            **/build/reports/tests/
+            **/build/test-results/
+            **/build/reports/lint-results-*.html
+            **/build/reports/lint-results-*.xml
+            **/build/reports/lint-results-*.sarif
+          if-no-files-found: warn
+          retention-days: 14
+
   resolve-apps:
     name: Resolve App Matrix
     if: github.event_name != 'pull_request' || github.event.pull_request.user.login != 'dependabot[bot]'
@@ -150,12 +170,11 @@ jobs:
   app-builds:
     name: Build ${{ matrix.flavor }}
     if: github.event_name != 'pull_request' || github.event.pull_request.user.login != 'dependabot[bot]'
-    needs: [workflow-policy, repository-security, android-quality, resolve-apps]
+    needs: [workflow-policy, repository-security, resolve-apps]
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
       fail-fast: false
-      max-parallel: 3
       matrix:
         flavor: ${{ fromJSON(needs.resolve-apps.outputs.flavors) }}
     env:
@@ -177,7 +196,7 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
         with:
-          cache-read-only: ${{ github.event_name == 'pull_request' }}
+          cache-read-only: true
 
       - name: Set up pinned Android SDK
         run: |
