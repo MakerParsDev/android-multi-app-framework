@@ -155,18 +155,34 @@ def test_ci_smoke_build_disables_remote_firebase_startup() -> None:
     assert 'buildConfigField("boolean", "CI_SMOKE", smoke.toString())' in gradle
 
     manifest = (ROOT / "app/src/debug/AndroidManifest.xml").read_text(encoding="utf-8")
-    for key in (
+    disabled_metadata = (
         "firebase_performance_collection_deactivated",
         "firebase_analytics_collection_deactivated",
+    )
+    enabled_metadata = (
         "firebase_crashlytics_collection_enabled",
         "firebase_messaging_auto_init_enabled",
         "firebase_data_collection_default_enabled",
-    ):
-        assert key in manifest
+    )
+    for key in disabled_metadata:
+        assert f'android:name="{key}"\n            android:value="${{ciSmokeFirebaseDisabled}}"' in manifest
+    for key in enabled_metadata:
+        assert f'android:name="{key}"\n            android:value="${{ciSmokeFirebaseEnabled}}"' in manifest
 
     app = (ROOT / "app/src/main/java/com/parsfilo/contentapp/App.kt").read_text(encoding="utf-8")
-    assert "if (BuildConfig.CI_SMOKE)" in app
-    assert "CI smoke startup complete" in app
+    guard_index = app.index("if (BuildConfig.CI_SMOKE)")
+    guard_block_end = app.index("        }", guard_index)
+    guard_block = app[guard_index:guard_block_end]
+    assert "CI smoke startup complete" in guard_block
+    assert "return" in guard_block
+    first_remote_initialization = min(
+        app.index("appAnalytics.setAnalyticsCollectionEnabled"),
+        app.index("FirebaseCrashlytics.getInstance"),
+        app.index("runtimeObservability.configure"),
+        app.index("appCheckInstaller.install"),
+    )
+    assert guard_index < first_remote_initialization
+    assert app.index("return", guard_index, guard_block_end) < first_remote_initialization
 
     for path in (
         ROOT / "app/src/androidTest/java/com/parsfilo/contentapp/AppLaunchSmokeTest.kt",
