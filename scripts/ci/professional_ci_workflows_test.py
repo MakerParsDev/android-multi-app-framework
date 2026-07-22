@@ -133,7 +133,11 @@ def test_managed_device_is_pinned_and_scheduled() -> None:
         assert value in gradle
     job = workflow["jobs"]["managed-device-smoke"]
     kvm = named_step(job, "Enable KVM acceleration")["run"]
-    assert "99-kvm4all.rules" in kvm
+    assert '[[ ! -e /dev/kvm ]]' in kvm
+    assert "sudo chmod 0666 /dev/kvm" in kvm
+    assert "stat --format='%A %a %U:%G %n' /dev/kvm" in kvm
+    assert "udevadm trigger" not in kvm
+    assert "test -r /dev/kvm" in kvm
     assert "test -w /dev/kvm" in kvm
     command = named_step(job, "Run managed-device smoke tests")["run"]
     assert "ciPixel2Api30Kuran_kerimDebugAndroidTest" in command
