@@ -1,0 +1,131 @@
+name: Attested Release Artifact
+
+on:
+  workflow_dispatch:
+    inputs:
+      flavor:
+        description: Android application flavor
+        required: true
+        type: string
+        default: kuran_kerim
+      retention_days:
+        description: Artifact retention
+        required: true
+        type: choice
+        default: '14'
+        options: ['7', '14', '30']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-attested-${{ inputs.flavor }}
+  cancel-in-progress: false
+
+jobs:
+  build-attest-release:
+    name: Build and Attest ${{ inputs.flavor }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    env:
+      REQUESTED_FLAVOR: ${{ inputs.flavor }}
+      REQUESTED_RETENTION_DAYS: ${{ inputs.retention_days }}
+      DOPPLER_PROJECT: android-multi-app-framework
+      DOPPLER_CONFIG: prod
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: '21'
+          check-latest: false
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+        with:
+          cache-read-only: true
+
+      - name: Set up pinned Android SDK
+        run: |
+          set -euo pipefail
+          bash scripts/ci/setup-android-sdk.sh
+
+      - name: Validate release inputs
+        id: release-inputs
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/validate_release_workflow_input.py \
+            --flavor "$REQUESTED_FLAVOR" \
+            --retention-days "$REQUESTED_RETENTION_DAYS" >> "$GITHUB_OUTPUT"
+
+      - name: Validate Doppler bootstrap
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+        run: |
+          set -euo pipefail
+          [[ -n "${DOPPLER_TOKEN:-}" ]] || {
+            echo '::error::production environment secret DOPPLER_TOKEN is missing'
+            exit 1
+          }
+
+      - name: Install verified Doppler CLI
+        run: |
+          set -euo pipefail
+          assignments="$(bash scripts/ci/install_doppler_cli.sh "$RUNNER_TEMP/doppler-bin")"
+          eval "$assignments"
+          printf '%s\n' "$(dirname "$DOPPLER_BIN")" >> "$GITHUB_PATH"
+
+      - name: Build signed AAB with Doppler
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+          RELEASE_FLAVOR: ${{ steps.release-inputs.outputs.flavor }}
+          RELEASE_CAPITALIZED: ${{ steps.release-inputs.outputs.capitalized }}
+        run: |
+          set -euo pipefail
+          scripts/doppler-run.sh -- bash scripts/ci/build_attested_release.sh
+
+      - name: Prepare AAB and checksum
+        id: artifact
+        env:
+          RELEASE_FLAVOR: ${{ steps.release-inputs.outputs.flavor }}
+        run: |
+          set -euo pipefail
+          source_dir="app/build/outputs/bundle/${RELEASE_FLAVOR}Release"
+          mapfile -t aabs < <(find "$source_dir" -maxdepth 1 -type f -name '*.aab' -print)
+          [[ ${#aabs[@]} -eq 1 ]] || {
+            echo "::error::Expected exactly one AAB in $source_dir, found ${#aabs[@]}"
+            exit 1
+          }
+          mkdir -p dist
+          short_sha="${GITHUB_SHA:0:12}"
+          artifact="dist/${RELEASE_FLAVOR}-${short_sha}.aab"
+          cp -- "${aabs[0]}" "$artifact"
+          sha256sum "$artifact" > "${artifact}.sha256"
+          printf 'subject_path=%s\n' "$artifact" >> "$GITHUB_OUTPUT"
+
+      - name: Attest signed AAB
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+        with:
+          subject-path: ${{ steps.artifact.outputs.subject_path }}
+          create-storage-record: false
+
+      - name: Upload signed AAB and checksum
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: signed-aab-${{ steps.release-inputs.outputs.flavor }}-${{ github.sha }}
+          path: |
+            ${{ steps.artifact.outputs.subject_path }}
+            ${{ steps.artifact.outputs.subject_path }}.sha256
+          if-no-files-found: error
+          retention-days: ${{ steps.release-inputs.outputs.retention_days }}

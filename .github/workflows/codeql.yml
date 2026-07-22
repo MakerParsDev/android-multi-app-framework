@@ -1,0 +1,78 @@
+name: CodeQL
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '23 3 * * 3'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codeql-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze-java-kotlin:
+    name: Analyze Java and Kotlin
+    if: github.event_name != 'pull_request' || github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: '21'
+          check-latest: false
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+        with:
+          cache-read-only: true
+
+      - name: Set up pinned Android SDK
+        run: |
+          set -euo pipefail
+          bash scripts/ci/setup-android-sdk.sh
+
+      - name: Generate CI-only Firebase placeholder
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/generate_ci_google_services.py --flavors kuran_kerim
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@e0647621c2984b5ed2f768cb892365bf2a616ad1 # v4.37.2
+        with:
+          languages: java-kotlin
+          build-mode: manual
+          queries: security-extended
+
+      - name: Build representative flavor for CodeQL
+        run: |
+          set -euo pipefail
+          chmod +x ./gradlew
+          ./gradlew assembleKuran_kerimDebug --no-daemon --stacktrace --max-workers=2
+
+      - name: Remove CI-only Firebase placeholder
+        if: always()
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/generate_ci_google_services.py --clean --flavors kuran_kerim
+
+      - name: Analyze Java and Kotlin
+        uses: github/codeql-action/analyze@e0647621c2984b5ed2f768cb892365bf2a616ad1 # v4.37.2
+        with:
+          category: /language:java-kotlin

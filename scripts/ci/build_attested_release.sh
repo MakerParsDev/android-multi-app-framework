@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$repo_root"
+
+: "${RELEASE_FLAVOR:?RELEASE_FLAVOR is required}"
+: "${RELEASE_CAPITALIZED:?RELEASE_CAPITALIZED is required}"
+
+cleanup_firebase() {
+  rm -f -- "app/src/${RELEASE_FLAVOR}/google-services.json"
+}
+trap cleanup_firebase EXIT
+
+python3 scripts/ci/materialize_firebase_configs.py \
+  --flavors "$RELEASE_FLAVOR" \
+  --mode strict
+
+python3 scripts/ci/verify_google_signin_config.py \
+  --flavors "$RELEASE_FLAVOR" \
+  --require-web-client-id
+
+./gradlew ":app:bundle${RELEASE_CAPITALIZED}Release" \
+  --no-daemon \
+  --stacktrace \
+  --max-workers=2

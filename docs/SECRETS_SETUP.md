@@ -314,3 +314,14 @@ FIREBASE_WEB_CLIENT_ID
 
 `scripts/download-firebase-configs.sh` script'i, Firebase CLI ile flavor dosyalarını lokal ortama indirmek için kullanılabilir.
 Bu script zorunlu CI adımı değildir; tam uygulama derlemesi gerektiğinde geçici lokal bootstrap adımı olarak düşünülmelidir.
+
+
+## GitHub protected attested release
+
+The active `Attested Release Artifact` workflow is manual and uses the GitHub environment `production`.
+
+GitHub stores only one bootstrap secret in that environment:
+
+- `DOPPLER_TOKEN`: a read-only service token scoped to project `android-multi-app-framework`, config `prod`.
+
+The workflow installs checksum-verified Doppler CLI 3.76.1, calls `scripts/doppler-run.sh`, materializes the signing keystore and Firebase config only for the requested flavor, builds one signed AAB, deletes temporary secret files, writes a SHA-256 checksum, uploads both files for 7/14/30 days, and creates a GitHub artifact attestation. It does not publish to Google Play.

@@ -1,0 +1,30 @@
+{
+  "actions/attest": {
+    "sha": "f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6",
+    "version": "v4.2.0"
+  },
+  "actions/checkout": {
+    "sha": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+    "version": "v7.0.1"
+  },
+  "actions/dependency-review-action": {
+    "sha": "a1d282b36b6f3519aa1f3fc636f609c47dddb294",
+    "version": "v5.0.0"
+  },
+  "actions/setup-java": {
+    "sha": "03ad4de0992f5dab5e18fcb136590ce7c4a0ac95",
+    "version": "v5.6.0"
+  },
+  "actions/upload-artifact": {
+    "sha": "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+    "version": "v7.0.1"
+  },
+  "github/codeql-action": {
+    "sha": "e0647621c2984b5ed2f768cb892365bf2a616ad1",
+    "version": "v4.37.2"
+  },
+  "gradle/actions": {
+    "sha": "3f131e8634966bd73d06cc69884922b02e6faf92",
+    "version": "v6.2.0"
+  }
+}

@@ -41,22 +41,23 @@ def test_dependabot_is_one_monthly_android_maintenance_group() -> None:
     assert gradle["cooldown"].get("semver-major-days") == 60
 
 
-def test_ci_uses_dynamic_catalog_matrix() -> None:
+def test_ci_uses_full_speed_dynamic_catalog_matrix() -> None:
     workflow = load_yaml(ROOT / ".github/workflows/ci-pr.yml")
-    jobs = workflow.get("jobs")
-    assert isinstance(jobs, dict)
-    resolver = jobs.get("resolve-apps")
-    builds = jobs.get("app-builds")
-    assert isinstance(resolver, dict)
-    assert isinstance(builds, dict)
-    assert resolver.get("outputs") == {
+    jobs = workflow["jobs"]
+    resolver = jobs["resolve-apps"]
+    builds = jobs["app-builds"]
+    assert resolver["outputs"] == {
         "flavors": "${{ steps.catalog.outputs.flavors }}",
         "count": "${{ steps.catalog.outputs.count }}",
     }
-    matrix = builds.get("strategy", {}).get("matrix", {})
-    assert matrix.get("flavor") == "${{ fromJSON(needs.resolve-apps.outputs.flavors) }}"
-    assert builds.get("name") == "Build ${{ matrix.flavor }}"
-    assert builds.get("strategy", {}).get("max-parallel") == 3
+    strategy = builds["strategy"]
+    assert strategy["matrix"]["flavor"] == "${{ fromJSON(needs.resolve-apps.outputs.flavors) }}"
+    assert "max-parallel" not in strategy
+    assert builds["needs"] == ["workflow-policy", "repository-security", "resolve-apps"]
+    setup_gradle = next(
+        step for step in builds["steps"] if step.get("name") == "Set up Gradle"
+    )
+    assert setup_gradle["with"]["cache-read-only"] is True
 
 
 def test_dependabot_prs_skip_heavy_android_jobs() -> None:
@@ -88,7 +89,7 @@ def test_ci_load_tests_run_after_pinned_yaml_install() -> None:
 def main() -> int:
     tests = [
         test_dependabot_is_one_monthly_android_maintenance_group,
-        test_ci_uses_dynamic_catalog_matrix,
+        test_ci_uses_full_speed_dynamic_catalog_matrix,
         test_dependabot_prs_skip_heavy_android_jobs,
         test_ci_load_tests_run_after_pinned_yaml_install,
     ]
