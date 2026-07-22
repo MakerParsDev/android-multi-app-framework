@@ -12,6 +12,8 @@ from typing import Any, Iterator, Sequence
 
 import yaml
 
+from pinned_github_actions import validate_pinned_actions
+
 FULL_SHA = re.compile(r"^[0-9a-f]{40}$")
 TEMPLATE_EXPRESSION = re.compile(r"\$\{\{.*?\}\}", re.DOTALL)
 
@@ -182,6 +184,9 @@ def validate_repository(repo: Path) -> list[Finding]:
             findings.extend(_validate_workflow(relative, text, document))
         findings.extend(_validate_external_uses(relative, text, document))
         findings.extend(_validate_run_blocks(relative, text, document))
+
+    for pin_finding in validate_pinned_actions(repo):
+        findings.append(Finding(pin_finding.path, pin_finding.line, pin_finding.message))
 
     return sorted(findings, key=lambda finding: (str(finding.path), finding.line, finding.message))
 

@@ -52,6 +52,10 @@ def assert_result(workflow: str, expected_code: int, message: str = "") -> None:
     with tempfile.TemporaryDirectory() as tmp:
         repo = Path(tmp)
         write(repo / ".github/workflows/ci.yml", workflow)
+        write(
+            repo / "config/pinned-github-actions.json",
+            (ROOT / "config/pinned-github-actions.json").read_text(encoding="utf-8"),
+        )
         result = run_validator(repo)
         assert result.returncode == expected_code, result.stderr
         if message:
@@ -70,6 +74,18 @@ def test_unpinned_action_fails() -> None:
         ),
         1,
         "external action must be pinned",
+    )
+
+
+def test_unapproved_action_sha_fails() -> None:
+    wrong_sha = "b" * 40
+    assert_result(
+        secure_workflow().replace(
+            "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+            f"actions/checkout@{wrong_sha}",
+        ),
+        1,
+        "must use approved SHA",
     )
 
 
@@ -146,6 +162,7 @@ def main() -> int:
     tests = [
         test_secure_fixture_passes,
         test_unpinned_action_fails,
+        test_unapproved_action_sha_fails,
         test_direct_template_in_run_fails,
         test_missing_timeout_fails,
         test_checkout_credentials_fail,

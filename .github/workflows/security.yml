@@ -32,6 +32,12 @@ jobs:
           set -euo pipefail
           python3 -m pip install --disable-pip-version-check --no-deps -r scripts/ci/requirements-workflow-policy.txt
 
+      - name: Test approved GitHub action pins
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/pinned_github_actions_test.py
+          python3 scripts/ci/pinned_github_actions.py --repo .
+
       - name: Install pinned workflow security tools
         env:
           WORKFLOW_TOOLS_DIR: ${{ runner.temp }}/workflow-security-tools
