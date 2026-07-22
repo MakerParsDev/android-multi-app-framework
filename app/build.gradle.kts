@@ -1,4 +1,5 @@
 import com.android.build.api.artifact.SingleArtifact
+import com.android.build.api.variant.BuildConfigField
 import java.util.Properties
 
 plugins {
@@ -363,6 +364,8 @@ android {
             asBuildConfigString(releaseTrackValue),
         )
         buildConfigField("boolean", "CI_SMOKE", "false")
+        manifestPlaceholders["ciSmokeFirebaseDisabled"] = "false"
+        manifestPlaceholders["ciSmokeFirebaseEnabled"] = "true"
     }
 
     buildTypes {
@@ -485,6 +488,17 @@ val validateSystemReceiverManifests =
     }
 
 androidComponents {
+    onVariants(selector().all()) { variant ->
+        if (variant.buildType == "benchmarkRelease" || variant.buildType == "nonMinifiedRelease") {
+            requireNotNull(variant.buildConfigFields).put(
+                "CI_SMOKE",
+                BuildConfigField("boolean", true, "Disable remote services for performance tests"),
+            )
+            variant.manifestPlaceholders.put("ciSmokeFirebaseDisabled", "true")
+            variant.manifestPlaceholders.put("ciSmokeFirebaseEnabled", "false")
+        }
+    }
+
     onVariants(selector().withBuildType("debug")) { variant ->
         when (variant.name) {
             "zikirmatikDebug" ->

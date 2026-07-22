@@ -195,7 +195,7 @@ def test_ci_smoke_build_disables_remote_firebase_startup() -> None:
     assert 'gradleProperty("ciSmoke")' in gradle
     assert 'buildConfigField("boolean", "CI_SMOKE", smoke.toString())' in gradle
 
-    manifest = (ROOT / "app/src/debug/AndroidManifest.xml").read_text(encoding="utf-8")
+    manifest = (ROOT / "app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
     disabled_metadata = (
         "firebase_performance_collection_deactivated",
         "firebase_analytics_collection_deactivated",

@@ -150,6 +150,26 @@ class PerformanceProfileStructureTest(unittest.TestCase):
         self.assertEqual("2027-01-31", entry["expires_on"])
         self.assertGreaterEqual(len(entry["reason"]), 12)
 
+    def test_generated_performance_variants_are_firebase_safe(self) -> None:
+        gradle = (ROOT / "app/build.gradle.kts").read_text(encoding="utf-8")
+        self.assertIn('variant.buildType == "benchmarkRelease"', gradle)
+        self.assertIn('variant.buildType == "nonMinifiedRelease"', gradle)
+        self.assertIn('BuildConfigField("boolean", true', gradle)
+        self.assertIn('requireNotNull(variant.buildConfigFields).put', gradle)
+        self.assertIn('requireNotNull(variant.buildConfigFields).put', gradle)
+        self.assertIn('variant.manifestPlaceholders.put("ciSmokeFirebaseDisabled", "true")', gradle)
+        self.assertIn('variant.manifestPlaceholders.put("ciSmokeFirebaseEnabled", "false")', gradle)
+        manifest = (ROOT / "app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
+        for key in (
+            "firebase_performance_collection_deactivated",
+            "firebase_analytics_collection_deactivated",
+            "firebase_crashlytics_collection_enabled",
+            "firebase_messaging_auto_init_enabled",
+            "firebase_data_collection_default_enabled",
+        ):
+            self.assertIn(f'android:name="{key}"', manifest)
+        self.assertFalse((ROOT / "app/src/debug/AndroidManifest.xml").exists())
+
     def test_release_variants_register_aab_profile_validation(self) -> None:
         source = (ROOT / "app/build.gradle.kts").read_text(encoding="utf-8")
         self.assertIn("SingleArtifact.BUNDLE", source)
