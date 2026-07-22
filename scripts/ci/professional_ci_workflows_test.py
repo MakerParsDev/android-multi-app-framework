@@ -10,6 +10,7 @@ UPLOAD_SHA = "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
 DEPENDENCY_REVIEW_SHA = "a1d282b36b6f3519aa1f3fc636f609c47dddb294"
 GRADLE_ACTIONS_SHA = "3f131e8634966bd73d06cc69884922b02e6faf92"
 CODEQL_SHA = "e0647621c2984b5ed2f768cb892365bf2a616ad1"
+ATTEST_SHA = "f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6"
 
 
 def load(path: str) -> dict:
@@ -113,6 +114,28 @@ def test_managed_device_is_pinned_and_scheduled() -> None:
     assert upload["if"] == "always()"
 
 
+def test_release_is_manual_protected_and_attested() -> None:
+    workflow = load(".github/workflows/release-attested.yml")
+    event = workflow.get("on", workflow.get(True))
+    assert list(event) == ["workflow_dispatch"]
+    job = workflow["jobs"]["build-attest-release"]
+    assert job["environment"] == "production"
+    assert job["permissions"] == {
+        "contents": "read",
+        "id-token": "write",
+        "attestations": "write",
+        "artifact-metadata": "write",
+    }
+    build = named_step(job, "Build signed AAB with Doppler")
+    assert "scripts/doppler-run.sh" in build["run"]
+    assert "materialize_firebase_configs.py" in build["run"]
+    assert "publish" not in build["run"].lower()
+    attest = named_step(job, "Attest signed AAB")
+    assert attest["uses"] == f"actions/attest@{ATTEST_SHA}"
+    upload = named_step(job, "Upload signed AAB and checksum")
+    assert upload["with"]["if-no-files-found"] == "error"
+
+
 def main() -> int:
     tests = [
         test_ci_runs_quality_and_flavors_in_parallel,
@@ -121,6 +144,7 @@ def main() -> int:
         test_dependency_submission_is_trusted_and_job_scoped,
         test_codeql_uses_manual_kotlin_build_and_cleans_placeholder,
         test_managed_device_is_pinned_and_scheduled,
+        test_release_is_manual_protected_and_attested,
     ]
     for test in tests:
         test()
