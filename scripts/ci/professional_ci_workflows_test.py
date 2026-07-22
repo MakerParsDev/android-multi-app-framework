@@ -128,8 +128,12 @@ def test_release_is_manual_protected_and_attested() -> None:
     }
     build = named_step(job, "Build signed AAB with Doppler")
     assert "scripts/doppler-run.sh" in build["run"]
-    assert "materialize_firebase_configs.py" in build["run"]
-    assert "publish" not in build["run"].lower()
+    assert "scripts/ci/build_attested_release.sh" in build["run"]
+    release_script = (ROOT / "scripts/ci/build_attested_release.sh").read_text(encoding="utf-8")
+    assert "materialize_firebase_configs.py" in release_script
+    assert "verify_google_signin_config.py" in release_script
+    assert "bundle${RELEASE_CAPITALIZED}Release" in release_script
+    assert "publish" not in release_script.lower()
     attest = named_step(job, "Attest signed AAB")
     assert attest["uses"] == f"actions/attest@{ATTEST_SHA}"
     upload = named_step(job, "Upload signed AAB and checksum")

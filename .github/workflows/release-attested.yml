@@ -92,24 +92,7 @@ jobs:
           RELEASE_CAPITALIZED: ${{ steps.release-inputs.outputs.capitalized }}
         run: |
           set -euo pipefail
-          export RELEASE_FLAVOR RELEASE_CAPITALIZED
-          scripts/doppler-run.sh -- bash -lc '
-            set -euo pipefail
-            cleanup_firebase() {
-              rm -f -- "app/src/${RELEASE_FLAVOR}/google-services.json"
-            }
-            trap cleanup_firebase EXIT
-            python3 scripts/ci/materialize_firebase_configs.py \
-              --flavors "$RELEASE_FLAVOR" \
-              --mode strict
-            python3 scripts/ci/verify_google_signin_config.py \
-              --flavors "$RELEASE_FLAVOR" \
-              --require-web-client-id
-            ./gradlew ":app:bundle${RELEASE_CAPITALIZED}Release" \
-              --no-daemon \
-              --stacktrace \
-              --max-workers=2
-          '
+          scripts/doppler-run.sh -- bash scripts/ci/build_attested_release.sh
 
       - name: Prepare AAB and checksum
         id: artifact
