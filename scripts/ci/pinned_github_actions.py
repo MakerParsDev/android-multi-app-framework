@@ -67,7 +67,12 @@ def validate_pinned_actions(repo: Path) -> list[PinFinding]:
     repo = repo.resolve()
     manifest = load_manifest(repo)
     findings: list[PinFinding] = []
-    paths = sorted((repo / ".github/workflows").glob("*.y*ml"))
+    paths = sorted(
+        [
+            *(repo / ".github/workflows").glob("*.y*ml"),
+            *(repo / ".github/actions").rglob("action.y*ml"),
+        ]
+    )
     for path in paths:
         text = path.read_text(encoding="utf-8")
         document = yaml.safe_load(text)
