@@ -3,6 +3,7 @@ import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.androidx.baselineprofile)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
@@ -48,10 +49,16 @@ fun asBuildConfigString(value: String): String = "\"" + value.replace("\\", "\\\
 
 fun normalizedTaskName(taskName: String): String = taskName.substringAfterLast(':')
 
+fun isGeneratedPerformanceVariant(normalized: String): Boolean =
+    normalized.contains("BenchmarkRelease") || normalized.contains("NonMinifiedRelease")
+
 fun isReleaseBuildLikeTask(taskName: String): Boolean =
     normalizedTaskName(taskName).let { normalized ->
-        (normalized.startsWith("assemble") || normalized.startsWith("bundle") || normalized.startsWith("publish")) &&
-            normalized.contains("Release")
+        (normalized.startsWith("assemble") ||
+            normalized.startsWith("bundle") ||
+            normalized.startsWith("publish")) &&
+            normalized.contains("Release") &&
+            !isGeneratedPerformanceVariant(normalized)
     }
 
 fun isReleasePublishTask(taskName: String): Boolean =
@@ -436,6 +443,12 @@ android {
     }
 }
 
+baselineProfile {
+    saveInSrc = true
+    automaticGenerationDuringBuild = false
+    mergeIntoMain = false
+}
+
 val validateSystemReceiverManifests =
     tasks.register<ValidateSystemReceiverManifestsTask>("validateSystemReceiverManifests") {
         group = "verification"
@@ -527,6 +540,8 @@ dependencies {
     implementation(project(":feature:quran"))
 
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.profileinstaller)
+    baselineProfile(project(":performance:benchmark"))
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.activity.compose)
