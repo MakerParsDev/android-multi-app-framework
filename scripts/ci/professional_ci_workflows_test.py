@@ -140,7 +140,7 @@ def test_managed_device_is_pinned_and_scheduled() -> None:
     assert "--no-configuration-cache" in command
     dependency_policy = load("config/dependency-policy.json")
     allowlist = {entry["coordinate"] for entry in dependency_policy["transitive_prerelease_allowlist"]}
-    assert "com.google.testing.platform:android-device-provider-local" in allowlist
+    assert "com.google.testing.platform:*" in allowlist
     upload = named_step(job, "Upload managed-device reports")
     assert upload["with"]["retention-days"] == 14
     assert upload["if"] == "always()"
