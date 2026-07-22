@@ -12,9 +12,7 @@ cleanup_firebase() {
 }
 trap cleanup_firebase EXIT
 
-python3 scripts/ci/materialize_firebase_configs.py \
-  --flavors "$RELEASE_FLAVOR" \
-  --mode strict
+bash scripts/ci/restore_firebase_configs.sh "$RELEASE_FLAVOR"
 
 python3 scripts/ci/verify_google_signin_config.py \
   --flavors "$RELEASE_FLAVOR" \

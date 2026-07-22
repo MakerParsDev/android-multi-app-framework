@@ -11,6 +11,7 @@ DEPENDENCY_REVIEW_SHA = "a1d282b36b6f3519aa1f3fc636f609c47dddb294"
 GRADLE_ACTIONS_SHA = "3f131e8634966bd73d06cc69884922b02e6faf92"
 CODEQL_SHA = "e0647621c2984b5ed2f768cb892365bf2a616ad1"
 ATTEST_SHA = "f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6"
+SETUP_NODE_SHA = "820762786026740c76f36085b0efc47a31fe5020"
 
 
 def load(path: str) -> dict:
@@ -192,8 +193,12 @@ def test_release_is_manual_protected_and_attested() -> None:
     assert build["env"]["DOPPLER_TOKEN"] == "${{ secrets.DOPPLER_TOKEN }}"
     assert "scripts/doppler-run.sh" in build["run"]
     assert "scripts/ci/build_attested_release.sh" in build["run"]
+    node = named_step(job, "Set up Node 24")
+    assert node["uses"] == f"actions/setup-node@{SETUP_NODE_SHA}"
+    assert node["with"]["node-version"] == "24.18.0"
+    assert node["with"]["cache-dependency-path"] == "side-projects/cloudflare/workers/content-api/package-lock.json"
     release_script = (ROOT / "scripts/ci/build_attested_release.sh").read_text(encoding="utf-8")
-    assert "materialize_firebase_configs.py" in release_script
+    assert "restore_firebase_configs.sh" in release_script
     assert "verify_google_signin_config.py" in release_script
     assert "bundle${RELEASE_CAPITALIZED}Release" in release_script
     assert "publish" not in release_script.lower()
@@ -233,12 +238,17 @@ def test_play_internal_builds_attests_and_publishes_one_exact_aab() -> None:
         "id-token": "write",
         "attestations": "write",
     }
+    node = named_step(job, "Set up Node 24")
+    assert node["uses"] == f"actions/setup-node@{SETUP_NODE_SHA}"
+    assert node["with"]["node-version"] == "24.18.0"
     dependencies = named_step(job, "Install pinned Play publisher dependencies")
     assert "--require-hashes" in dependencies["run"]
     assert "requirements-play-publisher.lock" in dependencies["run"]
     build = named_step(job, "Build one signed AAB with next Play version code")
     assert "scripts/doppler-run.sh" in build["run"]
     assert "build_play_internal_release.sh" in build["run"]
+    play_script = (ROOT / "scripts/ci/build_play_internal_release.sh").read_text(encoding="utf-8")
+    assert "restore_firebase_configs.sh" in play_script
     attest = named_step(job, "Attest exact signed AAB")
     assert attest["uses"] == f"actions/attest@{ATTEST_SHA}"
     publish = named_step(job, "Publish exact attested AAB to Play internal")

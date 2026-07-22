@@ -34,6 +34,11 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Materialize Firebase google-services.json files")
     parser.add_argument("--flavors", default="all", help="Comma-separated flavor list or 'all'")
     parser.add_argument("--env-var", default=DEFAULT_ENV_VAR, help="Base64 zip env var name")
+    parser.add_argument(
+        "--zip-file",
+        type=pathlib.Path,
+        help="Private Firebase config zip file (mutually exclusive with the base64 env source)",
+    )
     parser.add_argument("--mode", choices=("warn", "strict"), default="strict")
     parser.add_argument("--allow-existing", action="store_true")
     return parser.parse_args()
@@ -152,25 +157,41 @@ def main() -> int:
         return 1
 
     source_value = os.environ.get(args.env_var, "")
+    env_source_set = is_config_source_set(source_value)
+    raw_zip_source = args.zip_file
+    zip_source = raw_zip_source.resolve() if raw_zip_source is not None else None
+    if env_source_set and zip_source is not None:
+        print(f"ERROR: use either {args.env_var} or --zip-file, not both")
+        return 1
+    if zip_source is not None and (
+        raw_zip_source is None or raw_zip_source.is_symlink() or not zip_source.is_file()
+    ):
+        print(f"ERROR: --zip-file must be an existing non-symlink regular file: {zip_source}")
+        return 1
+
     missing_existing = [
         flavor.name
         for flavor in flavors
         if not (repo_root / "app" / "src" / flavor.name / "google-services.json").exists()
     ]
 
-    if not is_config_source_set(source_value):
+    if not env_source_set and zip_source is None:
         if args.allow_existing and not missing_existing:
             print(f"OK: Firebase configs already exist for {len(flavors)} flavor(s).")
             return 0
         missing_display = ", ".join(missing_existing or [flavor.name for flavor in flavors])
         return fail_or_warn(
-            f"{args.env_var} is not set and google-services.json is missing for: {missing_display}",
+            f"neither {args.env_var} nor --zip-file is set and google-services.json is missing for: {missing_display}",
             args.mode,
         )
 
     try:
         firebase_map = parse_json(repo_root / "config" / "firebase-apps.json")
-        archive = decode_zip(source_value, args.env_var)
+        archive = (
+            zipfile.ZipFile(zip_source)
+            if zip_source is not None
+            else decode_zip(source_value, args.env_var)
+        )
     except Exception as exc:  # noqa: BLE001
         print(f"ERROR: {exc}")
         return 1
