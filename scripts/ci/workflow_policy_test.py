@@ -158,6 +158,19 @@ def test_verify_env_contract_uses_fixed_script() -> None:
     assert 'bash "scripts/ci/verify_env_contract.sh"' in verify_env_run
 
 
+def test_physical_performance_has_no_secret_or_write_boundary() -> None:
+    workflow = load_yaml(ROOT / ".github/workflows/physical-performance.yml")
+    job = workflow["jobs"]["benchmark"]
+    assert workflow["permissions"] == {"contents": "read"}
+    assert job["permissions"] == {"contents": "read"}
+    assert "environment" not in job
+    assert "secrets" not in job
+    checkout = next(
+        step for step in job["steps"] if step.get("name") == "Checkout"
+    )
+    assert checkout["with"]["persist-credentials"] is False
+
+
 def test_baseline_profile_aggregate_uses_app_token_without_job_write_permissions() -> None:
     workflow = load_yaml(ROOT / ".github/workflows/baseline-profiles.yml")
     aggregate = workflow["jobs"]["aggregate"]
@@ -196,6 +209,7 @@ def main() -> int:
         test_verify_env_contract_uses_fixed_script,
         test_performance_contract_inherits_read_only_permissions_without_secrets,
         test_baseline_profile_aggregate_uses_app_token_without_job_write_permissions,
+        test_physical_performance_has_no_secret_or_write_boundary,
     ]
     for test in tests:
         test()

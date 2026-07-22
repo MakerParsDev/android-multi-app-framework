@@ -130,6 +130,27 @@ def test_codeql_uses_manual_kotlin_build_and_cleans_placeholder() -> None:
     assert analyze["uses"] == f"github/codeql-action/analyze@{CODEQL_SHA}"
 
 
+def test_physical_performance_is_manual_and_serial() -> None:
+    workflow = load(".github/workflows/physical-performance.yml")
+    event = workflow.get("on", workflow.get(True))
+    assert set(event) == {"workflow_dispatch"}
+    job = workflow["jobs"]["benchmark"]
+    assert job["runs-on"] == ["self-hosted", "android-performance"]
+    assert "strategy" not in job
+    assert job["permissions"] == {"contents": "read"}
+    assert "environment" not in job
+    runs = "\n".join(step.get("run", "") for step in job["steps"])
+    assert "run_physical_performance.sh" in runs
+    assert "DOPPLER_TOKEN" not in str(job)
+    script = (ROOT / "scripts/ci/run_physical_performance.sh").read_text(encoding="utf-8")
+    assert "trap cleanup EXIT" in script
+    assert "exactly one authorized Android device" in script
+    assert "benchmarkIterations" in script
+    assert "--max-workers=1" in script
+    actionlint = load(".github/actionlint.yaml")
+    assert "android-performance" in actionlint["self-hosted-runner"]["labels"]
+
+
 def test_baseline_profiles_workflow_is_full_speed_and_safe() -> None:
     workflow = load(".github/workflows/baseline-profiles.yml")
     event = workflow.get("on", workflow.get(True))
@@ -338,6 +359,7 @@ def main() -> int:
         test_dependency_submission_is_trusted_and_job_scoped,
         test_codeql_uses_manual_kotlin_build_and_cleans_placeholder,
         test_baseline_profiles_workflow_is_full_speed_and_safe,
+        test_physical_performance_is_manual_and_serial,
         test_managed_device_is_pinned_and_scheduled,
         test_ci_smoke_build_disables_remote_firebase_startup,
         test_release_is_manual_protected_and_attested,

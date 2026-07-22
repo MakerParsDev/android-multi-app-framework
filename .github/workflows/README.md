@@ -12,6 +12,7 @@ and must not be re-enabled by copying or renaming them.
 | CodeQL | human PR, `main`, weekly, manual | Java/Kotlin manual-build analysis | one representative flavor |
 | Device Smoke | nightly, manual | two instrumentation smoke tests on a Gradle Managed Device | one flavor, one ATD |
 | Baseline Profiles | weekly, manual | generate variant-scoped profiles for all 17 flavors and update one automation PR | full-speed managed-device matrix |
+| Physical Performance | manual | serial startup/frame benchmarks on one dedicated Android device | self-hosted `android-performance` runner |
 | Attested Release Artifact | manual | signed AAB, checksum, upload, provenance | protected `production` environment |
 
 Human pull requests and `main` pushes resolve the complete flavor matrix from
@@ -72,5 +73,5 @@ through a repository-scoped GitHub App. The matrix has read-only repository
 permissions and receives no production secret.
 
 Managed-device timing is diagnostic. Release performance comparisons remain the
-responsibility of the serial physical-device workflow documented in
-`docs/PERFORMANCE_TESTING.md`.
+responsibility of the serial physical-device workflow. See
+`docs/PERFORMANCE_TESTING.md` for the device, measurement, and artifact contract.
