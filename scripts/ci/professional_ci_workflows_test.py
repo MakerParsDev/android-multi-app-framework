@@ -50,6 +50,20 @@ def test_ci_enforces_and_uploads_kover_reports() -> None:
     assert upload["with"]["if-no-files-found"] == "warn"
 
 
+def test_android_quality_materializes_all_firebase_placeholders_for_kover() -> None:
+    quality = load(".github/workflows/ci-pr.yml")["jobs"]["android-quality"]
+    steps = quality["steps"]
+    names = [step.get("name") for step in steps]
+    generate = named_step(quality, "Generate CI-only Firebase placeholders")
+    cleanup = named_step(quality, "Remove CI-only Firebase placeholders")
+    assert "--flavors all" in generate["run"]
+    assert cleanup["if"] == "always()"
+    assert "--clean --flavors all" in cleanup["run"]
+    assert names.index("Generate CI-only Firebase placeholders") < names.index("Run Kover quality gate")
+    assert names.index("Run Kover quality gate") < names.index("Remove CI-only Firebase placeholders")
+    assert names.index("Remove CI-only Firebase placeholders") < names.index("Upload quality reports")
+
+
 def test_security_runs_dependency_review_only_for_pull_requests() -> None:
     jobs = load(".github/workflows/security.yml")["jobs"]
     review = jobs["dependency-review"]
@@ -144,6 +158,7 @@ def main() -> int:
     tests = [
         test_ci_runs_quality_and_flavors_in_parallel,
         test_ci_enforces_and_uploads_kover_reports,
+        test_android_quality_materializes_all_firebase_placeholders_for_kover,
         test_security_runs_dependency_review_only_for_pull_requests,
         test_dependency_submission_is_trusted_and_job_scoped,
         test_codeql_uses_manual_kotlin_build_and_cleans_placeholder,

@@ -119,6 +119,11 @@ jobs:
           python3 scripts/ci/validate_admob_inventory.py --mode warn --target-flavors all
           python3 scripts/ci/validate_android_toolchain_config.py
 
+      - name: Generate CI-only Firebase placeholders
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/generate_ci_google_services.py --flavors all
+
       - name: Run static analysis and unit tests
         run: |
           set -euo pipefail
@@ -128,7 +133,21 @@ jobs:
       - name: Run Kover quality gate
         run: |
           set -euo pipefail
-          ./gradlew             koverVerifyQuality             koverXmlReportQuality             koverHtmlReportQuality             validateCriticalCoverage             --continue             --no-daemon             --stacktrace             --max-workers=2
+          ./gradlew \
+            koverVerifyQuality \
+            koverXmlReportQuality \
+            koverHtmlReportQuality \
+            validateCriticalCoverage \
+            --continue \
+            --no-daemon \
+            --stacktrace \
+            --max-workers=2
+
+      - name: Remove CI-only Firebase placeholders
+        if: always()
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/generate_ci_google_services.py --clean --flavors all
 
       - name: Upload quality reports
         if: always()
