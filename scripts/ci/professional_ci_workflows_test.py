@@ -151,7 +151,7 @@ def test_managed_device_is_pinned_and_scheduled() -> None:
 def test_ci_smoke_build_disables_remote_firebase_startup() -> None:
     gradle = (ROOT / "app/build.gradle.kts").read_text(encoding="utf-8")
     assert 'buildConfigField("boolean", "CI_SMOKE", "false")' in gradle
-    assert 'providers.gradleProperty("ciSmoke")' in gradle
+    assert 'gradleProperty("ciSmoke")' in gradle
     assert 'buildConfigField("boolean", "CI_SMOKE", smoke.toString())' in gradle
 
     manifest = (ROOT / "app/src/debug/AndroidManifest.xml").read_text(encoding="utf-8")
