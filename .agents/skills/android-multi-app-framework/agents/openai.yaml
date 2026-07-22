@@ -1,0 +1,6 @@
+interface:
+  display_name: "Android Multi App Framework"
+  short_description: "Repo-specific patterns and workflows for android-multi-app-framework"
+  default_prompt: "Use the android-multi-app-framework repo skill to follow existing architecture, testing, and workflow conventions."
+policy:
+  allow_implicit_invocation: true
