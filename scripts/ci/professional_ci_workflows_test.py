@@ -30,6 +30,20 @@ def test_ci_gate_runs_professional_workflow_assertions() -> None:
     assert "professional_ci_workflows_test.py" in step["run"]
 
 
+def test_ci_has_lightweight_performance_contract() -> None:
+    workflow = load(".github/workflows/ci-pr.yml")
+    job = workflow["jobs"]["performance-contract"]
+    assert job["name"] == "Performance Contract"
+    assert job["needs"] == ["workflow-policy", "repository-security"]
+    assert "permissions" not in job
+    assert "secrets" not in job
+    runs = "\n".join(step.get("run", "") for step in job["steps"])
+    assert "performance_profile_policy_test.py" in runs
+    assert ":performance:benchmark:tasks" in runs
+    assert "connectedAndroidTest" not in runs
+    assert "generateBaselineProfile" not in runs
+
+
 def test_ci_runs_quality_and_flavors_in_parallel() -> None:
     jobs = load(".github/workflows/ci-pr.yml")["jobs"]
     assert jobs["android-quality"]["needs"] == ["workflow-policy", "repository-security"]
@@ -242,6 +256,7 @@ def test_ci_exposes_one_required_aggregate_check() -> None:
     assert job["needs"] == [
         "workflow-policy",
         "repository-security",
+        "performance-contract",
         "android-quality",
         "resolve-apps",
         "app-builds",
@@ -250,6 +265,7 @@ def test_ci_exposes_one_required_aggregate_check() -> None:
     command = named_step(job, "Enforce aggregate CI result")["run"]
     assert "WORKFLOW_POLICY_RESULT" in command
     assert "APP_BUILDS_RESULT" in command
+    assert "PERFORMANCE_CONTRACT_RESULT" in command
     assert "DEPENDABOT_SMOKE_RESULT" in command
 
 

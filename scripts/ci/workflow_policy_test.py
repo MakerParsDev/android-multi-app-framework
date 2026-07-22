@@ -158,6 +158,15 @@ def test_verify_env_contract_uses_fixed_script() -> None:
     assert 'bash "scripts/ci/verify_env_contract.sh"' in verify_env_run
 
 
+def test_performance_contract_inherits_read_only_permissions_without_secrets() -> None:
+    workflow = load_yaml(ROOT / ".github/workflows/ci-pr.yml")
+    job = workflow["jobs"]["performance-contract"]
+    assert workflow["permissions"] == {"contents": "read"}
+    assert "permissions" not in job
+    assert "secrets" not in job
+    assert "environment" not in job
+
+
 def main() -> int:
     tests = [
         test_secure_fixture_passes,
@@ -169,6 +178,7 @@ def main() -> int:
         test_pull_request_target_fails,
         test_resolve_flavors_uses_env_for_input,
         test_verify_env_contract_uses_fixed_script,
+        test_performance_contract_inherits_read_only_permissions_without_secrets,
     ]
     for test in tests:
         test()
