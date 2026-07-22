@@ -7,6 +7,8 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 UPLOAD_SHA = "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
+DEPENDENCY_REVIEW_SHA = "a1d282b36b6f3519aa1f3fc636f609c47dddb294"
+GRADLE_ACTIONS_SHA = "3f131e8634966bd73d06cc69884922b02e6faf92"
 
 
 def load(path: str) -> dict:
@@ -46,10 +48,37 @@ def test_ci_enforces_and_uploads_kover_reports() -> None:
     assert upload["with"]["if-no-files-found"] == "warn"
 
 
+def test_security_runs_dependency_review_only_for_pull_requests() -> None:
+    jobs = load(".github/workflows/security.yml")["jobs"]
+    review = jobs["dependency-review"]
+    assert review["if"] == "github.event_name == 'pull_request'"
+    assert review["permissions"] == {"contents": "read"}
+    step = named_step(review, "Review dependency changes")
+    assert step["uses"] == f"actions/dependency-review-action@{DEPENDENCY_REVIEW_SHA}"
+    assert step["with"] == {
+        "fail-on-severity": "high",
+        "show-openssf-scorecard": True,
+        "show-patched-versions": True,
+    }
+
+
+def test_dependency_submission_is_trusted_and_job_scoped() -> None:
+    workflow = load(".github/workflows/dependency-submission.yml")
+    assert workflow["permissions"] == {"contents": "read"}
+    job = workflow["jobs"]["submit-gradle-dependencies"]
+    assert job["permissions"] == {"contents": "write"}
+    step = named_step(job, "Submit Gradle dependency graph")
+    assert step["uses"] == f"gradle/actions/dependency-submission@{GRADLE_ACTIONS_SHA}"
+    assert step["with"]["dependency-graph"] == "generate-and-submit"
+    assert step["with"]["cache-read-only"] is True
+
+
 def main() -> int:
     tests = [
         test_ci_runs_quality_and_flavors_in_parallel,
         test_ci_enforces_and_uploads_kover_reports,
+        test_security_runs_dependency_review_only_for_pull_requests,
+        test_dependency_submission_is_trusted_and_job_scoped,
     ]
     for test in tests:
         test()
