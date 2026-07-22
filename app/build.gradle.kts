@@ -69,10 +69,12 @@ val releaseRevisionValue =
     ).firstOrNull { !it.isNullOrBlank() }.orEmpty().ifBlank { "local" }
 val releaseTrackValue = pick("PLAY_TRACK").orEmpty().ifBlank { "internal" }
 val ciSmokeEnabled =
-    providers.gradleProperty("ciSmoke").map { raw ->
-        raw.toBooleanStrictOrNull()
-            ?: error("Gradle property ciSmoke must be true or false (resolved='$raw')")
-    }.orElse(false)
+    providers
+        .gradleProperty("ciSmoke")
+        .map { raw ->
+            raw.toBooleanStrictOrNull()
+                ?: error("Gradle property ciSmoke must be true or false (resolved='$raw')")
+        }.orElse(false)
 if (pushRegistrationUrlValue.isBlank()) {
     logger.warn("⚠️ PUSH_REGISTRATION_URL is empty. Push registration requests will be skipped.")
 }
