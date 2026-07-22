@@ -29,6 +29,24 @@ EXPECTED = [
 
 
 class PerformanceProfileStructureTest(unittest.TestCase):
+    def test_performance_config_maps_all_families_and_clamps_iterations(self) -> None:
+        source = (
+            ROOT
+            / "performance/benchmark/src/main/java/com/parsfilo/contentapp/performance/PerformanceConfig.kt"
+        ).read_text(encoding="utf-8")
+        for family in (
+            '"content", "esma", "prayer_library" -> AUDIO_CONTENT',
+            '"quran" -> QURAN',
+            '"miracles" -> MIRACLES',
+            '"prayer_times" -> PRAYER_TIMES',
+            '"qibla" -> QIBLA',
+            '"zikir_counter" -> COUNTER',
+        ):
+            self.assertIn(family, source)
+        self.assertIn("coerceIn(5, 30)", source)
+        self.assertIn("Missing performanceFlavor instrumentation argument", source)
+        self.assertIn("Missing performanceFamily instrumentation argument", source)
+
     def test_toolchain_and_module_are_pinned(self) -> None:
         catalog = (ROOT / "gradle/libs.versions.toml").read_text(encoding="utf-8")
         self.assertIn('baselineProfile = "1.5.0-alpha07"', catalog)
