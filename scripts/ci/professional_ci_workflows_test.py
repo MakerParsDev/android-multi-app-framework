@@ -134,6 +134,8 @@ def test_managed_device_is_pinned_and_scheduled() -> None:
     job = workflow["jobs"]["managed-device-smoke"]
     kvm = named_step(job, "Enable KVM acceleration")["run"]
     assert '[[ ! -e /dev/kvm ]]' in kvm
+    assert "::error::GitHub runner does not expose /dev/kvm" in kvm
+    assert "exit 1" in kvm
     assert "sudo chmod 0666 /dev/kvm" in kvm
     assert "stat --format='%A %a %U:%G %n' /dev/kvm" in kvm
     assert "udevadm trigger" not in kvm
