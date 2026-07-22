@@ -29,6 +29,17 @@ EXPECTED = [
 
 
 class PerformanceProfileStructureTest(unittest.TestCase):
+    def test_generator_separates_startup_and_other_journeys(self) -> None:
+        source = (
+            ROOT
+            / "performance/benchmark/src/main/java/com/parsfilo/contentapp/performance/BaselineProfileGenerator.kt"
+        ).read_text(encoding="utf-8")
+        self.assertIn("BaselineProfileRule", source)
+        self.assertIn("includeInStartupProfile = true", source)
+        self.assertIn("includeInStartupProfile = false", source)
+        self.assertIn("CriticalUserJourneys.startup", source)
+        self.assertIn("CriticalUserJourneys.run", source)
+
     def test_performance_config_maps_all_families_and_clamps_iterations(self) -> None:
         source = (
             ROOT
