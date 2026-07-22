@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[2]
 UPLOAD_SHA = "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
 DEPENDENCY_REVIEW_SHA = "a1d282b36b6f3519aa1f3fc636f609c47dddb294"
 GRADLE_ACTIONS_SHA = "3f131e8634966bd73d06cc69884922b02e6faf92"
+CODEQL_SHA = "e0647621c2984b5ed2f768cb892365bf2a616ad1"
 
 
 def load(path: str) -> dict:
@@ -73,12 +74,33 @@ def test_dependency_submission_is_trusted_and_job_scoped() -> None:
     assert step["with"]["cache-read-only"] is True
 
 
+def test_codeql_uses_manual_kotlin_build_and_cleans_placeholder() -> None:
+    workflow = load(".github/workflows/codeql.yml")
+    job = workflow["jobs"]["analyze-java-kotlin"]
+    assert job["permissions"] == {"contents": "read", "security-events": "write"}
+    assert "dependabot[bot]" in job["if"]
+    init = named_step(job, "Initialize CodeQL")
+    assert init["uses"] == f"github/codeql-action/init@{CODEQL_SHA}"
+    assert init["with"] == {
+        "languages": "java-kotlin",
+        "build-mode": "manual",
+        "queries": "security-extended",
+    }
+    build = named_step(job, "Build representative flavor for CodeQL")
+    assert "assembleKuran_kerimDebug" in build["run"]
+    cleanup = named_step(job, "Remove CI-only Firebase placeholder")
+    assert cleanup["if"] == "always()"
+    analyze = named_step(job, "Analyze Java and Kotlin")
+    assert analyze["uses"] == f"github/codeql-action/analyze@{CODEQL_SHA}"
+
+
 def main() -> int:
     tests = [
         test_ci_runs_quality_and_flavors_in_parallel,
         test_ci_enforces_and_uploads_kover_reports,
         test_security_runs_dependency_review_only_for_pull_requests,
         test_dependency_submission_is_trusted_and_job_scoped,
+        test_codeql_uses_manual_kotlin_build_and_cleans_placeholder,
     ]
     for test in tests:
         test()
