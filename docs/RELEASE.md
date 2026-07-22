@@ -31,9 +31,12 @@ Play'a publish icin:
   - Google Sign-In web OAuth client id (`*.apps.googleusercontent.com`)
   - publish/internal preflight'ta zorunlu cross-check icin kullanilir
 
-Opsiyonel Firebase override (CI ile ayni model):
+Firebase release config kaynagi (korumali CI ile ayni model):
 
-- `FIREBASE_CONFIGS_ZIP_BASE64` (zip base64; materializer tarafından whitelist/JSON/package/appId/projectId doğrulanır)
+- Birincil doğrudan kaynak: `FIREBASE_CONFIGS_ZIP_BASE64`.
+- Alternatif korumalı kaynak: `CF_R2_ACCOUNT_ID`, `CF_API_TOKEN`, `CF_R2_BUCKET`, `CF_R2_FIREBASE_OBJECT` dörtlüsü.
+- `scripts/ci/restore_firebase_configs.sh` önce base64 kaynağını kullanır; base64 yoksa repository lock dosyasıyla kurulan Wrangler üzerinden R2 nesnesini indirir.
+- Her iki yol da `materialize_firebase_configs.py` whitelist/JSON/package/appId/projectId/OAuth doğrulamasından geçer ve geçici arşiv temizlenir.
 
 ## CI Bootstrap Akisi
 
@@ -46,13 +49,20 @@ Release ve publish workflow'lari artik tekrar eden shell bloklari yerine ortak c
    - Play service account'i decode eder
    - JSON yapisini dogrular
    - `PLAY_SERVICE_ACCOUNT_JSON` yolunu export eder
-3. `materialize_firebase_configs.py`
-   - `FIREBASE_CONFIGS_ZIP_BASE64` içeriğini sadece izinli flavor yollarına yazar
-   - JSON/package/appId/projectId kontrolü yapar
+3. `restore_firebase_configs.sh`
+   - base64 veya eksiksiz R2 credential dörtlüsünden tek kaynak seçer
+   - R2 yolunda `side-projects/cloudflare/workers/content-api/package-lock.json` ile kilitli Wrangler kurulumunu kullanır
+   - arşivi `materialize_firebase_configs.py` üzerinden sadece izinli flavor yollarına yazar
+   - JSON/package/appId/projectId/OAuth kontrolü yapar
 4. `verify-google-signin-config`
    - `FIREBASE_WEB_CLIENT_ID` ile flavor `google-services.json` uyumunu kontrol eder
 
 Bu sayede `release.yml` ve `release-parallel.yml` icinde ayni bootstrap mantigi paylasilir ve drift azalir.
+
+
+## Secret-free managed-device smoke mode
+
+`Device Smoke`, mevcut Debug test varyantını `-PciSmoke=true` ile çalıştırır. Bu özellik normal Debug ve Release buildlerini değiştirmez. Smoke modunda manifest placeholderları Firebase Performance, Analytics, Crashlytics, Messaging auto-init ve varsayılan Firebase data collection başlangıcını kapatır; `App` uzak servis başlangıçlarından önce yerel-only başlangıcı tamamlayıp döner. CI placeholder API anahtarı yalnızca biçim olarak geçerlidir ve gerçek Firebase trafiği için kullanılamaz.
 
 ## Fail-fast Dogrulama
 

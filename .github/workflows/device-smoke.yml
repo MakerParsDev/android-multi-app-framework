@@ -63,6 +63,7 @@ jobs:
           chmod +x ./gradlew
           ./gradlew \
             ciPixel2Api30Kuran_kerimDebugAndroidTest \
+            -PciSmoke=true \
             -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect \
             --no-daemon \
             --no-configuration-cache \

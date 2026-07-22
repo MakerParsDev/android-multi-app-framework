@@ -94,6 +94,15 @@ class App : Application() {
             BuildConfig.DEBUG,
         )
 
+        if (BuildConfig.CI_SMOKE) {
+            Timber.i(
+                "CI smoke startup complete flavor=%s package=%s",
+                productDefinition.flavorId,
+                packageName,
+            )
+            return
+        }
+
         // Consent Mode keeps storage/ad signals denied by manifest default until UMP resolves
         // the user's choices. Keep SDK collection enabled so denied-consent traffic can still
         // produce privacy-safe signals and to recover installs where an older build persisted

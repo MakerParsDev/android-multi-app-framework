@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 GENERATED_BY = "generate_ci_google_services.py"
-PLACEHOLDER_API_KEY = "ci-placeholder-not-a-real-api-key"
+PLACEHOLDER_API_KEY = "AIzaSy000000000000000000000000000000000"
 APP_ID_RE = re.compile(r"^1:(\d+):android:[0-9a-f]+$", re.IGNORECASE)
 PACKAGE_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)+$")
 

@@ -11,6 +11,7 @@ DEPENDENCY_REVIEW_SHA = "a1d282b36b6f3519aa1f3fc636f609c47dddb294"
 GRADLE_ACTIONS_SHA = "3f131e8634966bd73d06cc69884922b02e6faf92"
 CODEQL_SHA = "e0647621c2984b5ed2f768cb892365bf2a616ad1"
 ATTEST_SHA = "f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6"
+SETUP_NODE_SHA = "820762786026740c76f36085b0efc47a31fe5020"
 
 
 def load(path: str) -> dict:
@@ -136,6 +137,7 @@ def test_managed_device_is_pinned_and_scheduled() -> None:
     assert "test -w /dev/kvm" in kvm
     command = named_step(job, "Run managed-device smoke tests")["run"]
     assert "ciPixel2Api30Kuran_kerimDebugAndroidTest" in command
+    assert "-PciSmoke=true" in command
     assert "swiftshader_indirect" in command
     assert "--no-configuration-cache" in command
     dependency_policy = load("config/dependency-policy.json")
@@ -144,6 +146,49 @@ def test_managed_device_is_pinned_and_scheduled() -> None:
     upload = named_step(job, "Upload managed-device reports")
     assert upload["with"]["retention-days"] == 14
     assert upload["if"] == "always()"
+
+
+def test_ci_smoke_build_disables_remote_firebase_startup() -> None:
+    gradle = (ROOT / "app/build.gradle.kts").read_text(encoding="utf-8")
+    assert 'buildConfigField("boolean", "CI_SMOKE", "false")' in gradle
+    assert 'gradleProperty("ciSmoke")' in gradle
+    assert 'buildConfigField("boolean", "CI_SMOKE", smoke.toString())' in gradle
+
+    manifest = (ROOT / "app/src/debug/AndroidManifest.xml").read_text(encoding="utf-8")
+    disabled_metadata = (
+        "firebase_performance_collection_deactivated",
+        "firebase_analytics_collection_deactivated",
+    )
+    enabled_metadata = (
+        "firebase_crashlytics_collection_enabled",
+        "firebase_messaging_auto_init_enabled",
+        "firebase_data_collection_default_enabled",
+    )
+    for key in disabled_metadata:
+        assert f'android:name="{key}"\n            android:value="${{ciSmokeFirebaseDisabled}}"' in manifest
+    for key in enabled_metadata:
+        assert f'android:name="{key}"\n            android:value="${{ciSmokeFirebaseEnabled}}"' in manifest
+
+    app = (ROOT / "app/src/main/java/com/parsfilo/contentapp/App.kt").read_text(encoding="utf-8")
+    guard_index = app.index("if (BuildConfig.CI_SMOKE)")
+    guard_block_end = app.index("        }", guard_index)
+    guard_block = app[guard_index:guard_block_end]
+    assert "CI smoke startup complete" in guard_block
+    assert "return" in guard_block
+    first_remote_initialization = min(
+        app.index("appAnalytics.setAnalyticsCollectionEnabled"),
+        app.index("FirebaseCrashlytics.getInstance"),
+        app.index("runtimeObservability.configure"),
+        app.index("appCheckInstaller.install"),
+    )
+    assert guard_index < first_remote_initialization
+    assert app.index("return", guard_index, guard_block_end) < first_remote_initialization
+
+    for path in (
+        ROOT / "app/src/androidTest/java/com/parsfilo/contentapp/AppLaunchSmokeTest.kt",
+        ROOT / "app/src/androidTest/java/com/parsfilo/contentapp/SimpleInteractionSmokeTest.kt",
+    ):
+        assert "androidx.compose.ui.test.junit4.v2.createAndroidComposeRule" in path.read_text(encoding="utf-8")
 
 
 def test_release_is_manual_protected_and_attested() -> None:
@@ -164,8 +209,12 @@ def test_release_is_manual_protected_and_attested() -> None:
     assert build["env"]["DOPPLER_TOKEN"] == "${{ secrets.DOPPLER_TOKEN }}"
     assert "scripts/doppler-run.sh" in build["run"]
     assert "scripts/ci/build_attested_release.sh" in build["run"]
+    node = named_step(job, "Set up Node 24")
+    assert node["uses"] == f"actions/setup-node@{SETUP_NODE_SHA}"
+    assert node["with"]["node-version"] == "24.18.0"
+    assert node["with"]["cache-dependency-path"] == "side-projects/cloudflare/workers/content-api/package-lock.json"
     release_script = (ROOT / "scripts/ci/build_attested_release.sh").read_text(encoding="utf-8")
-    assert "materialize_firebase_configs.py" in release_script
+    assert "restore_firebase_configs.sh" in release_script
     assert "verify_google_signin_config.py" in release_script
     assert "bundle${RELEASE_CAPITALIZED}Release" in release_script
     assert "publish" not in release_script.lower()
@@ -205,12 +254,17 @@ def test_play_internal_builds_attests_and_publishes_one_exact_aab() -> None:
         "id-token": "write",
         "attestations": "write",
     }
+    node = named_step(job, "Set up Node 24")
+    assert node["uses"] == f"actions/setup-node@{SETUP_NODE_SHA}"
+    assert node["with"]["node-version"] == "24.18.0"
     dependencies = named_step(job, "Install pinned Play publisher dependencies")
     assert "--require-hashes" in dependencies["run"]
     assert "requirements-play-publisher.lock" in dependencies["run"]
     build = named_step(job, "Build one signed AAB with next Play version code")
     assert "scripts/doppler-run.sh" in build["run"]
     assert "build_play_internal_release.sh" in build["run"]
+    play_script = (ROOT / "scripts/ci/build_play_internal_release.sh").read_text(encoding="utf-8")
+    assert "restore_firebase_configs.sh" in play_script
     attest = named_step(job, "Attest exact signed AAB")
     assert attest["uses"] == f"actions/attest@{ATTEST_SHA}"
     publish = named_step(job, "Publish exact attested AAB to Play internal")
@@ -233,6 +287,7 @@ def main() -> int:
         test_dependency_submission_is_trusted_and_job_scoped,
         test_codeql_uses_manual_kotlin_build_and_cleans_placeholder,
         test_managed_device_is_pinned_and_scheduled,
+        test_ci_smoke_build_disables_remote_firebase_startup,
         test_release_is_manual_protected_and_attested,
         test_ci_exposes_one_required_aggregate_check,
         test_play_internal_builds_attests_and_publishes_one_exact_aab,

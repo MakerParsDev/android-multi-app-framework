@@ -266,8 +266,9 @@ Lokal geliştirmede bilerek kullanılan mevcut dosya yolları desteklenmeye deva
 17 farklı flavor olduğu için Firebase konfigürasyonunu hibrit modelle yönetiyoruz:
 
 1. Lokal kaynak: Git dışı `app/src/*/google-services.json` dosyaları
-2. CI/release kaynağı: `FIREBASE_CONFIGS_ZIP_BASE64` secret'ı
-3. Ortak materializer: `scripts/ci/materialize_firebase_configs.py`
+2. Genel CI/lokal override: opsiyonel `FIREBASE_CONFIGS_ZIP_BASE64`
+3. Doppler-backed korumalı release: base64 varsa onu, yoksa eksiksiz Cloudflare R2 dörtlüsünü kullanır
+4. Ortak materializer: `scripts/ci/materialize_firebase_configs.py`
 
 ### Varsayılan Akış (Git-Tracked Secrets Yok)
 
@@ -303,11 +304,21 @@ app/src/<flavor>/google-services.json
 google-services/<flavor>.json
 ```
 
-CI secret gereksinimleri:
+Genel CI/lokal override için `FIREBASE_CONFIGS_ZIP_BASE64` opsiyoneldir. Google Sign-In doğrulaması yapılan akışlarda `FIREBASE_WEB_CLIENT_ID` gerekir.
+
+Doppler-backed korumalı release için `FIREBASE_CONFIGS_ZIP_BASE64` zorunlu değildir. Doppler aşağıdaki iki geçerli modelden birini sağlamalıdır:
 
 ```text
 FIREBASE_CONFIGS_ZIP_BASE64
-FIREBASE_WEB_CLIENT_ID
+```
+
+veya R2-only model:
+
+```text
+CF_R2_ACCOUNT_ID
+CF_API_TOKEN
+CF_R2_BUCKET
+CF_R2_FIREBASE_OBJECT
 ```
 
 ### Firebase'den Güncelleme (Lokal Yardımcı Script)
@@ -315,6 +326,16 @@ FIREBASE_WEB_CLIENT_ID
 `scripts/download-firebase-configs.sh` script'i, Firebase CLI ile flavor dosyalarını lokal ortama indirmek için kullanılabilir.
 Bu script zorunlu CI adımı değildir; tam uygulama derlemesi gerektiğinde geçici lokal bootstrap adımı olarak düşünülmelidir.
 
+
+## Firebase archive source order for protected releases
+
+Protected release workflows receive all runtime values through Doppler and restore the selected flavor with `scripts/ci/restore_firebase_configs.sh`:
+
+1. Optional generic CI/local override `FIREBASE_CONFIGS_ZIP_BASE64`, when present.
+2. Otherwise the complete R2 quartet: `CF_R2_ACCOUNT_ID`, `CF_API_TOKEN`, `CF_R2_BUCKET`, `CF_R2_FIREBASE_OBJECT`.
+3. Fail closed when neither source is complete. R2-only protected releases are fully supported and do not require provisioning the legacy base64 secret.
+
+The R2 path installs Wrangler from the committed content-api `package-lock.json`, downloads into a `0700` temporary directory, validates the archive through the same allowlisted materializer, and removes the archive on every exit path. GitHub still stores only the environment-scoped `DOPPLER_TOKEN` bootstrap secret.
 
 ## GitHub protected attested release
 
