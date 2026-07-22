@@ -396,6 +396,18 @@ android {
         }
     }
 
+    testOptions {
+        managedDevices {
+            localDevices {
+                create("ciPixel2Api30") {
+                    device = "Pixel 2"
+                    apiLevel = 30
+                    systemImageSource = "aosp-atd"
+                }
+            }
+        }
+    }
+
     lint {
         abortOnError = true
         checkAllWarnings = true

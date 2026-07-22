@@ -94,6 +94,25 @@ def test_codeql_uses_manual_kotlin_build_and_cleans_placeholder() -> None:
     assert analyze["uses"] == f"github/codeql-action/analyze@{CODEQL_SHA}"
 
 
+def test_managed_device_is_pinned_and_scheduled() -> None:
+    gradle = (ROOT / "app/build.gradle.kts").read_text(encoding="utf-8")
+    for value in (
+        'create("ciPixel2Api30")',
+        'device = "Pixel 2"',
+        'apiLevel = 30',
+        'systemImageSource = "aosp-atd"',
+    ):
+        assert value in gradle
+    workflow = load(".github/workflows/device-smoke.yml")
+    job = workflow["jobs"]["managed-device-smoke"]
+    command = named_step(job, "Run managed-device smoke tests")["run"]
+    assert "ciPixel2Api30Kuran_kerimDebugAndroidTest" in command
+    assert "swiftshader_indirect" in command
+    upload = named_step(job, "Upload managed-device reports")
+    assert upload["with"]["retention-days"] == 14
+    assert upload["if"] == "always()"
+
+
 def main() -> int:
     tests = [
         test_ci_runs_quality_and_flavors_in_parallel,
@@ -101,6 +120,7 @@ def main() -> int:
         test_security_runs_dependency_review_only_for_pull_requests,
         test_dependency_submission_is_trusted_and_job_scoped,
         test_codeql_uses_manual_kotlin_build_and_cleans_placeholder,
+        test_managed_device_is_pinned_and_scheduled,
     ]
     for test in tests:
         test()
