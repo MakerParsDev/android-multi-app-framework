@@ -67,6 +67,52 @@ class PerformanceProfileStructureTest(unittest.TestCase):
         self.assertIn('!isGeneratedPerformanceVariant(normalized)', source)
         self.assertNotIn('normalized.endsWith("Release")', source)
 
+    def test_benchmark_tag_constants_match_ui_contract(self) -> None:
+        source = (
+            ROOT
+            / "performance/benchmark/src/main/java/com/parsfilo/contentapp/performance/PerformanceTags.kt"
+        ).read_text(encoding="utf-8")
+        for tag in (
+            "APP_ROOT", "PRIMARY_NAVIGATION", "CONTENT_LIST", "CONTENT_FIRST_ITEM",
+            "CONTENT_DETAIL", "AUDIO_PLAY_PAUSE", "MIRACLES_LIST",
+            "MIRACLES_FIRST_ITEM", "MIRACLES_DETAIL", "QURAN_LIST",
+            "QURAN_FIRST_ITEM", "QURAN_DETAIL", "PRAYER_TIMES_READY",
+            "QIBLA_READY", "COUNTER_ROOT", "COUNTER_VALUE", "COUNTER_INCREMENT",
+        ):
+            self.assertIn(f"const val {tag}", source)
+
+    def test_required_cross_process_tags_are_present(self) -> None:
+        required = {
+            "app_root",
+            "primary_navigation",
+            "content_list",
+            "content_first_item",
+            "content_detail",
+            "audio_play_pause",
+            "miracles_list",
+            "miracles_first_item",
+            "miracles_detail",
+            "quran_list",
+            "quran_first_item",
+            "quran_detail",
+            "prayer_times_ready",
+            "qibla_ready",
+            "counter_root",
+            "counter_value",
+            "counter_increment",
+        }
+        source = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in ROOT.rglob("*.kt")
+            if "/build/" not in path.as_posix()
+        )
+        missing = sorted(tag for tag in required if f'"{tag}"' not in source)
+        self.assertEqual([], missing)
+        content_app = (
+            ROOT / "app/src/main/java/com/parsfilo/contentapp/ui/ContentApp.kt"
+        ).read_text(encoding="utf-8")
+        self.assertIn("testTagsAsResourceId = true", content_app)
+
     def test_benchmark_build_declares_all_catalog_flavors(self) -> None:
         source = (ROOT / "performance/benchmark/build.gradle.kts").read_text(
             encoding="utf-8"

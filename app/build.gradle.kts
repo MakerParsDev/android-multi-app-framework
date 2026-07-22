@@ -49,14 +49,15 @@ fun asBuildConfigString(value: String): String = "\"" + value.replace("\\", "\\\
 
 fun normalizedTaskName(taskName: String): String = taskName.substringAfterLast(':')
 
-fun isGeneratedPerformanceVariant(normalized: String): Boolean =
-    normalized.contains("BenchmarkRelease") || normalized.contains("NonMinifiedRelease")
+fun isGeneratedPerformanceVariant(normalized: String): Boolean = normalized.contains("BenchmarkRelease") || normalized.contains("NonMinifiedRelease")
 
 fun isReleaseBuildLikeTask(taskName: String): Boolean =
     normalizedTaskName(taskName).let { normalized ->
-        (normalized.startsWith("assemble") ||
-            normalized.startsWith("bundle") ||
-            normalized.startsWith("publish")) &&
+        (
+            normalized.startsWith("assemble") ||
+                normalized.startsWith("bundle") ||
+                normalized.startsWith("publish")
+        ) &&
             normalized.contains("Release") &&
             !isGeneratedPerformanceVariant(normalized)
     }

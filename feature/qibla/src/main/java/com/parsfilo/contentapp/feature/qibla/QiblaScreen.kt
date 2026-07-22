@@ -65,6 +65,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -371,6 +372,7 @@ private fun QiblaScreenContent(
 
     Box(
         modifier = Modifier
+            .testTag("qibla_ready")
             .fillMaxSize()
             .background(
                 brush = Brush.verticalGradient(

@@ -22,6 +22,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -66,6 +67,7 @@ fun AppBottomBarWithFab(
     NavigationBar(
         modifier =
             Modifier
+                .testTag("primary_navigation")
                 .fillMaxWidth()
                 .drawBehind {
                     val stroke = 2.dp.toPx()

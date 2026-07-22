@@ -26,6 +26,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -211,11 +213,13 @@ fun ContentApp(
             modifier =
                 Modifier
                     .testTag("app_root")
+                    .semantics { testTagsAsResourceId = true }
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.background),
         ) {
             if (isMediumOrExpanded && showBottomBar) {
                 NavigationSuiteScaffold(
+                    modifier = Modifier.testTag("primary_navigation"),
                     navigationSuiteItems = {
                         topLevelRoutes.forEach { route ->
                             item(
