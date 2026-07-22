@@ -42,6 +42,16 @@ jobs:
           bash scripts/ci/setup-android-sdk.sh
           bash scripts/ci/setup_managed_device_sdk.sh
 
+      - name: Enable KVM acceleration
+        run: |
+          set -euo pipefail
+          printf '%s\n' 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | \
+            sudo tee /etc/udev/rules.d/99-kvm4all.rules >/dev/null
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          test -r /dev/kvm
+          test -w /dev/kvm
+
       - name: Generate CI-only Firebase placeholder
         run: |
           set -euo pipefail
@@ -55,6 +65,7 @@ jobs:
             ciPixel2Api30Kuran_kerimDebugAndroidTest \
             -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect \
             --no-daemon \
+            --no-configuration-cache \
             --stacktrace \
             --max-workers=2
 

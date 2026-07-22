@@ -56,3 +56,7 @@ Every active workflow must pass:
 Secret-backed Play, Cloudflare, AdMob, Firebase administration, and deployment
 workflows require separate reviewed migrations with protected environments and
 minimum job-level permissions.
+
+## Required aggregate check
+
+The `CI Required` job is the single branch-protection context for the complete CI workflow. It succeeds only when policy/security pass and either the full human/main Android path or the lightweight Dependabot path completes with the expected results.
