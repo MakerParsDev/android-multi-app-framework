@@ -92,7 +92,6 @@ class MainActivity : ComponentActivity() {
         applyEdgeToEdge(resolveInitialDarkMode())
         handleNotificationIntent(intent)
         setComposeContentSafely()
-        observePermissionPrompts()
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -101,6 +100,21 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+
+        startRuntimeServices()
+    }
+
+    private fun startRuntimeServices() {
+        if (BuildConfig.CI_SMOKE) {
+            Timber.i(
+                "CI smoke runtime services skipped flavor=%s package=%s",
+                productDefinition.flavorId,
+                packageName,
+            )
+            return
+        }
+
+        observePermissionPrompts()
 
         lifecycleScope.launch {
             pushRegistrationManager.syncRegistration("app_start")

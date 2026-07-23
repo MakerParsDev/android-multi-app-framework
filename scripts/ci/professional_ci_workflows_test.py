@@ -24,6 +24,21 @@ def named_step(job: dict, name: str) -> dict:
     return next(step for step in job["steps"] if step.get("name") == name)
 
 
+def source_block(source: str, marker: str, start: int = 0) -> str:
+    marker_index = source.index(marker, start)
+    block_start = source.index("{", marker_index)
+    depth = 0
+    for index in range(block_start, len(source)):
+        character = source[index]
+        if character == "{":
+            depth += 1
+        elif character == "}":
+            depth -= 1
+            if depth == 0:
+                return source[block_start : index + 1]
+    raise AssertionError(f"unterminated source block: {marker}")
+
+
 def test_ci_gate_runs_professional_workflow_assertions() -> None:
     workflow = load(".github/workflows/ci-pr.yml")
     step = named_step(workflow["jobs"]["workflow-policy"], "Test approved GitHub action pins")
@@ -260,6 +275,42 @@ def test_ci_smoke_build_disables_remote_firebase_startup() -> None:
         assert "androidx.compose.ui.test.junit4.v2.createAndroidComposeRule" in path.read_text(encoding="utf-8")
 
 
+def test_performance_startup_skips_prompts_and_remote_services() -> None:
+    activity = (
+        ROOT / "app/src/main/java/com/parsfilo/contentapp/MainActivity.kt"
+    ).read_text(encoding="utf-8")
+    runtime_start = activity.index("private fun startRuntimeServices()")
+    runtime_end = activity.index("\n    override fun onNewIntent", runtime_start)
+    runtime_block = activity[runtime_start:runtime_end]
+    guard_index = runtime_block.index("if (BuildConfig.CI_SMOKE)")
+    return_index = runtime_block.index("return", guard_index)
+    for remote_call in (
+        "observePermissionPrompts()",
+        'pushRegistrationManager.syncRegistration("app_start")',
+        'pushRegistrationManager.syncRegistration("notification_setting_changed")',
+        "adOrchestrator.initialize(this, lifecycleScope)",
+    ):
+        assert return_index < runtime_block.index(remote_call)
+
+    content_app = (
+        ROOT / "app/src/main/java/com/parsfilo/contentapp/ui/ContentApp.kt"
+    ).read_text(encoding="utf-8")
+    update_effect = content_app.index("LaunchedEffect(Unit)")
+    update_guard = source_block(content_app, "if (!BuildConfig.CI_SMOKE)", update_effect)
+    assert "updateGateViewModel.checkForUpdate()" in update_guard
+
+    route_effect = content_app.index("LaunchedEffect(selectedTopLevelRoute)")
+    route_guard = source_block(content_app, "if (!BuildConfig.CI_SMOKE)", route_effect)
+    assert "appAnalytics.logTabSelected" in route_guard
+
+    view_model = (
+        ROOT / "app/src/main/java/com/parsfilo/contentapp/ui/MainViewModel.kt"
+    ).read_text(encoding="utf-8")
+    init_start = view_model.index("        init {")
+    refresh_guard = source_block(view_model, "if (!BuildConfig.CI_SMOKE)", init_start)
+    assert "otherAppsRepository.refreshIfNeeded()" in refresh_guard
+
+
 def test_release_is_manual_protected_and_attested() -> None:
     workflow = load(".github/workflows/release-attested.yml")
     event = workflow.get("on", workflow.get(True))
@@ -374,6 +425,7 @@ def main() -> int:
         test_physical_performance_is_manual_and_serial,
         test_managed_device_is_pinned_and_scheduled,
         test_ci_smoke_build_disables_remote_firebase_startup,
+        test_performance_startup_skips_prompts_and_remote_services,
         test_release_is_manual_protected_and_attested,
         test_ci_exposes_one_required_aggregate_check,
         test_play_internal_builds_attests_and_publishes_one_exact_aab,
