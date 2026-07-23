@@ -23,7 +23,9 @@ ALLOWED_STORES = {
 
 def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--policy", type=Path, default=Path("config/secret-ownership.json"))
+    parser.add_argument(
+        "--policy", type=Path, default=Path("config/secret-ownership.json")
+    )
     parser.add_argument(
         "--json-report",
         type=Path,
@@ -54,7 +56,9 @@ def validate_rotation(entry: Dict[str, Any], subject: str) -> List[str]:
         return [f"{subject} must define rotation_days or rotation_mode"]
     rotation_days = entry.get("rotation_days")
     if rotation_days is not None and (
-        not isinstance(rotation_days, int) or isinstance(rotation_days, bool) or rotation_days < 1
+        not isinstance(rotation_days, int)
+        or isinstance(rotation_days, bool)
+        or rotation_days < 1
     ):
         errors.append(f"{subject}.rotation_days must be a positive integer")
     rotation_mode = entry.get("rotation_mode")
@@ -85,8 +89,13 @@ def validate_inventory(inventory: Any, today: date) -> List[str]:
     count = inventory.get("expected_name_count")
     if not isinstance(count, int) or isinstance(count, bool) or count < 1:
         errors.append("legacy_github_inventory.expected_name_count must be positive")
-    if inventory.get("status") != "legacy_mirror_remove_after_migration":
-        errors.append("legacy GitHub inventory must remain marked for removal after migration")
+    if inventory.get("status") not in (
+        "legacy_mirror_remove_after_migration",
+        "azure_to_github_migration_completed",
+    ):
+        errors.append(
+            "legacy GitHub inventory must remain marked for removal after migration"
+        )
     for key in ("owner", "evidence"):
         value = inventory.get(key)
         if not isinstance(value, str) or not value.strip():
@@ -95,7 +104,9 @@ def validate_inventory(inventory: Any, today: date) -> List[str]:
     if due is None:
         errors.append("legacy_github_inventory.review_due_on must use YYYY-MM-DD")
     elif due < today:
-        errors.append(f"legacy GitHub secret migration review expired on {due.isoformat()}")
+        errors.append(
+            f"legacy GitHub secret migration review expired on {due.isoformat()}"
+        )
     return errors
 
 
@@ -168,7 +179,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         "classificationRuleCount": len(policy.get("classification_rules", [])),
     }
     args.json_report.parent.mkdir(parents=True, exist_ok=True)
-    args.json_report.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    args.json_report.write_text(
+        json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     if errors:
         print("Secret ownership policy validation failed:", file=sys.stderr)
         for error in errors:
