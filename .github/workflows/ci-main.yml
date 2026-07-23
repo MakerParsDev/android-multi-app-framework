@@ -75,7 +75,6 @@ jobs:
     name: Side-project Quality
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    continue-on-error: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -299,13 +298,14 @@ jobs:
     if: always()
     steps:
       - name: Check required jobs
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
         run: |
           set -euo pipefail
-          NEEDS_JSON='{"security-gate":"${{ needs.security-gate.result }}","static-analysis":"${{ needs.static-analysis.result }}","validate-and-test":"${{ needs.validate-and-test.result }}","android-lint":"${{ needs.android-lint.result }}","kover-coverage":"${{ needs.kover-coverage.result }}","lint-baseline-budget":"${{ needs.lint-baseline-budget.result }}"}'
           failed=0
-          for job in security-gate static-analysis validate-and-test android-lint kover-coverage lint-baseline-budget; do
-            result=$(echo "$NEEDS_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin).get('$job','missing'))")
-            if [ "$result" != "success" ] && [ "$result" != "skipped" ]; then
+          for job in security-gate side-projects static-analysis validate-and-test android-lint kover-coverage lint-baseline-budget; do
+            result=$(python3 -c 'import json,sys; print(json.load(sys.stdin).get(sys.argv[1], {}).get("result", "missing"))' "$job" <<< "$NEEDS_JSON")
+            if [ "$result" != "success" ]; then
               echo "::error::Required job '$job' failed with result: $result"
               failed=1
             fi

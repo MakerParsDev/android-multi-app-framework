@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 import json
-import os
-import shutil
 
-# Executes a fixed local test command without a shell.
-import subprocess  # nosec B404
 from pathlib import Path
 import unittest
+
+import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGES = {
@@ -106,6 +104,37 @@ class SideProjectQualityContractTest(unittest.TestCase):
         self.assertIn("BLOCKED_DEV_SEVERITIES", validator)
         self.assertNotIn("audit fix --force", RUNNER.read_text(encoding="utf-8"))
 
+    def test_security_overrides_pin_patched_transitive_dependencies(self) -> None:
+        wrangler_packages = (
+            ROOT / "side-projects/admin-notifications/package.json",
+            ROOT / "side-projects/cloudflare/workers/admin-api/package.json",
+            ROOT / "side-projects/cloudflare/workers/content-api/package.json",
+            ROOT / "side-projects/cloudflare/workers/ssv-callback/package.json",
+        )
+        for package_path in wrangler_packages:
+            package = json.loads(package_path.read_text(encoding="utf-8"))
+            self.assertEqual("4.113.0", package["devDependencies"]["wrangler"])
+            self.assertEqual("0.35.3", package["overrides"]["sharp"])
+
+            lock = json.loads(
+                package_path.with_name("package-lock.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                "0.35.3",
+                lock["packages"]["node_modules/sharp"]["version"],
+            )
+
+        rules_path = ROOT / "side-projects/firebase/rules-tests/package.json"
+        rules = json.loads(rules_path.read_text(encoding="utf-8"))
+        self.assertEqual("2.0.11", rules["overrides"]["@hono/node-server"])
+        rules_lock = json.loads(
+            rules_path.with_name("package-lock.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            "2.0.11",
+            rules_lock["packages"]["node_modules/@hono/node-server"]["version"],
+        )
+
     def test_unexpanded_azure_health_placeholder_is_treated_as_unconfigured(
         self,
     ) -> None:
@@ -131,31 +160,12 @@ class SideProjectQualityContractTest(unittest.TestCase):
         self.assertRegex(pipeline, r"do_quality:[\s\S]*default: true")
         self.assertIn("run_side_project_quality.sh", pipeline)
 
-    def test_release_script_rejects_publish_when_quality_is_disabled(self) -> None:
-        env = os.environ.copy()
-        env.update(
-            {
-                "RESOLVED_FLAVORS_CSV": "zikirmatik",
-                "BUILD_TYPE": "Release",
-                "DO_BUILD": "true",
-                "DO_PUBLISH": "true",
-                "DO_INTERNAL_TEST": "false",
-                "DO_QUALITY": "false",
-            }
-        )
-        bash = shutil.which("bash")
-        if bash is None:
-            self.fail("bash executable was not found")
-        runner = ROOT / "scripts/ci/run_side_project_quality.sh"
-        result = subprocess.run(  # nosec B603
-            [bash, str(runner)],
-            cwd=ROOT,
-            env=env,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        self.assertNotEqual(0, result.returncode)
+    def test_release_publish_requires_quality_input(self) -> None:
+        workflow = yaml.safe_load(RELEASE_PIPELINE.read_text(encoding="utf-8"))
+        publish_condition = workflow["jobs"]["publish-play"]["if"]
+        self.assertIn("inputs.do_quality", publish_condition)
+        self.assertIn("inputs.do_internal_test", publish_condition)
+        self.assertIn("inputs.do_publish", publish_condition)
 
     def test_deploy_requires_same_commit_artifact_and_strict_drift_smoke(self) -> None:
         deploy = (ROOT / "scripts/ci/deploy_verified_side_project.mjs").read_text(

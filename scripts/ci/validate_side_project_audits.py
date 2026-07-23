@@ -25,6 +25,7 @@ PROJECTS = {
 }
 ALLOWED_EXCEPTION_SEVERITIES = {"low", "moderate"}
 BLOCKED_DEV_SEVERITIES = {"high", "critical"}
+EXPIRY_WARNING_DAYS = 30
 
 
 class AuditPolicyError(RuntimeError):
@@ -100,14 +101,28 @@ def _validate_exception(entry: dict[str, Any], today: date) -> tuple[str, str]:
     tracking_issue = entry.get("trackingIssue")
     if not isinstance(tracking_issue, str) or not ISSUE_RE.fullmatch(tracking_issue):
         raise AuditPolicyError(f"missing tracking issue for {context}")
+    _require_text(entry, "dependencyChain", context, "missing dependency chain", minimum_length=5)
     _require_text(entry, "reason", context, "missing rationale", minimum_length=20)
     _require_text(entry, "upgradePlan", context, "missing upgrade plan", minimum_length=20)
+    try:
+        introduced_on = date.fromisoformat(str(entry.get("introducedOn")))
+    except ValueError as error:
+        raise AuditPolicyError(f"invalid introduction date for {context}") from error
+    if introduced_on > today:
+        raise AuditPolicyError(
+            f"future introduction date for {context}: {introduced_on}"
+        )
     try:
         expires_on = date.fromisoformat(str(entry.get("expiresOn")))
     except ValueError as error:
         raise AuditPolicyError(f"invalid expiry for {context}") from error
     if expires_on < today:
         raise AuditPolicyError(f"expired audit exception: {context} expired {expires_on}")
+    if expires_on <= introduced_on:
+        raise AuditPolicyError(
+            f"expiry must be after introduction for {context}: "
+            f"introduced={introduced_on} expires={expires_on}"
+        )
     return project, advisory
 
 
@@ -130,6 +145,24 @@ def load_policy(path: Path, today: date) -> dict[tuple[str, str], dict[str, Any]
             raise AuditPolicyError(f"duplicate audit exception: {key[0]}/{key[1]}")
         result[key] = entry
     return result
+
+
+def exception_expiry_warnings(
+    exceptions: dict[tuple[str, str], dict[str, Any]],
+    today: date,
+    warning_days: int = EXPIRY_WARNING_DAYS,
+) -> list[str]:
+    warnings: list[str] = []
+    for (project, advisory), entry in sorted(exceptions.items()):
+        expires_on = date.fromisoformat(str(entry["expiresOn"]))
+        days_remaining = (expires_on - today).days
+        if 0 <= days_remaining <= warning_days:
+            warnings.append(
+                f"audit exception {project}/{advisory} expires in "
+                f"{days_remaining} days on {expires_on}; "
+                f"owner={entry['owner']} tracking={entry['trackingIssue']}"
+            )
+    return warnings
 
 
 def run_npm_audit(root: Path, project_path: Path, production: bool) -> dict[str, Any]:
@@ -298,7 +331,10 @@ def main() -> int:
     policy_path = args.policy if args.policy.is_absolute() else root / args.policy
     report_path = args.report if args.report.is_absolute() else root / args.report
     try:
-        exceptions = load_policy(policy_path, datetime.now(timezone.utc).date())
+        today = datetime.now(timezone.utc).date()
+        exceptions = load_policy(policy_path, today)
+        for warning in exception_expiry_warnings(exceptions, today):
+            print(f"::warning::{warning}", file=sys.stderr)
         errors, used, projects_report = _collect_audit_results(root, exceptions)
         stale = sorted(set(exceptions) - used)
         errors.extend(
@@ -319,7 +355,15 @@ def main() -> int:
                 "checkedAt": datetime.now(timezone.utc).isoformat(),
                 "productionPolicy": "zero-vulnerabilities",
                 "usedExceptions": [
-                    {"project": project, "advisory": advisory}
+                    {
+                        "project": project,
+                        "advisory": advisory,
+                        "dependencyChain": exceptions[(project, advisory)]["dependencyChain"],
+                        "owner": exceptions[(project, advisory)]["owner"],
+                        "trackingIssue": exceptions[(project, advisory)]["trackingIssue"],
+                        "introducedOn": exceptions[(project, advisory)]["introducedOn"],
+                        "expiresOn": exceptions[(project, advisory)]["expiresOn"],
+                    }
                     for project, advisory in sorted(used)
                 ],
                 "projects": projects_report,

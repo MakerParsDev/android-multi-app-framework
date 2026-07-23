@@ -9,10 +9,12 @@
       "severity": "moderate",
       "scope": "development",
       "owner": "oaslananka",
-      "trackingIssue": "#124",
+      "trackingIssue": "#40",
       "expiresOn": "2026-08-15",
       "reason": "The latest firebase-functions-test release still depends on vulnerable ts-deepmerge ^2; forcing ts-deepmerge 8 is a major compatibility override.",
-      "upgradePlan": "Upgrade when firebase-functions-test adopts ts-deepmerge 8 or another patched compatible merge implementation, then remove this entry."
+      "upgradePlan": "Upgrade when firebase-functions-test adopts ts-deepmerge 8 or another patched compatible merge implementation, then remove this entry.",
+      "dependencyChain": "firebase-functions-test > ts-deepmerge",
+      "introducedOn": "2026-07-21"
     },
     {
       "project": "firebase-rules-tests",
@@ -20,10 +22,12 @@
       "severity": "moderate",
       "scope": "development",
       "owner": "oaslananka",
-      "trackingIssue": "#124",
+      "trackingIssue": "#40",
       "expiresOn": "2026-08-15",
       "reason": "The latest firebase-tools release depends on @google-cloud/pubsub, which currently constrains @opentelemetry/core to the vulnerable 1.x line.",
-      "upgradePlan": "Upgrade firebase-tools when its Pub/Sub dependency accepts a patched OpenTelemetry release, then remove this entry."
+      "upgradePlan": "Upgrade firebase-tools when its Pub/Sub dependency accepts a patched OpenTelemetry release, then remove this entry.",
+      "dependencyChain": "firebase-tools > @google-cloud/pubsub > @opentelemetry/core",
+      "introducedOn": "2026-07-21"
     },
     {
       "project": "firebase-rules-tests",
@@ -31,10 +35,12 @@
       "severity": "moderate",
       "scope": "development",
       "owner": "oaslananka",
-      "trackingIssue": "#124",
+      "trackingIssue": "#40",
       "expiresOn": "2026-08-15",
       "reason": "The latest firebase-tools release depends on gaxios 6, which currently constrains uuid to the vulnerable 9.x line.",
-      "upgradePlan": "Upgrade firebase-tools when its gaxios dependency accepts uuid 11.1.1 or newer, then remove this entry."
+      "upgradePlan": "Upgrade firebase-tools when its gaxios dependency accepts uuid 11.1.1 or newer, then remove this entry.",
+      "dependencyChain": "firebase-tools > gaxios > uuid",
+      "introducedOn": "2026-07-21"
     }
   ]
 }

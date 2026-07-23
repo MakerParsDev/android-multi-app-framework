@@ -397,6 +397,127 @@ def test_ci_aggregate_gate_enforces_all_required_jobs() -> None:
     assert "kover-coverage" in command
 
 
+
+def test_side_project_quality_is_required_in_main_and_pr() -> None:
+    for workflow_path in (
+        ".github/workflows/ci-main.yml",
+        ".github/workflows/ci-pr.yml",
+    ):
+        jobs = load(workflow_path)["jobs"]
+        side_projects = jobs["side-projects"]
+        assert side_projects.get("continue-on-error") is not True, workflow_path
+
+        aggregate = jobs["aggregate-gate"]
+        assert "side-projects" in aggregate["needs"], workflow_path
+        step = named_step(aggregate, "Check required jobs")
+        assert step["env"]["NEEDS_JSON"] == "${{ toJSON(needs) }}", workflow_path
+        command = step["run"]
+        assert "side-projects" in command, workflow_path
+        required_loops = [
+            line.strip()
+            for line in command.splitlines()
+            if line.strip().startswith("for job in ")
+        ]
+        assert any("side-projects" in loop.split() for loop in required_loops), workflow_path
+
+
+def test_aggregate_gates_reject_unexpected_skips() -> None:
+    main_job = load(".github/workflows/ci-main.yml")["jobs"]["aggregate-gate"]
+    main_step = named_step(main_job, "Check required jobs")
+    assert main_step["env"]["NEEDS_JSON"] == "${{ toJSON(needs) }}"
+    main_command = main_step["run"]
+    assert 'result" != "success"' in main_command
+    assert 'result" != "skipped"' not in main_command
+
+    pr_job = load(".github/workflows/ci-pr.yml")["jobs"]["aggregate-gate"]
+    pr_step = named_step(pr_job, "Check required jobs")
+    assert pr_step["env"] == {
+        "NEEDS_JSON": "${{ toJSON(needs) }}",
+        "HAS_CODE": "${{ needs.analyze-impact.outputs.has_code }}",
+    }
+    command = pr_step["run"]
+    for always_required in ("security-gate", "analyze-impact", "repository-security"):
+        assert always_required in command
+    for code_job in (
+        "side-projects",
+        "static-analysis",
+        "validate-and-test",
+        "android-lint",
+        "kover-coverage",
+    ):
+        assert code_job in command
+    assert 'if [ "$HAS_CODE" = "true" ]' in command
+    assert "unexpectedly skipped" in command
+
+
+def test_ci_pr_shell_blocks_do_not_embed_github_expressions() -> None:
+    jobs = load(".github/workflows/ci-pr.yml")["jobs"]
+    for job_name, job in jobs.items():
+        for step in job.get("steps", []):
+            run = step.get("run", "")
+            assert "${{" not in run, f"{job_name}:{step.get('name', '<unnamed>')}"
+
+
+def test_required_pr_workflows_are_unfiltered_and_connected_tests_fail_closed() -> None:
+    ci = load(".github/workflows/ci-pr.yml")
+    ci_event = ci.get("on", ci.get(True))
+    pull_request = ci_event["pull_request"] or {}
+    assert "paths" not in pull_request
+    assert "paths-ignore" not in pull_request
+
+    connected = load(".github/workflows/connected-tests.yml")
+    connected_event = connected.get("on", connected.get(True))
+    assert "pull_request" in connected_event
+    connected_pr = connected_event["pull_request"] or {}
+    assert "paths" not in connected_pr
+    assert "paths-ignore" not in connected_pr
+
+    job = connected["jobs"]["instrumentation-tests"]
+    assert job["name"] == "Instrumentation Tests"
+    assert job["runs-on"] == "ubuntu-24.04"
+    command = named_step(job, "Run managed-device instrumentation tests")["run"]
+    assert "ciPixel2Api30Kuran_kerimDebugAndroidTest" in command
+    assert "|| true" not in command
+    kvm = named_step(job, "Enable KVM acceleration")["run"]
+    assert "exit 1" in kvm
+    cleanup = named_step(job, "Remove CI-only Firebase placeholder")
+    assert cleanup["if"] == "always()"
+
+
+def test_semgrep_uses_valid_pinned_configs_and_scoped_launcher_exception() -> None:
+    jobs = load(".github/workflows/security.yml")["jobs"]
+    semgrep_job = jobs["semgrep"]
+    install = named_step(semgrep_job, "Install Semgrep")["run"]
+    assert install == "python3 -m pip install semgrep==1.171.0"
+
+    command = named_step(semgrep_job, "Run Semgrep")["run"]
+    assert "--config auto" in command
+    assert "--config p/kotlin" in command
+    assert "p/android" not in command
+
+    manifest = (ROOT / "app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
+    suppression = (
+        "nosemgrep: java.android.security.exported_activity.exported_activity"
+    )
+    assert suppression in manifest
+    assert manifest.count("nosemgrep:") == 1
+    assert "android.intent.action.MAIN" in manifest
+    assert "android.intent.category.LAUNCHER" in manifest
+    assert 'android:exported="true"' in manifest
+
+
+def test_security_workflow_is_fail_closed() -> None:
+    jobs = load(".github/workflows/security.yml")["jobs"]
+    required_steps = (
+        (jobs["secret-scan"], "Run synthetic leak self-test"),
+        (jobs["semgrep"], "Run Semgrep"),
+        (jobs["workflow-audit"], "Run actionlint"),
+    )
+    for job, step_name in required_steps:
+        step = named_step(job, step_name)
+        assert step.get("continue-on-error") is not True, step_name
+        assert "|| true" not in step.get("run", ""), step_name
+
 def test_play_internal_builds_attests_and_publishes_one_exact_aab() -> None:
     workflow = load(".github/workflows/play-internal.yml")
     event = workflow.get("on", workflow.get(True))
@@ -459,6 +580,12 @@ def main() -> int:
         test_performance_startup_skips_prompts_and_remote_services,
         test_release_is_manual_protected_and_attested,
         test_ci_aggregate_gate_enforces_all_required_jobs,
+        test_side_project_quality_is_required_in_main_and_pr,
+        test_aggregate_gates_reject_unexpected_skips,
+        test_ci_pr_shell_blocks_do_not_embed_github_expressions,
+        test_required_pr_workflows_are_unfiltered_and_connected_tests_fail_closed,
+        test_semgrep_uses_valid_pinned_configs_and_scoped_launcher_exception,
+        test_security_workflow_is_fail_closed,
         test_play_internal_builds_attests_and_publishes_one_exact_aab,
     ]
     for test in tests:
