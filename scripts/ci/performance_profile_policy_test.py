@@ -352,6 +352,10 @@ class PerformanceProfileStructureTest(unittest.TestCase):
         self.assertIn("findTag", source[wait_start:click_start])
         self.assertIn("waitForTag", source[click_start:scroll_start])
         self.assertIn("waitForTag", source[scroll_start:launch_start])
+        self.assertIn(
+            "waitForTag(config, PerformanceTags.APP_ROOT)",
+            source[launch_start:],
+        )
 
     def test_benchmark_build_declares_all_catalog_flavors(self) -> None:
         source = (ROOT / "performance/benchmark/build.gradle.kts").read_text(
