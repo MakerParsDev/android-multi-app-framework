@@ -324,20 +324,34 @@ class PerformanceProfileStructureTest(unittest.TestCase):
         scoped_tag_index = root_chain.index('.testTag("app_root")')
         self.assertLess(semantics_index, scoped_tag_index)
 
-    def test_ui_automator_uses_compose_test_tag_resource_name_without_package(self) -> None:
+    def test_ui_automator_matches_compose_test_tag_accessibility_extras(self) -> None:
         source = (
             ROOT
             / "performance/benchmark/src/main/java/com/parsfilo/contentapp/performance/UiAutomatorActions.kt"
         ).read_text(encoding="utf-8")
+        self.assertIn(
+            '"androidx.compose.ui.semantics.testTag"',
+            source,
+        )
+        self.assertIn("device.onElementOrNull", source)
+        self.assertIn("extras.getString(COMPOSE_TEST_TAG_EXTRA) == tag", source)
+        self.assertIn("viewIdResourceName == tag", source)
         self.assertNotIn("By.res(config.packageName, tag)", source)
-        for helper in ("waitForTag", "clickTag", "scrollTag"):
-            match = re.search(
-                rf"internal fun MacrobenchmarkScope\.{helper}\([^)]*\) \{{(.*?)\n\}}",
-                source,
-                re.DOTALL,
-            )
-            self.assertIsNotNone(match, msg=f"missing helper body: {helper}")
-            self.assertIn("By.res(tag)", match.group(1), msg=helper)
+        self.assertNotIn("By.res(tag)", source)
+
+    def test_tag_actions_reuse_the_accessibility_matcher(self) -> None:
+        source = (
+            ROOT
+            / "performance/benchmark/src/main/java/com/parsfilo/contentapp/performance/UiAutomatorActions.kt"
+        ).read_text(encoding="utf-8")
+        self.assertIn("private fun MacrobenchmarkScope.findTag", source)
+        wait_start = source.index("internal fun MacrobenchmarkScope.waitForTag")
+        click_start = source.index("internal fun MacrobenchmarkScope.clickTag")
+        scroll_start = source.index("internal fun MacrobenchmarkScope.scrollTag")
+        launch_start = source.index("internal fun MacrobenchmarkScope.launchRoot")
+        self.assertIn("findTag", source[wait_start:click_start])
+        self.assertIn("waitForTag", source[click_start:scroll_start])
+        self.assertIn("waitForTag", source[scroll_start:launch_start])
 
     def test_benchmark_build_declares_all_catalog_flavors(self) -> None:
         source = (ROOT / "performance/benchmark/build.gradle.kts").read_text(
