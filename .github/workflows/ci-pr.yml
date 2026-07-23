@@ -395,11 +395,26 @@ jobs:
             build/reports/kover/
           retention-days: 14
 
-  aggregate-gate:
-    name: PR Quality Gate
+  repository-security:
+    name: Repository Security
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [security-gate, analyze-impact, side-projects, static-analysis, validate-and-test, android-lint, kover-coverage]
+    needs: [security-gate]
+    if: always()
+    steps:
+      - name: Verify security gate passed
+        run: |
+          if [ "${{ needs.security-gate.result }}" != "success" ]; then
+            echo "::error::Security gate did not pass (result: ${{ needs.security-gate.result }})"
+            exit 1
+          fi
+          echo "Security gate passed"
+
+  aggregate-gate:
+    name: CI Required
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [security-gate, analyze-impact, side-projects, static-analysis, validate-and-test, android-lint, kover-coverage, repository-security]
     if: always()
     steps:
       - name: Check required jobs
