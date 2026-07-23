@@ -409,15 +409,53 @@ def test_side_project_quality_is_required_in_main_and_pr() -> None:
 
         aggregate = jobs["aggregate-gate"]
         assert "side-projects" in aggregate["needs"], workflow_path
-        command = named_step(aggregate, "Check required jobs")["run"]
-        assert '"side-projects":' in command, workflow_path
-        assert "needs.side-projects.result" in command, workflow_path
-        required_loop = next(
+        step = named_step(aggregate, "Check required jobs")
+        assert step["env"]["NEEDS_JSON"] == "${{ toJSON(needs) }}", workflow_path
+        command = step["run"]
+        assert "side-projects" in command, workflow_path
+        required_loops = [
             line.strip()
             for line in command.splitlines()
             if line.strip().startswith("for job in ")
-        )
-        assert "side-projects" in required_loop.split(), workflow_path
+        ]
+        assert any("side-projects" in loop.split() for loop in required_loops), workflow_path
+
+
+def test_aggregate_gates_reject_unexpected_skips() -> None:
+    main_job = load(".github/workflows/ci-main.yml")["jobs"]["aggregate-gate"]
+    main_step = named_step(main_job, "Check required jobs")
+    assert main_step["env"]["NEEDS_JSON"] == "${{ toJSON(needs) }}"
+    main_command = main_step["run"]
+    assert 'result" != "success"' in main_command
+    assert 'result" != "skipped"' not in main_command
+
+    pr_job = load(".github/workflows/ci-pr.yml")["jobs"]["aggregate-gate"]
+    pr_step = named_step(pr_job, "Check required jobs")
+    assert pr_step["env"] == {
+        "NEEDS_JSON": "${{ toJSON(needs) }}",
+        "HAS_CODE": "${{ needs.analyze-impact.outputs.has_code }}",
+    }
+    command = pr_step["run"]
+    for always_required in ("security-gate", "analyze-impact", "repository-security"):
+        assert always_required in command
+    for code_job in (
+        "side-projects",
+        "static-analysis",
+        "validate-and-test",
+        "android-lint",
+        "kover-coverage",
+    ):
+        assert code_job in command
+    assert 'if [ "$HAS_CODE" = "true" ]' in command
+    assert "unexpectedly skipped" in command
+
+
+def test_ci_pr_shell_blocks_do_not_embed_github_expressions() -> None:
+    jobs = load(".github/workflows/ci-pr.yml")["jobs"]
+    for job_name, job in jobs.items():
+        for step in job.get("steps", []):
+            run = step.get("run", "")
+            assert "${{" not in run, f"{job_name}:{step.get('name', '<unnamed>')}"
 
 
 def test_security_workflow_is_fail_closed() -> None:
@@ -495,6 +533,8 @@ def main() -> int:
         test_release_is_manual_protected_and_attested,
         test_ci_aggregate_gate_enforces_all_required_jobs,
         test_side_project_quality_is_required_in_main_and_pr,
+        test_aggregate_gates_reject_unexpected_skips,
+        test_ci_pr_shell_blocks_do_not_embed_github_expressions,
         test_security_workflow_is_fail_closed,
         test_play_internal_builds_attests_and_publishes_one_exact_aab,
     ]
