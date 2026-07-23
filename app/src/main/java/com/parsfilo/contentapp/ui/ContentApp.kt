@@ -213,7 +213,6 @@ fun ContentApp(
             modifier =
                 Modifier
                     .semantics { testTagsAsResourceId = true }
-                    .testTag("app_root")
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.background),
         ) {
@@ -300,6 +299,7 @@ fun ContentApp(
                     },
                 ) {
                     Scaffold(
+                        modifier = Modifier.testTag("app_root"),
                         containerColor = app_transparent,
                         contentWindowInsets =
                             WindowInsets.safeDrawing.only(
@@ -328,6 +328,7 @@ fun ContentApp(
                 }
             } else {
                 Scaffold(
+                    modifier = Modifier.testTag("app_root"),
                     containerColor = app_transparent,
                     contentWindowInsets =
                         WindowInsets.safeDrawing.only(

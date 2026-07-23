@@ -450,14 +450,19 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 ```
 
-Change the root modifier to:
+Enable resource-ID mapping on a parent container and keep the tagged app surface on a separate descendant semantics node:
 
 ```kotlin
-Modifier
-    .semantics { testTagsAsResourceId = true }
-    .testTag("app_root")
-    .fillMaxSize()
-    .background(MaterialTheme.colorScheme.background)
+Box(
+    modifier = Modifier
+        .semantics { testTagsAsResourceId = true }
+        .fillMaxSize(),
+) {
+    Scaffold(
+        modifier = Modifier.testTag("app_root"),
+        // ...
+    )
+}
 ```
 
 Apply `.testTag("primary_navigation")` to both the `NavigationSuiteScaffold` and compact bottom-navigation container.
