@@ -313,9 +313,16 @@ class PerformanceProfileStructureTest(unittest.TestCase):
         source = (
             ROOT / "app/src/main/java/com/parsfilo/contentapp/ui/ContentApp.kt"
         ).read_text(encoding="utf-8")
-        semantics_index = source.index(".semantics { testTagsAsResourceId = true }")
         root_tag_index = source.index('.testTag("app_root")')
-        self.assertLess(semantics_index, root_tag_index)
+        root_start = source.rfind("Box(", 0, root_tag_index)
+        root_end = source.index("\n        ) {", root_tag_index)
+        self.assertGreaterEqual(root_start, 0)
+        root_chain = source[root_start:root_end]
+        semantics_index = root_chain.index(
+            ".semantics { testTagsAsResourceId = true }"
+        )
+        scoped_tag_index = root_chain.index('.testTag("app_root")')
+        self.assertLess(semantics_index, scoped_tag_index)
 
     def test_ui_automator_uses_compose_test_tag_resource_name_without_package(self) -> None:
         source = (
