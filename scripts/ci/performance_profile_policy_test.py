@@ -316,9 +316,15 @@ class PerformanceProfileStructureTest(unittest.TestCase):
         root_start = source.index("        Box(\n            modifier =")
         root_end = source.index("\n        ) {", root_start)
         root_chain = source[root_start:root_end]
-        self.assertIn(".semantics {", root_chain)
-        self.assertIn("testTagsAsResourceId = true", root_chain)
-        self.assertIn('testTag = "app_root"', root_chain)
+        semantics_match = re.search(
+            r"\.semantics \{(.*?)\n                    \}",
+            root_chain,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(semantics_match)
+        semantics_block = semantics_match.group(1)
+        self.assertIn("testTagsAsResourceId = true", semantics_block)
+        self.assertIn('testTag = "app_root"', semantics_block)
         self.assertNotIn('.testTag("app_root")', root_chain)
 
     def test_ui_automator_matches_compose_test_tag_accessibility_extras(self) -> None:
