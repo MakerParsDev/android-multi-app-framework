@@ -397,6 +397,41 @@ def test_ci_aggregate_gate_enforces_all_required_jobs() -> None:
     assert "kover-coverage" in command
 
 
+
+def test_side_project_quality_is_required_in_main_and_pr() -> None:
+    for workflow_path in (
+        ".github/workflows/ci-main.yml",
+        ".github/workflows/ci-pr.yml",
+    ):
+        jobs = load(workflow_path)["jobs"]
+        side_projects = jobs["side-projects"]
+        assert side_projects.get("continue-on-error") is not True, workflow_path
+
+        aggregate = jobs["aggregate-gate"]
+        assert "side-projects" in aggregate["needs"], workflow_path
+        command = named_step(aggregate, "Check required jobs")["run"]
+        assert '"side-projects":' in command, workflow_path
+        assert "needs.side-projects.result" in command, workflow_path
+        required_loop = next(
+            line.strip()
+            for line in command.splitlines()
+            if line.strip().startswith("for job in ")
+        )
+        assert "side-projects" in required_loop.split(), workflow_path
+
+
+def test_security_workflow_is_fail_closed() -> None:
+    jobs = load(".github/workflows/security.yml")["jobs"]
+    required_steps = (
+        (jobs["secret-scan"], "Run synthetic leak self-test"),
+        (jobs["semgrep"], "Run Semgrep"),
+        (jobs["workflow-audit"], "Run actionlint"),
+    )
+    for job, step_name in required_steps:
+        step = named_step(job, step_name)
+        assert step.get("continue-on-error") is not True, step_name
+        assert "|| true" not in step.get("run", ""), step_name
+
 def test_play_internal_builds_attests_and_publishes_one_exact_aab() -> None:
     workflow = load(".github/workflows/play-internal.yml")
     event = workflow.get("on", workflow.get(True))
@@ -459,6 +494,8 @@ def main() -> int:
         test_performance_startup_skips_prompts_and_remote_services,
         test_release_is_manual_protected_and_attested,
         test_ci_aggregate_gate_enforces_all_required_jobs,
+        test_side_project_quality_is_required_in_main_and_pr,
+        test_security_workflow_is_fail_closed,
         test_play_internal_builds_attests_and_publishes_one_exact_aab,
     ]
     for test in tests:

@@ -46,7 +46,7 @@ jobs:
         run: bash scripts/ci/run_secret_scan.sh --mode history --report-dir build/reports/security
 
       - name: Run synthetic leak self-test
-        run: bash scripts/ci/test_secret_gate.sh || true
+        run: bash scripts/ci/test_secret_gate.sh
 
       - name: Upload SARIF to GitHub
         if: always()
@@ -83,7 +83,6 @@ jobs:
         run: pip install semgrep
 
       - name: Run Semgrep
-        continue-on-error: true
         run: |
           semgrep scan \
             --config auto \
@@ -92,7 +91,7 @@ jobs:
             --sarif \
             --output semgrep-results.sarif \
             --error \
-            app/ core/ feature/ || true
+            app/ core/ feature/
 
       - name: Upload SARIF to GitHub
         if: always()
@@ -128,7 +127,6 @@ jobs:
             | tar xz -C /usr/local/bin actionlint
 
       - name: Run actionlint
-        continue-on-error: true
         run: actionlint .github/workflows/*.yml
 
       - name: Validate security pipeline

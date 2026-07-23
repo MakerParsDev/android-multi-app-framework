@@ -230,7 +230,7 @@ jobs:
         run: |
           echo "$PLAY_SERVICE_ACCOUNT_JSON_BASE64" | tr -d '\r\n\t ' | base64 -d > /tmp/service-account.json
           echo "PLAY_SERVICE_ACCOUNT_JSON=/tmp/service-account.json" >> "$GITHUB_ENV"
-          echo "::add-mask::$(cat /tmp/service-account.json | head -c 20)"
+          echo "::add-mask::$(head -c 20 /tmp/service-account.json)"
           python3 scripts/ci/verify_play_service_account_project.py --expected-project-id makerpars-oaslananka-mobil
           python3 -m pip install --quiet google-api-python-client google-auth
           python3 scripts/ci/fetch_play_version_codes.py \
@@ -317,7 +317,7 @@ jobs:
           echo "::add-mask::${KEY_PASSWORD}"
           echo "$KEYSTORE_BASE64" | base64 -d > /tmp/release.jks
           echo "$PLAY_SERVICE_ACCOUNT_JSON_BASE64" | tr -d '\r\n\t ' | base64 -d > /tmp/service-account.json
-          echo "::add-mask::$(cat /tmp/service-account.json | head -c 20)"
+          echo "::add-mask::$(head -c 20 /tmp/service-account.json)"
           echo "KEYSTORE_FILE=/tmp/release.jks" >> "$GITHUB_ENV"
           echo "PLAY_SERVICE_ACCOUNT_JSON=/tmp/service-account.json" >> "$GITHUB_ENV"
 

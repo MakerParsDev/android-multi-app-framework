@@ -108,6 +108,7 @@ jobs:
           BASE_REF: ${{ github.base_ref }}
         run: |
           set -euo pipefail
+          exec 3>>"$GITHUB_OUTPUT"
 
           CHANGED_FILES="$(git diff --name-only "origin/$BASE_REF"...HEAD 2>/dev/null || git ls-files)"
 
@@ -126,9 +127,9 @@ jobs:
           done <<< "$CHANGED_FILES"
 
           if [ "$HAS_CODE" != "true" ]; then
-            echo "has_code=false" >> "$GITHUB_OUTPUT"
-            echo "flavors_json=[]" >> "$GITHUB_OUTPUT"
-            echo "all_flavors_json=[]" >> "$GITHUB_OUTPUT"
+            echo "has_code=false" >&3
+            echo "flavors_json=[]" >&3
+            echo "all_flavors_json=[]" >&3
             exit 0
           fi
 
@@ -138,7 +139,7 @@ jobs:
             exit 1
           fi
 
-          echo "all_flavors_json=$ALL_FLAVORS_JSON" >> "$GITHUB_OUTPUT"
+          echo "all_flavors_json=$ALL_FLAVORS_JSON" >&3
 
           mapfile -t ALL_FLAVORS < <(
             echo "$ALL_FLAVORS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d'
@@ -167,8 +168,8 @@ jobs:
           fi
 
           if [ "${#SELECTED[@]}" -eq 0 ]; then
-            echo "has_code=false" >> "$GITHUB_OUTPUT"
-            echo "flavors_json=[]" >> "$GITHUB_OUTPUT"
+            echo "has_code=false" >&3
+            echo "flavors_json=[]" >&3
             exit 0
           fi
 
@@ -182,8 +183,8 @@ jobs:
           done
           SELECTED_JSON+="]"
 
-          echo "has_code=true" >> "$GITHUB_OUTPUT"
-          echo "flavors_json=$SELECTED_JSON" >> "$GITHUB_OUTPUT"
+          echo "has_code=true" >&3
+          echo "flavors_json=$SELECTED_JSON" >&3
 
   side-projects:
     name: Side-project Quality
@@ -191,7 +192,6 @@ jobs:
     timeout-minutes: 20
     needs: analyze-impact
     if: needs.analyze-impact.outputs.has_code == 'true'
-    continue-on-error: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -420,9 +420,9 @@ jobs:
       - name: Check required jobs
         run: |
           set -euo pipefail
-          NEEDS_JSON='{"security-gate":"${{ needs.security-gate.result }}","static-analysis":"${{ needs.static-analysis.result }}","validate-and-test":"${{ needs.validate-and-test.result }}","android-lint":"${{ needs.android-lint.result }}","kover-coverage":"${{ needs.kover-coverage.result }}"}'
+          NEEDS_JSON='{"security-gate":"${{ needs.security-gate.result }}","side-projects":"${{ needs.side-projects.result }}","static-analysis":"${{ needs.static-analysis.result }}","validate-and-test":"${{ needs.validate-and-test.result }}","android-lint":"${{ needs.android-lint.result }}","kover-coverage":"${{ needs.kover-coverage.result }}"}'
           failed=0
-          for job in security-gate static-analysis validate-and-test android-lint kover-coverage; do
+          for job in security-gate side-projects static-analysis validate-and-test android-lint kover-coverage; do
             result=$(echo "$NEEDS_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin).get('$job','missing'))")
             if [ "$result" != "success" ] && [ "$result" != "skipped" ]; then
               echo "::error::Required job '$job' failed with result: $result"
