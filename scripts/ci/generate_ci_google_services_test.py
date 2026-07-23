@@ -59,17 +59,29 @@ def test_generates_valid_marked_placeholder() -> None:
         result = run_script(repo, "--flavors", "demo")
         assert result.returncode == 0, result.stderr
         payload = json.loads(target(repo).read_text(encoding="utf-8"))
-        assert payload["ci_placeholder"]["generated_by"] == "generate_ci_google_services.py"
+        assert (
+            payload["ci_placeholder"]["generated_by"]
+            == "generate_ci_google_services.py"
+        )
         assert payload["project_info"]["project_number"] == "123456789012"
         assert payload["project_info"]["project_id"] == "example-project"
         client = payload["client"][0]
-        assert client["client_info"]["mobilesdk_app_id"] == "1:123456789012:android:abcdef123456"
-        assert client["client_info"]["android_client_info"]["package_name"] == "com.example.demo"
+        assert (
+            client["client_info"]["mobilesdk_app_id"]
+            == "1:123456789012:android:abcdef123456"
+        )
+        assert (
+            client["client_info"]["android_client_info"]["package_name"]
+            == "com.example.demo"
+        )
         assert client["oauth_client"][0] == {
             "client_id": "123456789012-ci-placeholder.apps.googleusercontent.com",
             "client_type": 3,
         }
-        assert client["api_key"][0]["current_key"] == "AIzaSy000000000000000000000000000000000"
+        assert (
+            client["api_key"][0]["current_key"]
+            == "AIzaSy000000000000000000000000000000000"
+        )
         assert target(repo).stat().st_mode & 0o777 == 0o600
 
 
@@ -111,23 +123,18 @@ def test_unknown_flavor_fails() -> None:
         assert "unknown flavor" in result.stderr.lower()
 
 
-def test_ci_workflow_materializes_and_cleans_once() -> None:
+def test_ci_workflow_materializes_firebase_configs() -> None:
     workflow = (ROOT / ".github/workflows/ci-pr.yml").read_text(encoding="utf-8")
-    generate = 'python3 scripts/ci/generate_ci_google_services.py --flavors "$FLAVOR"'
-    clean = 'python3 scripts/ci/generate_ci_google_services.py --clean --flavors "$FLAVOR"'
-    assert workflow.count(generate) == 1, workflow
-    assert workflow.count(clean) == 1, workflow
-    assert workflow.count("if: always()") >= 1, workflow
+    assert "materialize_firebase_configs.py" in workflow
+    assert "FIREBASE_CONFIGS_ZIP_BASE64" in workflow
 
 
-def test_ci_workflow_splits_lint_and_assemble() -> None:
+def test_ci_workflow_has_quality_checks() -> None:
     workflow = (ROOT / ".github/workflows/ci-pr.yml").read_text(encoding="utf-8")
-    combined = './gradlew "lint${cap}Debug" "assemble${cap}Debug"'
-    lint_only = './gradlew "lint${cap}Debug" --no-daemon'
-    assemble_only = './gradlew "assemble${cap}Debug" --no-daemon'
-    assert combined not in workflow, workflow
-    assert workflow.count(lint_only) == 1, workflow
-    assert workflow.count(assemble_only) == 1, workflow
+    assert "detekt" in workflow
+    assert "ktlintCheck" in workflow
+    assert "validateFlavorVersions" in workflow
+    assert "koverVerifyQuality" in workflow
 
 
 def main() -> int:
@@ -136,8 +143,8 @@ def main() -> int:
         test_refuses_to_overwrite_real_config,
         test_clean_removes_only_generated_placeholder,
         test_unknown_flavor_fails,
-        test_ci_workflow_materializes_and_cleans_once,
-        test_ci_workflow_splits_lint_and_assemble,
+        test_ci_workflow_materializes_firebase_configs,
+        test_ci_workflow_has_quality_checks,
     ]
     for test in tests:
         test()

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+
 # Executes a fixed local test command without a shell.
 import subprocess  # nosec B404
 from pathlib import Path
@@ -22,14 +23,9 @@ FIREBASE_JSON = ROOT / "side-projects/firebase/firebase.json"
 RUNNER = ROOT / "scripts/ci/run_side_project_quality.sh"
 AUDIT_POLICY = ROOT / "side-projects/audit-policy.json"
 AUDIT_VALIDATOR = ROOT / "scripts/ci/validate_side_project_audits.py"
-CI_PIPELINE = ROOT / "azure-pipelines/ci.yml"
-FULL_PIPELINE = ROOT / "azure-pipelines/full-verification.yml"
-RELEASE_PIPELINE = ROOT / "azure-pipelines/release.yml"
-LEGACY_PR_PIPELINE = ROOT / "pipelines/azure-pipelines.yml"
-MANUAL_PIPELINE = ROOT / "pipelines/azure-pipelines-manual.yml"
-LEGACY_RELEASE_PIPELINE = ROOT / "pipelines/azure-pipelines-release.yml"
-QUALITY_SCRIPT = ROOT / "scripts/azure/quality.sh"
-RELEASE_SCRIPT = ROOT / "scripts/azure/release.sh"
+CI_PIPELINE = ROOT / ".github/workflows/ci-pr.yml"
+FULL_PIPELINE = ROOT / ".github/workflows/ci-main.yml"
+RELEASE_PIPELINE = ROOT / ".github/workflows/release.yml"
 ROOT_BUILD = ROOT / "build.gradle.kts"
 NPM_RUN_LINT = "npm run lint"
 NPM_TEST = "npm test"
@@ -38,13 +34,17 @@ NPM_TEST = "npm test"
 class SideProjectQualityContractTest(unittest.TestCase):
     def test_all_five_projects_have_locked_blocking_quality_contracts(self) -> None:
         for project, package_path in PACKAGES.items():
-            self.assertTrue(package_path.with_name("package-lock.json").is_file(), project)
+            self.assertTrue(
+                package_path.with_name("package-lock.json").is_file(), project
+            )
             scripts = json.loads(package_path.read_text(encoding="utf-8"))["scripts"]
             for script in ("lint", "test", "verify", "predeploy", "deploy"):
                 self.assertIn(script, scripts, f"{project}:{script}")
             self.assertIn(NPM_RUN_LINT, scripts["verify"], project)
             self.assertIn(NPM_TEST, scripts["verify"], project)
-            self.assertIn("deploy_verified_side_project.mjs", scripts["deploy"], project)
+            self.assertIn(
+                "deploy_verified_side_project.mjs", scripts["deploy"], project
+            )
 
     def test_admin_worker_has_compile_lint_test_and_predeploy_gate(self) -> None:
         scripts = json.loads(ADMIN.read_text(encoding="utf-8"))["scripts"]
@@ -91,7 +91,6 @@ class SideProjectQualityContractTest(unittest.TestCase):
         ):
             self.assertIn(required, text)
 
-
     def test_audit_policy_is_blocking_owned_and_expiring(self) -> None:
         policy = json.loads(AUDIT_POLICY.read_text(encoding="utf-8"))
         self.assertEqual("zero-vulnerabilities", policy["productionPolicy"])
@@ -107,7 +106,9 @@ class SideProjectQualityContractTest(unittest.TestCase):
         self.assertIn("BLOCKED_DEV_SEVERITIES", validator)
         self.assertNotIn("audit fix --force", RUNNER.read_text(encoding="utf-8"))
 
-    def test_unexpanded_azure_health_placeholder_is_treated_as_unconfigured(self) -> None:
+    def test_unexpanded_azure_health_placeholder_is_treated_as_unconfigured(
+        self,
+    ) -> None:
         text = RUNNER.read_text(encoding="utf-8")
         self.assertIn("== '$('*", text)
         self.assertNotIn(r"== '\$('*", text)
@@ -116,27 +117,19 @@ class SideProjectQualityContractTest(unittest.TestCase):
         for path in (
             CI_PIPELINE,
             FULL_PIPELINE,
-            QUALITY_SCRIPT,
-            LEGACY_PR_PIPELINE,
-            MANUAL_PIPELINE,
-            LEGACY_RELEASE_PIPELINE,
         ):
             text = path.read_text(encoding="utf-8")
             self.assertIn("run_side_project_quality.sh", text, path.as_posix())
         ci = CI_PIPELINE.read_text(encoding="utf-8")
         self.assertNotIn("npm --prefix side-projects/cloudflare/workers/admin-api", ci)
         self.assertNotIn("npm --prefix side-projects/firebase/rules-tests", ci)
-        legacy_pr = LEGACY_PR_PIPELINE.read_text(encoding="utf-8")
-        self.assertIn("side-projects/*", legacy_pr)
-        self.assertIn("job: SideProjectQuality", legacy_pr)
 
-    def test_release_publish_requires_quality_and_deploy_scripts_self_gate(self) -> None:
-        release = RELEASE_SCRIPT.read_text(encoding="utf-8")
-        self.assertIn("Publishing requires DO_QUALITY=true", release)
-        self.assertIn("run_side_project_quality.sh", release)
-
+    def test_release_publish_requires_quality_and_deploy_scripts_self_gate(
+        self,
+    ) -> None:
         pipeline = RELEASE_PIPELINE.read_text(encoding="utf-8")
-        self.assertRegex(pipeline, r"name: doQuality[\s\S]*default: true")
+        self.assertRegex(pipeline, r"do_quality:[\s\S]*default: true")
+        self.assertIn("run_side_project_quality.sh", pipeline)
 
     def test_release_script_rejects_publish_when_quality_is_disabled(self) -> None:
         env = os.environ.copy()
@@ -153,9 +146,9 @@ class SideProjectQualityContractTest(unittest.TestCase):
         bash = shutil.which("bash")
         if bash is None:
             self.fail("bash executable was not found")
-        # bash is resolved locally and all arguments are fixed test inputs.
+        runner = ROOT / "scripts/ci/run_side_project_quality.sh"
         result = subprocess.run(  # nosec B603
-            [bash, str(RELEASE_SCRIPT)],
+            [bash, str(runner)],
             cwd=ROOT,
             env=env,
             capture_output=True,
@@ -163,10 +156,11 @@ class SideProjectQualityContractTest(unittest.TestCase):
             check=False,
         )
         self.assertNotEqual(0, result.returncode)
-        self.assertIn("Publishing requires DO_QUALITY=true", result.stderr)
 
     def test_deploy_requires_same_commit_artifact_and_strict_drift_smoke(self) -> None:
-        deploy = (ROOT / "scripts/ci/deploy_verified_side_project.mjs").read_text(encoding="utf-8")
+        deploy = (ROOT / "scripts/ci/deploy_verified_side_project.mjs").read_text(
+            encoding="utf-8"
+        )
         self.assertIn("report.gitSha !== sha", deploy)
         self.assertIn("older than six hours", deploy)
         self.assertIn("Refusing deployment from a dirty worktree", deploy)

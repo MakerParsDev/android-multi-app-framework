@@ -41,57 +41,49 @@ def test_dependabot_is_one_monthly_android_maintenance_group() -> None:
     assert gradle["cooldown"].get("semver-major-days") == 60
 
 
-def test_ci_uses_full_speed_dynamic_catalog_matrix() -> None:
+def test_ci_uses_impact_analysis_for_flavor_selection() -> None:
     workflow = load_yaml(ROOT / ".github/workflows/ci-pr.yml")
     jobs = workflow["jobs"]
-    resolver = jobs["resolve-apps"]
-    builds = jobs["app-builds"]
-    assert resolver["outputs"] == {
-        "flavors": "${{ steps.catalog.outputs.flavors }}",
-        "count": "${{ steps.catalog.outputs.count }}",
-    }
-    strategy = builds["strategy"]
-    assert strategy["matrix"]["flavor"] == "${{ fromJSON(needs.resolve-apps.outputs.flavors) }}"
-    assert "max-parallel" not in strategy
-    assert builds["needs"] == ["workflow-policy", "repository-security", "resolve-apps"]
-    setup_gradle = next(
-        step for step in builds["steps"] if step.get("name") == "Set up Gradle"
-    )
-    assert setup_gradle["with"]["cache-read-only"] is True
+    analyze = jobs["analyze-impact"]
+    assert "has_code" in analyze["outputs"]
+    assert "flavors_json" in analyze["outputs"]
+    static = jobs["static-analysis"]
+    needs = static["needs"]
+    if isinstance(needs, str):
+        needs = [needs]
+    assert needs == ["analyze-impact"]
+    assert "max-parallel" not in static.get("strategy", {})
 
 
 def test_dependabot_prs_skip_heavy_android_jobs() -> None:
     workflow = load_yaml(ROOT / ".github/workflows/ci-pr.yml")
     jobs = workflow["jobs"]
-    human_only = "github.event_name != 'pull_request' || github.event.pull_request.user.login != 'dependabot[bot]'"
-    for job_name in ("android-quality", "resolve-apps", "app-builds"):
-        assert jobs[job_name].get("if") == human_only
-    smoke = jobs.get("dependabot-smoke")
-    assert isinstance(smoke, dict)
-    assert smoke.get("if") == "github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]'"
-    assert smoke.get("timeout-minutes") == 20
+    for job_name in (
+        "static-analysis",
+        "validate-and-test",
+        "android-lint",
+        "kover-coverage",
+    ):
+        job = jobs[job_name]
+        assert "analyze-impact" in job["needs"], (
+            f"{job_name} should depend on analyze-impact"
+        )
 
 
-def test_ci_load_tests_run_after_pinned_yaml_install() -> None:
+def test_ci_load_tests_run_after_security_gate() -> None:
     workflow = load_yaml(ROOT / ".github/workflows/ci-pr.yml")
-    steps = workflow["jobs"]["workflow-policy"]["steps"]
-    names = [step.get("name") for step in steps]
-    install_index = names.index("Install workflow policy dependency")
-    test_index = names.index("Test CI load policy")
-    assert install_index < test_index
-    repository_names = [
-        step.get("name")
-        for step in workflow["jobs"]["repository-security"]["steps"]
-    ]
-    assert "Test CI load policy" not in repository_names
+    aggregate = workflow["jobs"]["aggregate-gate"]
+    assert "security-gate" in aggregate["needs"]
+    assert "static-analysis" in aggregate["needs"]
+    assert "validate-and-test" in aggregate["needs"]
 
 
 def main() -> int:
     tests = [
         test_dependabot_is_one_monthly_android_maintenance_group,
-        test_ci_uses_full_speed_dynamic_catalog_matrix,
+        test_ci_uses_impact_analysis_for_flavor_selection,
         test_dependabot_prs_skip_heavy_android_jobs,
-        test_ci_load_tests_run_after_pinned_yaml_install,
+        test_ci_load_tests_run_after_security_gate,
     ]
     for test in tests:
         test()

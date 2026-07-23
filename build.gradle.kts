@@ -180,12 +180,9 @@ val validateSupplyChainPolicyTask = tasks.register<Exec>("validateSupplyChainPol
 
 val validateSecurityPipelineTask = tasks.register<Exec>("validateSecurityPipeline") {
     group = "verification"
-    description = "Validate full-history Azure checkout and pre-secret security gate ordering"
+    description = "Validate GitHub Actions checkout and security-gate ordering"
     inputs.files(
-        fileTree(layout.projectDirectory.dir("azure-pipelines")) { include("*.yml") },
-        fileTree(layout.projectDirectory.dir("pipelines")) {
-            include("azure-pipelines*.yml", "templates/**/*.yml")
-        },
+        fileTree(layout.projectDirectory.dir(".github/workflows")) { include("*.yml") },
         layout.projectDirectory.file("scripts/ci/validate_security_pipeline.py"),
     )
     outputs.file(layout.buildDirectory.file("reports/security/security-pipeline.json"))
@@ -261,10 +258,7 @@ val validateSideProjectQualityContractTask = tasks.register<Exec>("validateSideP
         layout.projectDirectory.file("scripts/ci/check_side_project_deployment_drift.py"),
         layout.projectDirectory.file("scripts/ci/validate_side_project_endpoint_contracts.py"),
         layout.projectDirectory.file("scripts/ci/side_project_quality_contract_test.py"),
-        layout.projectDirectory.file("scripts/azure/quality.sh"),
-        layout.projectDirectory.file("scripts/azure/release.sh"),
-        fileTree(layout.projectDirectory.dir("azure-pipelines")) { include("*.yml") },
-        fileTree(layout.projectDirectory.dir("pipelines")) { include("azure-pipelines*.yml") },
+        fileTree(layout.projectDirectory.dir(".github/workflows")) { include("*.yml") },
     )
     commandLine(pythonExecutable.get(), "scripts/ci/side_project_quality_contract_test.py")
 }
@@ -450,7 +444,7 @@ val validateRuntimeObservabilityTask = tasks.register<Exec>("validateRuntimeObse
         layout.projectDirectory.file(
             "core/firebase/src/main/java/com/parsfilo/contentapp/core/firebase/AnalyticsConsent.kt",
         ),
-        layout.projectDirectory.file("azure-pipelines/release-health.yml"),
+        layout.projectDirectory.file(".github/workflows/release.yml"),
         layout.projectDirectory.file("docs/RELEASE_HEALTH_RUNBOOK.md"),
     )
     outputs.file(layout.buildDirectory.file("reports/observability/policy-validation.json"))

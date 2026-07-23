@@ -8,7 +8,12 @@ import sys
 from pathlib import Path
 from typing import Dict, List
 
-from runtime_health_policy import load_json, parse_flavor_packages, validate_catalogs, validate_policy
+from runtime_health_policy import (
+    load_json,
+    parse_flavor_packages,
+    validate_catalogs,
+    validate_policy,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 POLICY = ROOT / "config/runtime-observability-policy.json"
@@ -53,10 +58,9 @@ CODE_REQUIREMENTS = {
     "core/firebase/src/main/java/com/parsfilo/contentapp/core/firebase/AnalyticsConsent.kt": [
         "AnalyticsEventName.CONSENT_ERROR",
     ],
-    "azure-pipelines/release-health.yml": [
-        "security-gate.yml",
-        "evaluate_release_health.py",
-        "PublishPipelineArtifact@1",
+    ".github/workflows/release.yml": [
+        "security-gate",
+        "upload-artifact",
     ],
     "docs/RELEASE_HEALTH_RUNBOOK.md": [
         "+24",
@@ -102,7 +106,9 @@ def main() -> int:
         "errors": errors,
     }
     REPORT.parent.mkdir(parents=True, exist_ok=True)
-    REPORT.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    REPORT.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     if errors:
         print("Runtime observability validation failed:", file=sys.stderr)
         for error in errors:
@@ -110,7 +116,11 @@ def main() -> int:
         return 1
     print(
         "Runtime observability policy passed: %d flavors, %d metrics, %d required signals"
-        % (payload["flavor_count"], payload["metric_count"], payload["required_signal_count"])
+        % (
+            payload["flavor_count"],
+            payload["metric_count"],
+            payload["required_signal_count"],
+        )
     )
     return 0
 
