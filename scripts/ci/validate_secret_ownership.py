@@ -14,10 +14,10 @@ from typing import Any, Dict, List, Optional, Sequence, Set
 PREFIX_RE = re.compile(r"^[A-Z][A-Z0-9_]+_$")
 ALLOWED_STORES = {
     "doppler",
-    "azure_secure_files_or_variable_group",
-    "azure_variable_group",
-    "azure_system_access_token_or_oidc",
     "doppler_scoped_api_token",
+    "github_secrets",
+    "github_secrets_and_environment",
+    "github_actions_oidc",
 }
 
 
