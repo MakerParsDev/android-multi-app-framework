@@ -309,6 +309,14 @@ class PerformanceProfileStructureTest(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("testTagsAsResourceId = true", content_app)
 
+    def test_ui_automator_uses_compose_test_tag_resource_name_without_package(self) -> None:
+        source = (
+            ROOT
+            / "performance/benchmark/src/main/java/com/parsfilo/contentapp/performance/UiAutomatorActions.kt"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("By.res(config.packageName, tag)", source)
+        self.assertEqual(3, source.count("By.res(tag)"))
+
     def test_benchmark_build_declares_all_catalog_flavors(self) -> None:
         source = (ROOT / "performance/benchmark/build.gradle.kts").read_text(
             encoding="utf-8"
