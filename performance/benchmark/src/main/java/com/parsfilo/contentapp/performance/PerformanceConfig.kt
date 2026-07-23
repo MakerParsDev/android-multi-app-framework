@@ -32,7 +32,6 @@ internal data class PerformanceConfig(
 ) {
     companion object {
         fun current(): PerformanceConfig {
-            val instrumentation = InstrumentationRegistry.getInstrumentation()
             val args = InstrumentationRegistry.getArguments()
             val flavor =
                 requireNotNull(args.getString("performanceFlavor")) {
@@ -42,8 +41,12 @@ internal data class PerformanceConfig(
                 requireNotNull(args.getString("performanceFamily")) {
                     "Missing performanceFamily instrumentation argument"
                 }
+            val packageName =
+                requireNotNull(args.getString("performancePackage")) {
+                    "Missing performancePackage instrumentation argument"
+                }
             return PerformanceConfig(
-                packageName = instrumentation.targetContext.packageName,
+                packageName = packageName,
                 flavor = flavor,
                 family = PerformanceFamily.from(family),
                 iterations = parseIterations(args.getString("benchmarkIterations")),

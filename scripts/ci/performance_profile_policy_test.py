@@ -160,6 +160,22 @@ class PerformanceProfileStructureTest(unittest.TestCase):
         self.assertIn("Missing performanceFlavor instrumentation argument", source)
         self.assertIn("Missing performanceFamily instrumentation argument", source)
 
+    def test_performance_config_uses_explicit_target_package_argument(self) -> None:
+        config = (
+            ROOT
+            / "performance/benchmark/src/main/java/com/parsfilo/contentapp/performance/PerformanceConfig.kt"
+        ).read_text(encoding="utf-8")
+        gradle = (ROOT / "performance/benchmark/build.gradle.kts").read_text(encoding="utf-8")
+        self.assertIn("Missing performancePackage instrumentation argument", config)
+        self.assertIn('args.getString("performancePackage")', config)
+        self.assertNotIn("instrumentation.targetContext.packageName", config)
+        self.assertEqual(
+            1,
+            gradle.count(
+                'testInstrumentationRunnerArguments["performancePackage"] = config.packageName'
+            ),
+        )
+
     def test_toolchain_and_module_are_pinned(self) -> None:
         catalog = (ROOT / "gradle/libs.versions.toml").read_text(encoding="utf-8")
         self.assertIn('baselineProfile = "1.5.0-alpha07"', catalog)
