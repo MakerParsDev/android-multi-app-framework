@@ -458,6 +458,32 @@ def test_ci_pr_shell_blocks_do_not_embed_github_expressions() -> None:
             assert "${{" not in run, f"{job_name}:{step.get('name', '<unnamed>')}"
 
 
+def test_required_pr_workflows_are_unfiltered_and_connected_tests_fail_closed() -> None:
+    ci = load(".github/workflows/ci-pr.yml")
+    ci_event = ci.get("on", ci.get(True))
+    pull_request = ci_event["pull_request"] or {}
+    assert "paths" not in pull_request
+    assert "paths-ignore" not in pull_request
+
+    connected = load(".github/workflows/connected-tests.yml")
+    connected_event = connected.get("on", connected.get(True))
+    assert "pull_request" in connected_event
+    connected_pr = connected_event["pull_request"] or {}
+    assert "paths" not in connected_pr
+    assert "paths-ignore" not in connected_pr
+
+    job = connected["jobs"]["instrumentation-tests"]
+    assert job["name"] == "Instrumentation Tests"
+    assert job["runs-on"] == "ubuntu-24.04"
+    command = named_step(job, "Run managed-device instrumentation tests")["run"]
+    assert "ciPixel2Api30Kuran_kerimDebugAndroidTest" in command
+    assert "|| true" not in command
+    kvm = named_step(job, "Enable KVM acceleration")["run"]
+    assert "exit 1" in kvm
+    cleanup = named_step(job, "Remove CI-only Firebase placeholder")
+    assert cleanup["if"] == "always()"
+
+
 def test_security_workflow_is_fail_closed() -> None:
     jobs = load(".github/workflows/security.yml")["jobs"]
     required_steps = (
@@ -535,6 +561,7 @@ def main() -> int:
         test_side_project_quality_is_required_in_main_and_pr,
         test_aggregate_gates_reject_unexpected_skips,
         test_ci_pr_shell_blocks_do_not_embed_github_expressions,
+        test_required_pr_workflows_are_unfiltered_and_connected_tests_fail_closed,
         test_security_workflow_is_fail_closed,
         test_play_internal_builds_attests_and_publishes_one_exact_aab,
     ]

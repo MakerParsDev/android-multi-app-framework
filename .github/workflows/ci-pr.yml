@@ -3,22 +3,6 @@ name: CI PR Quality Gate
 on:
   pull_request:
     branches: [main]
-    paths:
-      - 'app/**'
-      - 'core/**'
-      - 'feature/**'
-      - 'buildSrc/**'
-      - 'gradle/**'
-      - 'build.gradle.kts'
-      - 'settings.gradle.kts'
-      - 'gradle.properties'
-      - 'config/**'
-      - 'side-projects/**'
-      - '.gitleaks.toml'
-      - '.gitleaksignore'
-      - 'app-versions.properties'
-      - 'scripts/**'
-      - '.github/workflows/ci-pr.yml'
 
 concurrency:
   group: ci-pr-${{ github.head_ref || github.ref }}
