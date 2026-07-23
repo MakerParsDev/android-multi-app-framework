@@ -8,6 +8,7 @@ import unittest
 
 from scripts.ci.validate_side_project_audits import (
     AuditPolicyError,
+    exception_expiry_warnings,
     load_policy,
     resolve_advisories,
     validate_project_audits,
@@ -46,7 +47,9 @@ def exception() -> dict[str, str]:
         "severity": "moderate",
         "scope": "development",
         "owner": "oaslananka",
-        "trackingIssue": "#124",
+        "trackingIssue": "#40",
+        "dependencyChain": "firebase-functions-test > ts-deepmerge",
+        "introducedOn": "2026-07-21",
         "expiresOn": "2026-08-15",
         "reason": "Upstream test dependency has no compatible patched release yet.",
         "upgradePlan": "Upgrade the upstream package and remove this exception immediately.",
@@ -159,6 +162,54 @@ class SideProjectAuditPolicyTest(unittest.TestCase):
             path.write_text(json.dumps(payload), encoding="utf-8")
             with self.assertRaisesRegex(AuditPolicyError, "expired"):
                 load_policy(path, date(2026, 7, 21))
+
+
+    def test_policy_requires_dependency_chain_and_introduced_date(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "policy.json"
+            payload = {
+                "schemaVersion": 1,
+                "productionPolicy": "zero-vulnerabilities",
+                "exceptions": [exception()],
+            }
+            del payload["exceptions"][0]["dependencyChain"]
+            path.write_text(json.dumps(payload), encoding="utf-8")
+            with self.assertRaisesRegex(AuditPolicyError, "dependency chain"):
+                load_policy(path, date(2026, 7, 23))
+
+            payload["exceptions"][0]["dependencyChain"] = (
+                "firebase-functions-test > ts-deepmerge"
+            )
+            del payload["exceptions"][0]["introducedOn"]
+            path.write_text(json.dumps(payload), encoding="utf-8")
+            with self.assertRaisesRegex(AuditPolicyError, "introduction date"):
+                load_policy(path, date(2026, 7, 23))
+
+    def test_policy_rejects_future_introduction_date(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "policy.json"
+            payload = {
+                "schemaVersion": 1,
+                "productionPolicy": "zero-vulnerabilities",
+                "exceptions": [exception()],
+            }
+            payload["exceptions"][0]["introducedOn"] = "2026-07-24"
+            path.write_text(json.dumps(payload), encoding="utf-8")
+            with self.assertRaisesRegex(AuditPolicyError, "future introduction"):
+                load_policy(path, date(2026, 7, 23))
+
+    def test_warns_when_exception_expires_within_thirty_days(self) -> None:
+        entries = {("firebase-functions", ADVISORY): exception()}
+        warnings = exception_expiry_warnings(entries, date(2026, 7, 23))
+        self.assertEqual(1, len(warnings))
+        self.assertIn("expires in 23 days", warnings[0])
+        self.assertIn("owner=oaslananka", warnings[0])
+        self.assertIn("tracking=#40", warnings[0])
+
+        self.assertEqual(
+            [],
+            exception_expiry_warnings(entries, date(2026, 7, 1)),
+        )
 
 
 if __name__ == "__main__":
