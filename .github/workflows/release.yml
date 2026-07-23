@@ -104,9 +104,11 @@ jobs:
 
       - name: Resolve flavors
         id: resolve
+        env:
+          TARGET_FLAVORS: ${{ inputs.target_flavors }}
         run: |
           set -euo pipefail
-          INPUT="${{ inputs.target_flavors }}"
+          INPUT="$TARGET_FLAVORS"
           INPUT="$(echo "$INPUT" | tr -d '[:space:]')"
 
           ALL_JSON="$(./gradlew -q printFlavors | tr -d '\r')"

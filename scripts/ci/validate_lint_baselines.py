@@ -56,7 +56,7 @@ def fetch_remote_target(branch: str, root: Path) -> str:
     )
     if fetch.returncode != 0 or not git_ref_exists(candidate, root):
         raise ValueError(
-            f"Unable to resolve Azure PR target {candidate}: {fetch.stderr.strip()}"
+            f"Unable to resolve PR target {candidate}: {fetch.stderr.strip()}"
         )
     return candidate
 

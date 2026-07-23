@@ -53,11 +53,13 @@ jobs:
 
       - name: Secret scan PR range
         if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
         run: |
-          git fetch origin "${{ github.base_ref }}" --depth=1 || true
+          git fetch origin "$BASE_REF" --depth=1 || true
           bash scripts/ci/run_secret_scan.sh \
             --mode range \
-            --base-ref "refs/remotes/origin/${{ github.base_ref }}"
+            --base-ref "refs/remotes/origin/$BASE_REF"
 
       - name: Validate secret scan policy
         run: python3 scripts/ci/validate_secret_scan_policy.py
@@ -102,10 +104,12 @@ jobs:
 
       - name: Detect changed flavors
         id: detect
+        env:
+          BASE_REF: ${{ github.base_ref }}
         run: |
           set -euo pipefail
 
-          CHANGED_FILES="$(git diff --name-only "origin/${{ github.base_ref }}"...HEAD 2>/dev/null || git ls-files)"
+          CHANGED_FILES="$(git diff --name-only "origin/$BASE_REF"...HEAD 2>/dev/null || git ls-files)"
 
           echo "Changed files:"
           echo "$CHANGED_FILES"
@@ -389,9 +393,10 @@ jobs:
       - name: Check required jobs
         run: |
           set -euo pipefail
+          NEEDS_JSON='{"security-gate":"${{ needs.security-gate.result }}","static-analysis":"${{ needs.static-analysis.result }}","validate-and-test":"${{ needs.validate-and-test.result }}","android-lint":"${{ needs.android-lint.result }}","kover-coverage":"${{ needs.kover-coverage.result }}"}'
           failed=0
           for job in security-gate static-analysis validate-and-test android-lint kover-coverage; do
-            result="${{ needs[job].result }}"
+            result=$(echo "$NEEDS_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin).get('$job','missing'))")
             if [ "$result" != "success" ] && [ "$result" != "skipped" ]; then
               echo "::error::Required job '$job' failed with result: $result"
               failed=1
