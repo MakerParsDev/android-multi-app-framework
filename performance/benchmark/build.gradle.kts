@@ -21,6 +21,7 @@ android {
                 dimension = "app"
                 testInstrumentationRunnerArguments["performanceFamily"] = config.contentFamily
                 testInstrumentationRunnerArguments["performanceFlavor"] = config.name
+                testInstrumentationRunnerArguments["performancePackage"] = config.packageName
             }
         }
     }
