@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -212,8 +213,10 @@ fun ContentApp(
         Box(
             modifier =
                 Modifier
-                    .semantics { testTagsAsResourceId = true }
-                    .testTag("app_root")
+                    .semantics {
+                        testTagsAsResourceId = true
+                        testTag = "app_root"
+                    }
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.background),
         ) {

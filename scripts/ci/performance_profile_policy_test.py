@@ -309,20 +309,17 @@ class PerformanceProfileStructureTest(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("testTagsAsResourceId = true", content_app)
 
-    def test_resource_id_semantics_wraps_the_tagged_app_root(self) -> None:
+    def test_root_semantics_combines_resource_id_toggle_and_app_tag(self) -> None:
         source = (
             ROOT / "app/src/main/java/com/parsfilo/contentapp/ui/ContentApp.kt"
         ).read_text(encoding="utf-8")
-        root_tag_index = source.index('.testTag("app_root")')
-        root_start = source.rfind("Box(", 0, root_tag_index)
-        root_end = source.index("\n        ) {", root_tag_index)
-        self.assertGreaterEqual(root_start, 0)
+        root_start = source.index("        Box(\n            modifier =")
+        root_end = source.index("\n        ) {", root_start)
         root_chain = source[root_start:root_end]
-        semantics_index = root_chain.index(
-            ".semantics { testTagsAsResourceId = true }"
-        )
-        scoped_tag_index = root_chain.index('.testTag("app_root")')
-        self.assertLess(semantics_index, scoped_tag_index)
+        self.assertIn(".semantics {", root_chain)
+        self.assertIn("testTagsAsResourceId = true", root_chain)
+        self.assertIn('testTag = "app_root"', root_chain)
+        self.assertNotIn('.testTag("app_root")', root_chain)
 
     def test_ui_automator_matches_compose_test_tag_accessibility_extras(self) -> None:
         source = (
@@ -336,6 +333,8 @@ class PerformanceProfileStructureTest(unittest.TestCase):
         self.assertIn("device.onElementOrNull", source)
         self.assertIn("extras.getString(COMPOSE_TEST_TAG_EXTRA) == tag", source)
         self.assertIn("viewIdResourceName == tag", source)
+        self.assertIn("dumpWindowHierarchy", source)
+        self.assertIn("Accessibility hierarchy:", source)
         self.assertNotIn("By.res(config.packageName, tag)", source)
         self.assertNotIn("By.res(tag)", source)
 

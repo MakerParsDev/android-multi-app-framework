@@ -4,8 +4,10 @@ import android.graphics.Point
 import androidx.benchmark.macro.MacrobenchmarkScope
 import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.onElementOrNull
+import java.io.ByteArrayOutputStream
 
 private const val READY_TIMEOUT_MS = 15_000L
+private const val HIERARCHY_DIAGNOSTIC_LIMIT = 8_000
 private const val COMPOSE_TEST_TAG_EXTRA = "androidx.compose.ui.semantics.testTag"
 
 private fun MacrobenchmarkScope.findTag(
@@ -16,13 +18,30 @@ private fun MacrobenchmarkScope.findTag(
         extras.getString(COMPOSE_TEST_TAG_EXTRA) == tag || viewIdResourceName == tag
     }
 
+private fun MacrobenchmarkScope.accessibilityHierarchy(): String =
+    runCatching {
+        ByteArrayOutputStream().use { output ->
+            device.dumpWindowHierarchy(output)
+            output.toString(Charsets.UTF_8.name()).take(HIERARCHY_DIAGNOSTIC_LIMIT)
+        }
+    }.getOrElse { error ->
+        "<unavailable: ${error::class.java.simpleName}: ${error.message}>"
+    }
+
 internal fun MacrobenchmarkScope.waitForTag(
     config: PerformanceConfig,
     tag: String,
-): UiObject2 =
-    checkNotNull(findTag(tag)) {
-        "Timed out waiting for tag=$tag flavor=${config.flavor} package=${config.packageName}"
+): UiObject2 {
+    val matchedNode = findTag(tag)
+    checkNotNull(matchedNode) {
+        buildString {
+            append("Timed out waiting for tag=$tag flavor=${config.flavor} package=${config.packageName}")
+            append("\nAccessibility hierarchy:\n")
+            append(accessibilityHierarchy())
+        }
     }
+    return matchedNode
+}
 
 internal fun MacrobenchmarkScope.clickTag(config: PerformanceConfig, tag: String) {
     waitForTag(config, tag).click()
