@@ -39,6 +39,7 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.window.core.layout.WindowSizeClass
+import com.parsfilo.contentapp.BuildConfig
 import com.parsfilo.contentapp.R
 import com.parsfilo.contentapp.core.designsystem.AppTheme
 import com.parsfilo.contentapp.core.designsystem.theme.app_transparent
@@ -164,7 +165,9 @@ fun ContentApp(
 
     LaunchedEffect(selectedTopLevelRoute) {
         viewModel.onTopLevelRouteVisited(selectedTopLevelRoute)
-        appAnalytics.logTabSelected(selectedTopLevelRoute.route)
+        if (!BuildConfig.CI_SMOKE) {
+            appAnalytics.logTabSelected(selectedTopLevelRoute.route)
+        }
     }
 
     LaunchedEffect(openNotificationsEvents) {
@@ -189,7 +192,9 @@ fun ContentApp(
     }
 
     LaunchedEffect(Unit) {
-        updateGateViewModel.checkForUpdate()
+        if (!BuildConfig.CI_SMOKE) {
+            updateGateViewModel.checkForUpdate()
+        }
     }
 
     DisposableEffect(lifecycleOwner, audioPlayerViewModel) {

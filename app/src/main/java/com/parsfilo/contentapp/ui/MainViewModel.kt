@@ -2,6 +2,7 @@ package com.parsfilo.contentapp.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.parsfilo.contentapp.BuildConfig
 import com.parsfilo.contentapp.core.auth.AuthManager
 import com.parsfilo.contentapp.core.database.dao.NotificationDao
 import com.parsfilo.contentapp.core.datastore.PrayerPreferencesDataSource
@@ -114,9 +115,11 @@ class MainViewModel
                 )
 
         init {
-            viewModelScope.launch {
-                Timber.d("MainViewModel init: refreshing other apps feed")
-                otherAppsRepository.refreshIfNeeded()
+            if (!BuildConfig.CI_SMOKE) {
+                viewModelScope.launch {
+                    Timber.d("MainViewModel init: refreshing other apps feed")
+                    otherAppsRepository.refreshIfNeeded()
+                }
             }
         }
 

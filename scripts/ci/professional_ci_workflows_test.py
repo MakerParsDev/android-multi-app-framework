@@ -260,6 +260,48 @@ def test_ci_smoke_build_disables_remote_firebase_startup() -> None:
         assert "androidx.compose.ui.test.junit4.v2.createAndroidComposeRule" in path.read_text(encoding="utf-8")
 
 
+def test_performance_startup_skips_prompts_and_remote_services() -> None:
+    activity = (
+        ROOT / "app/src/main/java/com/parsfilo/contentapp/MainActivity.kt"
+    ).read_text(encoding="utf-8")
+    runtime_start = activity.index("private fun startRuntimeServices()")
+    runtime_end = activity.index("\n    override fun onNewIntent", runtime_start)
+    runtime_block = activity[runtime_start:runtime_end]
+    guard_index = runtime_block.index("if (BuildConfig.CI_SMOKE)")
+    return_index = runtime_block.index("return", guard_index)
+    for remote_call in (
+        "observePermissionPrompts()",
+        'pushRegistrationManager.syncRegistration("app_start")',
+        'pushRegistrationManager.syncRegistration("notification_setting_changed")',
+        "adOrchestrator.initialize(this, lifecycleScope)",
+    ):
+        assert return_index < runtime_block.index(remote_call)
+
+    content_app = (
+        ROOT / "app/src/main/java/com/parsfilo/contentapp/ui/ContentApp.kt"
+    ).read_text(encoding="utf-8")
+    update_effect = content_app.index("LaunchedEffect(Unit)")
+    update_end = content_app.index("\n    }", update_effect)
+    update_block = content_app[update_effect:update_end]
+    assert "if (!BuildConfig.CI_SMOKE)" in update_block
+    assert "updateGateViewModel.checkForUpdate()" in update_block
+
+    route_effect = content_app.index("LaunchedEffect(selectedTopLevelRoute)")
+    route_end = content_app.index("\n    }", route_effect)
+    route_block = content_app[route_effect:route_end]
+    assert "if (!BuildConfig.CI_SMOKE)" in route_block
+    assert "appAnalytics.logTabSelected" in route_block
+
+    view_model = (
+        ROOT / "app/src/main/java/com/parsfilo/contentapp/ui/MainViewModel.kt"
+    ).read_text(encoding="utf-8")
+    init_start = view_model.index("        init {")
+    init_end = view_model.index("\n        fun onNotificationPermissionResult", init_start)
+    init_block = view_model[init_start:init_end]
+    assert "if (!BuildConfig.CI_SMOKE)" in init_block
+    assert "otherAppsRepository.refreshIfNeeded()" in init_block
+
+
 def test_release_is_manual_protected_and_attested() -> None:
     workflow = load(".github/workflows/release-attested.yml")
     event = workflow.get("on", workflow.get(True))
@@ -374,6 +416,7 @@ def main() -> int:
         test_physical_performance_is_manual_and_serial,
         test_managed_device_is_pinned_and_scheduled,
         test_ci_smoke_build_disables_remote_firebase_startup,
+        test_performance_startup_skips_prompts_and_remote_services,
         test_release_is_manual_protected_and_attested,
         test_ci_exposes_one_required_aggregate_check,
         test_play_internal_builds_attests_and_publishes_one_exact_aab,
