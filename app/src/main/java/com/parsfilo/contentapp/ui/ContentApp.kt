@@ -212,8 +212,8 @@ fun ContentApp(
         Box(
             modifier =
                 Modifier
-                    .testTag("app_root")
                     .semantics { testTagsAsResourceId = true }
+                    .testTag("app_root")
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.background),
         ) {

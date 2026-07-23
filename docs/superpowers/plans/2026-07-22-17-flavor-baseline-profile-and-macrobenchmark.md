@@ -454,8 +454,8 @@ Change the root modifier to:
 
 ```kotlin
 Modifier
-    .testTag("app_root")
     .semantics { testTagsAsResourceId = true }
+    .testTag("app_root")
     .fillMaxSize()
     .background(MaterialTheme.colorScheme.background)
 ```
