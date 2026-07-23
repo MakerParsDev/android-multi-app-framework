@@ -43,7 +43,7 @@ def git_ref_exists(ref: str, root: Path) -> bool:
     return git("rev-parse", "--verify", "--quiet", ref, root=root).returncode == 0
 
 
-def fetch_azure_target(branch: str, root: Path) -> str:
+def fetch_remote_target(branch: str, root: Path) -> str:
     candidate = f"origin/{branch}"
     if git_ref_exists(candidate, root):
         return candidate
@@ -55,16 +55,30 @@ def fetch_azure_target(branch: str, root: Path) -> str:
         root=root,
     )
     if fetch.returncode != 0 or not git_ref_exists(candidate, root):
-        raise ValueError(f"Unable to resolve Azure PR target {candidate}: {fetch.stderr.strip()}")
+        raise ValueError(
+            f"Unable to resolve Azure PR target {candidate}: {fetch.stderr.strip()}"
+        )
     return candidate
 
 
 def resolve_base_ref(explicit: Optional[str], root: Path) -> Optional[str]:
     if explicit:
         return explicit
-    azure_target = os.getenv("SYSTEM_PULLREQUEST_TARGETBRANCH", "")
-    if azure_target.startswith("refs/heads/"):
-        return fetch_azure_target(azure_target[len("refs/heads/"):], root)
+    # GitHub Actions: GITHUB_BASE_REF is set for pull_request events
+    github_target = os.getenv("GITHUB_BASE_REF", "")
+    if github_target:
+        candidate = f"origin/{github_target}"
+        if git_ref_exists(candidate, root):
+            return candidate
+        fetch = git(
+            "fetch",
+            "--no-tags",
+            "origin",
+            f"{github_target}:refs/remotes/origin/{github_target}",
+            root=root,
+        )
+        if fetch.returncode == 0 and git_ref_exists(candidate, root):
+            return candidate
     branch_result = git("branch", "--show-current", root=root)
     branch = branch_result.stdout.strip()
     if branch and branch != "main" and git_ref_exists("origin/main", root):
@@ -75,10 +89,14 @@ def resolve_base_ref(explicit: Optional[str], root: Path) -> Optional[str]:
 def inventory_from_git(ref: str, root: Path) -> BaselineInventory:
     listing = git("ls-tree", "-r", "--name-only", ref, "--", *SEARCH_ROOTS, root=root)
     if listing.returncode != 0:
-        raise ValueError(f"Unable to list lint baselines from {ref}: {listing.stderr.strip()}")
+        raise ValueError(
+            f"Unable to list lint baselines from {ref}: {listing.stderr.strip()}"
+        )
     by_file: dict[str, Counter[str]] = {}
     paths = sorted(
-        line for line in listing.stdout.splitlines() if line.endswith("/lint-baseline.xml")
+        line
+        for line in listing.stdout.splitlines()
+        if line.endswith("/lint-baseline.xml")
     )
     for path in paths:
         content = git("show", f"{ref}:{path}", root=root)
@@ -120,7 +138,9 @@ def write_budget_if_requested(
     )
 
 
-def write_report_if_requested(requested: Optional[Path], root: Path, report: str) -> None:
+def write_report_if_requested(
+    requested: Optional[Path], root: Path, report: str
+) -> None:
     if requested is None:
         return
     path = resolve_path(requested, root)
@@ -144,7 +164,9 @@ def validate_report(path: Path, report: str, root: Path) -> list[str]:
     ]
 
 
-def run_validation(args: argparse.Namespace) -> tuple[BaselineInventory, Optional[str], list[str]]:
+def run_validation(
+    args: argparse.Namespace,
+) -> tuple[BaselineInventory, Optional[str], list[str]]:
     root = args.root.resolve()
     budget_path = resolve_path(args.budget, root)
     report_path = resolve_path(args.check_report, root)
@@ -153,9 +175,13 @@ def run_validation(args: argparse.Namespace) -> tuple[BaselineInventory, Optiona
     budget = load_budget(budget_path)
     errors = validate_against_budget(inventory, empty_files, budget)
 
-    base_ref = None if args.no_base_comparison else resolve_base_ref(args.base_ref, root)
+    base_ref = (
+        None if args.no_base_comparison else resolve_base_ref(args.base_ref, root)
+    )
     if base_ref:
-        errors.extend(compare_inventories(inventory, inventory_from_git(base_ref, root), base_ref))
+        errors.extend(
+            compare_inventories(inventory, inventory_from_git(base_ref, root), base_ref)
+        )
 
     report = render_report(inventory)
     write_report_if_requested(args.write_report, root, report)

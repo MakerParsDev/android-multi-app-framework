@@ -11,7 +11,11 @@ from pathlib import Path
 from types import SimpleNamespace
 from urllib.parse import urlsplit
 
-from admin_backend_smoke import SmokeFailure, normalized_origin, run_smoke as execute_smoke
+from admin_backend_smoke import (
+    SmokeFailure,
+    normalized_origin,
+    run_smoke as execute_smoke,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 EXPECTED_SHA = "ef6bdf66499874269a26337f35c549a83cd19078"
@@ -169,14 +173,16 @@ class AdminBackendSmokeTest(unittest.TestCase):
 
 
 class ReleaseIntegrationContractTest(unittest.TestCase):
-    def test_release_script_runs_backend_smoke_before_gradle(self) -> None:
-        release_script = (ROOT / "scripts" / "azure" / "release.sh").read_text(
+    def test_release_workflow_runs_backend_smoke_before_gradle(self) -> None:
+        release_workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(
             encoding="utf-8"
         )
         smoke_call = "python3 ./scripts/ci/admin_backend_smoke.py"
-        self.assertIn(smoke_call, release_script)
-        self.assertLess(release_script.index(smoke_call), release_script.index("./gradlew"))
-        self.assertIn("EXPECTED_ADMIN_BACKEND_GIT_SHA", release_script)
+        self.assertIn(smoke_call, release_workflow)
+        self.assertLess(
+            release_workflow.index(smoke_call), release_workflow.index("./gradlew")
+        )
+        self.assertIn("EXPECTED_ADMIN_BACKEND_GIT_SHA", release_workflow)
 
 
 if __name__ == "__main__":

@@ -16,9 +16,7 @@ TARGET_SDK_KEY = "toolchain.android.targetSdk"
 MIN_SDK_KEY = "toolchain.android.minSdk"
 BUILD_TOOLS_KEY = "toolchain.android.buildTools"
 CMDLINE_TOOLS_KEY = "toolchain.android.cmdlineTools"
-BOOTSTRAP_CMDLINE_TOOLS_REVISION_KEY = (
-    "toolchain.android.bootstrapCmdlineToolsRevision"
-)
+BOOTSTRAP_CMDLINE_TOOLS_REVISION_KEY = "toolchain.android.bootstrapCmdlineToolsRevision"
 YAML_GLOB = "*.yml"
 REQUIRED_KEYS = {
     JAVA_MAJOR_KEY,
@@ -102,8 +100,7 @@ def validate_manifest(values: dict[str, str]) -> list[str]:
         build_tools_major = int(values[BUILD_TOOLS_KEY].split(".", 1)[0])
     except ValueError:
         errors.append(
-            "buildTools must start with an integer: "
-            + values[BUILD_TOOLS_KEY]
+            "buildTools must start with an integer: " + values[BUILD_TOOLS_KEY]
         )
         build_tools_major = None
 
@@ -145,11 +142,10 @@ def validate_gradle_files(paths: list[Path], root: Path) -> list[str]:
 
 
 def collect_pipeline_files(root: Path) -> list[Path]:
-    return [
-        *sorted((root / "azure-pipelines").glob(YAML_GLOB)),
-        *sorted((root / "pipelines").glob(YAML_GLOB)),
-        *sorted((root / "pipelines/templates").rglob(YAML_GLOB)),
-    ]
+    workflows_dir = root / ".github" / "workflows"
+    if not workflows_dir.is_dir():
+        return []
+    return sorted(workflows_dir.glob("*.yml"))
 
 
 def validate_pipeline_files(paths: list[Path], root: Path) -> list[str]:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression tests for the Azure secret and supply-chain security gate."""
+"""Regression tests for the secret and supply-chain security gate."""
 
 from __future__ import annotations
 
@@ -15,10 +15,17 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from secret_scan_policy import render_gitleaksignore, validate_ignore_file, validate_policy as validate_scan
+from secret_scan_policy import (
+    render_gitleaksignore,
+    validate_ignore_file,
+    validate_policy as validate_scan,
+)
 from tracked_sensitive_files import find_sensitive_paths, sensitive_reason
 from validate_secret_ownership import validate_policy as validate_ownership
-from validate_security_pipeline import validate_pipeline_file, validate_setup_template
+from validate_security_pipeline import (
+    validate_github_workflow,
+    validate_security_workflow,
+)
 from validate_supply_chain_policy import validate_policy as validate_supply
 
 
@@ -106,13 +113,20 @@ class SecurityGatePolicyTest(unittest.TestCase):
 
     def test_expired_baseline_fails(self):
         policy = scan_policy()
-        policy["baseline"] = [{
-            "fingerprint": "a" * 40 + ":path/file.txt:generic-api-key:12",
-            "owner": "platform/security",
-            "reason": "Historical finding retained while credential rotation is verified.",
-            "expires_on": "2026-01-01",
-        }]
-        self.assertTrue(any("expired" in error for error in validate_scan(policy, date(2026, 7, 12))[2]))
+        policy["baseline"] = [
+            {
+                "fingerprint": "a" * 40 + ":path/file.txt:generic-api-key:12",
+                "owner": "platform/security",
+                "reason": "Historical finding retained while credential rotation is verified.",
+                "expires_on": "2026-01-01",
+            }
+        ]
+        self.assertTrue(
+            any(
+                "expired" in error
+                for error in validate_scan(policy, date(2026, 7, 12))[2]
+            )
+        )
 
     def test_ignore_file_is_deterministic(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -122,7 +136,9 @@ class SecurityGatePolicyTest(unittest.TestCase):
 
     def test_sensitive_paths_and_templates(self):
         self.assertEqual("", sensitive_reason("config/.env.example"))
-        findings = find_sensitive_paths([".env", "app/google-services.json", "release.jks"])
+        findings = find_sensitive_paths(
+            [".env", "app/google-services.json", "release.jks"]
+        )
         self.assertEqual(3, len(findings))
 
     def test_supply_policy_passes_and_detects_tamper(self):
@@ -131,55 +147,78 @@ class SecurityGatePolicyTest(unittest.TestCase):
             policy = supply_fixture(root)
             self.assertEqual([], validate_supply(root, policy, date(2026, 7, 12)))
             (root / "gradle/wrapper/gradle-wrapper.jar").write_bytes(b"tampered")
-            self.assertTrue(any("JAR SHA-256" in error for error in validate_supply(root, policy, date(2026, 7, 12))))
+            self.assertTrue(
+                any(
+                    "JAR SHA-256" in error
+                    for error in validate_supply(root, policy, date(2026, 7, 12))
+                )
+            )
 
     def test_expired_dependency_review_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             policy = supply_fixture(root)
             policy["dependency_verification"]["next_review_on"] = "2026-01-01"
-            self.assertTrue(any("review expired" in error for error in validate_supply(root, policy, date(2026, 7, 12))))
+            self.assertTrue(
+                any(
+                    "review expired" in error
+                    for error in validate_supply(root, policy, date(2026, 7, 12))
+                )
+            )
 
-    def write_pipeline(self, root: Path, body: str):
-        path = root / "azure-pipelines/ci.yml"
+    def write_workflow(self, root: Path, body: str):
+        path = root / ".github/workflows/ci-pr.yml"
         path.parent.mkdir(parents=True)
         path.write_text(body, encoding="utf-8")
         return path
 
-    def test_full_checkout_and_security_first_pass(self):
+    def test_checkout_with_persist_credentials_pass(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
-            path = self.write_pipeline(root, "steps:\n  - checkout: self\n    fetchDepth: 0\n  - template: /pipelines/templates/steps/security-gate.yml\n")
-            self.assertEqual([], validate_pipeline_file(path, root)[1])
+            path = self.write_workflow(
+                root,
+                "jobs:\n  test:\n    steps:\n      - uses: actions/checkout@abc123\n        with:\n          fetch-depth: 0\n          persist-credentials: false\n",
+            )
+            self.assertEqual([], validate_github_workflow(path, root))
 
-    def test_shallow_or_late_security_gate_fails(self):
+    def test_checkout_without_persist_credentials_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
-            path = self.write_pipeline(root, "steps:\n  - checkout: self\n    fetchDepth: 1\n  - bash: echo build\n  - template: /pipelines/templates/steps/security-gate.yml\n")
-            errors = validate_pipeline_file(path, root)[1]
-            self.assertTrue(any("fetchDepth" in error for error in errors))
-            self.assertTrue(any("first post-checkout" in error for error in errors))
+            path = self.write_workflow(
+                root,
+                "jobs:\n  test:\n    steps:\n      - uses: actions/checkout@abc123\n        with:\n          fetch-depth: 0\n",
+            )
+            errors = validate_github_workflow(path, root)
+            self.assertTrue(any("persist-credentials" in error for error in errors))
 
-    def test_setup_template_starts_with_security_gate(self):
+    def test_security_workflow_required(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
-            path = root / "pipelines/templates/steps/setup-android.yml"
-            path.parent.mkdir(parents=True)
-            path.write_text("steps:\n  - template: security-gate.yml\n", encoding="utf-8")
-            self.assertEqual([], validate_setup_template(root))
+            errors = validate_security_workflow(root)
+            self.assertTrue(any("Missing" in error for error in errors))
 
     def test_ownership_policy_and_deadline(self):
         self.assertEqual([], validate_ownership(ownership_policy(), date(2026, 7, 12)))
         policy = ownership_policy()
         policy["legacy_github_inventory"]["review_due_on"] = "2026-01-01"
-        self.assertTrue(any("review expired" in error for error in validate_ownership(policy, date(2026, 7, 12))))
+        self.assertTrue(
+            any(
+                "review expired" in error
+                for error in validate_ownership(policy, date(2026, 7, 12))
+            )
+        )
 
     def test_duplicate_ownership_prefix_fails(self):
         policy = ownership_policy()
         duplicate = json.loads(json.dumps(policy["classification_rules"][0]))
         duplicate["id"] = "duplicate"
         policy["classification_rules"].append(duplicate)
-        self.assertTrue(any("Duplicate secret-name prefix" in error for error in validate_ownership(policy, date(2026, 7, 12))))
+        self.assertTrue(
+            any(
+                "Duplicate secret-name prefix" in error
+                for error in validate_ownership(policy, date(2026, 7, 12))
+            )
+        )
 
 
 if __name__ == "__main__":

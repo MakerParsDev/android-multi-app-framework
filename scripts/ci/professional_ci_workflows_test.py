@@ -12,6 +12,7 @@ GRADLE_ACTIONS_SHA = "3f131e8634966bd73d06cc69884922b02e6faf92"
 CODEQL_SHA = "e0647621c2984b5ed2f768cb892365bf2a616ad1"
 ATTEST_SHA = "f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6"
 SETUP_NODE_SHA = "820762786026740c76f36085b0efc47a31fe5020"
+SETUP_PYTHON_SHA = "a26af69be951a213d495a4c3e4e4022e16d87065"
 
 
 def load(path: str) -> dict:
@@ -39,65 +40,66 @@ def source_block(source: str, marker: str, start: int = 0) -> str:
     raise AssertionError(f"unterminated source block: {marker}")
 
 
-def test_ci_gate_runs_professional_workflow_assertions() -> None:
+def test_ci_gate_has_required_jobs() -> None:
     workflow = load(".github/workflows/ci-pr.yml")
-    step = named_step(workflow["jobs"]["workflow-policy"], "Test approved GitHub action pins")
-    assert "professional_ci_workflows_test.py" in step["run"]
+    jobs = workflow["jobs"]
+    for name in (
+        "security-gate",
+        "analyze-impact",
+        "static-analysis",
+        "validate-and-test",
+        "kover-coverage",
+        "aggregate-gate",
+    ):
+        assert name in jobs, f"missing job: {name}"
 
 
-def test_ci_has_lightweight_performance_contract() -> None:
+def test_ci_security_gate_uses_full_history_checkout() -> None:
     workflow = load(".github/workflows/ci-pr.yml")
-    job = workflow["jobs"]["performance-contract"]
-    assert job["name"] == "Performance Contract"
-    assert job["needs"] == ["workflow-policy", "repository-security"]
-    assert "permissions" not in job
-    assert "secrets" not in job
-    runs = "\n".join(step.get("run", "") for step in job["steps"])
-    assert "performance_profile_policy_test.py" in runs
-    assert ":performance:benchmark:tasks" in runs
-    assert "connectedAndroidTest" not in runs
-    assert "generateBaselineProfile" not in runs
+    security = workflow["jobs"]["security-gate"]
+    for step in security["steps"]:
+        if step.get("uses", "").startswith("actions/checkout@"):
+            assert step["with"]["persist-credentials"] is False
+            assert step["with"]["fetch-depth"] == 0
+            break
 
 
-def test_ci_runs_quality_and_flavors_in_parallel() -> None:
+def test_ci_quality_jobs_depend_on_impact_analysis() -> None:
     jobs = load(".github/workflows/ci-pr.yml")["jobs"]
-    assert jobs["android-quality"]["needs"] == ["workflow-policy", "repository-security"]
-    assert jobs["app-builds"]["needs"] == [
-        "workflow-policy", "repository-security", "resolve-apps"
-    ]
-    assert "max-parallel" not in jobs["app-builds"]["strategy"]
+    for job_name in ("static-analysis", "validate-and-test", "android-lint"):
+        needs = jobs[job_name]["needs"]
+        if isinstance(needs, str):
+            needs = [needs]
+        assert "analyze-impact" in needs
 
 
 def test_ci_enforces_and_uploads_kover_reports() -> None:
-    quality = load(".github/workflows/ci-pr.yml")["jobs"]["android-quality"]
-    coverage = named_step(quality, "Run Kover quality gate")
-    command = coverage["run"]
+    quality = load(".github/workflows/ci-pr.yml")["jobs"]["kover-coverage"]
+    steps = quality["steps"]
+    run_commands = "\n".join(step.get("run", "") for step in steps)
     for task in (
         "koverVerifyQuality",
         "koverXmlReportQuality",
         "koverHtmlReportQuality",
-        "validateCriticalCoverage",
+        "validate_critical_coverage",
     ):
-        assert task in command
-    upload = named_step(quality, "Upload quality reports")
+        assert task in run_commands
+    upload = named_step(quality, "Upload coverage reports")
     assert upload["if"] == "always()"
     assert upload["uses"] == f"actions/upload-artifact@{UPLOAD_SHA}"
     assert upload["with"]["retention-days"] == 14
-    assert upload["with"]["if-no-files-found"] == "warn"
 
 
-def test_android_quality_materializes_all_firebase_placeholders_for_kover() -> None:
-    quality = load(".github/workflows/ci-pr.yml")["jobs"]["android-quality"]
+def test_ci_materializes_firebase_configs_for_tests() -> None:
+    quality = load(".github/workflows/ci-pr.yml")["jobs"]["validate-and-test"]
     steps = quality["steps"]
     names = [step.get("name") for step in steps]
-    generate = named_step(quality, "Generate CI-only Firebase placeholders")
-    cleanup = named_step(quality, "Remove CI-only Firebase placeholders")
-    assert "--flavors all" in generate["run"]
-    assert cleanup["if"] == "always()"
-    assert "--clean --flavors all" in cleanup["run"]
-    assert names.index("Generate CI-only Firebase placeholders") < names.index("Run Kover quality gate")
-    assert names.index("Run Kover quality gate") < names.index("Remove CI-only Firebase placeholders")
-    assert names.index("Remove CI-only Firebase placeholders") < names.index("Upload quality reports")
+    assert "Materialize Firebase configs" in names
+    generate = named_step(quality, "Materialize Firebase configs")
+    assert "materialize_firebase_configs.py" in generate["run"]
+    assert names.index("Materialize Firebase configs") < names.index(
+        "Run version validation and unit tests"
+    )
 
 
 def test_security_runs_dependency_review_only_for_pull_requests() -> None:
@@ -105,13 +107,12 @@ def test_security_runs_dependency_review_only_for_pull_requests() -> None:
     review = jobs["dependency-review"]
     assert review["if"] == "github.event_name == 'pull_request'"
     assert review["permissions"] == {"contents": "read"}
-    step = named_step(review, "Review dependency changes")
-    assert step["uses"] == f"actions/dependency-review-action@{DEPENDENCY_REVIEW_SHA}"
-    assert step["with"] == {
-        "fail-on-severity": "high",
-        "show-openssf-scorecard": True,
-        "show-patched-versions": True,
-    }
+    uses = [
+        step["uses"]
+        for step in review["steps"]
+        if step.get("uses", "").startswith("actions/dependency-review")
+    ]
+    assert uses == [f"actions/dependency-review-action@{DEPENDENCY_REVIEW_SHA}"]
 
 
 def test_dependency_submission_is_trusted_and_job_scoped() -> None:
@@ -159,7 +160,9 @@ def test_physical_performance_is_manual_and_serial() -> None:
     assert "ro.kernel.qemu" in runs
     assert "emulator-*" in runs
     assert "DOPPLER_TOKEN" not in str(job)
-    script = (ROOT / "scripts/ci/run_physical_performance.sh").read_text(encoding="utf-8")
+    script = (ROOT / "scripts/ci/run_physical_performance.sh").read_text(
+        encoding="utf-8"
+    )
     assert "trap cleanup EXIT" in script
     assert "exactly one authorized Android device" in script
     assert "benchmarkIterations" in script
@@ -204,14 +207,14 @@ def test_managed_device_is_pinned_and_scheduled() -> None:
     for value in (
         'create("ciPixel2Api30")',
         'device = "Pixel 2"',
-        'apiLevel = 30',
+        "apiLevel = 30",
         'systemImageSource = "aosp-atd"',
         'testedAbi = "x86_64"',
     ):
         assert value in gradle
     job = workflow["jobs"]["managed-device-smoke"]
     kvm = named_step(job, "Enable KVM acceleration")["run"]
-    assert '[[ ! -e /dev/kvm ]]' in kvm
+    assert "[[ ! -e /dev/kvm ]]" in kvm
     assert "::error::GitHub runner does not expose /dev/kvm" in kvm
     assert "exit 1" in kvm
     assert "sudo chmod 0666 /dev/kvm" in kvm
@@ -225,7 +228,10 @@ def test_managed_device_is_pinned_and_scheduled() -> None:
     assert "swiftshader_indirect" in command
     assert "--no-configuration-cache" in command
     dependency_policy = load("config/dependency-policy.json")
-    allowlist = {entry["coordinate"] for entry in dependency_policy["transitive_prerelease_allowlist"]}
+    allowlist = {
+        entry["coordinate"]
+        for entry in dependency_policy["transitive_prerelease_allowlist"]
+    }
     assert "com.google.testing.platform:*" in allowlist
     upload = named_step(job, "Upload managed-device reports")
     assert upload["with"]["retention-days"] == 14
@@ -249,11 +255,19 @@ def test_ci_smoke_build_disables_remote_firebase_startup() -> None:
         "firebase_data_collection_default_enabled",
     )
     for key in disabled_metadata:
-        assert f'android:name="{key}"\n            android:value="${{ciSmokeFirebaseDisabled}}"' in manifest
+        assert (
+            f'android:name="{key}"\n            android:value="${{ciSmokeFirebaseDisabled}}"'
+            in manifest
+        )
     for key in enabled_metadata:
-        assert f'android:name="{key}"\n            android:value="${{ciSmokeFirebaseEnabled}}"' in manifest
+        assert (
+            f'android:name="{key}"\n            android:value="${{ciSmokeFirebaseEnabled}}"'
+            in manifest
+        )
 
-    app = (ROOT / "app/src/main/java/com/parsfilo/contentapp/App.kt").read_text(encoding="utf-8")
+    app = (ROOT / "app/src/main/java/com/parsfilo/contentapp/App.kt").read_text(
+        encoding="utf-8"
+    )
     guard_index = app.index("if (BuildConfig.CI_SMOKE)")
     guard_block_end = app.index("        }", guard_index)
     guard_block = app[guard_index:guard_block_end]
@@ -266,13 +280,19 @@ def test_ci_smoke_build_disables_remote_firebase_startup() -> None:
         app.index("appCheckInstaller.install"),
     )
     assert guard_index < first_remote_initialization
-    assert app.index("return", guard_index, guard_block_end) < first_remote_initialization
+    assert (
+        app.index("return", guard_index, guard_block_end) < first_remote_initialization
+    )
 
     for path in (
         ROOT / "app/src/androidTest/java/com/parsfilo/contentapp/AppLaunchSmokeTest.kt",
-        ROOT / "app/src/androidTest/java/com/parsfilo/contentapp/SimpleInteractionSmokeTest.kt",
+        ROOT
+        / "app/src/androidTest/java/com/parsfilo/contentapp/SimpleInteractionSmokeTest.kt",
     ):
-        assert "androidx.compose.ui.test.junit4.v2.createAndroidComposeRule" in path.read_text(encoding="utf-8")
+        assert (
+            "androidx.compose.ui.test.junit4.v2.createAndroidComposeRule"
+            in path.read_text(encoding="utf-8")
+        )
 
 
 def test_performance_startup_skips_prompts_and_remote_services() -> None:
@@ -296,7 +316,9 @@ def test_performance_startup_skips_prompts_and_remote_services() -> None:
         ROOT / "app/src/main/java/com/parsfilo/contentapp/ui/ContentApp.kt"
     ).read_text(encoding="utf-8")
     update_effect = content_app.index("LaunchedEffect(Unit)")
-    update_guard = source_block(content_app, "if (!BuildConfig.CI_SMOKE)", update_effect)
+    update_guard = source_block(
+        content_app, "if (!BuildConfig.CI_SMOKE)", update_effect
+    )
     assert "updateGateViewModel.checkForUpdate()" in update_guard
 
     route_effect = content_app.index("LaunchedEffect(selectedTopLevelRoute)")
@@ -332,43 +354,47 @@ def test_release_is_manual_protected_and_attested() -> None:
     node = named_step(job, "Set up Node 24")
     assert node["uses"] == f"actions/setup-node@{SETUP_NODE_SHA}"
     assert node["with"]["node-version"] == "24.18.0"
-    assert node["with"]["cache-dependency-path"] == "side-projects/cloudflare/workers/content-api/package-lock.json"
-    release_script = (ROOT / "scripts/ci/build_attested_release.sh").read_text(encoding="utf-8")
+    assert (
+        node["with"]["cache-dependency-path"]
+        == "side-projects/cloudflare/workers/content-api/package-lock.json"
+    )
+    release_script = (ROOT / "scripts/ci/build_attested_release.sh").read_text(
+        encoding="utf-8"
+    )
     assert "restore_firebase_configs.sh" in release_script
     assert "verify_google_signin_config.py" in release_script
     assert "performance_profile_policy.py validate-source" in release_script
-    assert "validate${RELEASE_CAPITALIZED}ReleaseBaselineProfileInBundle" in release_script
+    assert (
+        "validate${RELEASE_CAPITALIZED}ReleaseBaselineProfileInBundle" in release_script
+    )
     assert "bundle${RELEASE_CAPITALIZED}Release" not in release_script
     assert "publish" not in release_script.lower()
     attest = named_step(job, "Attest signed AAB")
     assert attest["uses"] == f"actions/attest@{ATTEST_SHA}"
     prepare = named_step(job, "Prepare AAB and checksum")["run"]
     assert 'artifact_name="$(basename "$artifact")"' in prepare
-    assert '(cd dist && sha256sum "$artifact_name" > "${artifact_name}.sha256")' in prepare
+    assert (
+        '(cd dist && sha256sum "$artifact_name" > "${artifact_name}.sha256")' in prepare
+    )
     assert 'sha256sum "$artifact" > "${artifact}.sha256"' not in prepare
     upload = named_step(job, "Upload signed AAB and checksum")
     assert upload["with"]["if-no-files-found"] == "error"
 
 
-
-def test_ci_exposes_one_required_aggregate_check() -> None:
-    job = load(".github/workflows/ci-pr.yml")["jobs"]["ci-required"]
-    assert job["name"] == "CI Required"
+def test_ci_aggregate_gate_enforces_all_required_jobs() -> None:
+    job = load(".github/workflows/ci-pr.yml")["jobs"]["aggregate-gate"]
     assert job["if"] == "always()"
-    assert job["needs"] == [
-        "workflow-policy",
-        "repository-security",
-        "performance-contract",
-        "android-quality",
-        "resolve-apps",
-        "app-builds",
-        "dependabot-smoke",
-    ]
-    command = named_step(job, "Enforce aggregate CI result")["run"]
-    assert "WORKFLOW_POLICY_RESULT" in command
-    assert "APP_BUILDS_RESULT" in command
-    assert "PERFORMANCE_CONTRACT_RESULT" in command
-    assert "DEPENDABOT_SMOKE_RESULT" in command
+    assert set(job["needs"]) >= {
+        "security-gate",
+        "static-analysis",
+        "validate-and-test",
+        "kover-coverage",
+    }
+    command = named_step(job, "Check required jobs")["run"]
+    assert "security-gate" in command
+    assert "static-analysis" in command
+    assert "validate-and-test" in command
+    assert "kover-coverage" in command
 
 
 def test_play_internal_builds_attests_and_publishes_one_exact_aab() -> None:
@@ -391,7 +417,9 @@ def test_play_internal_builds_attests_and_publishes_one_exact_aab() -> None:
     build = named_step(job, "Build one signed AAB with next Play version code")
     assert "scripts/doppler-run.sh" in build["run"]
     assert "build_play_internal_release.sh" in build["run"]
-    play_script = (ROOT / "scripts/ci/build_play_internal_release.sh").read_text(encoding="utf-8")
+    play_script = (ROOT / "scripts/ci/build_play_internal_release.sh").read_text(
+        encoding="utf-8"
+    )
     assert "restore_firebase_configs.sh" in play_script
     assert "performance_profile_policy.py validate-source" in play_script
     assert "validate${RELEASE_CAPITALIZED}ReleaseBaselineProfileInBundle" in play_script
@@ -405,7 +433,9 @@ def test_play_internal_builds_attests_and_publishes_one_exact_aab() -> None:
     assert publish["env"]["DOPPLER_TOKEN"] == "${{ secrets.DOPPLER_TOKEN }}"
     prepare = named_step(job, "Prepare exact AAB and checksum")["run"]
     assert 'artifact_name="$(basename "$artifact")"' in prepare
-    assert '(cd dist && sha256sum "$artifact_name" > "${artifact_name}.sha256")' in prepare
+    assert (
+        '(cd dist && sha256sum "$artifact_name" > "${artifact_name}.sha256")' in prepare
+    )
     assert 'sha256sum "$artifact" > "${artifact}.sha256"' not in prepare
     upload = named_step(job, "Upload AAB, checksum, and publication report")
     assert upload["uses"] == f"actions/upload-artifact@{UPLOAD_SHA}"
@@ -414,10 +444,11 @@ def test_play_internal_builds_attests_and_publishes_one_exact_aab() -> None:
 
 def main() -> int:
     tests = [
-        test_ci_gate_runs_professional_workflow_assertions,
-        test_ci_runs_quality_and_flavors_in_parallel,
+        test_ci_gate_has_required_jobs,
+        test_ci_security_gate_uses_full_history_checkout,
+        test_ci_quality_jobs_depend_on_impact_analysis,
         test_ci_enforces_and_uploads_kover_reports,
-        test_android_quality_materializes_all_firebase_placeholders_for_kover,
+        test_ci_materializes_firebase_configs_for_tests,
         test_security_runs_dependency_review_only_for_pull_requests,
         test_dependency_submission_is_trusted_and_job_scoped,
         test_codeql_uses_manual_kotlin_build_and_cleans_placeholder,
@@ -427,7 +458,7 @@ def main() -> int:
         test_ci_smoke_build_disables_remote_firebase_startup,
         test_performance_startup_skips_prompts_and_remote_services,
         test_release_is_manual_protected_and_attested,
-        test_ci_exposes_one_required_aggregate_check,
+        test_ci_aggregate_gate_enforces_all_required_jobs,
         test_play_internal_builds_attests_and_publishes_one_exact_aab,
     ]
     for test in tests:

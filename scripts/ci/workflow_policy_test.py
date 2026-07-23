@@ -127,7 +127,6 @@ def test_pull_request_target_fails() -> None:
     )
 
 
-
 def load_yaml(path: Path) -> dict:
     document = yaml.safe_load(path.read_text(encoding="utf-8"))
     assert isinstance(document, dict)
@@ -165,13 +164,13 @@ def test_physical_performance_has_no_secret_or_write_boundary() -> None:
     assert job["permissions"] == {"contents": "read"}
     assert "environment" not in job
     assert "secrets" not in job
-    checkout = next(
-        step for step in job["steps"] if step.get("name") == "Checkout"
-    )
+    checkout = next(step for step in job["steps"] if step.get("name") == "Checkout")
     assert checkout["with"]["persist-credentials"] is False
 
 
-def test_baseline_profile_aggregate_uses_app_token_without_job_write_permissions() -> None:
+def test_baseline_profile_aggregate_uses_app_token_without_job_write_permissions() -> (
+    None
+):
     workflow = load_yaml(ROOT / ".github/workflows/baseline-profiles.yml")
     aggregate = workflow["jobs"]["aggregate"]
     assert aggregate["permissions"] == {"contents": "read"}
@@ -189,11 +188,14 @@ def test_baseline_profile_aggregate_uses_app_token_without_job_write_permissions
 
 def test_performance_contract_inherits_read_only_permissions_without_secrets() -> None:
     workflow = load_yaml(ROOT / ".github/workflows/ci-pr.yml")
-    job = workflow["jobs"]["performance-contract"]
     assert workflow["permissions"] == {"contents": "read"}
-    assert "permissions" not in job
-    assert "secrets" not in job
-    assert "environment" not in job
+    for job_name in ("kover-coverage", "static-analysis", "validate-and-test"):
+        job = workflow["jobs"][job_name]
+        assert "permissions" not in job, (
+            f"{job_name} should not have job-level permissions"
+        )
+        assert "secrets" not in job, f"{job_name} should not have secrets"
+        assert "environment" not in job, f"{job_name} should not have environment"
 
 
 def main() -> int:
