@@ -23,6 +23,11 @@
         android:enableOnBackInvokedCallback="true"
         tools:targetApi="36">
 
+        <!--
+            Required launcher entry point. MAIN/LAUNCHER activities must remain exported on
+            Android 12+; MainActivity validates all externally supplied navigation before use.
+        -->
+        <!-- nosemgrep: java.android.security.exported_activity.exported_activity -->
         <activity
             android:name=".MainActivity"
             android:exported="true"

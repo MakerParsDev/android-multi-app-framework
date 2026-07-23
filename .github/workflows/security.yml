@@ -80,14 +80,13 @@ jobs:
           python-version: '3.13'
 
       - name: Install Semgrep
-        run: pip install semgrep
+        run: python3 -m pip install semgrep==1.171.0
 
       - name: Run Semgrep
         run: |
           semgrep scan \
             --config auto \
             --config p/kotlin \
-            --config p/android \
             --sarif \
             --output semgrep-results.sarif \
             --error \

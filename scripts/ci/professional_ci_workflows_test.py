@@ -484,6 +484,28 @@ def test_required_pr_workflows_are_unfiltered_and_connected_tests_fail_closed() 
     assert cleanup["if"] == "always()"
 
 
+def test_semgrep_uses_valid_pinned_configs_and_scoped_launcher_exception() -> None:
+    jobs = load(".github/workflows/security.yml")["jobs"]
+    semgrep_job = jobs["semgrep"]
+    install = named_step(semgrep_job, "Install Semgrep")["run"]
+    assert install == "python3 -m pip install semgrep==1.171.0"
+
+    command = named_step(semgrep_job, "Run Semgrep")["run"]
+    assert "--config auto" in command
+    assert "--config p/kotlin" in command
+    assert "p/android" not in command
+
+    manifest = (ROOT / "app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
+    suppression = (
+        "nosemgrep: java.android.security.exported_activity.exported_activity"
+    )
+    assert suppression in manifest
+    assert manifest.count("nosemgrep:") == 1
+    assert "android.intent.action.MAIN" in manifest
+    assert "android.intent.category.LAUNCHER" in manifest
+    assert 'android:exported="true"' in manifest
+
+
 def test_security_workflow_is_fail_closed() -> None:
     jobs = load(".github/workflows/security.yml")["jobs"]
     required_steps = (
@@ -562,6 +584,7 @@ def main() -> int:
         test_aggregate_gates_reject_unexpected_skips,
         test_ci_pr_shell_blocks_do_not_embed_github_expressions,
         test_required_pr_workflows_are_unfiltered_and_connected_tests_fail_closed,
+        test_semgrep_uses_valid_pinned_configs_and_scoped_launcher_exception,
         test_security_workflow_is_fail_closed,
         test_play_internal_builds_attests_and_publishes_one_exact_aab,
     ]
