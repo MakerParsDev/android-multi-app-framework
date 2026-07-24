@@ -60,7 +60,6 @@ class NominatimHttpTransportTest {
         every { callFactory.newCall(any()) } returns call
         every { call.enqueue(any()) } answers {
             callback = firstArg()
-            Unit
         }
         val transport = NominatimHttpTransport(
             callFactory = callFactory,

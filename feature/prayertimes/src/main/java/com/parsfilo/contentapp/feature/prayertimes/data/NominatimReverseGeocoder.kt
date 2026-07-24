@@ -338,8 +338,8 @@ class NominatimHttpTransport @Inject constructor() : NominatimTransport {
             continuation.invokeOnCancellation { call.cancel() }
             call.enqueue(
                 object : Callback {
-                    override fun onFailure(call: Call, error: IOException) {
-                        continuation.resumeWithException(error)
+                    override fun onFailure(call: Call, e: IOException) {
+                        continuation.resumeWithException(e)
                     }
 
                     override fun onResponse(call: Call, response: Response) {
@@ -359,7 +359,7 @@ class NominatimHttpTransport @Inject constructor() : NominatimTransport {
 
     private fun Response.toNominatimResult(): NominatimHttpResult = NominatimHttpResult(
         statusCode = code,
-        body = if (isSuccessful) body?.string() else null,
+        body = if (isSuccessful) body.string() else null,
         retryAfterMillis = header("Retry-After")
             ?.trim()
             ?.toLongOrNull()
