@@ -1,3 +1,5 @@
+@file:Suppress("UnstableApiUsage")
+
 import com.android.build.api.artifact.SingleArtifact
 import com.android.build.api.variant.BuildConfigField
 import java.util.Properties
@@ -18,9 +20,9 @@ plugins {
    ENV & VERSION PROPERTIES
    ========================= */
 
-val envFile: File? = rootProject.file(".env")
+val envFile: File = rootProject.file(".env")
 val envProps = Properties()
-if (envFile?.exists() == true) {
+if (envFile.exists()) {
     envFile.inputStream().use { envProps.load(it) }
 }
 
@@ -437,9 +439,6 @@ android {
         checkAllWarnings = true
         warningsAsErrors = false
         checkDependencies = true
-        htmlReport = true
-        xmlReport = true
-        sarifReport = true
         baseline = file("lint-baseline.xml")
         // gRPC/Firebase transitively references javax.naming for desktop DNS fallback;
         // Android never executes that path and the library module gate already suppresses it.
@@ -613,7 +612,6 @@ dependencies {
     androidTestImplementation(libs.androidx.rules)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
 
     debugImplementation(libs.androidx.compose.ui.tooling)

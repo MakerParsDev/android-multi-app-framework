@@ -614,7 +614,7 @@ subprojects {
     }
 
     // ── ktlint (koşulsuz, configuration-cache uyumlu) ──
-    apply(plugin = "org.jlleitschuh.gradle.ktlint")
+    pluginManager.apply("org.jlleitschuh.gradle.ktlint")
 
     // ✅ Plugin apply edildikten sonra extension kesin var
     plugins.withId("org.jlleitschuh.gradle.ktlint") {
@@ -691,9 +691,6 @@ subprojects {
             checkAllWarnings = true
             warningsAsErrors = false
             checkDependencies = false
-            htmlReport = true
-            xmlReport = true
-            sarifReport = true
             val lintBaseline = file("lint-baseline.xml")
             if (lintBaseline.exists()) {
                 baseline = lintBaseline
@@ -783,7 +780,7 @@ gradle.projectsEvaluated {
 // ═══════════════════════════════════════════════════════════════
 
 subprojects {
-    apply(plugin = "org.jetbrains.kotlinx.kover")
+    pluginManager.apply("org.jetbrains.kotlinx.kover")
 }
 
 kover {
@@ -808,7 +805,7 @@ kover {
                     "*.di.*",
                 )
                 // Exclude generated Room DAO implementations
-                classes("*_Impl", "*_Impl\$*")
+                classes("*_Impl", "*_Impl$*")
             }
         }
         variant("quality") {
