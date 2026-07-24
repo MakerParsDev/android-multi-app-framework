@@ -87,7 +87,6 @@ fun AppNavHost(
     val hostActivity = context as? MainActivity
     val productDefinition = remember { AppProductDefinition.current }
     val useTestAds = remember { BuildConfig.USE_TEST_ADS }
-    val isPrayerTimesFlavor = remember(productDefinition) { productDefinition.isPrayerTimesFlavor }
     val isQuranFlavor = remember(productDefinition) { productDefinition.contentFamily == ContentFamily.QURAN }
     val isEsmaFlavor = remember(productDefinition) { productDefinition.contentFamily == ContentFamily.ESMA }
     val showVerseCount = remember(productDefinition) { !productDefinition.hasCapability("hide_verse_count") }
@@ -550,7 +549,7 @@ fun AppNavHost(
             composable(
                 route = AppRoute.PrayerDetail.route,
                 arguments = AppRoute.PrayerDetail.arguments,
-            ) { backStackEntry ->
+            ) { _ ->
                 LaunchedEffect(Unit) {
                     nativeAdViewModel.setPlacement(AdPlacement.NATIVE_FEED_CONTENT)
                 }
@@ -711,7 +710,7 @@ fun AppNavHost(
             composable(
                 route = AppRoute.MiraclesDetail.route,
                 arguments = AppRoute.MiraclesDetail.arguments,
-            ) { backStackEntry ->
+            ) { _ ->
                 LaunchedEffect(Unit) {
                     nativeAdViewModel.setPlacement(AdPlacement.NATIVE_FEED_CONTENT)
                 }
