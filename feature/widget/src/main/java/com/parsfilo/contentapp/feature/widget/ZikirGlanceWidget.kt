@@ -15,7 +15,7 @@ import androidx.glance.text.Text
 
 class ZikirGlanceWidget : GlanceAppWidget() {
 
-    override async fun provideGlance(context: Context, id: GlanceId) {
+    override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
             WidgetContent()
         }
