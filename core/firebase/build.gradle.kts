@@ -17,10 +17,16 @@ android {
         sourceCompatibility = JavaVersion.toVersion(requiredToolchainInt("toolchain.java.major"))
         targetCompatibility = JavaVersion.toVersion(requiredToolchainInt("toolchain.java.major"))
     }
+}
 
-    sourceSets {
-        maybeCreate("benchmarkRelease").java.srcDir("src/release/java")
-        maybeCreate("nonMinifiedRelease").java.srcDir("src/release/java")
+androidComponents {
+    onVariants(selector().withBuildType("benchmarkRelease")) { variant ->
+        variant.sources.java?.addStaticSourceDirectory("src/release/java")
+        variant.sources.kotlin?.addStaticSourceDirectory("src/release/java")
+    }
+    onVariants(selector().withBuildType("nonMinifiedRelease")) { variant ->
+        variant.sources.java?.addStaticSourceDirectory("src/release/java")
+        variant.sources.kotlin?.addStaticSourceDirectory("src/release/java")
     }
 }
 
