@@ -6,7 +6,7 @@
 
 **Architecture:** A repository-owned Python policy validator is the first gate for active workflows and local composite actions. Two small workflows, `ci-pr.yml` and `security.yml`, use immutable action SHAs, least-privilege permissions, explicit timeouts, credential-free checkout, pinned security tools, and the repository’s own Android toolchain scripts. Legacy release and deployment workflows remain under `.github/workflows.disabled`.
 
-**Tech Stack:** GitHub Actions, YAML, Python 3.12 with PyYAML 6.0.3, Bash, actionlint 1.7.12, zizmor 1.27.0, Gitleaks 8.30.1, JDK 21, Gradle 9.5.1, Android SDK manifest from `gradle.properties`.
+**Tech Stack:** GitHub Actions, YAML, Python 3.12 with PyYAML 6.0.3, Bash, actionlint 1.7.12, zizmor 1.27.0, Gitleaks 8.30.1, JDK 21, Gradle 9.6.1, Android SDK manifest from `gradle.properties`.
 
 ## Global Constraints
 

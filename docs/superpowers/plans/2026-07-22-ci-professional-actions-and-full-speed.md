@@ -6,7 +6,7 @@
 
 **Architecture:** Keep the existing `CI` and `Security` workflows as the short-gate foundation, remove the repository-local flavor concurrency ceiling, and add narrowly scoped workflows for dependency submission, CodeQL, scheduled device smoke tests, and manual release provenance. Repository-native Python/Bash validators remain the source of truth; every external action is pinned to an approved immutable SHA and every write permission is job-scoped.
 
-**Tech Stack:** GitHub Actions, Android Gradle Plugin 9.2.1, Gradle Wrapper 9.5.1, JDK 21, Kotlin/Android, Kover 0.9.8, Python 3, Bash, Doppler CLI 3.76.1, GitHub CodeQL v4, Gradle Managed Devices.
+**Tech Stack:** GitHub Actions, Android Gradle Plugin 9.2.1, Gradle Wrapper 9.6.1, JDK 21, Kotlin/Android, Kover 0.9.8, Python 3, Bash, Doppler CLI 3.76.1, GitHub CodeQL v4, Gradle Managed Devices.
 
 ## Global Constraints
 

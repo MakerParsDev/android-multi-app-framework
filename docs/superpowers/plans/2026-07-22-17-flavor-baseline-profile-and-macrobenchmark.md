@@ -6,7 +6,7 @@
 
 **Architecture:** One `:performance:benchmark` `com.android.test` module mirrors the application flavor dimension and targets `:app`. Shared UIAutomator journeys are reused by `BaselineProfileRule` and Macrobenchmark tests. GitHub-hosted Gradle Managed Devices generate profiles, while only a labeled physical Android runner may produce authoritative timing comparisons.
 
-**Tech Stack:** AGP 9.2.1, Gradle 9.5.1, JDK 21, Kotlin 2.3.21, AndroidX Baseline Profile Gradle Plugin 1.5.0-alpha07, AndroidX Benchmark 1.4.1, ProfileInstaller 1.4.1, UIAutomator 2.4.0, Python 3, GitHub Actions.
+**Tech Stack:** AGP 9.2.1, Gradle 9.6.1, JDK 21, Kotlin 2.3.21, AndroidX Baseline Profile Gradle Plugin 1.5.0-alpha07, AndroidX Benchmark 1.4.1, ProfileInstaller 1.4.1, UIAutomator 2.4.0, Python 3, GitHub Actions.
 
 ## Global Constraints
 

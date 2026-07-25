@@ -6,7 +6,7 @@
 
 **Architecture:** A dedicated `ciSmoke` build type disables remote Firebase initialization at manifest and application levels. Release Firebase configs are restored through one fail-closed resolver that prefers the existing base64 secret and otherwise downloads the R2 archive using repository-locked Wrangler dependencies.
 
-**Tech Stack:** Kotlin/AGP 9.2, Gradle 9.5.1, Python 3, Bash, Firebase Android SDK, Gradle Managed Devices, GitHub Actions, Doppler, Cloudflare R2.
+**Tech Stack:** Kotlin/AGP 9.2, Gradle 9.6.1, Python 3, Bash, Firebase Android SDK, Gradle Managed Devices, GitHub Actions, Doppler, Cloudflare R2.
 
 ## Global Constraints
 

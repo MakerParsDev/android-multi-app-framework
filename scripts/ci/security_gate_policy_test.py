@@ -79,7 +79,7 @@ def supply_fixture(root: Path):
     (wrapper_dir / "gradle-wrapper.jar").write_bytes(jar_bytes)
     distribution_sha = "a" * 64
     (wrapper_dir / "gradle-wrapper.properties").write_text(
-        "distributionUrl=https\\://services.gradle.org/distributions/gradle-9.5.1-bin.zip\n"
+        "distributionUrl=https\\://services.gradle.org/distributions/gradle-9.6.1-bin.zip\n"
         f"distributionSha256Sum={distribution_sha}\n"
         "validateDistributionUrl=true\n",
         encoding="utf-8",
@@ -87,7 +87,7 @@ def supply_fixture(root: Path):
     return {
         "schema_version": 1,
         "gradle_wrapper": {
-            "version": "9.5.1",
+            "version": "9.6.1",
             "distribution_sha256": distribution_sha,
             "jar_sha256": jar_sha,
         },
