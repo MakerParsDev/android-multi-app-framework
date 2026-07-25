@@ -18,10 +18,27 @@ internal object CriticalUserJourneys {
             PerformanceFamily.AUDIO_CONTENT -> audioContent(scope, config)
             PerformanceFamily.QURAN -> quran(scope, config)
             PerformanceFamily.MIRACLES -> miracles(scope, config)
+            PerformanceFamily.ESMA -> esma(scope, config)
             PerformanceFamily.PRAYER_TIMES -> scope.waitForTag(config, PerformanceTags.PRAYER_TIMES_READY)
             PerformanceFamily.QIBLA -> scope.waitForTag(config, PerformanceTags.QIBLA_READY)
             PerformanceFamily.COUNTER -> counter(scope, config)
         }
+    }
+
+    private fun esma(scope: MacrobenchmarkScope, config: PerformanceConfig) {
+        scope.waitForTag(config, PerformanceTags.MIRACLES_LIST)
+        scope.scrollTag(config, PerformanceTags.MIRACLES_LIST)
+        scope.clickTag(config, PerformanceTags.MIRACLES_FIRST_ITEM)
+        scope.waitForTag(config, PerformanceTags.MIRACLES_DETAIL)
+        scope.device.pressBack()
+
+        // Esmaül Hüsna specific: "Tümünü Dinle" button and audio player interaction
+        scope.waitForTag(config, PerformanceTags.MIRACLES_PLAY_ALL_AUDIO)
+        scope.clickTag(config, PerformanceTags.MIRACLES_PLAY_ALL_AUDIO)
+        scope.waitForTag(config, PerformanceTags.AUDIO_PLAY_PAUSE)
+        scope.clickTag(config, PerformanceTags.AUDIO_PLAY_PAUSE)
+        scope.device.waitForIdle()
+        scope.clickTag(config, PerformanceTags.AUDIO_PLAY_PAUSE)
     }
 
     private fun audioContent(scope: MacrobenchmarkScope, config: PerformanceConfig) {

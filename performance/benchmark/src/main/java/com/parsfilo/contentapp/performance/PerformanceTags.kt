@@ -10,6 +10,7 @@ internal object PerformanceTags {
     const val MIRACLES_LIST = "miracles_list"
     const val MIRACLES_FIRST_ITEM = "miracles_first_item"
     const val MIRACLES_DETAIL = "miracles_detail"
+    const val MIRACLES_PLAY_ALL_AUDIO = "miracles_play_all_audio"
     const val QURAN_LIST = "quran_list"
     const val QURAN_FIRST_ITEM = "quran_first_item"
     const val QURAN_DETAIL = "quran_detail"

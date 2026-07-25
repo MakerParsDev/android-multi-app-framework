@@ -6,6 +6,7 @@ internal enum class PerformanceFamily {
     AUDIO_CONTENT,
     QURAN,
     MIRACLES,
+    ESMA,
     PRAYER_TIMES,
     QIBLA,
     COUNTER;
@@ -13,9 +14,10 @@ internal enum class PerformanceFamily {
     companion object {
         fun from(raw: String): PerformanceFamily =
             when (raw) {
-                "content", "esma", "prayer_library" -> AUDIO_CONTENT
+                "content", "prayer_library" -> AUDIO_CONTENT
                 "quran" -> QURAN
                 "miracles" -> MIRACLES
+                "esma" -> ESMA
                 "prayer_times" -> PRAYER_TIMES
                 "qibla" -> QIBLA
                 "zikir_counter" -> COUNTER
