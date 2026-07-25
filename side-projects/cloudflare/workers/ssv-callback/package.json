@@ -10,7 +10,7 @@
     "deploy": "node ../../../../scripts/ci/deploy_verified_side_project.mjs ssv-callback",
     "check": "tsc --noEmit",
     "lint": "eslint src --max-warnings=0",
-    "test": "rm -rf .test-dist && tsc -p tsconfig.test.json && node --test test/*.test.mjs",
+    "test": "node -e \"fs.rmSync('.test-dist', {recursive: true, force: true})\" && tsc -p tsconfig.test.json && node --test test/*.test.mjs",
     "dry-run": "wrangler deploy --dry-run",
     "verify": "npm run check && npm run lint && npm test && npm run dry-run",
     "predeploy": "npm run verify"

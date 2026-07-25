@@ -9,7 +9,7 @@
     "dev": "wrangler dev",
     "deploy": "node ../../../../scripts/ci/deploy_verified_side_project.mjs admin-api",
     "check": "tsc --noEmit",
-    "test": "rm -rf .test-dist && tsc -p tsconfig.test.json && node --test test/*.test.mjs",
+    "test": "node -e \"fs.rmSync('.test-dist', {recursive: true, force: true})\" && tsc -p tsconfig.test.json && node --test test/*.test.mjs",
     "verify": "npm run check && npm run lint && npm test && npm run dry-run",
     "lint": "eslint src --max-warnings=0",
     "predeploy": "npm run verify",

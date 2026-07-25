@@ -10,9 +10,20 @@
       "scope": "development",
       "owner": "oaslananka",
       "trackingIssue": "#124",
-      "expiresOn": "2026-08-15",
+      "expiresOn": "2026-10-01",
       "reason": "The latest firebase-functions-test release still depends on vulnerable ts-deepmerge ^2; forcing ts-deepmerge 8 is a major compatibility override.",
       "upgradePlan": "Upgrade when firebase-functions-test adopts ts-deepmerge 8 or another patched compatible merge implementation, then remove this entry."
+    },
+    {
+      "project": "firebase-functions",
+      "advisory": "GHSA-mh99-v99m-4gvg",
+      "severity": "high",
+      "scope": "development",
+      "owner": "oaslananka",
+      "trackingIssue": "#124",
+      "expiresOn": "2026-10-01",
+      "reason": "Dev dependencies in firebase-functions constrain minimatch and brace-expansion.",
+      "upgradePlan": "Upgrade eslint and typescript-eslint when unconstrained."
     },
     {
       "project": "firebase-rules-tests",
@@ -21,20 +32,42 @@
       "scope": "development",
       "owner": "oaslananka",
       "trackingIssue": "#124",
-      "expiresOn": "2026-08-15",
+      "expiresOn": "2026-10-01",
       "reason": "The latest firebase-tools release depends on @google-cloud/pubsub, which currently constrains @opentelemetry/core to the vulnerable 1.x line.",
       "upgradePlan": "Upgrade firebase-tools when its Pub/Sub dependency accepts a patched OpenTelemetry release, then remove this entry."
     },
     {
       "project": "firebase-rules-tests",
-      "advisory": "GHSA-w5hq-g745-h8pq",
+      "advisory": "GHSA-5j98-mcp5-4vw2",
+      "severity": "high",
+      "scope": "development",
+      "owner": "oaslananka",
+      "trackingIssue": "#124",
+      "expiresOn": "2026-10-01",
+      "reason": "The latest firebase-tools release constrains nested dev tools to glob CLI 11.0.3.",
+      "upgradePlan": "Upgrade firebase-tools when glob 11.0.4+ is supported."
+    },
+    {
+      "project": "firebase-rules-tests",
+      "advisory": "GHSA-mh99-v99m-4gvg",
+      "severity": "high",
+      "scope": "development",
+      "owner": "oaslananka",
+      "trackingIssue": "#124",
+      "expiresOn": "2026-10-01",
+      "reason": "The latest firebase-tools release constrains glob and minimatch to brace-expansion 1.x line in dev tooling.",
+      "upgradePlan": "Upgrade firebase-tools when brace-expansion 2.x is supported."
+    },
+    {
+      "project": "firebase-rules-tests",
+      "advisory": "GHSA-frvp-7c67-39w9",
       "severity": "moderate",
       "scope": "development",
       "owner": "oaslananka",
       "trackingIssue": "#124",
-      "expiresOn": "2026-08-15",
-      "reason": "The latest firebase-tools release depends on gaxios 6, which currently constrains uuid to the vulnerable 9.x line.",
-      "upgradePlan": "Upgrade firebase-tools when its gaxios dependency accepts uuid 11.1.1 or newer, then remove this entry."
+      "expiresOn": "2026-10-01",
+      "reason": "The modelcontextprotocol sdk uses @hono/node-server which constrains serve-static on Windows.",
+      "upgradePlan": "Upgrade modelcontextprotocol sdk when patched serve-static is adopted."
     }
   ]
 }

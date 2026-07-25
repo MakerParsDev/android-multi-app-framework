@@ -31,12 +31,17 @@
         "googleapis": "^150.0.1"
     },
     "devDependencies": {
-        "eslint": "^10.7.0",
-        "firebase-functions-test": "^3.5.0",
+        "eslint": "^9.20.0",
+        "firebase-functions-test": "^3.4.0",
         "typescript": "^5.7.0",
-        "typescript-eslint": "^8.65.0"
+        "typescript-eslint": "^8.24.0"
     },
     "overrides": {
+        "brace-expansion": "^1.1.12",
+        "glob": "^10.4.5",
+        "minimatch": "^3.1.2",
+        "rimraf": "^5.0.10",
+        "gaxios": "^7.1.4",
         "uuid": "^11.1.1"
     },
     "private": true

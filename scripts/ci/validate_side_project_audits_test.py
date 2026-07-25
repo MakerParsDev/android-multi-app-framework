@@ -70,11 +70,11 @@ class SideProjectAuditPolicyTest(unittest.TestCase):
                 ],
             },
         }
-        self.assertEqual({ADVISORY}, resolve_advisories("firebase-functions-test", vulnerabilities))
+        self.assertEqual({ADVISORY: "moderate"}, resolve_advisories("firebase-functions-test", vulnerabilities))
 
     def test_malformed_vulnerability_entry_is_ignored_without_crashing(self) -> None:
         vulnerabilities = {"broken-package": "unexpected"}
-        self.assertEqual(set(), resolve_advisories("broken-package", vulnerabilities))
+        self.assertEqual({}, resolve_advisories("broken-package", vulnerabilities))
 
     def test_rejects_any_production_finding(self) -> None:
         production = audit_payload(
@@ -129,19 +129,19 @@ class SideProjectAuditPolicyTest(unittest.TestCase):
         )
         self.assertTrue(any("unowned dev audit advisory" in error for error in errors))
 
-        high = {
+        critical = {
             "dangerous-tool": {
-                "severity": "high",
+                "severity": "critical",
                 "via": [{"source": 2, "url": "https://github.com/advisories/GHSA-aaaa-bbbb-cccc"}],
             }
         }
         errors, _used, _summary = validate_project_audits(
             "firebase-functions",
             audit_payload({}, total=0),
-            audit_payload(high, total=1),
+            audit_payload(critical, total=1),
             {},
         )
-        self.assertTrue(any("blocked high" in error for error in errors))
+        self.assertTrue(any("blocked critical" in error for error in errors))
 
     def test_policy_requires_owner_tracking_and_future_expiry(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

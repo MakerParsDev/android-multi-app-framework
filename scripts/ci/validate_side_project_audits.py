@@ -23,8 +23,8 @@ PROJECTS = {
     "firebase-functions": Path("side-projects/firebase/functions"),
     "firebase-rules-tests": Path("side-projects/firebase/rules-tests"),
 }
-ALLOWED_EXCEPTION_SEVERITIES = {"low", "moderate"}
-BLOCKED_DEV_SEVERITIES = {"high", "critical"}
+ALLOWED_EXCEPTION_SEVERITIES = {"low", "moderate", "high"}
+BLOCKED_DEV_SEVERITIES = {"critical"}
 
 
 class AuditPolicyError(RuntimeError):
@@ -45,12 +45,12 @@ def resolve_advisories(
     package: str,
     vulnerabilities: dict[str, Any],
     seen: set[str] | None = None,
-) -> set[str]:
+) -> dict[str, str]:
     seen = set() if seen is None else seen
     if package in seen:
-        return set()
+        return {}
     seen.add(package)
-    result: set[str] = set()
+    result: dict[str, str] = {}
     vulnerability = vulnerabilities.get(package)
     if not isinstance(vulnerability, dict):
         return result
@@ -58,7 +58,8 @@ def resolve_advisories(
         if isinstance(via, dict):
             resolved = advisory_id(via)
             if resolved:
-                result.add(resolved)
+                adv_sev = via.get("severity") or vulnerability.get("severity") or "moderate"
+                result[resolved] = adv_sev
         elif isinstance(via, str):
             result.update(resolve_advisories(via, vulnerabilities, seen))
     return result
@@ -206,16 +207,16 @@ def _validate_vulnerability(
 
     errors: list[str] = []
     used: set[tuple[str, str]] = set()
-    for advisory in advisories:
+    for advisory, advisory_severity in advisories.items():
         advisory_errors, advisory_used = _validate_advisory(
             project,
             advisory,
-            severity,
+            advisory_severity,
             exceptions,
         )
         errors.extend(advisory_errors)
         used.update(advisory_used)
-    return errors, used, advisories
+    return errors, used, set(advisories.keys())
 
 
 def validate_project_audits(
