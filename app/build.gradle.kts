@@ -577,6 +577,7 @@ dependencies {
     implementation(project(":feature:quran"))
     implementation(project(":feature:widget"))
     implementation(project(":feature:wear"))
+    implementation(project(":feature:dynamic_audio"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.profileinstaller)
