@@ -1,6 +1,11 @@
 {
   "conditions": [],
   "parameters": {
+    "paywall_variant_key": {
+      "defaultValue": {
+        "value": "annual_discount_highlight"
+      }
+    },
     "ads_banner_enabled": {
       "defaultValue": {
         "value": "true"
