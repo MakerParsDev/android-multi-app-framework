@@ -15,12 +15,17 @@ concurrency:
   group: codeql-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  CODEQL_EXTRACTOR_JAVA_OPTION_DISABLE_KOTLIN_INTERCEPTOR: 'true'
+  JAVA_TOOL_OPTIONS: '-Dcodeql.extractor.java.disableKotlinInterceptor=true'
+  GRADLE_OPTS: '-Dcodeql.extractor.java.disableKotlinInterceptor=true'
+
 jobs:
   analyze-java-kotlin:
     name: Analyze Java and Kotlin
     if: github.event_name != 'pull_request' || github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 60
     permissions:
       contents: read
       security-events: write
@@ -36,13 +41,41 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+          check-latest: false
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+        with:
+          cache-read-only: true
+
+      - name: Set up pinned Android SDK
+        run: |
+          set -euo pipefail
+          bash scripts/ci/setup-android-sdk.sh
+
+      - name: Generate CI-only Firebase placeholder
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/generate_ci_google_services.py --flavors kuran_kerim
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@e0647621c2984b5ed2f768cb892365bf2a616ad1 # v4.37.2
         with:
           languages: java-kotlin
-          build-mode: none
+          build-mode: manual
           queries: security-extended
+
+      - name: Build representative flavor for CodeQL
+        run: |
+          set -euo pipefail
+          chmod +x ./gradlew
+          ./gradlew assembleKuran_kerimDebug --no-daemon --stacktrace --max-workers=2 -Dcodeql.extractor.java.disableKotlinInterceptor=true
+
+      - name: Remove CI-only Firebase placeholder
+        if: always()
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/generate_ci_google_services.py --clean --flavors kuran_kerim
 
       - name: Analyze Java and Kotlin
         uses: github/codeql-action/analyze@e0647621c2984b5ed2f768cb892365bf2a616ad1 # v4.37.2
