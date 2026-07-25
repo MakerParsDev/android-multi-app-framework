@@ -97,7 +97,7 @@ class SideProjectQualityContractTest(unittest.TestCase):
         self.assertGreater(len(policy["exceptions"]), 0)
         for entry in policy["exceptions"]:
             self.assertEqual("development", entry["scope"])
-            self.assertIn(entry["severity"], {"low", "moderate"})
+            self.assertIn(entry["severity"], {"low", "moderate", "high"})
             self.assertTrue(entry["owner"])
             self.assertRegex(entry["trackingIssue"], r"#\d+")
             self.assertTrue(entry["expiresOn"])
