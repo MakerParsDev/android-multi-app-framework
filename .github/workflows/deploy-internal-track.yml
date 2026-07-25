@@ -8,6 +8,10 @@ on:
         required: true
         default: 'namazvakitleri'
 
+concurrency:
+  group: deploy-internal-track-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   deploy:
     name: Deploy to Play Console
