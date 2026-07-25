@@ -86,6 +86,31 @@
         <meta-data
             android:name="com.google.android.gms.ads.flag.NATIVE_AD_DEBUGGER_ENABLED"
             android:value="false" />
+
+        <!-- Jetpack Glance Widget Receiver -->
+        <receiver
+            android:name="com.parsfilo.contentapp.feature.widget.ZikirGlanceWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/zikir_glance_widget_info" />
+        </receiver>
+
+        <!-- WearOS Data Layer Sync Service -->
+        <service
+            android:name="com.parsfilo.contentapp.feature.wear.WearDataSyncListener"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
+                <data
+                    android:host="*"
+                    android:pathPrefix="/zikir_count_sync"
+                    android:scheme="wear" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>
