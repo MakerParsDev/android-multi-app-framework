@@ -72,7 +72,9 @@ class PerformanceProfilePolicyTest(unittest.TestCase):
                 )
             self.assertEqual([], validate_aab(aab))
 
-    def test_profile_pair_rejects_comment_only_duplicate_and_malformed_rules(self) -> None:
+    def test_profile_pair_rejects_comment_only_duplicate_and_malformed_rules(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             directory = expected_profile_dir(root, "kuran_kerim")
@@ -83,17 +85,27 @@ class PerformanceProfilePolicyTest(unittest.TestCase):
             baseline.write_text("# generated only\n", encoding="utf-8")
             startup.write_text("# generated only\n", encoding="utf-8")
             errors = validate_profile_pair(root, "kuran_kerim", {})
-            self.assertTrue(any("no profile rules" in error for error in errors), errors)
+            self.assertTrue(
+                any("no profile rules" in error for error in errors), errors
+            )
 
-            baseline.write_text("Lcom/parsfilo/A;\nLcom/parsfilo/A;\n", encoding="utf-8")
+            baseline.write_text(
+                "Lcom/parsfilo/A;\nLcom/parsfilo/A;\n", encoding="utf-8"
+            )
             startup.write_text("Lcom/parsfilo/A;\n", encoding="utf-8")
             errors = validate_profile_pair(root, "kuran_kerim", {})
-            self.assertTrue(any("duplicate profile rule" in error for error in errors), errors)
+            self.assertTrue(
+                any("duplicate profile rule" in error for error in errors), errors
+            )
 
-            baseline.write_text("not-a-profile-rule\nLcom/parsfilo/A;\n", encoding="utf-8")
+            baseline.write_text(
+                "not-a-profile-rule\nLcom/parsfilo/A;\n", encoding="utf-8"
+            )
             startup.write_text("Lcom/parsfilo/A;\n", encoding="utf-8")
             errors = validate_profile_pair(root, "kuran_kerim", {})
-            self.assertTrue(any("malformed profile rule" in error for error in errors), errors)
+            self.assertTrue(
+                any("malformed profile rule" in error for error in errors), errors
+            )
 
     def test_aab_rejects_empty_compiled_profile_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -148,7 +160,8 @@ class PerformanceProfileStructureTest(unittest.TestCase):
             / "performance/benchmark/src/main/java/com/parsfilo/contentapp/performance/PerformanceConfig.kt"
         ).read_text(encoding="utf-8")
         for family in (
-            '"content", "esma", "prayer_library" -> AUDIO_CONTENT',
+            '"content", "prayer_library" -> AUDIO_CONTENT',
+            '"esma" -> ESMA',
             '"quran" -> QURAN',
             '"miracles" -> MIRACLES',
             '"prayer_times" -> PRAYER_TIMES',
@@ -165,7 +178,9 @@ class PerformanceProfileStructureTest(unittest.TestCase):
             ROOT
             / "performance/benchmark/src/main/java/com/parsfilo/contentapp/performance/PerformanceConfig.kt"
         ).read_text(encoding="utf-8")
-        gradle = (ROOT / "performance/benchmark/build.gradle.kts").read_text(encoding="utf-8")
+        gradle = (ROOT / "performance/benchmark/build.gradle.kts").read_text(
+            encoding="utf-8"
+        )
         self.assertIn("Missing performancePackage instrumentation argument", config)
         self.assertIn('args.getString("performancePackage")', config)
         self.assertNotIn("instrumentation.targetContext.packageName", config)
@@ -198,8 +213,7 @@ class PerformanceProfileStructureTest(unittest.TestCase):
             (ROOT / "config/dependency-policy.json").read_text(encoding="utf-8")
         )
         entries = {
-            entry["alias"]: entry
-            for entry in policy["catalog_prerelease_allowlist"]
+            entry["alias"]: entry for entry in policy["catalog_prerelease_allowlist"]
         }
         entry = entries["androidx-baselineprofile"]
         self.assertEqual("ci/android-performance", entry["owner"])
@@ -211,11 +225,19 @@ class PerformanceProfileStructureTest(unittest.TestCase):
         self.assertIn('variant.buildType == "benchmarkRelease"', gradle)
         self.assertIn('variant.buildType == "nonMinifiedRelease"', gradle)
         self.assertIn('BuildConfigField("boolean", true', gradle)
-        self.assertIn('requireNotNull(variant.buildConfigFields).put', gradle)
-        self.assertIn('requireNotNull(variant.buildConfigFields).put', gradle)
-        self.assertIn('variant.manifestPlaceholders.put("ciSmokeFirebaseDisabled", "true")', gradle)
-        self.assertIn('variant.manifestPlaceholders.put("ciSmokeFirebaseEnabled", "false")', gradle)
-        manifest = (ROOT / "app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
+        self.assertIn("requireNotNull(variant.buildConfigFields).put", gradle)
+        self.assertIn("requireNotNull(variant.buildConfigFields).put", gradle)
+        self.assertIn(
+            'variant.manifestPlaceholders.put("ciSmokeFirebaseDisabled", "true")',
+            gradle,
+        )
+        self.assertIn(
+            'variant.manifestPlaceholders.put("ciSmokeFirebaseEnabled", "false")',
+            gradle,
+        )
+        manifest = (ROOT / "app/src/main/AndroidManifest.xml").read_text(
+            encoding="utf-8"
+        )
         for key in (
             "firebase_performance_collection_deactivated",
             "firebase_analytics_collection_deactivated",
@@ -238,7 +260,7 @@ class PerformanceProfileStructureTest(unittest.TestCase):
         self.assertIn("alias(libs.plugins.androidx.baselineprofile)", source)
         self.assertIn('baselineProfile(project(":performance:benchmark"))', source)
         self.assertIn('normalized.contains("Release")', source)
-        self.assertIn('!isGeneratedPerformanceVariant(normalized)', source)
+        self.assertIn("!isGeneratedPerformanceVariant(normalized)", source)
         self.assertNotIn('normalized.endsWith("Release")', source)
 
     def test_benchmark_tag_constants_match_ui_contract(self) -> None:
@@ -247,28 +269,43 @@ class PerformanceProfileStructureTest(unittest.TestCase):
             / "performance/benchmark/src/main/java/com/parsfilo/contentapp/performance/PerformanceTags.kt"
         ).read_text(encoding="utf-8")
         for tag in (
-            "APP_ROOT", "PRIMARY_NAVIGATION", "CONTENT_LIST", "CONTENT_FIRST_ITEM",
-            "CONTENT_DETAIL", "AUDIO_PLAY_PAUSE", "MIRACLES_LIST",
-            "MIRACLES_FIRST_ITEM", "MIRACLES_DETAIL", "QURAN_LIST",
-            "QURAN_FIRST_ITEM", "QURAN_DETAIL", "PRAYER_TIMES_READY",
-            "QIBLA_READY", "COUNTER_ROOT", "COUNTER_VALUE", "COUNTER_INCREMENT",
+            "APP_ROOT",
+            "PRIMARY_NAVIGATION",
+            "CONTENT_LIST",
+            "CONTENT_FIRST_ITEM",
+            "CONTENT_DETAIL",
+            "AUDIO_PLAY_PAUSE",
+            "MIRACLES_LIST",
+            "MIRACLES_FIRST_ITEM",
+            "MIRACLES_DETAIL",
+            "QURAN_LIST",
+            "QURAN_FIRST_ITEM",
+            "QURAN_DETAIL",
+            "PRAYER_TIMES_READY",
+            "QIBLA_READY",
+            "COUNTER_ROOT",
+            "COUNTER_VALUE",
+            "COUNTER_INCREMENT",
         ):
             self.assertIn(f"const val {tag}", source)
 
     def test_performance_tags_mark_loaded_surfaces(self) -> None:
         content = (
-            ROOT / "feature/content/src/main/java/com/parsfilo/contentapp/feature/content/ui/ContentScreen.kt"
+            ROOT
+            / "feature/content/src/main/java/com/parsfilo/contentapp/feature/content/ui/ContentScreen.kt"
         ).read_text(encoding="utf-8")
         self.assertGreaterEqual(content.count('.testTag("content_list")'), 2)
 
         prayer = (
-            ROOT / "feature/prayertimes/src/main/java/com/parsfilo/contentapp/feature/prayertimes/ui/PrayerTimesScreen.kt"
+            ROOT
+            / "feature/prayertimes/src/main/java/com/parsfilo/contentapp/feature/prayertimes/ui/PrayerTimesScreen.kt"
         ).read_text(encoding="utf-8")
         self.assertIn("if (!uiState.isRefreshing)", prayer)
         self.assertIn('.testTag("prayer_times_ready")', prayer)
 
         qibla = (
-            ROOT / "feature/qibla/src/main/java/com/parsfilo/contentapp/feature/qibla/QiblaScreen.kt"
+            ROOT
+            / "feature/qibla/src/main/java/com/parsfilo/contentapp/feature/qibla/QiblaScreen.kt"
         ).read_text(encoding="utf-8")
         self.assertIn("if (!uiState.isLocationRefreshing)", qibla)
         self.assertIn('.testTag("qibla_ready")', qibla)
@@ -369,9 +406,9 @@ class PerformanceProfileStructureTest(unittest.TestCase):
         self.assertIn("AppFlavors.all.forEach", source)
         self.assertIn('dimension = "app"', source)
         self.assertIn('targetProjectPath = ":app"', source)
-        catalog = (
-            ROOT / "buildSrc/src/main/kotlin/FlavorConfig.kt"
-        ).read_text(encoding="utf-8")
+        catalog = (ROOT / "buildSrc/src/main/kotlin/FlavorConfig.kt").read_text(
+            encoding="utf-8"
+        )
         actual = re.findall(r'name = "([a-z0-9_]+)"', catalog)
         self.assertEqual(EXPECTED, actual)
 
