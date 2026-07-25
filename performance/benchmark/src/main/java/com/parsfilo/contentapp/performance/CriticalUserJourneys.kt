@@ -18,10 +18,32 @@ internal object CriticalUserJourneys {
             PerformanceFamily.AUDIO_CONTENT -> audioContent(scope, config)
             PerformanceFamily.QURAN -> quran(scope, config)
             PerformanceFamily.MIRACLES -> miracles(scope, config)
+            PerformanceFamily.ESMA -> esma(scope, config)
             PerformanceFamily.PRAYER_TIMES -> scope.waitForTag(config, PerformanceTags.PRAYER_TIMES_READY)
             PerformanceFamily.QIBLA -> scope.waitForTag(config, PerformanceTags.QIBLA_READY)
             PerformanceFamily.COUNTER -> counter(scope, config)
         }
+    }
+
+    private fun esma(scope: MacrobenchmarkScope, config: PerformanceConfig) {
+        scope.waitForTag(config, PerformanceTags.MIRACLES_LIST)
+
+        // Click first item while it's still visible, then go to detail and back
+        scope.clickTag(config, PerformanceTags.MIRACLES_FIRST_ITEM)
+        scope.waitForTag(config, PerformanceTags.MIRACLES_DETAIL)
+        scope.device.pressBack()
+
+        scope.waitForTag(config, PerformanceTags.MIRACLES_LIST)
+
+        // Esma-specific audio flow
+        scope.clickTag(config, PerformanceTags.MIRACLES_PLAY_ALL_AUDIO)
+        scope.waitForTag(config, PerformanceTags.AUDIO_PLAY_PAUSE)
+        scope.clickTag(config, PerformanceTags.AUDIO_PLAY_PAUSE)
+        scope.device.waitForIdle()
+        scope.clickTag(config, PerformanceTags.AUDIO_PLAY_PAUSE)
+
+        // Scroll measurement at the end when first item visibility no longer matters
+        scope.scrollTag(config, PerformanceTags.MIRACLES_LIST)
     }
 
     private fun audioContent(scope: MacrobenchmarkScope, config: PerformanceConfig) {

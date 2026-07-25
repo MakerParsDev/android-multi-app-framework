@@ -165,7 +165,9 @@ fun MiraclesListScreen(
                     ) {
                         FilledTonalButton(
                             onClick = onPlayAllAudioClick,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("miracles_play_all_audio")
                         ) {
                             Text(text = stringResource(R.string.miracles_play_all_audio))
                         }
