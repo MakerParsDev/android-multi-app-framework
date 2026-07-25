@@ -575,6 +575,8 @@ dependencies {
     implementation(project(":feature:qibla"))
     implementation(project(":feature:counter"))
     implementation(project(":feature:quran"))
+    implementation(project(":feature:widget"))
+    implementation(project(":feature:wear"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.profileinstaller)
