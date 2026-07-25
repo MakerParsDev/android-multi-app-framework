@@ -677,6 +677,15 @@ subprojects {
         @Suppress("UNCHECKED_CAST") val androidExt =
             extensions.getByName("android") as com.android.build.api.dsl.LibraryExtension
 
+        androidExt.buildTypes {
+            maybeCreate("benchmarkRelease").apply {
+                matchingFallbacks += listOf("release")
+            }
+            maybeCreate("nonMinifiedRelease").apply {
+                matchingFallbacks += listOf("release")
+            }
+        }
+
         androidExt.packaging {
             jniLibs {
                 // Prebuilt libs may not be strip-compatible; keep symbols to avoid noisy warnings.
