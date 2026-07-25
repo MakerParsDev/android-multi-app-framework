@@ -17,6 +17,11 @@ android {
         sourceCompatibility = JavaVersion.toVersion(requiredToolchainInt("toolchain.java.major"))
         targetCompatibility = JavaVersion.toVersion(requiredToolchainInt("toolchain.java.major"))
     }
+
+    sourceSets {
+        maybeCreate("benchmarkRelease").java.srcDir("src/release/java")
+        maybeCreate("nonMinifiedRelease").java.srcDir("src/release/java")
+    }
 }
 
 dependencies {
