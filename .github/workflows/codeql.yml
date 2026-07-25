@@ -15,6 +15,9 @@ concurrency:
   group: codeql-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  CODEQL_EXTRACTOR_JAVA_OPTION_DISABLE_KOTLIN_INTERCEPTOR: 'true'
+
 jobs:
   analyze-java-kotlin:
     name: Analyze Java and Kotlin
