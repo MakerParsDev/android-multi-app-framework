@@ -30,8 +30,9 @@ import sys
 from dataclasses import dataclass
 
 
-FLAVOR_PATTERN = re.compile(
-    r'FlavorConfig\(\s*"(?P<name>[^"]+)"\s*,\s*"[^"]*"\s*,\s*"(?P<pkg>[^"]+)"'
+NAMED_ARG_PATTERN = re.compile(r'(?P<key>\w+)\s*=\s*"(?P<value>[^"]+)"')
+POSITIONAL_PATTERN = re.compile(
+    r'"(?P<name>[^"]+)"\s*,\s*"[^"]*"\s*,\s*"(?P<pkg>[^"]+)"'
 )
 
 
@@ -54,13 +55,81 @@ def parse_args() -> argparse.Namespace:
 def read_flavors(flavor_file: pathlib.Path) -> dict[str, FlavorInfo]:
     text = flavor_file.read_text(encoding="utf-8")
     result: dict[str, FlavorInfo] = {}
-    for match in FLAVOR_PATTERN.finditer(text):
-        name = match.group("name").strip()
-        pkg = match.group("pkg").strip()
-        result[name] = FlavorInfo(name=name, package_name=pkg)
+
+    for block in extract_flavor_blocks(text):
+        flavor = parse_flavor_block(block)
+        if flavor is None:
+            continue
+        result[flavor.name] = flavor
+
     if not result:
         raise RuntimeError(f"No flavors parsed from {flavor_file}")
     return result
+
+
+def extract_flavor_blocks(text: str) -> list[str]:
+    blocks: list[str] = []
+    marker = "FlavorConfig("
+    search_from = 0
+
+    while True:
+        start = text.find(marker, search_from)
+        if start == -1:
+            break
+
+        index = start + len("FlavorConfig")
+        depth = 0
+        in_string = False
+        escaped = False
+
+        while index < len(text):
+            char = text[index]
+
+            if in_string:
+                if escaped:
+                    escaped = False
+                elif char == "\\":
+                    escaped = True
+                elif char == '"':
+                    in_string = False
+            else:
+                if char == '"':
+                    in_string = True
+                elif char == "(":
+                    depth += 1
+                elif char == ")":
+                    depth -= 1
+                    if depth == 0:
+                        blocks.append(text[start : index + 1])
+                        search_from = index + 1
+                        break
+            index += 1
+        else:
+            break
+
+    return blocks
+
+
+def parse_flavor_block(block: str) -> FlavorInfo | None:
+    named_values = {
+        match.group("key").strip(): match.group("value").strip()
+        for match in NAMED_ARG_PATTERN.finditer(block)
+    }
+
+    if named_values.get("name") and named_values.get("packageName"):
+        return FlavorInfo(
+            name=named_values["name"],
+            package_name=named_values["packageName"],
+        )
+
+    positional_match = POSITIONAL_PATTERN.search(block)
+    if positional_match:
+        return FlavorInfo(
+            name=positional_match.group("name").strip(),
+            package_name=positional_match.group("pkg").strip(),
+        )
+
+    return None
 
 
 def load_service_account_value(raw: str) -> dict:
