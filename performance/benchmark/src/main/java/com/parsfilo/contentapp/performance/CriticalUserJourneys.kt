@@ -16,6 +16,7 @@ internal object CriticalUserJourneys {
     fun runFromRoot(scope: MacrobenchmarkScope, config: PerformanceConfig) {
         when (config.family) {
             PerformanceFamily.AUDIO_CONTENT -> audioContent(scope, config)
+            PerformanceFamily.PRAYER_LIBRARY -> prayerLibrary(scope, config)
             PerformanceFamily.QURAN -> quran(scope, config)
             PerformanceFamily.MIRACLES -> miracles(scope, config)
             PerformanceFamily.ESMA -> esma(scope, config)
@@ -52,6 +53,18 @@ internal object CriticalUserJourneys {
         scope.clickTag(config, PerformanceTags.AUDIO_PLAY_PAUSE)
         scope.device.waitForIdle()
         scope.clickTag(config, PerformanceTags.AUDIO_PLAY_PAUSE)
+        scope.scrollTag(config, PerformanceTags.CONTENT_LIST)
+    }
+
+    private fun prayerLibrary(scope: MacrobenchmarkScope, config: PerformanceConfig) {
+        scope.waitForTag(config, PerformanceTags.CONTENT_LIST)
+        scope.clickTag(config, PerformanceTags.CONTENT_FIRST_ITEM)
+        scope.waitForTag(config, PerformanceTags.CONTENT_DETAIL)
+        scope.clickTag(config, PerformanceTags.AUDIO_PLAY_PAUSE)
+        scope.device.waitForIdle()
+        scope.clickTag(config, PerformanceTags.AUDIO_PLAY_PAUSE)
+        scope.device.pressBack()
+        scope.waitForTag(config, PerformanceTags.CONTENT_LIST)
         scope.scrollTag(config, PerformanceTags.CONTENT_LIST)
     }
 
