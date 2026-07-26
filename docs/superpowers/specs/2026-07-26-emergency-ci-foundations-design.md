@@ -22,7 +22,7 @@ The contract test that currently launches the full runner merely to verify a rel
 
 ### Release backend smoke invocation
 
-The release workflow will pass purchase and push endpoint URLs to `admin_backend_smoke.py` through environment variables and explicit CLI flags. The workflow contract test will require both flags and will continue to require that the smoke step appears before any Gradle execution.
+The release workflow will install the repository-pinned Doppler CLI, expose only `DOPPLER_TOKEN` from GitHub, and run `admin_backend_smoke.py` inside `scripts/doppler-run.sh`. Purchase and push endpoint URLs are expanded only by the Doppler-injected inner shell and passed through explicit CLI flags. The workflow contract test requires both endpoint flags, the expected Git SHA flag, and execution before any Gradle task.
 
 ### Centralized Java toolchain
 
