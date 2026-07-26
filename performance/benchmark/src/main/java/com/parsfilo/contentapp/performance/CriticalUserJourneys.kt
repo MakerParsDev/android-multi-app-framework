@@ -48,33 +48,37 @@ internal object CriticalUserJourneys {
 
     private fun audioContent(scope: MacrobenchmarkScope, config: PerformanceConfig) {
         scope.waitForTag(config, PerformanceTags.CONTENT_LIST)
-        scope.scrollTag(config, PerformanceTags.CONTENT_LIST)
         scope.clickTag(config, PerformanceTags.CONTENT_FIRST_ITEM)
         scope.waitForTag(config, PerformanceTags.CONTENT_DETAIL)
         scope.clickTag(config, PerformanceTags.AUDIO_PLAY_PAUSE)
         scope.device.waitForIdle()
         scope.clickTag(config, PerformanceTags.AUDIO_PLAY_PAUSE)
         scope.device.pressBack()
+        scope.waitForTag(config, PerformanceTags.CONTENT_LIST)
+        scope.scrollTag(config, PerformanceTags.CONTENT_LIST)
     }
 
     private fun quran(scope: MacrobenchmarkScope, config: PerformanceConfig) {
         scope.waitForTag(config, PerformanceTags.QURAN_LIST)
-        scope.scrollTag(config, PerformanceTags.QURAN_LIST)
         scope.clickTag(config, PerformanceTags.QURAN_FIRST_ITEM)
         scope.waitForTag(config, PerformanceTags.QURAN_DETAIL)
         scope.device.pressBack()
+        scope.waitForTag(config, PerformanceTags.QURAN_LIST)
+        scope.scrollTag(config, PerformanceTags.QURAN_LIST)
     }
 
     private fun miracles(scope: MacrobenchmarkScope, config: PerformanceConfig) {
         scope.waitForTag(config, PerformanceTags.MIRACLES_LIST)
-        scope.scrollTag(config, PerformanceTags.MIRACLES_LIST)
         scope.clickTag(config, PerformanceTags.MIRACLES_FIRST_ITEM)
         scope.waitForTag(config, PerformanceTags.MIRACLES_DETAIL)
         scope.device.pressBack()
+        scope.waitForTag(config, PerformanceTags.MIRACLES_LIST)
+        scope.scrollTag(config, PerformanceTags.MIRACLES_LIST)
     }
 
     private fun counter(scope: MacrobenchmarkScope, config: PerformanceConfig) {
-        scope.waitForTag(config, PerformanceTags.COUNTER_ROOT)
+        scope.clickTagIfPresent(config, PerformanceTags.COUNTER_SELECTOR_FIRST_ITEM)
+        scope.waitForTag(config, PerformanceTags.COUNTER_INCREMENT)
         repeat(3) { scope.clickTag(config, PerformanceTags.COUNTER_INCREMENT) }
         scope.waitForTag(config, PerformanceTags.COUNTER_VALUE)
     }
