@@ -78,10 +78,38 @@ jobs:
       - name: Validate tracked sensitive files
         run: python3 scripts/ci/validate_tracked_sensitive_files.py
 
+      - name: Validate Doppler bootstrap
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+        run: |
+          set -euo pipefail
+          [[ -n "${DOPPLER_TOKEN:-}" ]] || {
+            echo '::error::repository secret DOPPLER_TOKEN is missing'
+            exit 1
+          }
+
+      - name: Install verified Doppler CLI
+        run: |
+          set -euo pipefail
+          assignments="$(bash scripts/ci/install_doppler_cli.sh "$RUNNER_TEMP/doppler-bin")"
+          eval "$assignments"
+          printf '%s\n' "$(dirname "$DOPPLER_BIN")" >> "$GITHUB_PATH"
+
       - name: Run admin backend smoke test
         env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
           EXPECTED_ADMIN_BACKEND_GIT_SHA: ${{ github.sha }}
-        run: python3 ./scripts/ci/admin_backend_smoke.py
+        run: |
+          set -euo pipefail
+          # Variables are intentionally expanded by the Doppler-injected inner shell.
+          # shellcheck disable=SC2016
+          scripts/doppler-run.sh -- bash -c '
+            set -euo pipefail
+            python3 ./scripts/ci/admin_backend_smoke.py \
+              --purchase-url "$PURCHASE_VERIFICATION_URL" \
+              --push-url "$PUSH_REGISTRATION_URL" \
+              --expected-git-sha "$EXPECTED_ADMIN_BACKEND_GIT_SHA"
+          '
 
   resolve-flavors:
     name: Resolve Flavors

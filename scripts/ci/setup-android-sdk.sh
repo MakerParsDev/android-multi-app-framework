@@ -23,9 +23,11 @@ run_pkg_manager() {
 }
 
 detect_java_major() {
-  local version_line
-  version_line="$(java -version 2>&1 | head -n 1 || true)"
-  printf '%s\n' "$version_line" | sed -n 's/.*version "\([0-9][0-9]*\).*/\1/p'
+  local version_output
+  version_output="$(java -version 2>&1 || true)"
+  printf '%s\n' "$version_output" \
+    | sed -n 's/.*version "\([0-9][0-9]*\).*/\1/p' \
+    | head -n 1
 }
 
 select_installed_java() {

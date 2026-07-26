@@ -13,8 +13,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
+        sourceCompatibility = JavaVersion.toVersion(requiredToolchainInt("toolchain.java.major"))
+        targetCompatibility = JavaVersion.toVersion(requiredToolchainInt("toolchain.java.major"))
     }
 }
 

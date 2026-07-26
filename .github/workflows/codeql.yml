@@ -15,11 +15,6 @@ concurrency:
   group: codeql-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-env:
-  CODEQL_EXTRACTOR_JAVA_OPTION_DISABLE_KOTLIN_INTERCEPTOR: 'true'
-  JAVA_TOOL_OPTIONS: '-Dcodeql.extractor.java.disableKotlinInterceptor=true'
-  GRADLE_OPTS: '-Dcodeql.extractor.java.disableKotlinInterceptor=true'
-
 jobs:
   analyze-java-kotlin:
     name: Analyze Java and Kotlin
@@ -69,7 +64,7 @@ jobs:
         run: |
           set -euo pipefail
           chmod +x ./gradlew
-          ./gradlew assembleKuran_kerimDebug --no-daemon --stacktrace --max-workers=2 -Dcodeql.extractor.java.disableKotlinInterceptor=true
+          ./gradlew assembleKuran_kerimDebug --no-daemon --stacktrace --max-workers=2
 
       - name: Remove CI-only Firebase placeholder
         if: always()

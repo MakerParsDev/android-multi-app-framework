@@ -6,10 +6,14 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "$REPO_ROOT/scripts/ci/android-toolchain.sh"
 
 SDK_ROOT="$(android_toolchain_resolve_sdk_root)"
-JAVA_VERSION_LINE="$(java -version 2>&1 | head -n 1 || true)"
+JAVA_VERSION_OUTPUT="$(java -version 2>&1 || true)"
+JAVA_VERSION_LINE="$(printf '%s\n' "$JAVA_VERSION_OUTPUT" | sed -n '/version "[0-9][0-9]*\./{p;q;}')"
 JAVA_MAJOR_ACTUAL="$(printf '%s\n' "$JAVA_VERSION_LINE" | sed -n 's/.*version "\([0-9][0-9]*\).*/\1/p')"
 
-[[ -n "$JAVA_MAJOR_ACTUAL" ]] || { echo "Unable to detect Java version: $JAVA_VERSION_LINE" >&2; exit 1; }
+[[ -n "$JAVA_MAJOR_ACTUAL" ]] || {
+  echo "Unable to detect Java version from java -version output." >&2
+  exit 1
+}
 (( JAVA_MAJOR_ACTUAL >= ANDROID_JAVA_MAJOR )) || {
   echo "Java $ANDROID_JAVA_MAJOR+ required; found $JAVA_VERSION_LINE" >&2
   exit 1

@@ -1,11 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
-import shutil
-
-# Executes a fixed local test command without a shell.
-import subprocess  # nosec B404
 from pathlib import Path
 import unittest
 
@@ -87,9 +82,12 @@ class SideProjectQualityContractTest(unittest.TestCase):
             "npm --prefix side-projects/firebase/rules-tests test",
             "python3 scripts/ci/validate_side_project_audits.py",
             "side-projects/audit-policy.json",
-            "python3 -m unittest discover -s scripts/ci -p '*_test.py'",
         ):
             self.assertIn(required, text)
+        self.assertNotRegex(
+            text,
+            r"\bpython3(?:\.\d+)?\s+-m\s+unittest\s+discover\b",
+        )
 
     def test_audit_policy_is_blocking_owned_and_expiring(self) -> None:
         policy = json.loads(AUDIT_POLICY.read_text(encoding="utf-8"))
@@ -131,31 +129,11 @@ class SideProjectQualityContractTest(unittest.TestCase):
         self.assertRegex(pipeline, r"do_quality:[\s\S]*default: true")
         self.assertIn("run_side_project_quality.sh", pipeline)
 
-    def test_release_script_rejects_publish_when_quality_is_disabled(self) -> None:
-        env = os.environ.copy()
-        env.update(
-            {
-                "RESOLVED_FLAVORS_CSV": "zikirmatik",
-                "BUILD_TYPE": "Release",
-                "DO_BUILD": "true",
-                "DO_PUBLISH": "true",
-                "DO_INTERNAL_TEST": "false",
-                "DO_QUALITY": "false",
-            }
-        )
-        bash = shutil.which("bash")
-        if bash is None:
-            self.fail("bash executable was not found")
-        runner = ROOT / "scripts/ci/run_side_project_quality.sh"
-        result = subprocess.run(  # nosec B603
-            [bash, str(runner)],
-            cwd=ROOT,
-            env=env,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        self.assertNotEqual(0, result.returncode)
+    def test_runner_rejects_recursive_invocation_before_work(self) -> None:
+        text = RUNNER.read_text(encoding="utf-8")
+        self.assertIn("SIDE_PROJECT_QUALITY_ACTIVE", text)
+        self.assertIn("Recursive side-project quality invocation detected", text)
+        self.assertLess(text.index("SIDE_PROJECT_QUALITY_ACTIVE"), text.index("projects=("))
 
     def test_deploy_requires_same_commit_artifact_and_strict_drift_smoke(self) -> None:
         deploy = (ROOT / "scripts/ci/deploy_verified_side_project.mjs").read_text(

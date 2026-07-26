@@ -183,6 +183,19 @@ class ReleaseIntegrationContractTest(unittest.TestCase):
             release_workflow.index(smoke_call), release_workflow.index("./gradlew")
         )
         self.assertIn("EXPECTED_ADMIN_BACKEND_GIT_SHA", release_workflow)
+        doppler_install = "Install verified Doppler CLI"
+        self.assertIn(doppler_install, release_workflow)
+        self.assertLess(release_workflow.index(doppler_install), release_workflow.index(smoke_call))
+        self.assertIn("DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}", release_workflow)
+        self.assertIn("scripts/doppler-run.sh -- bash -c", release_workflow)
+        self.assertIn('--purchase-url "$PURCHASE_VERIFICATION_URL"', release_workflow)
+        self.assertIn('--push-url "$PUSH_REGISTRATION_URL"', release_workflow)
+        self.assertIn(
+            '--expected-git-sha "$EXPECTED_ADMIN_BACKEND_GIT_SHA"',
+            release_workflow,
+        )
+        self.assertNotIn("secrets.PURCHASE_VERIFICATION_URL", release_workflow)
+        self.assertNotIn("secrets.PUSH_REGISTRATION_URL", release_workflow)
 
 
 if __name__ == "__main__":
