@@ -9,7 +9,13 @@ SHA = "1234567890abcdef1234567890abcdef12345678"
 
 
 class Handler(BaseHTTPRequestHandler):
+    required_user_agent = "contentapp-deployment-drift/1"
+
     def do_GET(self):
+        if self.headers.get("user-agent") != self.required_user_agent:
+            self.send_response(403)
+            self.end_headers()
+            return
         if self.path == "/html-error":
             body = b"<html><body>upstream unavailable</body></html>"
             self.send_response(502)
@@ -48,6 +54,15 @@ class DriftTest(unittest.TestCase):
         config = {"url": f"http://127.0.0.1:{self.server.server_port}/health", "method": "GET"}
         self.assertEqual("current", evaluate("content-api", config, SHA, 2).status)
         self.assertEqual("drift", evaluate("content-api", config, "a" * 40, 2).status)
+
+    def test_fetch_uses_cloudflare_safe_user_agent(self):
+        status, payload = fetch_json(
+            f"http://127.0.0.1:{self.server.server_port}/health",
+            "GET",
+            2,
+        )
+        self.assertEqual(200, status)
+        self.assertEqual(SHA, payload["gitSha"])
 
     def test_non_json_http_error_preserves_status(self):
         config = {
