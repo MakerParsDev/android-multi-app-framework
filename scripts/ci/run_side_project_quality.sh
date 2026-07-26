@@ -1,23 +1,28 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ "${SIDE_PROJECT_QUALITY_ACTIVE:-0}" == "1" ]]; then
+  echo "Recursive side-project quality invocation detected" >&2
+  exit 1
+fi
+export SIDE_PROJECT_QUALITY_ACTIVE=1
+
 install=false
-skip_python=false
 report_path="${SIDE_PROJECT_QUALITY_REPORT:-build/reports/side-projects/quality.json}"
 
 usage() {
   cat <<'USAGE'
-Usage: run_side_project_quality.sh [--install] [--skip-python] [--report PATH]
+Usage: run_side_project_quality.sh [--install] [--report PATH]
 
 Runs blocking quality checks for five Node side projects, Firestore rules, critical
-endpoint contracts, Python CI helpers, and a non-blocking live deployment drift report.
+endpoint contracts, and a non-blocking live deployment drift report. Python CI helper
+unit tests are executed by their independent repository quality gate.
 USAGE
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --install) install=true; shift ;;
-    --skip-python) skip_python=true; shift ;;
     --report)
       [[ $# -ge 2 ]] || { echo "--report requires a path" >&2; exit 2; }
       report_path="$2"; shift 2 ;;
@@ -60,10 +65,6 @@ npm --prefix side-projects/firebase/functions run verify
 npm --prefix side-projects/firebase/rules-tests test
 python3 scripts/ci/validate_side_project_endpoint_contracts.py
 
-if [[ "$skip_python" != "true" ]]; then
-  python3 -m unittest discover -s scripts/ci -p '*_test.py'
-fi
-
 sha="$(git rev-parse HEAD)"
 endpoints_json="${SIDE_PROJECT_HEALTH_ENDPOINTS_JSON:-}"
 # The single-quoted pattern intentionally matches an unexpanded Azure $(...) placeholder.
@@ -77,7 +78,7 @@ python3 scripts/ci/check_side_project_deployment_drift.py \
   --report build/reports/side-projects/deployment-drift.json
 
 mkdir -p "$(dirname "$report_path")"
-python3 - "$report_path" "$install" "$skip_python" "$sha" <<'PY'
+python3 - "$report_path" "$install" "$sha" <<'PY'
 from datetime import datetime, timezone
 import json
 from pathlib import Path
@@ -94,16 +95,17 @@ checks = {
 }
 report = {
     "status": "passed",
-    "gitSha": sys.argv[4],
+    "gitSha": sys.argv[3],
     "completedAt": datetime.now(timezone.utc).isoformat(),
     "installedDependencies": sys.argv[2] == "true",
-    "pythonHelpersIncluded": sys.argv[3] != "true",
+    "pythonHelpersIncluded": False,
+    "pythonHelpersExecution": "independent-repository-quality-gate",
     "projects": {
         project: {"status": "passed", "checks": project_checks}
         for project, project_checks in checks.items()
     },
 }
 path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
-print(f"Side-project quality gate passed: projects=5 firestore=1 gitSha={sys.argv[4]}")
+print(f"Side-project quality gate passed: projects=5 firestore=1 gitSha={sys.argv[3]}")
 print(f"Side-project quality report={path}")
 PY
