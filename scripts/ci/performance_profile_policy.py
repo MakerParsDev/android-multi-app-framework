@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate variant-scoped Baseline Profiles and compiled AAB metadata."""
+"""Normalize and validate variant-scoped Baseline Profiles and compiled AAB metadata."""
 
 from __future__ import annotations
 
@@ -17,6 +17,8 @@ if str(SCRIPT_DIR) not in sys.path:
 from resolve_ci_flavor_matrix import load_flavors
 
 ROOT = SCRIPT_DIR.parents[1]
+FLAG_ORDER = "HSP"
+PROFILE_RULE = re.compile(r"^(?P<flags>[HSP]*)(?P<body>\[*L[^;\s]+;(?:->\S+)?)$")
 
 
 def gradle_flavor_token(flavor: str) -> str:
@@ -26,14 +28,7 @@ def gradle_flavor_token(flavor: str) -> str:
 
 
 def expected_profile_dir(repo: Path, flavor: str) -> Path:
-    return (
-        repo
-        / "app"
-        / "src"
-        / f"{flavor}Release"
-        / "generated"
-        / "baselineProfiles"
-    )
+    return repo / "app" / "src" / f"{flavor}Release" / "generated" / "baselineProfiles"
 
 
 def load_packages(repo: Path) -> dict[str, str]:
@@ -52,16 +47,22 @@ def load_packages(repo: Path) -> dict[str, str]:
     return packages
 
 
-PROFILE_RULE = re.compile(r"^[HSP]*\[*L[^;\s]+;(?:->\S+)?$")
+def parse_profile_rule(rule: str) -> tuple[frozenset[str], str]:
+    match = PROFILE_RULE.fullmatch(rule)
+    if match is None:
+        raise ValueError(f"malformed profile rule: {rule}")
+    return frozenset(match.group("flags")), match.group("body")
+
+
+def render_profile_rule(flags: set[str] | frozenset[str], body: str) -> str:
+    return "".join(flag for flag in FLAG_ORDER if flag in flags) + body
 
 
 def parse_profile_rules(path: Path) -> tuple[list[str], list[str]]:
     rules: list[str] = []
     errors: list[str] = []
     seen: set[str] = set()
-    for line_number, raw in enumerate(
-        path.read_text(encoding="utf-8").splitlines(), start=1
-    ):
+    for line_number, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
         rule = raw.strip()
         if not rule or rule.startswith("#"):
             continue
@@ -78,16 +79,58 @@ def parse_profile_rules(path: Path) -> tuple[list[str], list[str]]:
     return rules, errors
 
 
+def semantic_profile(rules: list[str]) -> tuple[list[str], dict[str, set[str]]]:
+    order: list[str] = []
+    merged: dict[str, set[str]] = {}
+    for rule in rules:
+        flags, body = parse_profile_rule(rule)
+        if body not in merged:
+            order.append(body)
+            merged[body] = set()
+        merged[body].update(flags)
+    return order, merged
+
+
+def normalize_profile_pair(repo: Path, flavor: str) -> int:
+    directory = expected_profile_dir(repo, flavor)
+    baseline = directory / "baseline-prof.txt"
+    startup = directory / "startup-prof.txt"
+    for path in (baseline, startup):
+        if not path.is_file() or path.stat().st_size == 0:
+            raise ValueError(f"[{flavor}] missing or empty profile: {path}")
+
+    baseline_rules, baseline_errors = parse_profile_rules(baseline)
+    startup_rules, startup_errors = parse_profile_rules(startup)
+    errors = baseline_errors + startup_errors
+    if errors:
+        raise ValueError("; ".join(errors))
+
+    baseline_order, baseline_map = semantic_profile(baseline_rules)
+    startup_order, startup_map = semantic_profile(startup_rules)
+    changed = 0
+    for body in startup_order:
+        startup_flags = startup_map[body]
+        if body not in baseline_map:
+            baseline_order.append(body)
+            baseline_map[body] = set(startup_flags)
+            changed += 1
+            continue
+        merged_flags = baseline_map[body] | startup_flags
+        if merged_flags != baseline_map[body]:
+            baseline_map[body] = merged_flags
+            changed += 1
+
+    normalized = [render_profile_rule(baseline_map[body], body) for body in baseline_order]
+    baseline.write_text("\n".join(normalized) + "\n", encoding="utf-8")
+    return changed
+
+
 def normalized_rules(path: Path) -> set[str]:
     rules, _ = parse_profile_rules(path)
     return set(rules)
 
 
-def validate_profile_pair(
-    repo: Path,
-    flavor: str,
-    packages: dict[str, str],
-) -> list[str]:
+def validate_profile_pair(repo: Path, flavor: str, packages: dict[str, str]) -> list[str]:
     errors: list[str] = []
     directory = expected_profile_dir(repo, flavor)
     baseline = directory / "baseline-prof.txt"
@@ -101,16 +144,25 @@ def validate_profile_pair(
     baseline_list, baseline_errors = parse_profile_rules(baseline)
     startup_list, startup_errors = parse_profile_rules(startup)
     errors.extend(f"[{flavor}] {error}" for error in baseline_errors + startup_errors)
-    baseline_rules = set(baseline_list)
-    startup_rules = set(startup_list)
-    if not startup_rules.issubset(baseline_rules):
+    if baseline_errors or startup_errors:
+        return errors
+
+    _, baseline_map = semantic_profile(baseline_list)
+    _, startup_map = semantic_profile(startup_list)
+    missing_or_weaker = [
+        body
+        for body, startup_flags in startup_map.items()
+        if body not in baseline_map or not startup_flags.issubset(baseline_map[body])
+    ]
+    if missing_or_weaker:
         errors.append(f"[{flavor}] startup profile is not a subset of baseline profile")
 
+    all_rules = set(baseline_list) | set(startup_list)
     for other, package_name in packages.items():
         if other == flavor:
             continue
         descriptor = package_name.replace(".", "/")
-        if any(descriptor in rule for rule in baseline_rules | startup_rules):
+        if any(descriptor in rule for rule in all_rules):
             errors.append(f"[{flavor}] profile references other flavor package: {other}")
     return errors
 
@@ -142,7 +194,7 @@ def validate_aab(aab: Path) -> list[str]:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="command", required=True)
-    for name in ("validate-source", "task"):
+    for name in ("normalize-source", "validate-source", "task"):
         command = sub.add_parser(name)
         command.add_argument("--flavor", required=True)
     sub.add_parser("validate-all")
@@ -168,6 +220,15 @@ def main() -> int:
 
     if args.command == "task":
         print(f"generate{gradle_flavor_token(selected)}ReleaseBaselineProfile")
+        return 0
+
+    if args.command == "normalize-source":
+        try:
+            changed = normalize_profile_pair(ROOT, selected)
+        except (ValueError, OSError) as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
+        print(f"Normalized performance profile: flavor={selected} changed={changed}")
         return 0
 
     if args.command == "validate-aab":

@@ -192,6 +192,7 @@ def test_baseline_profiles_workflow_is_full_speed_and_safe() -> None:
     assert "vars.PERFORMANCE_AUTOMATION_ENABLED == 'true'" in aggregate["if"]
     runs = "\n".join(step.get("run", "") for step in matrix_job["steps"])
     assert "performance_profile_policy.py task" in runs
+    assert "performance_profile_policy.py normalize-source" in runs
     assert "generate_ci_google_services.py --clean" in runs
     assert "swiftshader_indirect" in runs
     assert "setup-performance-device-sdk.sh" in runs

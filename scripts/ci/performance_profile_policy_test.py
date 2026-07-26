@@ -11,6 +11,7 @@ from pathlib import Path
 from performance_profile_policy import (
     expected_profile_dir,
     gradle_flavor_token,
+    normalize_profile_pair,
     validate_aab,
     validate_profile_pair,
 )
@@ -57,6 +58,35 @@ class PerformanceProfilePolicyTest(unittest.TestCase):
                 "Lcom/parsfilo/C;\n", encoding="utf-8"
             )
             self.assertTrue(validate_profile_pair(root, "kuran_kerim", {}))
+
+    def test_normalizer_merges_startup_rules_into_baseline_semantically(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            directory = expected_profile_dir(root, "kuran_kerim")
+            directory.mkdir(parents=True)
+            baseline = directory / "baseline-prof.txt"
+            startup = directory / "startup-prof.txt"
+            baseline.write_text(
+                "HPLcom/parsfilo/A;->run()V\nLcom/parsfilo/B;\n",
+                encoding="utf-8",
+            )
+            startup.write_text(
+                "HSPLcom/parsfilo/A;->run()V\nLcom/parsfilo/C;\n",
+                encoding="utf-8",
+            )
+
+            changed = normalize_profile_pair(root, "kuran_kerim")
+
+            self.assertEqual(2, changed)
+            self.assertEqual(
+                [
+                    "HSPLcom/parsfilo/A;->run()V",
+                    "Lcom/parsfilo/B;",
+                    "Lcom/parsfilo/C;",
+                ],
+                baseline.read_text(encoding="utf-8").splitlines(),
+            )
+            self.assertEqual([], validate_profile_pair(root, "kuran_kerim", {}))
 
     def test_aab_requires_compiled_profile_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -284,6 +314,7 @@ class PerformanceProfileStructureTest(unittest.TestCase):
             "PRAYER_TIMES_READY",
             "QIBLA_READY",
             "COUNTER_ROOT",
+            "COUNTER_SELECTOR_FIRST_ITEM",
             "COUNTER_VALUE",
             "COUNTER_INCREMENT",
         ):
@@ -310,6 +341,32 @@ class PerformanceProfileStructureTest(unittest.TestCase):
         self.assertIn("if (!uiState.isLocationRefreshing)", qibla)
         self.assertIn('.testTag("qibla_ready")', qibla)
 
+    def test_journeys_click_first_item_before_scrolling(self) -> None:
+        source = (
+            ROOT
+            / "performance/benchmark/src/main/java/com/parsfilo/contentapp/performance/CriticalUserJourneys.kt"
+        ).read_text(encoding="utf-8")
+        for first_tag, list_tag in (
+            ("CONTENT_FIRST_ITEM", "CONTENT_LIST"),
+            ("QURAN_FIRST_ITEM", "QURAN_LIST"),
+            ("MIRACLES_FIRST_ITEM", "MIRACLES_LIST"),
+        ):
+            self.assertLess(
+                source.index(f"clickTag(config, PerformanceTags.{first_tag})"),
+                source.index(f"scrollTag(config, PerformanceTags.{list_tag})"),
+            )
+        self.assertIn(
+            "clickTagIfPresent(config, PerformanceTags.COUNTER_SELECTOR_FIRST_ITEM)",
+            source,
+        )
+
+    def test_counter_selector_exposes_first_item_tag(self) -> None:
+        source = (
+            ROOT
+            / "feature/counter/src/main/java/com/parsfilo/contentapp/feature/counter/ui/components/ZikirSelectorSheet.kt"
+        ).read_text(encoding="utf-8")
+        self.assertIn('.testTag("counter_selector_first_item")', source)
+
     def test_app_gradle_reuses_python_provider(self) -> None:
         source = (ROOT / "app/build.gradle.kts").read_text(encoding="utf-8")
         self.assertIn("pythonExecutable.set(appPythonExecutable)", source)
@@ -331,6 +388,7 @@ class PerformanceProfileStructureTest(unittest.TestCase):
             "prayer_times_ready",
             "qibla_ready",
             "counter_root",
+            "counter_selector_first_item",
             "counter_value",
             "counter_increment",
         }
@@ -378,6 +436,9 @@ class PerformanceProfileStructureTest(unittest.TestCase):
         self.assertIn("viewIdResourceName == tag", source)
         self.assertIn("dumpWindowHierarchy", source)
         self.assertIn("Accessibility hierarchy:", source)
+        self.assertIn("StaleObjectException", source)
+        self.assertIn("pm grant", source)
+        self.assertIn("ACCESS_FINE_LOCATION", source)
         self.assertNotIn("By.res(config.packageName, tag)", source)
         self.assertNotIn("By.res(tag)", source)
 

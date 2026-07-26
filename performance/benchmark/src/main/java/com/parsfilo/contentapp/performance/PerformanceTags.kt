@@ -17,6 +17,7 @@ internal object PerformanceTags {
     const val PRAYER_TIMES_READY = "prayer_times_ready"
     const val QIBLA_READY = "qibla_ready"
     const val COUNTER_ROOT = "counter_root"
+    const val COUNTER_SELECTOR_FIRST_ITEM = "counter_selector_first_item"
     const val COUNTER_VALUE = "counter_value"
     const val COUNTER_INCREMENT = "counter_increment"
 }

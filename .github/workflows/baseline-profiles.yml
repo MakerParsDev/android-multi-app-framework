@@ -145,6 +145,7 @@ jobs:
       - name: Validate and stage profile pair
         run: |
           set -euo pipefail
+          python3 scripts/ci/performance_profile_policy.py normalize-source --flavor "$FLAVOR"
           python3 scripts/ci/performance_profile_policy.py validate-source --flavor "$FLAVOR"
           source_dir="app/src/${FLAVOR}Release/generated/baselineProfiles"
           target_dir="performance-artifacts/$FLAVOR"
