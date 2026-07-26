@@ -84,9 +84,9 @@ class SideProjectQualityContractTest(unittest.TestCase):
             "side-projects/audit-policy.json",
         ):
             self.assertIn(required, text)
-        self.assertNotIn(
-            "python3 -m unittest discover -s scripts/ci -p '*_test.py'",
+        self.assertNotRegex(
             text,
+            r"\bpython3(?:\.\d+)?\s+-m\s+unittest\s+discover\b",
         )
 
     def test_audit_policy_is_blocking_owned_and_expiring(self) -> None:

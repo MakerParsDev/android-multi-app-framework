@@ -397,9 +397,9 @@ def test_ci_aggregate_gate_enforces_all_required_jobs() -> None:
     assert "kover-coverage" in command
 
 
-def test_deprecated_internal_track_workflow_is_not_active() -> None:
+def test_deprecated_internal_track_workflow_is_removed() -> None:
     assert not (ROOT / ".github/workflows/deploy-internal-track.yml").exists()
-    assert (ROOT / ".github/workflows.disabled/deploy-internal-track.yml").is_file()
+    assert not (ROOT / ".github/workflows.disabled/deploy-internal-track.yml").exists()
 
 
 def test_play_internal_builds_attests_and_publishes_one_exact_aab() -> None:
