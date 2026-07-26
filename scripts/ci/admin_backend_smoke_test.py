@@ -183,6 +183,16 @@ class ReleaseIntegrationContractTest(unittest.TestCase):
             release_workflow.index(smoke_call), release_workflow.index("./gradlew")
         )
         self.assertIn("EXPECTED_ADMIN_BACKEND_GIT_SHA", release_workflow)
+        self.assertIn(
+            "PURCHASE_VERIFICATION_URL: ${{ secrets.PURCHASE_VERIFICATION_URL }}",
+            release_workflow,
+        )
+        self.assertIn(
+            "PUSH_REGISTRATION_URL: ${{ secrets.PUSH_REGISTRATION_URL }}",
+            release_workflow,
+        )
+        self.assertIn('--purchase-url "$PURCHASE_VERIFICATION_URL"', release_workflow)
+        self.assertIn('--push-url "$PUSH_REGISTRATION_URL"', release_workflow)
 
 
 if __name__ == "__main__":

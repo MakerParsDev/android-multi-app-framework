@@ -81,7 +81,12 @@ jobs:
       - name: Run admin backend smoke test
         env:
           EXPECTED_ADMIN_BACKEND_GIT_SHA: ${{ github.sha }}
-        run: python3 ./scripts/ci/admin_backend_smoke.py
+          PURCHASE_VERIFICATION_URL: ${{ secrets.PURCHASE_VERIFICATION_URL }}
+          PUSH_REGISTRATION_URL: ${{ secrets.PUSH_REGISTRATION_URL }}
+        run: |
+          python3 ./scripts/ci/admin_backend_smoke.py \
+            --purchase-url "$PURCHASE_VERIFICATION_URL" \
+            --push-url "$PUSH_REGISTRATION_URL"
 
   resolve-flavors:
     name: Resolve Flavors
