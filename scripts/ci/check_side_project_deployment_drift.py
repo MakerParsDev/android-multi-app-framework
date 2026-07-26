@@ -16,6 +16,7 @@ from urllib.request import Request, urlopen
 
 GIT_SHA_RE = re.compile(r"^[0-9a-fA-F]{7,40}$")
 MAX_BYTES = 64 * 1024
+USER_AGENT = "contentapp-deployment-drift/1"
 SERVICE_NAMES = {
     "admin-api": "cloudflare-admin-api",
     "content-api": "contentapp-content-api",
@@ -98,7 +99,11 @@ def fetch_json(url: str, method: str, timeout: float) -> tuple[int, dict[str, ob
         url,
         data=body,
         method=method,
-        headers={"accept": "application/json", "content-type": "application/json"},
+        headers={
+            "accept": "application/json",
+            "content-type": "application/json",
+            "user-agent": USER_AGENT,
+        },
     )
     try:
         # The URL scheme and host are restricted immediately above.
