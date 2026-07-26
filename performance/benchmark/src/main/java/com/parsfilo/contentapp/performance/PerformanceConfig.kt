@@ -4,6 +4,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 
 internal enum class PerformanceFamily {
     AUDIO_CONTENT,
+    PRAYER_LIBRARY,
     QURAN,
     MIRACLES,
     ESMA,
@@ -14,7 +15,8 @@ internal enum class PerformanceFamily {
     companion object {
         fun from(raw: String): PerformanceFamily =
             when (raw) {
-                "content", "prayer_library" -> AUDIO_CONTENT
+                "content" -> AUDIO_CONTENT
+                "prayer_library" -> PRAYER_LIBRARY
                 "quran" -> QURAN
                 "miracles" -> MIRACLES
                 "esma" -> ESMA

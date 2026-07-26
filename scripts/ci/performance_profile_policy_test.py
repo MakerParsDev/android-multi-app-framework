@@ -190,7 +190,8 @@ class PerformanceProfileStructureTest(unittest.TestCase):
             / "performance/benchmark/src/main/java/com/parsfilo/contentapp/performance/PerformanceConfig.kt"
         ).read_text(encoding="utf-8")
         for family in (
-            '"content", "prayer_library" -> AUDIO_CONTENT',
+            '"content" -> AUDIO_CONTENT',
+            '"prayer_library" -> PRAYER_LIBRARY',
             '"esma" -> ESMA',
             '"quran" -> QURAN',
             '"miracles" -> MIRACLES',
@@ -355,13 +356,30 @@ class PerformanceProfileStructureTest(unittest.TestCase):
                 source.index(f"scrollTag(config, PerformanceTags.{list_tag})"),
             )
         audio_start = source.index("private fun audioContent")
-        audio_end = source.index("private fun quran", audio_start)
+        audio_end = source.index("private fun prayerLibrary", audio_start)
         audio = source[audio_start:audio_end]
         self.assertNotIn("CONTENT_FIRST_ITEM", audio)
         self.assertNotIn("pressBack", audio)
         self.assertLess(
             audio.index("AUDIO_PLAY_PAUSE"),
             audio.index("scrollTag(config, PerformanceTags.CONTENT_LIST)"),
+        )
+
+        prayer_start = source.index("private fun prayerLibrary")
+        prayer_end = source.index("private fun quran", prayer_start)
+        prayer = source[prayer_start:prayer_end]
+        self.assertLess(
+            prayer.index("CONTENT_FIRST_ITEM"),
+            prayer.index("CONTENT_DETAIL"),
+        )
+        self.assertIn("pressBack", prayer)
+        self.assertLess(
+            prayer.index("AUDIO_PLAY_PAUSE"),
+            prayer.index("pressBack"),
+        )
+        self.assertLess(
+            prayer.index("pressBack"),
+            prayer.index("scrollTag(config, PerformanceTags.CONTENT_LIST)"),
         )
         self.assertIn(
             "clickTagIfPresent(config, PerformanceTags.COUNTER_SELECTOR_FIRST_ITEM)",
