@@ -24,6 +24,6 @@ set -o pipefail
 
 "$manager" --sdk_root="$sdk_root" \
   emulator \
-  'system-images;android-33;default;x86_64'
+  'system-images;android-33;google_apis;x86_64'
 
 echo 'Performance managed-device SDK packages installed.'

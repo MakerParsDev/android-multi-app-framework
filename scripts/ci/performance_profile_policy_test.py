@@ -341,13 +341,12 @@ class PerformanceProfileStructureTest(unittest.TestCase):
         self.assertIn("if (!uiState.isLocationRefreshing)", qibla)
         self.assertIn('.testTag("qibla_ready")', qibla)
 
-    def test_journeys_click_first_item_before_scrolling(self) -> None:
+    def test_journeys_use_valid_navigation_and_scroll_order(self) -> None:
         source = (
             ROOT
             / "performance/benchmark/src/main/java/com/parsfilo/contentapp/performance/CriticalUserJourneys.kt"
         ).read_text(encoding="utf-8")
         for first_tag, list_tag in (
-            ("CONTENT_FIRST_ITEM", "CONTENT_LIST"),
             ("QURAN_FIRST_ITEM", "QURAN_LIST"),
             ("MIRACLES_FIRST_ITEM", "MIRACLES_LIST"),
         ):
@@ -355,10 +354,37 @@ class PerformanceProfileStructureTest(unittest.TestCase):
                 source.index(f"clickTag(config, PerformanceTags.{first_tag})"),
                 source.index(f"scrollTag(config, PerformanceTags.{list_tag})"),
             )
+        audio_start = source.index("private fun audioContent")
+        audio_end = source.index("private fun quran", audio_start)
+        audio = source[audio_start:audio_end]
+        self.assertNotIn("CONTENT_FIRST_ITEM", audio)
+        self.assertNotIn("pressBack", audio)
+        self.assertLess(
+            audio.index("AUDIO_PLAY_PAUSE"),
+            audio.index("scrollTag(config, PerformanceTags.CONTENT_LIST)"),
+        )
         self.assertIn(
             "clickTagIfPresent(config, PerformanceTags.COUNTER_SELECTOR_FIRST_ITEM)",
             source,
         )
+
+    def test_performance_device_uses_google_apis_image(self) -> None:
+        gradle = (
+            ROOT / "performance/benchmark/build.gradle.kts"
+        ).read_text(encoding="utf-8")
+        setup = (
+            ROOT / "scripts/ci/setup-performance-device-sdk.sh"
+        ).read_text(encoding="utf-8")
+        self.assertIn('systemImageSource = "google"', gradle)
+        self.assertIn("system-images;android-33;google_apis;x86_64", setup)
+        self.assertNotIn("system-images;android-33;default;x86_64", setup)
+
+    def test_profile_workflow_allocates_d8_heap(self) -> None:
+        workflow = (ROOT / ".github/workflows/baseline-profiles.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('-Dorg.gradle.jvmargs="-Xmx6g', workflow)
+        self.assertIn("--max-workers=1", workflow)
 
     def test_counter_selector_exposes_first_item_tag(self) -> None:
         source = (
