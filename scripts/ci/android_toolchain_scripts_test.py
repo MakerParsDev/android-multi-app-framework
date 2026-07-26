@@ -67,6 +67,27 @@ class AndroidToolchainScriptsTest(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertEqual("21|37.0|37.0.0", result.stdout.strip())
 
+    def test_java_detection_ignores_launcher_messages(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            fake_bin = Path(temp_dir) / "bin"
+            fake_bin.mkdir()
+            java_script = fake_bin / "java"
+            java_script.write_text(
+                "#!/usr/bin/env bash\n"
+                "printf '%s\\n' 'Picked up JAVA_TOOL_OPTIONS: -Dexample=true' >&2\n"
+                "printf '%s\\n' 'openjdk version \"21.0.11\" 2026-04-21' >&2\n",
+                encoding="utf-8",
+            )
+            java_script.chmod(0o755)
+
+            result = self.run_bash(
+                f'source "{SETUP_SCRIPT}"; detect_java_major',
+                env={"PATH": f"{fake_bin}:{os.environ['PATH']}"},
+            )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("21", result.stdout.strip())
+
     def test_bootstrap_temp_directory_is_removed_when_download_fails(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp = Path(temp_dir)
