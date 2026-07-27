@@ -16,7 +16,7 @@ buildscript {
     configurations.all {
         resolutionStrategy {
             // Force secure versions for Netty (HTTP/2 DoS, Request Smuggling, etc.)
-            val nettyVersion = "4.2.14.Final"
+            val nettyVersion = "4.2.16.Final"
             force("io.netty:netty-codec-http2:$nettyVersion")
             force("io.netty:netty-handler:$nettyVersion")
             force("io.netty:netty-codec-http:$nettyVersion")
