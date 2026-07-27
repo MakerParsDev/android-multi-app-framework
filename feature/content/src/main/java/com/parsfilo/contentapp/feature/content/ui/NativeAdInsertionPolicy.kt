@@ -5,7 +5,7 @@ private const val INLINE_FEED_AD_INTERVAL = 10
 private const val MIN_CONTENT_ITEMS_AFTER_INLINE_FEED_AD = 2
 
 fun shouldShowTopBannerForScrollableContent(totalContentItems: Int): Boolean =
-    totalContentItems > 0 && !shouldPreferInlineFeedAds(totalContentItems)
+    totalContentItems > 0
 
 fun shouldPreferInlineFeedAds(totalContentItems: Int): Boolean =
     totalContentItems >= MIN_CONTENT_ITEMS_FOR_INLINE_FEED_ADS

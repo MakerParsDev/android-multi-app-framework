@@ -56,6 +56,7 @@ import com.parsfilo.contentapp.core.designsystem.tokens.LocalDimens
 import com.parsfilo.contentapp.core.designsystem.tokens.LocalMotion
 import com.parsfilo.contentapp.core.model.DisplayMode
 import com.parsfilo.contentapp.core.model.Verse
+import com.parsfilo.contentapp.feature.ads.AdPlacement
 import com.parsfilo.contentapp.feature.ads.ui.BannerAd
 import com.parsfilo.contentapp.feature.content.R
 
@@ -167,8 +168,8 @@ fun ContentScreen(
                 if (showTopBanner) {
                     BannerAd(
                         adUnitId = bannerAdUnitId,
+                        placement = AdPlacement.BANNER_CONTENT_DETAIL,
                         showPlacementLabels = false,
-                        modifier = Modifier.padding(horizontal = dimens.space6)
                     )
                 }
 
