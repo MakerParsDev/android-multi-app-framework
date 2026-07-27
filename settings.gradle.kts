@@ -25,8 +25,8 @@ buildscript {
             force("io.netty:netty-handler-proxy:$nettyVersion")
             
             // Force secure BouncyCastle, Guava, and other transitive build plugin deps
-            force("org.bouncycastle:bcprov-jdk18on:1.84")
-            force("org.bouncycastle:bcpkix-jdk18on:1.84")
+            force("org.bouncycastle:bcprov-jdk18on:1.85")
+            force("org.bouncycastle:bcpkix-jdk18on:1.85")
             force("com.google.guava:guava:33.6.0-jre")
             force("org.jdom:jdom2:2.0.6.1")
             force("org.bitbucket.b_c:jose4j:0.9.6")
