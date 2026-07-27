@@ -22,5 +22,6 @@ python3 scripts/ci/performance_profile_policy.py validate-source --flavor "$RELE
 
 ./gradlew ":app:validate${RELEASE_CAPITALIZED}ReleaseBaselineProfileInBundle" \
   --no-daemon \
+  --no-configuration-cache \
   --stacktrace \
   --max-workers=2

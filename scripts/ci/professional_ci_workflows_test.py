@@ -368,6 +368,7 @@ def test_release_is_manual_protected_and_attested() -> None:
     assert (
         "validate${RELEASE_CAPITALIZED}ReleaseBaselineProfileInBundle" in release_script
     )
+    assert "--no-configuration-cache" in release_script
     assert "bundle${RELEASE_CAPITALIZED}Release" not in release_script
     assert "publish" not in release_script.lower()
     attest = named_step(job, "Attest signed AAB")
@@ -429,6 +430,7 @@ def test_play_internal_builds_attests_and_publishes_one_exact_aab() -> None:
     assert "restore_firebase_configs.sh" in play_script
     assert "performance_profile_policy.py validate-source" in play_script
     assert "validate${RELEASE_CAPITALIZED}ReleaseBaselineProfileInBundle" in play_script
+    assert "--no-configuration-cache" in play_script
     assert "bundle${RELEASE_CAPITALIZED}Release" not in play_script
     attest = named_step(job, "Attest exact signed AAB")
     assert attest["uses"] == f"actions/attest@{ATTEST_SHA}"
