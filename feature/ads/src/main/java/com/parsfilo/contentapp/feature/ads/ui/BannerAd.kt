@@ -95,7 +95,7 @@ fun BannerAd(
         var loadState by remember(adUnitId, placement, adWidthDp) {
             mutableStateOf(BannerLoadState.LOADING)
         }
-        val adView = remember(adUnitId, adWidthDp, showPlacementLabels, adSize) {
+        val adView = remember(adUnitId, placement, adWidthDp, showPlacementLabels, adSize) {
             val loadStartedAtMillis = SystemTimeProvider.nowMillis()
             AdView(adContext).apply {
                 this.adUnitId = adUnitId
