@@ -30,7 +30,7 @@ buildscript {
             force("com.google.guava:guava:33.6.0-jre")
             force("org.jdom:jdom2:2.0.6.1")
             force("org.bitbucket.b_c:jose4j:0.9.6")
-            force("org.apache.commons:commons-lang3:3.18.0")
+            force("org.apache.commons:commons-lang3:3.20.0")
             force("ch.qos.logback:logback-core:1.5.25")
             force("org.apache.httpcomponents:httpclient:4.5.14")
         }
