@@ -6,11 +6,12 @@ import org.junit.Test
 class NativeAdInsertionPolicyTest {
 
     @Test
-    fun `top banner only shows for short scrollable content`() {
+    fun `top banner shows whenever scrollable content exists`() {
         assertThat(shouldShowTopBannerForScrollableContent(0)).isFalse()
         assertThat(shouldShowTopBannerForScrollableContent(1)).isTrue()
         assertThat(shouldShowTopBannerForScrollableContent(11)).isTrue()
-        assertThat(shouldShowTopBannerForScrollableContent(12)).isFalse()
+        assertThat(shouldShowTopBannerForScrollableContent(12)).isTrue()
+        assertThat(shouldShowTopBannerForScrollableContent(99)).isTrue()
     }
 
     @Test

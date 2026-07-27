@@ -197,6 +197,7 @@ fun AppNavHost(
                 ) {
                     BannerAd(
                         adUnitId = adUnitIds.banner,
+                        placement = AdPlacement.BANNER_SETTINGS,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -334,6 +335,7 @@ fun AppNavHost(
                         bannerAdContent = {
                             BannerAd(
                                 adUnitId = adUnitIds.banner,
+                                placement = AdPlacement.BANNER_CONTENT_LIST,
                                 modifier = Modifier.fillMaxWidth(),
                             )
                         },
@@ -381,6 +383,7 @@ fun AppNavHost(
                         bannerAdContent = {
                             BannerAd(
                                 adUnitId = adUnitIds.banner,
+                                placement = AdPlacement.BANNER_CONTENT_DETAIL,
                                 modifier = Modifier.fillMaxWidth(),
                             )
                         },
@@ -407,6 +410,7 @@ fun AppNavHost(
                         bannerAdContent = {
                             BannerAd(
                                 adUnitId = adUnitIds.banner,
+                                placement = AdPlacement.BANNER_CONTENT_DETAIL,
                                 modifier = Modifier.fillMaxWidth(),
                             )
                         },

@@ -53,6 +53,7 @@ import com.parsfilo.contentapp.core.designsystem.tokens.LocalDimens
 import com.parsfilo.contentapp.core.designsystem.tokens.LocalMotion
 import com.parsfilo.contentapp.core.model.Prayer
 import com.parsfilo.contentapp.core.model.PrayerVerse
+import com.parsfilo.contentapp.feature.ads.AdPlacement
 import com.parsfilo.contentapp.feature.ads.ui.BannerAd
 import com.parsfilo.contentapp.feature.content.ui.shouldInsertInlineFeedAdAfterItem
 import com.parsfilo.contentapp.feature.content.ui.shouldPreferInlineFeedAds
@@ -142,7 +143,7 @@ fun PrayerListScreen(
                     // Banner reklam
                     BannerAd(
                         adUnitId = bannerAdUnitId,
-                        modifier = Modifier.padding(horizontal = dimens.space6)
+                        placement = AdPlacement.BANNER_CONTENT_LIST,
                     )
                 }
 

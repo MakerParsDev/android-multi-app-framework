@@ -54,6 +54,7 @@ import com.parsfilo.contentapp.core.designsystem.AppTheme
 import com.parsfilo.contentapp.core.designsystem.tokens.LocalDimens
 import com.parsfilo.contentapp.core.designsystem.tokens.LocalMotion
 import com.parsfilo.contentapp.core.model.MiraclesPrayer
+import com.parsfilo.contentapp.feature.ads.AdPlacement
 import com.parsfilo.contentapp.feature.ads.ui.BannerAd
 import com.parsfilo.contentapp.feature.content.R
 import com.parsfilo.contentapp.feature.content.ui.shouldInsertInlineFeedAdAfterItem
@@ -150,7 +151,7 @@ fun MiraclesListScreen(
                 if (showTopBanner) {
                     BannerAd(
                         adUnitId = bannerAdUnitId,
-                        modifier = Modifier.padding(horizontal = dimens.space6)
+                        placement = AdPlacement.BANNER_CONTENT_LIST,
                     )
                 }
 

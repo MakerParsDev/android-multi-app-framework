@@ -2,13 +2,14 @@ package com.parsfilo.contentapp.feature.ads.ui
 
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
@@ -19,7 +20,6 @@ import com.google.android.gms.ads.AdListener
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
-import com.parsfilo.contentapp.core.designsystem.tokens.LocalDimens
 import com.parsfilo.contentapp.feature.ads.AdFormat
 import com.parsfilo.contentapp.feature.ads.AdPaidEventContext
 import com.parsfilo.contentapp.feature.ads.AdPlacement
@@ -46,7 +46,6 @@ fun BannerAd(
 
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val dimens = LocalDimens.current
     val adContext = remember(context) { context.findActivity() ?: context }
     val appContext = context.applicationContext
     val entryPoint = remember(appContext) {
@@ -86,13 +85,15 @@ fun BannerAd(
     val adRequest = remember { AdRequest.Builder().build() }
 
     BoxWithConstraints(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = dimens.space6),
+        modifier = modifier.fillMaxWidth(),
     ) {
         val adWidthDp = max(1, maxWidth.value.toInt())
-        val adSize = remember(adContext, placement, adWidthDp) {
-            placement.adaptiveBannerSize(adContext, adWidthDp)
+        val sizingPolicy = remember(placement) { placement.bannerSizingPolicy() }
+        val adSize = remember(sizingPolicy, adWidthDp) {
+            sizingPolicy.toAdSize(adWidthDp)
+        }
+        var loadState by remember(adUnitId, placement, adWidthDp) {
+            mutableStateOf(BannerLoadState.LOADING)
         }
         val adView = remember(adUnitId, adWidthDp, showPlacementLabels, adSize) {
             val loadStartedAtMillis = SystemTimeProvider.nowMillis()
@@ -110,6 +111,7 @@ fun BannerAd(
                 )
                 adListener = object : AdListener() {
                     override fun onAdLoaded() {
+                        loadState = BannerLoadState.LOADED
                         val fillLatencyMs = (SystemTimeProvider.nowMillis() - loadStartedAtMillis).coerceAtLeast(0L)
                         revenueLogger.logLoaded(
                             adFormat = AdFormat.BANNER,
@@ -128,6 +130,7 @@ fun BannerAd(
                     }
 
                     override fun onAdFailedToLoad(error: com.google.android.gms.ads.LoadAdError) {
+                        loadState = BannerLoadState.FAILED
                         revenueLogger.logFailedToLoad(
                             adFormat = AdFormat.BANNER,
                             placement = placement,
@@ -179,6 +182,8 @@ fun BannerAd(
             }
         }
 
+        if (loadState == BannerLoadState.FAILED) return@BoxWithConstraints
+
         DisposableEffect(adView, lifecycleOwner) {
             val observer = LifecycleEventObserver { _, event ->
                 when (event) {
@@ -221,14 +226,19 @@ fun BannerAd(
     }
 }
 
-private fun AdPlacement.adaptiveBannerSize(
-    context: android.content.Context,
-    adWidthDp: Int,
-): AdSize =
-    when (this) {
-        AdPlacement.BANNER_CONTENT_LIST,
-        AdPlacement.BANNER_CONTENT_DETAIL,
-        -> AdSize.getCurrentOrientationInlineAdaptiveBannerAdSize(context, adWidthDp)
+private enum class BannerLoadState {
+    LOADING,
+    LOADED,
+    FAILED,
+}
 
-        else -> AdSize.getLargeAnchoredAdaptiveBannerAdSize(context, adWidthDp)
+private fun BannerSizingPolicy.toAdSize(adWidthDp: Int): AdSize =
+    when (mode) {
+        BannerSizingMode.INLINE_ADAPTIVE ->
+            AdSize.getInlineAdaptiveBannerAdSize(
+                adWidthDp,
+                requireNotNull(maxHeightDp),
+            )
+
+        BannerSizingMode.FIXED_STANDARD -> AdSize.BANNER
     }
