@@ -16,7 +16,7 @@
     "predeploy": "npm run verify"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260721.1",
+    "@cloudflare/workers-types": "^5.20260727.1",
     "eslint": "^10.7.0",
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.65.0",
