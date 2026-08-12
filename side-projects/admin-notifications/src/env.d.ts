@@ -2,6 +2,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_FIREBASE_PROJECT_ID: string;
+  readonly VITE_FUNCTIONS_BASE_URL?: string;
   readonly VITE_FIREBASE_FUNCTIONS_REGION?: string;
   readonly VITE_CONTENT_API_URL?: string;
   readonly VITE_ADMIN_API_URL?: string;

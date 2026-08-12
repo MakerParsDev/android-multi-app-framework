@@ -99,6 +99,44 @@ function jsonRequest(url, { token, body } = {}) {
   });
 }
 
+function getRequest(url, { token } = {}) {
+  const headers = new Headers();
+  if (token !== undefined) headers.set("Cf-Access-Jwt-Assertion", token);
+  return new Request(url, { method: "GET", headers });
+}
+
+function textPlainRequest(url, { token, body } = {}) {
+  const headers = new Headers({ "content-type": "text/plain" });
+  if (token !== undefined) headers.set("Cf-Access-Jwt-Assertion", token);
+  return new Request(url, {
+    method: "POST",
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+}
+
+/**
+ * Shared CSRF-guard assertions (Finding 1): every admin route must reject a
+ * non-POST method with 405 and a non-JSON Content-Type with 415, *before*
+ * Cloudflare Access verification runs. A validly-signed token is attached to
+ * prove the guard fires independent of auth state.
+ */
+async function assertCsrfGuard(handler, path, signer) {
+  const token = await signer.sign();
+
+  const methodResponse = await handler(
+    getRequest(`https://admin-api.parsfilo.com${path}`, { token }),
+    baseEnv(),
+  );
+  assert.equal(methodResponse.status, 405);
+
+  const contentTypeResponse = await handler(
+    textPlainRequest(`https://admin-api.parsfilo.com${path}`, { token, body: { id: "event-1" } }),
+    baseEnv(),
+  );
+  assert.equal(contentTypeResponse.status, 415);
+}
+
 async function responseJson(response) {
   return JSON.parse(await response.text());
 }
@@ -137,6 +175,11 @@ function mockFetch({ certsKeys = [], firestore = {} } = {}) {
         ? firestore.list(urlStr, init)
         : new Response(JSON.stringify({ documents: [] }), { status: 200 });
     }
+    if (urlStr.startsWith(`${DOCUMENTS_BASE}/scheduled_events/`) && method === "GET") {
+      return firestore.getEvent
+        ? firestore.getEvent(urlStr, init)
+        : new Response(JSON.stringify({ error: { code: 404 } }), { status: 404 });
+    }
     if (urlStr.startsWith(`${DOCUMENTS_BASE}/scheduled_events/`) && method === "PATCH") {
       return firestore.patch
         ? firestore.patch(urlStr, init)
@@ -164,6 +207,12 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 // handleAdminListScheduledEvents
 // ---------------------------------------------------------------------------
+
+test("adminListScheduledEvents: rejects non-POST method (405) and non-JSON Content-Type (415) before auth runs", async () => {
+  const signer = await createSigner();
+  mockFetch({ certsKeys: [signer.jwk] });
+  await assertCsrfGuard(handleAdminListScheduledEvents, "/adminListScheduledEvents", signer);
+});
 
 test("adminListScheduledEvents: 401 when Cf-Access-Jwt-Assertion header is missing", async () => {
   mockFetch();
@@ -231,9 +280,62 @@ test("adminListScheduledEvents: returns events mapped from Firestore documents",
   });
 });
 
+test("adminListScheduledEvents: sorts results newest-updatedAt-first, regardless of Firestore's default document order", async () => {
+  const signer = await createSigner();
+  const token = await signer.sign();
+
+  function eventDoc(id, updatedAt) {
+    return {
+      name: `projects/${PROJECT_ID}/databases/(default)/documents/scheduled_events/${id}`,
+      fields: {
+        status: { stringValue: "scheduled" },
+        localDeliveryTime: { stringValue: "09:00" },
+        updatedAt: { timestampValue: updatedAt },
+      },
+    };
+  }
+
+  mockFetch({
+    certsKeys: [signer.jwk],
+    firestore: {
+      // Deliberately out of chronological order, as Firestore's default
+      // (name/ID) order would return them with random UUIDs.
+      list: () =>
+        new Response(
+          JSON.stringify({
+            documents: [
+              eventDoc("event-b", "2026-08-10T00:00:00.000Z"),
+              eventDoc("event-a", "2026-08-12T00:00:00.000Z"),
+              eventDoc("event-c", "2026-08-01T00:00:00.000Z"),
+            ],
+          }),
+          { status: 200 },
+        ),
+    },
+  });
+
+  const response = await handleAdminListScheduledEvents(
+    jsonRequest("https://admin-api.parsfilo.com/adminListScheduledEvents", { token }),
+    baseEnv(),
+  );
+
+  assert.equal(response.status, 200);
+  const { events } = await responseJson(response);
+  assert.deepEqual(
+    events.map((event) => event.id),
+    ["event-a", "event-b", "event-c"],
+  );
+});
+
 // ---------------------------------------------------------------------------
 // handleAdminSaveScheduledEvent
 // ---------------------------------------------------------------------------
+
+test("adminSaveScheduledEvent: rejects non-POST method (405) and non-JSON Content-Type (415) before auth runs", async () => {
+  const signer = await createSigner();
+  mockFetch({ certsKeys: [signer.jwk] });
+  await assertCsrfGuard(handleAdminSaveScheduledEvent, "/adminSaveScheduledEvent", signer);
+});
 
 test("adminSaveScheduledEvent: 401 when Cf-Access-Jwt-Assertion header is missing", async () => {
   mockFetch();
@@ -303,7 +405,7 @@ test("adminSaveScheduledEvent: create stamps createdBy/updatedBy from the verifi
   assert.ok(typeof patchedBody.fields.createdAt.timestampValue === "string" || typeof patchedBody.fields.createdAt.stringValue === "string");
 });
 
-test("adminSaveScheduledEvent: update stamps only updatedBy and omits create-only fields", async () => {
+test("adminSaveScheduledEvent: update stamps only updatedBy from the verified admin and re-derives protected fields from the pre-fetched Firestore doc", async () => {
   const signer = await createSigner();
   const token = await signer.sign();
   let patchedBody = null;
@@ -327,9 +429,111 @@ test("adminSaveScheduledEvent: update stamps only updatedBy and omits create-onl
 
   assert.equal(response.status, 200);
   assert.equal(patchedBody.fields.updatedBy.stringValue, ADMIN_EMAIL);
-  assert.equal(patchedBody.fields.createdBy, undefined);
-  assert.equal(patchedBody.fields.createdAt, undefined);
-  assert.equal(patchedBody.fields.sentTimezones, undefined);
+  // No pre-existing doc was mocked (getEvent falls through to 404 -> null),
+  // so the re-derivation falls back to `now`/admin.email/empty-defaults --
+  // but critically these fields are still explicitly present (never simply
+  // omitted), since PATCH has no updateMask and an omitted field would be
+  // deleted from the stored document.
+  assert.equal(patchedBody.fields.createdBy.stringValue, ADMIN_EMAIL);
+  assert.ok(patchedBody.fields.createdAt);
+  assert.deepEqual(patchedBody.fields.sentTimezones.arrayValue.values, []);
+});
+
+test("adminSaveScheduledEvent: update discards forged createdBy/sentTimezones from the client body and re-derives them from the existing Firestore document", async () => {
+  const signer = await createSigner();
+  const token = await signer.sign();
+  let patchedBody = null;
+  let getEventUrl = null;
+  mockFetch({
+    certsKeys: [signer.jwk],
+    firestore: {
+      getEvent: (url) => {
+        getEventUrl = url;
+        return new Response(
+          JSON.stringify({
+            name: `projects/${PROJECT_ID}/databases/(default)/documents/scheduled_events/event-1`,
+            fields: {
+              createdAt: { timestampValue: "2026-01-01T00:00:00.000Z" },
+              createdBy: { stringValue: "real-admin@parsfilo.com" },
+              sentTimezones: { arrayValue: { values: [{ stringValue: "Europe/Istanbul" }] } },
+              lastResetAt: { nullValue: null },
+              lastDispatchedAt: { timestampValue: "2026-08-01T00:00:00.000Z" },
+              status: { stringValue: "scheduled" },
+            },
+          }),
+          { status: 200 },
+        );
+      },
+      patch: (_url, init) => {
+        patchedBody = JSON.parse(init.body);
+        return new Response(JSON.stringify({}), { status: 200 });
+      },
+    },
+  });
+
+  const response = await handleAdminSaveScheduledEvent(
+    jsonRequest("https://admin-api.parsfilo.com/adminSaveScheduledEvent", {
+      token,
+      body: {
+        id: "event-1",
+        status: "paused",
+        createdBy: "attacker@evil.com",
+        createdAt: "2020-01-01T00:00:00.000Z",
+        sentTimezones: [],
+        lastResetAt: "2099-01-01T00:00:00.000Z",
+        lastDispatchedAt: null,
+      },
+    }),
+    baseEnv(),
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(getEventUrl, `${DOCUMENTS_BASE}/scheduled_events/event-1`);
+  // The PATCH sent to Firestore must reflect the *existing* stored values,
+  // not the client's forged ones -- and must not simply omit them, since
+  // this endpoint issues a maskless PATCH that deletes omitted fields.
+  assert.equal(patchedBody.fields.createdBy.stringValue, "real-admin@parsfilo.com");
+  assert.equal(patchedBody.fields.createdAt.timestampValue ?? patchedBody.fields.createdAt.stringValue, "2026-01-01T00:00:00.000Z");
+  assert.deepEqual(patchedBody.fields.sentTimezones.arrayValue.values, [{ stringValue: "Europe/Istanbul" }]);
+  assert.deepEqual(patchedBody.fields.lastResetAt, { nullValue: null });
+  assert.equal(
+    patchedBody.fields.lastDispatchedAt.timestampValue ?? patchedBody.fields.lastDispatchedAt.stringValue,
+    "2026-08-01T00:00:00.000Z",
+  );
+  assert.equal(patchedBody.fields.updatedBy.stringValue, ADMIN_EMAIL);
+  assert.equal(patchedBody.fields.status.stringValue, "paused");
+});
+
+test("adminSaveScheduledEvent: create does not pre-fetch the existing document and stamps createdBy from the verified admin", async () => {
+  const signer = await createSigner();
+  const token = await signer.sign();
+  let getEventCalled = false;
+  let patchedBody = null;
+  mockFetch({
+    certsKeys: [signer.jwk],
+    firestore: {
+      getEvent: () => {
+        getEventCalled = true;
+        return new Response(JSON.stringify({ error: { code: 404 } }), { status: 404 });
+      },
+      patch: (_url, init) => {
+        patchedBody = JSON.parse(init.body);
+        return new Response(JSON.stringify({}), { status: 200 });
+      },
+    },
+  });
+
+  const response = await handleAdminSaveScheduledEvent(
+    jsonRequest("https://admin-api.parsfilo.com/adminSaveScheduledEvent", {
+      token,
+      body: { id: "event-new", isCreate: true, status: "scheduled", createdBy: "attacker@evil.com" },
+    }),
+    baseEnv(),
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(getEventCalled, false, "create must be short-circuited by the isCreate branch, no pre-fetch GET");
+  assert.equal(patchedBody.fields.createdBy.stringValue, ADMIN_EMAIL);
 });
 
 test("adminSaveScheduledEvent: returns 500 when the Firestore write fails", async () => {
@@ -357,6 +561,12 @@ test("adminSaveScheduledEvent: returns 500 when the Firestore write fails", asyn
 // ---------------------------------------------------------------------------
 // handleAdminDeleteScheduledEvent
 // ---------------------------------------------------------------------------
+
+test("adminDeleteScheduledEvent: rejects non-POST method (405) and non-JSON Content-Type (415) before auth runs", async () => {
+  const signer = await createSigner();
+  mockFetch({ certsKeys: [signer.jwk] });
+  await assertCsrfGuard(handleAdminDeleteScheduledEvent, "/adminDeleteScheduledEvent", signer);
+});
 
 test("adminDeleteScheduledEvent: 401 when Cf-Access-Jwt-Assertion header is missing", async () => {
   mockFetch();
@@ -433,6 +643,12 @@ test("adminDeleteScheduledEvent: returns 500 when the Firestore delete fails", a
 // handleAdminPreviewTargetDevices
 // ---------------------------------------------------------------------------
 
+test("adminPreviewTargetDevices: rejects non-POST method (405) and non-JSON Content-Type (415) before auth runs", async () => {
+  const signer = await createSigner();
+  mockFetch({ certsKeys: [signer.jwk] });
+  await assertCsrfGuard(handleAdminPreviewTargetDevices, "/adminPreviewTargetDevices", signer);
+});
+
 test("adminPreviewTargetDevices: 401 when Cf-Access-Jwt-Assertion header is missing", async () => {
   mockFetch();
   const response = await handleAdminPreviewTargetDevices(
@@ -506,6 +722,12 @@ test("adminPreviewTargetDevices: counts only devices with notificationsEnabled, 
 // ---------------------------------------------------------------------------
 // handleAdminLookupDevice
 // ---------------------------------------------------------------------------
+
+test("adminLookupDevice: rejects non-POST method (405) and non-JSON Content-Type (415) before auth runs", async () => {
+  const signer = await createSigner();
+  mockFetch({ certsKeys: [signer.jwk] });
+  await assertCsrfGuard(handleAdminLookupDevice, "/adminLookupDevice", signer);
+});
 
 test("adminLookupDevice: 401 when Cf-Access-Jwt-Assertion header is missing", async () => {
   mockFetch();
@@ -633,6 +855,12 @@ test("adminLookupDevice: URL-encodes the id when building the Firestore document
 // ---------------------------------------------------------------------------
 // handleAdminListRecentDevices
 // ---------------------------------------------------------------------------
+
+test("adminListRecentDevices: rejects non-POST method (405) and non-JSON Content-Type (415) before auth runs", async () => {
+  const signer = await createSigner();
+  mockFetch({ certsKeys: [signer.jwk] });
+  await assertCsrfGuard(handleAdminListRecentDevices, "/adminListRecentDevices", signer);
+});
 
 test("adminListRecentDevices: 401 when Cf-Access-Jwt-Assertion header is missing", async () => {
   mockFetch();

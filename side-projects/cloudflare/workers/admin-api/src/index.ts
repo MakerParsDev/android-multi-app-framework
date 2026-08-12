@@ -290,12 +290,11 @@ type ScheduledEvent = {
   lastResetAtMs?: number;
 };
 
-const DEFAULT_ALLOWED_ORIGINS = [
-  "https://admin.parsfilo.com",
-  "https://parsfilo-admin.pages.dev",
-  "http://localhost:5173",
-  "http://localhost:4173",
-];
+// This is the credentialed-CORS fallback used only when ALLOWED_ADMIN_ORIGINS
+// is unset or misconfigured, so it must stay production-only (no dev-origin
+// entries). Local dev that needs cross-origin access should set
+// ALLOWED_ADMIN_ORIGINS explicitly (see wrangler.toml).
+const DEFAULT_ALLOWED_ORIGINS = ["https://admin.parsfilo.com", "https://parsfilo-admin.pages.dev"];
 
 const DEFAULT_PACKAGES = [
   "com.parsfilo.amenerrasulu",
@@ -980,6 +979,13 @@ async function handleDeviceCoverageReport(request: Request, env: Env): Promise<R
 }
 
 export async function handleAdminListScheduledEvents(request: Request, env: Env): Promise<Response> {
+  if (request.method !== "POST") {
+    return jsonResponse({ error: "Method not allowed" }, 405);
+  }
+  if (!looksLikeJson(request.headers.get("content-type"))) {
+    return jsonResponse({ error: "Content-Type must be application/json" }, 415);
+  }
+
   let admin: { email: string } | null;
   try {
     admin = await verifyAccessRequest(request, env);
@@ -994,6 +1000,13 @@ export async function handleAdminListScheduledEvents(request: Request, env: Env)
     id: extractDocumentId(doc),
     ...parseFirestoreDocument(doc),
   }));
+  events.sort((a, b) => {
+    const aUpdatedAt = (a as Record<string, unknown>).updatedAt;
+    const bUpdatedAt = (b as Record<string, unknown>).updatedAt;
+    const aTime = typeof aUpdatedAt === "string" ? aUpdatedAt : "";
+    const bTime = typeof bUpdatedAt === "string" ? bUpdatedAt : "";
+    return bTime.localeCompare(aTime);
+  });
 
   return jsonResponse({ events });
 }
@@ -1021,6 +1034,13 @@ function toFirestoreFields(value: Record<string, unknown>): Record<string, Fires
 }
 
 export async function handleAdminSaveScheduledEvent(request: Request, env: Env): Promise<Response> {
+  if (request.method !== "POST") {
+    return jsonResponse({ error: "Method not allowed" }, 405);
+  }
+  if (!looksLikeJson(request.headers.get("content-type"))) {
+    return jsonResponse({ error: "Content-Type must be application/json" }, 415);
+  }
+
   let admin: { email: string } | null;
   try {
     admin = await verifyAccessRequest(request, env);
@@ -1031,7 +1051,7 @@ export async function handleAdminSaveScheduledEvent(request: Request, env: Env):
   if (!admin) return jsonResponse({ error: "Missing Cloudflare Access token" }, 401);
 
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
-  const { id, isCreate, ...eventFields } = body;
+  const { id, isCreate, createdAt, createdBy, sentTimezones, lastResetAt, lastDispatchedAt, ...eventFields } = body;
   if (typeof id !== "string" || !id) {
     return jsonResponse({ error: "id is required" }, 400);
   }
@@ -1042,12 +1062,21 @@ export async function handleAdminSaveScheduledEvent(request: Request, env: Env):
     updatedAt: now,
     updatedBy: admin.email,
   };
+
   if (isCreate) {
     fields.createdAt = now;
     fields.createdBy = admin.email;
     fields.sentTimezones = [];
     fields.lastResetAt = null;
     fields.lastDispatchedAt = null;
+  } else {
+    const existingDoc = await getFirestoreDoc(env, `scheduled_events/${encodeURIComponent(id)}`);
+    const existing = existingDoc ? parseFirestoreDocument(existingDoc) : {};
+    fields.createdAt = existing.createdAt ?? now;
+    fields.createdBy = existing.createdBy ?? admin.email;
+    fields.sentTimezones = existing.sentTimezones ?? [];
+    fields.lastResetAt = existing.lastResetAt ?? null;
+    fields.lastDispatchedAt = existing.lastDispatchedAt ?? null;
   }
 
   const ok = await upsertFirestoreDoc(env, `scheduled_events/${encodeURIComponent(id)}`, toFirestoreFields(fields));
@@ -1058,6 +1087,13 @@ export async function handleAdminSaveScheduledEvent(request: Request, env: Env):
 }
 
 export async function handleAdminDeleteScheduledEvent(request: Request, env: Env): Promise<Response> {
+  if (request.method !== "POST") {
+    return jsonResponse({ error: "Method not allowed" }, 405);
+  }
+  if (!looksLikeJson(request.headers.get("content-type"))) {
+    return jsonResponse({ error: "Content-Type must be application/json" }, 415);
+  }
+
   let admin: { email: string } | null;
   try {
     admin = await verifyAccessRequest(request, env);
@@ -1081,6 +1117,13 @@ export async function handleAdminDeleteScheduledEvent(request: Request, env: Env
 }
 
 export async function handleAdminPreviewTargetDevices(request: Request, env: Env): Promise<Response> {
+  if (request.method !== "POST") {
+    return jsonResponse({ error: "Method not allowed" }, 405);
+  }
+  if (!looksLikeJson(request.headers.get("content-type"))) {
+    return jsonResponse({ error: "Content-Type must be application/json" }, 415);
+  }
+
   let admin: { email: string } | null;
   try {
     admin = await verifyAccessRequest(request, env);
@@ -1106,6 +1149,13 @@ export async function handleAdminPreviewTargetDevices(request: Request, env: Env
 }
 
 export async function handleAdminLookupDevice(request: Request, env: Env): Promise<Response> {
+  if (request.method !== "POST") {
+    return jsonResponse({ error: "Method not allowed" }, 405);
+  }
+  if (!looksLikeJson(request.headers.get("content-type"))) {
+    return jsonResponse({ error: "Content-Type must be application/json" }, 415);
+  }
+
   let admin: { email: string } | null;
   try {
     admin = await verifyAccessRequest(request, env);
@@ -1130,6 +1180,13 @@ export async function handleAdminLookupDevice(request: Request, env: Env): Promi
 }
 
 export async function handleAdminListRecentDevices(request: Request, env: Env): Promise<Response> {
+  if (request.method !== "POST") {
+    return jsonResponse({ error: "Method not allowed" }, 405);
+  }
+  if (!looksLikeJson(request.headers.get("content-type"))) {
+    return jsonResponse({ error: "Content-Type must be application/json" }, 415);
+  }
+
   let admin: { email: string } | null;
   try {
     admin = await verifyAccessRequest(request, env);

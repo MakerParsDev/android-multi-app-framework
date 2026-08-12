@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   fetchAdminFunctionJson,
   normalizePackages,
+  parseEvent,
   parseTargetTimezonesInput,
   parseTestPushDataInput,
   summarizeApiError,
@@ -45,5 +46,15 @@ describe("admin API contracts", () => {
     );
     expect(summarizeApiError({ error: "Exact" }, "Fallback")).toBe("Exact");
     vi.unstubAllGlobals();
+  });
+
+  it("parses ISO-8601 timestamp strings returned by the admin-api Worker (Firestore REST, not the SDK Timestamp type)", () => {
+    const record = parseEvent("event-1", {
+      createdAt: "2026-08-12T10:00:00.000Z",
+      updatedAt: "not-a-date",
+    });
+    expect(record.createdAt).toBeInstanceOf(Date);
+    expect(record.createdAt?.getTime()).toBe(Date.parse("2026-08-12T10:00:00.000Z"));
+    expect(record.updatedAt).toBeNull();
   });
 });
