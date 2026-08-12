@@ -123,6 +123,18 @@ export default function Header({ user, activeTab, onTabChange, onSignOut }: Head
           <span className="tab-icon" aria-hidden="true">💚</span>
           System
         </button>
+        <button
+          type="button"
+          role="tab"
+          className={`tab-btn ${activeTab === "astroloji" ? "active" : ""}`}
+          aria-selected={activeTab === "astroloji"}
+          onClick={() => onTabChange("astroloji")}
+          id="tab-astroloji"
+          aria-controls="tabpanel-astroloji"
+        >
+          <span className="tab-icon" aria-hidden="true">🔮</span>
+          Astroloji
+        </button>
       </nav>
     </>
   );

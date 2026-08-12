@@ -11,6 +11,7 @@ interface ImportMetaEnv {
   readonly VITE_CONTENT_API_URL?: string;
   readonly VITE_ADMIN_API_URL?: string;
   readonly VITE_SSV_CALLBACK_URL?: string;
+  readonly VITE_ASTROLOJI_API_URL?: string;
   readonly VITE_APP_GIT_SHA?: string;
   readonly VITE_APP_BUILD_TIME?: string;
   readonly FIREBASE_WEB_API_KEY?: string;

@@ -73,6 +73,7 @@ import RemoteConfigPanel from "./components/RemoteConfigPanel";
 import AnalyticsPanel from "./components/AnalyticsPanel";
 import RevenuePanel from "./components/RevenuePanel";
 import SystemHealthPanel from "./components/SystemHealthPanel";
+import AstrolojiPanel from "./components/AstrolojiPanel";
 
 const allPackages = sortedApps.map((a) => a.package);
 
@@ -85,7 +86,8 @@ function readInitialTab(): AdminTab {
     tab === "remote-config" ||
     tab === "analytics" ||
     tab === "revenue" ||
-    tab === "system-health"
+    tab === "system-health" ||
+    tab === "astroloji"
   ) {
     return tab;
   }
@@ -1005,6 +1007,8 @@ export default function App() {
         {activeTab === "revenue" && <RevenuePanel user={user} />}
 
         {activeTab === "system-health" && <SystemHealthPanel />}
+
+        {activeTab === "astroloji" && <AstrolojiPanel user={user} />}
       </div>
     </div>
   );

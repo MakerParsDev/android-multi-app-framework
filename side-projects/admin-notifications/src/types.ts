@@ -14,7 +14,8 @@ export type AdminTab =
   | "remote-config"
   | "analytics"
   | "revenue"
-  | "system-health";
+  | "system-health"
+  | "astroloji";
 export type TestPushSubTab = "single-device" | "coverage" | "ad-health";
 export type TestPushTargetMode = "installationId" | "token";
 
