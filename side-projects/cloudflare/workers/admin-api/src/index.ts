@@ -979,6 +979,132 @@ async function handleDeviceCoverageReport(request: Request, env: Env): Promise<R
   });
 }
 
+export async function handleAdminListScheduledEvents(request: Request, env: Env): Promise<Response> {
+  let admin: { email: string } | null;
+  try {
+    admin = await verifyAccessRequest(request, env);
+  } catch (error) {
+    console.warn("[admin-api] adminListScheduledEvents auth failed", error);
+    return jsonResponse({ error: "Invalid Cloudflare Access token" }, 401);
+  }
+  if (!admin) return jsonResponse({ error: "Missing Cloudflare Access token" }, 401);
+
+  const docs = await listCollectionDocuments(env, "scheduled_events");
+  const events = docs.map((doc) => ({
+    id: extractDocumentId(doc),
+    ...parseFirestoreDocument(doc),
+  }));
+
+  return jsonResponse({ events });
+}
+
+function toFirestoreFields(value: Record<string, unknown>): Record<string, FirestoreField> {
+  const fields: Record<string, FirestoreField> = {};
+  for (const [key, raw] of Object.entries(value)) {
+    if (raw === null || raw === undefined) {
+      fields[key] = { nullValue: null };
+    } else if (typeof raw === "string") {
+      fields[key] = { stringValue: raw };
+    } else if (typeof raw === "boolean") {
+      fields[key] = { booleanValue: raw };
+    } else if (typeof raw === "number") {
+      fields[key] = { integerValue: String(raw) };
+    } else if (raw instanceof Date) {
+      fields[key] = { timestampValue: raw.toISOString() };
+    } else if (Array.isArray(raw)) {
+      fields[key] = { arrayValue: { values: raw.map((item) => toFirestoreFields({ v: item }).v) } };
+    } else if (typeof raw === "object") {
+      fields[key] = { mapValue: { fields: toFirestoreFields(raw as Record<string, unknown>) } };
+    }
+  }
+  return fields;
+}
+
+export async function handleAdminSaveScheduledEvent(request: Request, env: Env): Promise<Response> {
+  let admin: { email: string } | null;
+  try {
+    admin = await verifyAccessRequest(request, env);
+  } catch (error) {
+    console.warn("[admin-api] adminSaveScheduledEvent auth failed", error);
+    return jsonResponse({ error: "Invalid Cloudflare Access token" }, 401);
+  }
+  if (!admin) return jsonResponse({ error: "Missing Cloudflare Access token" }, 401);
+
+  const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+  const { id, isCreate, ...eventFields } = body;
+  if (typeof id !== "string" || !id) {
+    return jsonResponse({ error: "id is required" }, 400);
+  }
+
+  const now = new Date().toISOString();
+  const fields: Record<string, unknown> = {
+    ...eventFields,
+    updatedAt: now,
+    updatedBy: admin.email,
+  };
+  if (isCreate) {
+    fields.createdAt = now;
+    fields.createdBy = admin.email;
+    fields.sentTimezones = [];
+    fields.lastResetAt = null;
+    fields.lastDispatchedAt = null;
+  }
+
+  const ok = await upsertFirestoreDoc(env, `scheduled_events/${encodeURIComponent(id)}`, toFirestoreFields(fields));
+  if (!ok) {
+    return jsonResponse({ error: "Failed to save event" }, 500);
+  }
+  return jsonResponse({ id });
+}
+
+export async function handleAdminDeleteScheduledEvent(request: Request, env: Env): Promise<Response> {
+  let admin: { email: string } | null;
+  try {
+    admin = await verifyAccessRequest(request, env);
+  } catch (error) {
+    console.warn("[admin-api] adminDeleteScheduledEvent auth failed", error);
+    return jsonResponse({ error: "Invalid Cloudflare Access token" }, 401);
+  }
+  if (!admin) return jsonResponse({ error: "Missing Cloudflare Access token" }, 401);
+
+  const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+  const { id } = body;
+  if (typeof id !== "string" || !id) {
+    return jsonResponse({ error: "id is required" }, 400);
+  }
+
+  const ok = await deleteFirestoreDoc(env, `scheduled_events/${encodeURIComponent(id)}`);
+  if (!ok) {
+    return jsonResponse({ error: "Failed to delete event" }, 500);
+  }
+  return jsonResponse({ ok: true });
+}
+
+export async function handleAdminPreviewTargetDevices(request: Request, env: Env): Promise<Response> {
+  let admin: { email: string } | null;
+  try {
+    admin = await verifyAccessRequest(request, env);
+  } catch (error) {
+    console.warn("[admin-api] adminPreviewTargetDevices auth failed", error);
+    return jsonResponse({ error: "Invalid Cloudflare Access token" }, 401);
+  }
+  if (!admin) return jsonResponse({ error: "Missing Cloudflare Access token" }, 401);
+
+  const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+  const packages = parsePackages(body.packages);
+
+  const byPackage: Record<string, number> = {};
+  let total = 0;
+  for (const packageName of packages) {
+    const devices = await queryDevicesByPackage(env, packageName);
+    const count = devices.filter((device) => device.notificationsEnabled).length;
+    byPackage[packageName] = count;
+    total += count;
+  }
+
+  return jsonResponse({ total, byPackage });
+}
+
 function sanitizeOptionalText(value: unknown, maxLength: number): string | undefined {
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
@@ -3934,6 +4060,14 @@ export default {
         response = await handleSendTestNotification(request, env);
       } else if (path === "/deviceCoverageReport") {
         response = await handleDeviceCoverageReport(request, env);
+      } else if (path === "/adminListScheduledEvents") {
+        response = await handleAdminListScheduledEvents(request, env);
+      } else if (path === "/adminSaveScheduledEvent") {
+        response = await handleAdminSaveScheduledEvent(request, env);
+      } else if (path === "/adminDeleteScheduledEvent") {
+        response = await handleAdminDeleteScheduledEvent(request, env);
+      } else if (path === "/adminPreviewTargetDevices") {
+        response = await handleAdminPreviewTargetDevices(request, env);
       } else if (path === "/registerDevice" || path === "/register-device") {
         response = await handleRegisterDevice(request, env);
       } else if (
