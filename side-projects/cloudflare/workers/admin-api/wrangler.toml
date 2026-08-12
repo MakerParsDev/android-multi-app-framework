@@ -16,6 +16,10 @@ crons = ["0 * * * *", "15 7 * * 1"]
 [vars]
 SERVICE_ENVIRONMENT = "production"
 
+# Cloudflare Access (admin routes)
+ADMIN_ACCESS_TEAM_DOMAIN = "oaslananka.cloudflareaccess.com"
+ADMIN_ACCESS_AUD = "5069a4e84e68eb9898e8831ce46e9d93a5c26a3892f19bde0f37e57a94948287"
+
 # Required
 FIREBASE_PROJECT_ID = "makerpars-oaslananka-mobil"
 FIREBASE_PROJECT_NUMBER = "462747480927"
