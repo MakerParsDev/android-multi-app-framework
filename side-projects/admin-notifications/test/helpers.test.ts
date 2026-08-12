@@ -25,7 +25,7 @@ describe("admin API contracts", () => {
     expect(parseTestPushDataInput("broken-line").error).toContain("key=value");
   });
 
-  it("preserves backend error contracts and bearer auth", async () => {
+  it("preserves backend error contracts and sends credentials for Cloudflare Access", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ error: "Denied by contract" }), {
         status: 403,
@@ -34,13 +34,13 @@ describe("admin API contracts", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(fetchAdminFunctionJson({ endpoint: "https://example.test/admin", idToken: "token" }))
+    await expect(fetchAdminFunctionJson({ endpoint: "https://example.test/admin" }))
       .rejects.toThrow("Denied by contract");
     expect(fetchMock).toHaveBeenCalledWith(
       "https://example.test/admin",
       expect.objectContaining({
         method: "GET",
-        headers: { Authorization: "Bearer token" },
+        credentials: "include",
       }),
     );
     expect(summarizeApiError({ error: "Exact" }, "Fallback")).toBe("Exact");

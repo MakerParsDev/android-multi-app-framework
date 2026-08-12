@@ -1,39 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
-import type { User } from "firebase/auth";
 import {
-  getRedirectResult,
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  signInWithRedirect,
-  signOut,
-} from "firebase/auth";
-import { FirebaseError } from "firebase/app";
-import {
-  addDoc,
   collection,
-  deleteDoc,
   doc,
   getDoc,
   getDocs,
   limit,
-  onSnapshot,
   orderBy,
   query,
-  setDoc,
-  where,
+  type DocumentData,
 } from "firebase/firestore";
-import {
-  auth,
-  authPersistenceReady,
-  firestore,
-  functionsBaseUrl,
-  getAuthPersistenceMode,
-  googleProvider,
-} from "./firebase";
+import { firestore, functionsBaseUrl } from "./firebase";
 import {
   DEFAULT_FORM,
   type AdminTab,
-  type AdminState,
   type DeviceCoverageReport,
   type DeviceFinderItem,
   type AdPerformanceReport,
@@ -45,7 +24,6 @@ import {
   type TestPushSubTab,
   type TestPushTargetMode,
   type TestPushResult,
-  type AdminAccessResponse,
   type RemoteConfigEntry,
   type RemoteConfigTemplateResponse,
 } from "./types";
@@ -55,7 +33,7 @@ import {
   parseDeviceFinderItem,
   parseRemoteConfigEntries,
   formFromRecord,
-  buildPayload,
+  buildEventPayload,
   validateForm,
   parseTestPushDataInput,
   summarizeApiError,
@@ -64,7 +42,6 @@ import {
 
 /* ── Components ── */
 import Header from "./components/Header";
-import AuthScreen from "./components/AuthScreen";
 import FlavorHubPanel from "./components/FlavorHubPanel";
 import EventListPanel from "./components/EventListPanel";
 import EventFormPanel from "./components/EventFormPanel";
@@ -102,41 +79,7 @@ function readInitialSubTab(): TestPushSubTab {
   return "single-device";
 }
 
-function formatAuthError(err: unknown): string {
-  if (!(err instanceof FirebaseError)) {
-    return err instanceof Error ? err.message : "Authentication failed.";
-  }
-
-  switch (err.code) {
-    case "auth/unauthorized-domain":
-      return "This domain is not authorized in Firebase Auth. Add current host to Firebase Authentication > Settings > Authorized domains.";
-    case "auth/operation-not-allowed":
-      return "Google sign-in is disabled in Firebase Authentication > Sign-in method.";
-    case "auth/invalid-api-key":
-      return "Invalid Firebase API key. Check VITE_FIREBASE_API_KEY.";
-    case "auth/invalid-credential":
-      return "Invalid credential returned from Google sign-in.";
-    case "auth/network-request-failed":
-      return "Network request failed during sign-in.";
-    case "auth/invalid-email":
-      return "Invalid email format.";
-    case "auth/invalid-login-credentials":
-      return "Invalid email or password.";
-    case "auth/user-disabled":
-      return "This account is disabled.";
-    case "auth/too-many-requests":
-      return "Too many attempts. Try again later.";
-    default:
-      return `${err.code}: ${err.message}`;
-  }
-}
-
 export default function App() {
-  /* ── Auth state ── */
-  const [authState, setAuthState] = useState<"loading" | "ready" | "error">("loading");
-  const [user, setUser] = useState<User | null>(null);
-  const [adminState, setAdminState] = useState<AdminState>("checking");
-  const [emailSignInLoading, setEmailSignInLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -222,145 +165,38 @@ export default function App() {
   }, [activeTab, testPushSubTab]);
 
   /* ════════════════════════════════════════════
-   *  AUTH EFFECTS
+   *  EVENTS
    * ════════════════════════════════════════════ */
 
-  useEffect(() => {
-    let cancelled = false;
-    authPersistenceReady
-      .then(() => {
-        if (cancelled) return;
-        getRedirectResult(auth).catch((err) => {
-          if (err instanceof FirebaseError && err.code === "auth/popup-closed-by-user") return;
-          console.error("getRedirectResult error:", err);
-          if (!cancelled) {
-            setError(formatAuthError(err));
-          }
-        });
-        const unsub = onAuthStateChanged(
-          auth,
-          (u) => {
-            if (cancelled) return;
-            setUser(u);
-            setAuthState("ready");
-          },
-          (err) => {
-            console.error("onAuthStateChanged error:", err);
-            if (cancelled) return;
-            setError(formatAuthError(err));
-            setAuthState("error");
-          },
-        );
-        return unsub;
-      })
-      .catch((err) => {
-        console.error("Auth persistence error:", err);
-        if (!cancelled) {
-          setError(formatAuthError(err));
-          setAuthState("error");
-        }
+  const loadEvents = useCallback(async () => {
+    setEventsState("loading");
+    try {
+      const response = await fetch(`${functionsBaseUrl}/adminListScheduledEvents`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
       });
-    return () => {
-      cancelled = true;
-    };
+      const body = (await response.json()) as { events?: unknown[]; error?: string };
+      if (!response.ok) throw new Error(body.error ?? `HTTP ${response.status}`);
+      const parsed = (body.events ?? []).map((raw) =>
+        parseEvent((raw as { id: string }).id, raw as DocumentData),
+      );
+      setEvents(parsed);
+      setEventsState("ready");
+    } catch (err) {
+      console.error("Events load error:", err);
+      setEventsState("error");
+    }
   }, []);
 
-  /* Admin check */
   useEffect(() => {
-    if (!user) {
-      setAdminState("checking");
-      return;
-    }
-    let cancelled = false;
-    setAdminState("checking");
-    (async () => {
-      try {
-        const idToken = await user.getIdToken();
-        const response = await fetch(`${functionsBaseUrl}/adminAccessCheck`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${idToken}`,
-          },
-          body: "{}",
-        });
-        const payload: AdminAccessResponse = await response.json();
-        if (cancelled) return;
-        if (payload.authorized) {
-          setAdminState("authorized");
-        } else {
-          setAdminState("unauthorized");
-        }
-      } catch (err) {
-        console.error("Admin check error:", err);
-        if (!cancelled) setAdminState("unauthorized");
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
-
-  /* ════════════════════════════════════════════
-   *  EVENTS LISTENER
-   * ════════════════════════════════════════════ */
-
-  useEffect(() => {
-    if (adminState !== "authorized") return;
-    setEventsState("loading");
-    const q = query(collection(firestore, "scheduled_events"), orderBy("updatedAt", "desc"));
-    const unsub = onSnapshot(
-      q,
-      (snapshot) => {
-        const parsed = snapshot.docs.map((d) => parseEvent(d.id, d.data()));
-        setEvents(parsed);
-        setEventsState("ready");
-      },
-      (err) => {
-        console.error("Events snapshot error:", err);
-        setEventsState("error");
-      },
-    );
-    return unsub;
-  }, [adminState]);
+    loadEvents();
+  }, [loadEvents]);
 
   /* ════════════════════════════════════════════
    *  HANDLERS
    * ════════════════════════════════════════════ */
-
-  const handleSignIn = useCallback(() => {
-    setError("");
-    const persistenceMode = getAuthPersistenceMode();
-    console.info(`Auth persistence mode: ${persistenceMode}`);
-    signInWithRedirect(auth, googleProvider).catch((err) => {
-      console.error("signInWithRedirect error:", err);
-      setError(formatAuthError(err));
-    });
-  }, []);
-
-  const handleSignOut = useCallback(() => {
-    signOut(auth).catch((err) => {
-      console.error("signOut error:", err);
-    });
-  }, []);
-
-  const handleEmailPasswordSignIn = useCallback(async (email: string, password: string) => {
-    const normalizedEmail = email.trim();
-    if (!normalizedEmail || !password) {
-      setError("Email and password are required.");
-      return;
-    }
-    setError("");
-    setEmailSignInLoading(true);
-    try {
-      await signInWithEmailAndPassword(auth, normalizedEmail, password);
-    } catch (err) {
-      console.error("signInWithEmailAndPassword error:", err);
-      setError(formatAuthError(err));
-    } finally {
-      setEmailSignInLoading(false);
-    }
-  }, []);
 
   /* Event selection */
   const selectEvent = useCallback((event: ScheduledEventRecord) => {
@@ -385,7 +221,6 @@ export default function App() {
 
   /* Save event */
   const saveEvent = useCallback(async () => {
-    if (!user) return;
     const validationError = validateForm(form);
     if (validationError) {
       setError(validationError);
@@ -395,41 +230,53 @@ export default function App() {
     setError("");
     setMessage("");
     try {
-      const payload = buildPayload(form, user, isCreateMode);
-      if (isCreateMode) {
-        const ref = await addDoc(collection(firestore, "scheduled_events"), payload);
-        setSelectedId(ref.id);
-        setMessage("Event created.");
-      } else {
-        await setDoc(doc(firestore, "scheduled_events", selectedId!), payload, { merge: true });
-        setMessage("Event saved.");
-      }
+      const payload = buildEventPayload(form);
+      const id = isCreateMode ? crypto.randomUUID() : selectedId!;
+      const response = await fetch(`${functionsBaseUrl}/adminSaveScheduledEvent`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, isCreate: isCreateMode, ...payload }),
+      });
+      const body = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(body.error ?? `HTTP ${response.status}`);
+      setSelectedId(id);
+      setMessage(isCreateMode ? "Event created." : "Event saved.");
+      await loadEvents();
     } catch (err) {
       console.error("Save event error:", err);
       setError(err instanceof Error ? err.message : "Failed to save event.");
     } finally {
       setSaving(false);
     }
-  }, [user, form, isCreateMode, selectedId]);
+  }, [form, isCreateMode, selectedId, loadEvents]);
 
   /* Delete event */
   const removeEvent = useCallback(async () => {
-    if (!selectedId || !user) return;
+    if (!selectedId) return;
     const ok = window.confirm("Delete this event permanently?");
     if (!ok) return;
     setDeleting(true);
     setError("");
     try {
-      await deleteDoc(doc(firestore, "scheduled_events", selectedId));
+      const response = await fetch(`${functionsBaseUrl}/adminDeleteScheduledEvent`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: selectedId }),
+      });
+      const body = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(body.error ?? `HTTP ${response.status}`);
       resetForm();
       setMessage("Event deleted.");
+      await loadEvents();
     } catch (err) {
       console.error("Delete event error:", err);
       setError(err instanceof Error ? err.message : "Failed to delete event.");
     } finally {
       setDeleting(false);
     }
-  }, [selectedId, user, resetForm]);
+  }, [selectedId, resetForm, loadEvents]);
 
   /* Package checkbox */
   const updatePackages = useCallback((packageName: string, checked: boolean) => {
@@ -454,21 +301,17 @@ export default function App() {
     setPreviewCount(null);
     setPreviewByPackage({});
     try {
-      const pkgs = form.packages.includes("*") ? allPackages : form.packages;
-      const byPkg: Record<string, number> = {};
-      let total = 0;
-      for (const pkg of pkgs) {
-        const q = query(
-          collection(firestore, "devices"),
-          where("packageName", "==", pkg),
-          where("notificationsEnabled", "==", true),
-        );
-        const snap = await getDocs(q);
-        byPkg[pkg] = snap.size;
-        total += snap.size;
-      }
-      setPreviewCount(total);
-      setPreviewByPackage(byPkg);
+      const packages = form.packages.includes("*") ? allPackages : form.packages;
+      const response = await fetch(`${functionsBaseUrl}/adminPreviewTargetDevices`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ packages }),
+      });
+      const body = (await response.json()) as { total?: number; byPackage?: Record<string, number>; error?: string };
+      if (!response.ok) throw new Error(body.error ?? `HTTP ${response.status}`);
+      setPreviewCount(body.total ?? 0);
+      setPreviewByPackage(body.byPackage ?? {});
     } catch (err) {
       console.error("Preview error:", err);
       setPreviewError(err instanceof Error ? err.message : "Failed to preview.");
@@ -480,7 +323,6 @@ export default function App() {
   /* ── Test Push Handlers ── */
 
   const sendTestPushToSingleDevice = useCallback(async () => {
-    if (!user) return;
     const token = testPushToken.trim();
     const installationId = testPushInstallationId.trim();
     const targetValue = testPushTargetMode === "token" ? token : installationId;
@@ -503,13 +345,10 @@ export default function App() {
     setTestPushError("");
     setTestPushResult(null);
     try {
-      const idToken = await user.getIdToken();
       const response = await fetch(`${functionsBaseUrl}/sendTestNotification`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...(testPushTargetMode === "token" ? { token } : { installationId }),
           title: testPushTitle,
@@ -567,7 +406,7 @@ export default function App() {
     } finally {
       setTestPushLoading(false);
     }
-  }, [user, testPushToken, testPushInstallationId, testPushTargetMode, testPushTitle, testPushBody, testPushDataInput, testPushIncludeNotification]);
+  }, [testPushToken, testPushInstallationId, testPushTargetMode, testPushTitle, testPushBody, testPushDataInput, testPushIncludeNotification]);
 
   /* Device finder */
   const lookupDeviceByInstallationId = useCallback(async () => {
@@ -621,18 +460,14 @@ export default function App() {
 
   /* Coverage */
   const loadDeviceCoverageReport = useCallback(async () => {
-    if (!user) return;
     const normalizedDays = Math.max(1, Math.min(90, Math.floor(coverageDays || 14)));
     setCoverageLoading(true);
     setCoverageError("");
     try {
-      const idToken = await user.getIdToken();
       const response = await fetch(`${functionsBaseUrl}/deviceCoverageReport`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           days: normalizedDays,
           packages: allPackages,
@@ -656,21 +491,17 @@ export default function App() {
     } finally {
       setCoverageLoading(false);
     }
-  }, [user, coverageDays]);
+  }, [coverageDays]);
 
   /* Ad performance */
   const loadAdPerformanceReport = useCallback(async (forceRefresh: boolean) => {
-    if (!user) return;
     setAdReportLoading(true);
     setAdReportError("");
     try {
-      const idToken = await user.getIdToken();
       const response = await fetch(`${functionsBaseUrl}/adPerformance`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: forceRefresh ? "refresh" : "report" }),
       });
       let responseBody: unknown = null;
@@ -691,20 +522,16 @@ export default function App() {
     } finally {
       setAdReportLoading(false);
     }
-  }, [user]);
+  }, []);
 
   const loadAdPerformanceToday = useCallback(async () => {
-    if (!user) return;
     setAdTodayLoading(true);
     setAdTodayError("");
     try {
-      const idToken = await user.getIdToken();
       const response = await fetch(`${functionsBaseUrl}/adPerformance`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: "today" }),
       });
       let responseBody: unknown = null;
@@ -725,20 +552,16 @@ export default function App() {
     } finally {
       setAdTodayLoading(false);
     }
-  }, [user]);
+  }, []);
 
   const loadAdPerformanceTodayLatest = useCallback(async () => {
-    if (!user) return;
     setAdTodayLatestLoading(true);
     setAdTodayLatestError("");
     try {
-      const idToken = await user.getIdToken();
       const response = await fetch(`${functionsBaseUrl}/adPerformance`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "today_latest",
           catalog: sortedApps.map((app) => ({
@@ -765,7 +588,7 @@ export default function App() {
     } finally {
       setAdTodayLatestLoading(false);
     }
-  }, [user]);
+  }, []);
 
   const refreshAdHealth = useCallback(async (forceWeeklyRefresh: boolean) => {
     await Promise.all([
@@ -776,14 +599,11 @@ export default function App() {
   }, [loadAdPerformanceReport, loadAdPerformanceToday, loadAdPerformanceTodayLatest]);
 
   const loadRemoteConfig = useCallback(async () => {
-    if (!user) return;
     setRemoteConfigLoading(true);
     setRemoteConfigError("");
     try {
-      const idToken = await user.getIdToken();
       const template = await fetchAdminFunctionJson<RemoteConfigTemplateResponse>({
         endpoint: `${functionsBaseUrl}/adminGetRemoteConfig`,
-        idToken,
         method: "GET",
       });
       setRemoteConfigEntries(parseRemoteConfigEntries(template));
@@ -796,21 +616,17 @@ export default function App() {
     } finally {
       setRemoteConfigLoading(false);
     }
-  }, [user]);
+  }, []);
 
   const saveRemoteConfigEntry = useCallback(async (entry: RemoteConfigEntry) => {
-    if (!user) return;
     setRemoteConfigSavingKey(entry.key);
     setRemoteConfigError("");
     setRemoteConfigMessage("");
     try {
-      const idToken = await user.getIdToken();
       const response = await fetch(`${functionsBaseUrl}/adminUpdateRemoteConfig`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           key: entry.key,
           value: entry.value,
@@ -838,7 +654,7 @@ export default function App() {
     } finally {
       setRemoteConfigSavingKey(null);
     }
-  }, [loadRemoteConfig, user]);
+  }, [loadRemoteConfig]);
 
   useEffect(() => {
     if (activeTab !== "remote-config") return;
@@ -850,52 +666,13 @@ export default function App() {
    *  RENDER
    * ════════════════════════════════════════════ */
 
-  /* Pre-auth screens */
-  if (authState === "loading") {
-    return <AuthScreen mode="loading" error={error} onSignIn={handleSignIn} />;
-  }
-  if (authState === "error") {
-    return <AuthScreen mode="error" error={error} onSignIn={handleSignIn} />;
-  }
-  if (!user) {
-    return (
-      <AuthScreen
-        mode="login"
-        error={error}
-        onSignIn={handleSignIn}
-        onEmailPasswordSignIn={handleEmailPasswordSignIn}
-        emailSignInLoading={emailSignInLoading}
-      />
-    );
-  }
-  if (adminState === "checking") {
-    return <AuthScreen mode="checking" error={error} onSignIn={handleSignIn} />;
-  }
-  if (adminState === "unauthorized") {
-    return (
-      <AuthScreen
-        mode="unauthorized"
-        error={error}
-        onSignIn={handleSignIn}
-        onSignOut={handleSignOut}
-        userEmail={user.email ?? user.uid}
-      />
-    );
-  }
-
-  /* Main app */
   return (
     <div className="app-shell">
       <a href="#main-content" className="skip-link">
         Skip to main content
       </a>
 
-      <Header
-        user={user}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        onSignOut={handleSignOut}
-      />
+      <Header activeTab={activeTab} onTabChange={setActiveTab} />
 
       {(error || message) && (
         <div className={`banner ${error ? "banner-error" : "banner-success"}`} role="status">
@@ -904,7 +681,7 @@ export default function App() {
       )}
 
       <div id="main-content">
-        {activeTab === "flavor-hub" && <FlavorHubPanel user={user} />}
+        {activeTab === "flavor-hub" && <FlavorHubPanel />}
 
         {activeTab === "events" && (
           <div className="content-grid">
@@ -918,6 +695,7 @@ export default function App() {
               onStatusFilterChange={setEventStatusFilter}
               onSelectEvent={selectEvent}
               onNewEvent={resetForm}
+              onRefresh={loadEvents}
             />
             <EventFormPanel
               form={form}
@@ -1002,13 +780,13 @@ export default function App() {
           />
         )}
 
-        {activeTab === "analytics" && <AnalyticsPanel user={user} />}
+        {activeTab === "analytics" && <AnalyticsPanel />}
 
-        {activeTab === "revenue" && <RevenuePanel user={user} />}
+        {activeTab === "revenue" && <RevenuePanel />}
 
         {activeTab === "system-health" && <SystemHealthPanel />}
 
-        {activeTab === "astroloji" && <AstrolojiPanel user={user} />}
+        {activeTab === "astroloji" && <AstrolojiPanel />}
       </div>
     </div>
   );

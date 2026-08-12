@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import type { User } from "firebase/auth";
 import { functionsBaseUrl } from "../firebase";
 import {
   fetchAdminFunctionJson,
@@ -16,11 +15,7 @@ const admobAccountUrl =
 const playConsoleUrl =
   "https://play.google.com/console/u/0/developers/makerpars-oaslananka-mobil";
 
-type RevenuePanelProps = {
-  user: User;
-};
-
-export default function RevenuePanel({ user }: RevenuePanelProps) {
+export default function RevenuePanel() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [summary, setSummary] = useState<RevenueSummary | null>(null);
@@ -32,10 +27,8 @@ export default function RevenuePanel({ user }: RevenuePanelProps) {
       setLoading(true);
       setError("");
       try {
-        const idToken = await user.getIdToken();
         const payload = await fetchAdminFunctionJson<RevenueSummary>({
           endpoint: `${functionsBaseUrl}/adminGetRevenueSummary`,
-          idToken,
           body: {
             catalog: sortedApps.map((app) => ({
               packageName: app.package,
@@ -64,7 +57,7 @@ export default function RevenuePanel({ user }: RevenuePanelProps) {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, []);
 
   return (
     <div

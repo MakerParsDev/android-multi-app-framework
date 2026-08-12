@@ -1,6 +1,4 @@
 import { Timestamp, type DocumentData } from "firebase/firestore";
-import type { User } from "firebase/auth";
-import { serverTimestamp } from "firebase/firestore";
 import ciApps from "@ciapps";
 import {
   WEEKDAYS,
@@ -179,7 +177,7 @@ export function parseTargetTimezonesInput(input: string): string[] {
   );
 }
 
-export function buildPayload(form: ScheduledEventForm, user: User, isCreate: boolean) {
+export function buildEventPayload(form: ScheduledEventForm) {
   const targetTimezones = parseTargetTimezonesInput(form.targetTimezonesInput);
   const base: Record<string, unknown> = {
     name: form.name.trim(),
@@ -189,18 +187,8 @@ export function buildPayload(form: ScheduledEventForm, user: User, isCreate: boo
     targetTimezones: targetTimezones.length > 0 ? targetTimezones : null,
     topic: form.topic.trim() || null,
     packages: normalizePackages(form.packages),
-    title: {
-      tr: form.title.tr.trim(),
-      en: form.title.en.trim(),
-      de: form.title.de.trim(),
-    },
-    body: {
-      tr: form.body.tr.trim(),
-      en: form.body.en.trim(),
-      de: form.body.de.trim(),
-    },
-    updatedAt: serverTimestamp(),
-    updatedBy: user.uid,
+    title: { tr: form.title.tr.trim(), en: form.title.en.trim(), de: form.title.de.trim() },
+    body: { tr: form.body.tr.trim(), en: form.body.en.trim(), de: form.body.de.trim() },
   };
 
   if (form.scheduleMode === "once") {
@@ -212,14 +200,6 @@ export function buildPayload(form: ScheduledEventForm, user: User, isCreate: boo
   } else {
     base.date = null;
     base.recurrence = `weekly:${form.weeklyDay}`;
-  }
-
-  if (isCreate) {
-    base.sentTimezones = [];
-    base.lastResetAt = null;
-    base.lastDispatchedAt = null;
-    base.createdAt = serverTimestamp();
-    base.createdBy = user.uid;
   }
 
   return base;
@@ -289,24 +269,19 @@ export function summarizeApiError(errorPayload: unknown, fallback: string): stri
 export async function fetchAdminFunctionJson<T>(
   input: {
     endpoint: string;
-    idToken: string;
     body?: Record<string, unknown>;
     method?: "GET" | "POST";
   },
 ): Promise<T> {
-  const { endpoint, idToken, body, method = body ? "POST" : "GET" } = input;
+  const { endpoint, body, method = body ? "POST" : "GET" } = input;
   const init: RequestInit = {
     method,
-    headers: {
-      Authorization: `Bearer ${idToken}`,
-    },
+    credentials: "include",
+    headers: {},
   };
 
   if (method !== "GET") {
-    init.headers = {
-      ...init.headers,
-      "Content-Type": "application/json",
-    };
+    init.headers = { ...init.headers, "Content-Type": "application/json" };
     init.body = JSON.stringify(body ?? {});
   }
 

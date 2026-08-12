@@ -1,10 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type { User } from "firebase/auth";
 import { fetchAdminFunctionJson } from "../helpers";
-
-type AstrolojiPanelProps = {
-  user: User;
-};
 
 type AstrolojiHealth = {
   status: "ok" | "degraded";
@@ -26,7 +21,7 @@ type AstrolojiLlmTestResult = {
 
 const LLM_TEST_TASK_TYPES: AstrolojiLlmTestTaskType[] = ["daily_content", "deep_reading", "chat_consultation"];
 
-export default function AstrolojiPanel({ user }: AstrolojiPanelProps) {
+export default function AstrolojiPanel() {
   const apiBaseUrl = import.meta.env.VITE_ASTROLOJI_API_URL?.trim().replace(/\/$/, "");
 
   const [health, setHealth] = useState<AstrolojiHealth | null>(null);
@@ -42,10 +37,8 @@ export default function AstrolojiPanel({ user }: AstrolojiPanelProps) {
     setHealthLoading(true);
     setHealthError("");
     try {
-      const idToken = await user.getIdToken();
       const payload = await fetchAdminFunctionJson<AstrolojiHealth>({
         endpoint: `${apiBaseUrl}/api/v1/admin/panel/health`,
-        idToken,
         method: "GET",
       });
       setHealth(payload);
@@ -55,7 +48,7 @@ export default function AstrolojiPanel({ user }: AstrolojiPanelProps) {
     } finally {
       setHealthLoading(false);
     }
-  }, [apiBaseUrl, user]);
+  }, [apiBaseUrl]);
 
   useEffect(() => {
     loadHealth();
@@ -66,10 +59,8 @@ export default function AstrolojiPanel({ user }: AstrolojiPanelProps) {
     setTestLoading(taskType);
     setTestError("");
     try {
-      const idToken = await user.getIdToken();
       const payload = await fetchAdminFunctionJson<AstrolojiLlmTestResult>({
         endpoint: `${apiBaseUrl}/api/v1/admin/panel/llm/test`,
-        idToken,
         body: { taskType },
       });
       setTestResults((previous) => ({ ...previous, [taskType]: payload }));
@@ -79,7 +70,7 @@ export default function AstrolojiPanel({ user }: AstrolojiPanelProps) {
     } finally {
       setTestLoading(null);
     }
-  }, [apiBaseUrl, user]);
+  }, [apiBaseUrl]);
 
   return (
     <div className="single-panel-grid" id="tabpanel-astroloji" role="tabpanel" aria-labelledby="tab-astroloji">

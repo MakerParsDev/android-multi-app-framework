@@ -1,15 +1,12 @@
-import type { User } from "firebase/auth";
 import type { AdminTab } from "../types";
 import { appBuildId, appBuildTime } from "../helpers";
 
 type HeaderProps = {
-  user: User;
   activeTab: AdminTab;
   onTabChange: (tab: AdminTab) => void;
-  onSignOut: () => void;
 };
 
-export default function Header({ user, activeTab, onTabChange, onSignOut }: HeaderProps) {
+export default function Header({ activeTab, onTabChange }: HeaderProps) {
   return (
     <>
       <header className="topbar" role="banner">
@@ -26,15 +23,9 @@ export default function Header({ user, activeTab, onTabChange, onSignOut }: Head
           </p>
         </div>
         <div className="topbar-actions">
-          <div className="user-pill" aria-label={`Signed in as ${user.email ?? user.uid}`}>
-            <span className="user-avatar" aria-hidden="true">
-              {(user.email ?? user.uid).charAt(0).toUpperCase()}
-            </span>
-            <span className="user-email">{user.email ?? user.uid}</span>
-          </div>
-          <button className="btn-secondary" onClick={onSignOut} aria-label="Sign out">
+          <a className="btn-secondary" href="https://admin.parsfilo.com/cdn-cgi/access/logout" aria-label="Sign out">
             Sign out
-          </button>
+          </a>
         </div>
       </header>
 

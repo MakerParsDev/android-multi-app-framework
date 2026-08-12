@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import type { User } from "firebase/auth";
 import { functionsBaseUrl } from "../firebase";
 import {
   fetchAdminFunctionJson,
@@ -14,11 +13,7 @@ const flavorVersions = parseFlavorVersions();
 const firebaseConsoleUrl = "https://console.firebase.google.com/project/makerpars-oaslananka-mobil/overview";
 const playConsoleBaseUrl = "https://play.google.com/console/u/0/developers";
 
-type FlavorHubPanelProps = {
-  user: User;
-};
-
-export default function FlavorHubPanel({ user }: FlavorHubPanelProps) {
+export default function FlavorHubPanel() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [state, setState] = useState<FlavorHubSummary | null>(null);
@@ -30,10 +25,8 @@ export default function FlavorHubPanel({ user }: FlavorHubPanelProps) {
       setLoading(true);
       setError("");
       try {
-        const idToken = await user.getIdToken();
         const payload = await fetchAdminFunctionJson<FlavorHubSummary>({
           endpoint: `${functionsBaseUrl}/adminGetFlavorHubSummary`,
-          idToken,
           body: { packages: sortedApps.map((app) => app.package) },
         });
 
@@ -59,7 +52,7 @@ export default function FlavorHubPanel({ user }: FlavorHubPanelProps) {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, []);
 
   return (
     <div

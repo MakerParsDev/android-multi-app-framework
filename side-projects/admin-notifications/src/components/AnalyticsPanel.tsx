@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import type { User } from "firebase/auth";
 import { functionsBaseUrl } from "../firebase";
 import {
   fetchAdminFunctionJson,
@@ -11,11 +10,7 @@ import type { AnalyticsSummary } from "../types";
 
 const firebaseProjectId = import.meta.env.VITE_FIREBASE_PROJECT_ID ?? "makerpars-oaslananka-mobil";
 
-type AnalyticsPanelProps = {
-  user: User;
-};
-
-export default function AnalyticsPanel({ user }: AnalyticsPanelProps) {
+export default function AnalyticsPanel() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
@@ -27,10 +22,8 @@ export default function AnalyticsPanel({ user }: AnalyticsPanelProps) {
       setLoading(true);
       setError("");
       try {
-        const idToken = await user.getIdToken();
         const payload = await fetchAdminFunctionJson<AnalyticsSummary>({
           endpoint: `${functionsBaseUrl}/adminGetAnalyticsSummary`,
-          idToken,
           body: { packages: sortedApps.map((app) => app.package) },
         });
 
@@ -54,7 +47,7 @@ export default function AnalyticsPanel({ user }: AnalyticsPanelProps) {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, []);
 
   return (
     <div

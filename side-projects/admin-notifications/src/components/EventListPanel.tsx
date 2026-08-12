@@ -12,6 +12,7 @@ type EventListPanelProps = {
   onStatusFilterChange: (filter: "all" | ScheduledEventRecord["status"]) => void;
   onSelectEvent: (event: ScheduledEventRecord) => void;
   onNewEvent: () => void;
+  onRefresh: () => void;
 };
 
 export default function EventListPanel({
@@ -24,6 +25,7 @@ export default function EventListPanel({
   onStatusFilterChange,
   onSelectEvent,
   onNewEvent,
+  onRefresh,
 }: EventListPanelProps) {
   const filteredEvents = useMemo(() => {
     const q = eventSearchQuery.trim().toLowerCase();
@@ -57,6 +59,9 @@ export default function EventListPanel({
     <aside className="panel list-panel" role="complementary" aria-label="Event list">
       <div className="panel-header">
         <h2>Scheduled events</h2>
+        <button className="btn-secondary" onClick={onRefresh} aria-label="Refresh events">
+          Refresh
+        </button>
         <button className="btn-secondary btn-new" onClick={onNewEvent} aria-label="Create new event">
           <span aria-hidden="true">+</span> New event
         </button>
