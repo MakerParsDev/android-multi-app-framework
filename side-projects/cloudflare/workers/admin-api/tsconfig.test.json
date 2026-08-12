@@ -10,6 +10,7 @@
   "include": [
     "src/appCheck.ts",
     "src/deviceRegistration.ts",
-    "src/health.ts"
+    "src/health.ts",
+    "src/index.ts"
   ]
 }

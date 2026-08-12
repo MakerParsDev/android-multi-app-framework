@@ -3,22 +3,24 @@ import {
   AppCheckVerificationError,
   parseAllowedAppIds,
   verifyFirebaseAppCheckToken,
-} from "./appCheck";
+} from "./appCheck.js";
 import {
   DeviceRegistrationDependencyUnavailableError,
   handleDeviceRegistration,
   type DeviceRegistrationRecord,
-} from "./deviceRegistration";
+} from "./deviceRegistration.js";
 import {
   handleHealthCheck,
   type WorkerVersionMetadata,
-} from "./health";
+} from "./health.js";
 
 export interface Env {
   FIREBASE_PROJECT_ID: string;
   FIREBASE_PROJECT_NUMBER: string;
   FIREBASE_WEB_API_KEY: string;
   FIREBASE_APP_CHECK_ALLOWED_APP_IDS: string;
+  ADMIN_ACCESS_TEAM_DOMAIN: string;
+  ADMIN_ACCESS_AUD: string;
   ADMIN_ALLOWED_EMAILS?: string;
   ALLOWED_ADMIN_ORIGINS?: string;
   FIREBASE_SERVICE_ACCOUNT_JSON?: string;
@@ -84,13 +86,6 @@ type FirestoreField = {
 type FirestoreDocument = {
   name?: string;
   fields?: Record<string, FirestoreField>;
-};
-
-type ResolvedAdmin = {
-  uid: string;
-  email?: string;
-  authorized: boolean;
-  source: "firestore" | "allowlist" | "none";
 };
 
 type DeviceCoverageItem = {
@@ -443,6 +438,7 @@ function withCors(headers: Record<string, string>, origin: string | null, env: E
   return {
     ...headers,
     "access-control-allow-origin": origin,
+    "access-control-allow-credentials": "true",
     "access-control-allow-methods": "GET, POST, OPTIONS",
     "access-control-allow-headers": "content-type, authorization",
     "access-control-max-age": "86400",
@@ -518,15 +514,68 @@ async function verifyFirebaseIdToken(idToken: string, apiKey: string): Promise<F
   };
 }
 
-function parseAllowedEmails(raw: string | undefined): Set<string> {
-  const set = new Set<string>();
-  if (!raw) return set;
-  raw
-    .split(/[,\n;\s]+/g)
-    .map((item) => item.trim().toLowerCase())
-    .filter(Boolean)
-    .forEach((email) => set.add(email));
-  return set;
+interface CloudflareAccessJwk {
+  kid: string;
+  kty: string;
+  n: string;
+  e: string;
+}
+
+export async function verifyAccessRequest(request: Request, env: Env): Promise<{ email: string } | null> {
+  const token = request.headers.get("Cf-Access-Jwt-Assertion");
+  if (!token) return null;
+
+  const certsResponse = await fetch(`https://${env.ADMIN_ACCESS_TEAM_DOMAIN}/cdn-cgi/access/certs`);
+  if (!certsResponse.ok) {
+    throw new Error("Unable to fetch Cloudflare Access verification certificates.");
+  }
+  const { keys } = (await certsResponse.json()) as { keys: CloudflareAccessJwk[] };
+
+  const [headerB64] = token.split(".");
+  const header = JSON.parse(atob(headerB64.replace(/-/g, "+").replace(/_/g, "/"))) as { kid?: string };
+  const jwk = keys.find((key) => key.kid === header.kid);
+  if (!jwk) {
+    throw new Error("Unable to resolve Cloudflare Access verification key.");
+  }
+
+  const cryptoKey = await crypto.subtle.importKey(
+    "jwk",
+    { kty: jwk.kty, n: jwk.n, e: jwk.e, alg: "RS256", ext: true },
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["verify"],
+  );
+
+  const [, payloadB64, signatureB64] = token.split(".");
+  const signature = Uint8Array.from(atob(signatureB64.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
+  const signedData = new TextEncoder().encode(`${headerB64}.${payloadB64}`);
+  const valid = await crypto.subtle.verify("RSASSA-PKCS1-v1_5", cryptoKey, signature, signedData);
+  if (!valid) {
+    throw new Error("Cloudflare Access token signature is invalid.");
+  }
+
+  const payload = JSON.parse(atob(payloadB64.replace(/-/g, "+").replace(/_/g, "/"))) as {
+    iss?: string;
+    aud?: string | string[];
+    exp?: number;
+    email?: string;
+  };
+
+  if (payload.iss !== `https://${env.ADMIN_ACCESS_TEAM_DOMAIN}`) {
+    throw new Error("Cloudflare Access token issuer mismatch.");
+  }
+  const audiences = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
+  if (!audiences.includes(env.ADMIN_ACCESS_AUD)) {
+    throw new Error("Cloudflare Access token audience mismatch.");
+  }
+  if (!payload.exp || payload.exp * 1000 < Date.now()) {
+    throw new Error("Cloudflare Access token is expired.");
+  }
+  if (typeof payload.email !== "string" || !payload.email) {
+    throw new Error("Cloudflare Access token is missing an email claim.");
+  }
+
+  return { email: payload.email };
 }
 
 function pemToArrayBuffer(pem: string): ArrayBuffer {
@@ -775,94 +824,6 @@ async function deleteFirestoreDoc(env: Env, collectionPath: string): Promise<boo
   return true;
 }
 
-async function upsertAdminDoc(env: Env, uid: string, email?: string): Promise<void> {
-  const accessToken = await getGoogleAccessToken(env);
-  if (!accessToken) return;
-
-  const updateMask = [
-    "email",
-    "role",
-    "enabled",
-    "source",
-    "updatedAt",
-  ].map((field) => `updateMask.fieldPaths=${encodeURIComponent(field)}`).join("&");
-
-  const fields: Record<string, unknown> = {
-    role: { stringValue: "admin" },
-    enabled: { booleanValue: true },
-    source: { stringValue: "admin_allowed_emails" },
-    updatedAt: { timestampValue: new Date().toISOString() },
-  };
-  if (email && email.trim().length > 0) {
-    fields.email = { stringValue: email.trim().toLowerCase() };
-  }
-
-  const response = await fetch(`${firestoreDocumentUrl(env, `admins/${encodeURIComponent(uid)}`)}?${updateMask}`, {
-    method: "PATCH",
-    headers: {
-      authorization: `Bearer ${accessToken}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({ fields }),
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    console.warn("[admin-api] admin doc upsert failed", response.status, text);
-  }
-}
-
-async function ensureAdminAccess(request: Request, env: Env): Promise<ResolvedAdmin | null> {
-  const bearer = parseBearerToken(request);
-  if (!bearer) return null;
-
-  const apiKey = env.FIREBASE_WEB_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error("Missing FIREBASE_WEB_API_KEY");
-  }
-
-  const user = await verifyFirebaseIdToken(bearer, apiKey);
-  const uid = user.localId;
-  const email = user.email?.toLowerCase();
-  const allowedEmails = parseAllowedEmails(env.ADMIN_ALLOWED_EMAILS);
-
-  const adminDoc = await getFirestoreDoc(env, `admins/${encodeURIComponent(uid)}`);
-  if (adminDoc) {
-    return { uid, email, authorized: true, source: "firestore" };
-  }
-
-  if (email && allowedEmails.has(email)) {
-    await upsertAdminDoc(env, uid, email);
-    return { uid, email, authorized: true, source: "allowlist" };
-  }
-
-  return { uid, email, authorized: false, source: "none" };
-}
-
-async function handleAdminAccessCheck(request: Request, env: Env): Promise<Response> {
-  if (request.method !== "POST") {
-    return jsonResponse({ error: "Method not allowed" }, 405);
-  }
-  if (!looksLikeJson(request.headers.get("content-type"))) {
-    return jsonResponse({ error: "Content-Type must be application/json" }, 415);
-  }
-
-  try {
-    const admin = await ensureAdminAccess(request, env);
-    if (!admin) return jsonResponse({ error: "Missing Bearer token" }, 401);
-
-    return jsonResponse({
-      authorized: admin.authorized,
-      source: admin.source,
-      uid: admin.uid,
-      email: admin.email ?? null,
-    });
-  } catch (error) {
-    console.warn("[admin-api] adminAccessCheck failed", error);
-    return jsonResponse({ error: "Invalid Firebase Auth token" }, 401);
-  }
-}
-
 function parsePackages(raw: unknown): string[] {
   if (!Array.isArray(raw)) return DEFAULT_PACKAGES;
   const values = raw
@@ -980,15 +941,14 @@ async function handleDeviceCoverageReport(request: Request, env: Env): Promise<R
     return jsonResponse({ error: "Content-Type must be application/json" }, 415);
   }
 
-  let admin: ResolvedAdmin | null;
+  let admin: { email: string } | null;
   try {
-    admin = await ensureAdminAccess(request, env);
+    admin = await verifyAccessRequest(request, env);
   } catch (error) {
     console.warn("[admin-api] deviceCoverageReport auth failed", error);
-    return jsonResponse({ error: "Invalid Firebase Auth token" }, 401);
+    return jsonResponse({ error: "Invalid Cloudflare Access token" }, 401);
   }
-  if (!admin) return jsonResponse({ error: "Missing Bearer token" }, 401);
-  if (!admin.authorized) return jsonResponse({ error: "User is not in admins whitelist" }, 403);
+  if (!admin) return jsonResponse({ error: "Missing Cloudflare Access token" }, 401);
 
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   const days = parseCoverageDays(body.days);
@@ -1154,15 +1114,14 @@ async function handleSendTestNotification(request: Request, env: Env): Promise<R
     return jsonResponse({ error: "Content-Type must be application/json" }, 415);
   }
 
-  let admin: ResolvedAdmin | null;
+  let admin: { email: string } | null;
   try {
-    admin = await ensureAdminAccess(request, env);
+    admin = await verifyAccessRequest(request, env);
   } catch (error) {
     console.warn("[admin-api] sendTestNotification auth failed", error);
-    return jsonResponse({ error: "Invalid Firebase Auth token" }, 401);
+    return jsonResponse({ error: "Invalid Cloudflare Access token" }, 401);
   }
-  if (!admin) return jsonResponse({ error: "Missing Bearer token" }, 401);
-  if (!admin.authorized) return jsonResponse({ error: "User is not in admins whitelist" }, 403);
+  if (!admin) return jsonResponse({ error: "Missing Cloudflare Access token" }, 401);
 
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   if (!body) return jsonResponse({ error: "Invalid JSON body" }, 400);
@@ -1799,15 +1758,14 @@ async function handleAdminGetFlavorHubSummary(request: Request, env: Env): Promi
     return jsonResponse({ error: "Content-Type must be application/json" }, 415);
   }
 
-  let admin: ResolvedAdmin | null;
+  let admin: { email: string } | null;
   try {
-    admin = await ensureAdminAccess(request, env);
+    admin = await verifyAccessRequest(request, env);
   } catch (error) {
     console.warn("[admin-api] adminGetFlavorHubSummary auth failed", error);
-    return jsonResponse({ error: "Invalid Firebase Auth token" }, 401);
+    return jsonResponse({ error: "Invalid Cloudflare Access token" }, 401);
   }
-  if (!admin) return jsonResponse({ error: "Missing Bearer token" }, 401);
-  if (!admin.authorized) return jsonResponse({ error: "User is not in admins whitelist" }, 403);
+  if (!admin) return jsonResponse({ error: "Missing Cloudflare Access token" }, 401);
 
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   const packages = parsePackages(body.packages);
@@ -1971,15 +1929,14 @@ async function handleAdminGetAnalyticsSummary(request: Request, env: Env): Promi
     return jsonResponse({ error: "Content-Type must be application/json" }, 415);
   }
 
-  let admin: ResolvedAdmin | null;
+  let admin: { email: string } | null;
   try {
-    admin = await ensureAdminAccess(request, env);
+    admin = await verifyAccessRequest(request, env);
   } catch (error) {
     console.warn("[admin-api] adminGetAnalyticsSummary auth failed", error);
-    return jsonResponse({ error: "Invalid Firebase Auth token" }, 401);
+    return jsonResponse({ error: "Invalid Cloudflare Access token" }, 401);
   }
-  if (!admin) return jsonResponse({ error: "Missing Bearer token" }, 401);
-  if (!admin.authorized) return jsonResponse({ error: "User is not in admins whitelist" }, 403);
+  if (!admin) return jsonResponse({ error: "Missing Cloudflare Access token" }, 401);
 
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   const packages = parsePackages(body.packages);
@@ -3126,15 +3083,14 @@ async function handleAdminGetRevenueSummary(request: Request, env: Env): Promise
     return jsonResponse({ error: "Content-Type must be application/json" }, 415);
   }
 
-  let admin: ResolvedAdmin | null;
+  let admin: { email: string } | null;
   try {
-    admin = await ensureAdminAccess(request, env);
+    admin = await verifyAccessRequest(request, env);
   } catch (error) {
     console.warn("[admin-api] adminGetRevenueSummary auth failed", error);
-    return jsonResponse({ error: "Invalid Firebase Auth token" }, 401);
+    return jsonResponse({ error: "Invalid Cloudflare Access token" }, 401);
   }
-  if (!admin) return jsonResponse({ error: "Missing Bearer token" }, 401);
-  if (!admin.authorized) return jsonResponse({ error: "User is not in admins whitelist" }, 403);
+  if (!admin) return jsonResponse({ error: "Missing Cloudflare Access token" }, 401);
 
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   const catalog = parseAdHealthCatalog(body);
@@ -3296,15 +3252,14 @@ async function handleAdPerformance(request: Request, env: Env): Promise<Response
     return jsonResponse({ error: "Content-Type must be application/json" }, 415);
   }
 
-  let admin: ResolvedAdmin | null;
+  let admin: { email: string } | null;
   try {
-    admin = await ensureAdminAccess(request, env);
+    admin = await verifyAccessRequest(request, env);
   } catch (error) {
     console.warn("[admin-api] adPerformance auth failed", error);
-    return jsonResponse({ error: "Invalid Firebase Auth token" }, 401);
+    return jsonResponse({ error: "Invalid Cloudflare Access token" }, 401);
   }
-  if (!admin) return jsonResponse({ error: "Missing Bearer token" }, 401);
-  if (!admin.authorized) return jsonResponse({ error: "User is not in admins whitelist" }, 403);
+  if (!admin) return jsonResponse({ error: "Missing Cloudflare Access token" }, 401);
 
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   const requestType = asString(body.type) || "report";
@@ -3321,7 +3276,7 @@ async function handleAdPerformance(request: Request, env: Env): Promise<Response
 
   if (requestType === "refresh") {
     const weeklyReport = await generateAndStoreWeeklyReport(env, "manual", {
-      uid: admin.uid,
+      uid: admin.email,
       email: admin.email,
     });
     return jsonResponse(weeklyReport);
@@ -3814,15 +3769,14 @@ async function handleAdminGetRemoteConfig(request: Request, env: Env): Promise<R
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
-  let admin: ResolvedAdmin | null;
+  let admin: { email: string } | null;
   try {
-    admin = await ensureAdminAccess(request, env);
+    admin = await verifyAccessRequest(request, env);
   } catch (error) {
     console.warn("[admin-api] adminGetRemoteConfig auth failed", error);
-    return jsonResponse({ error: "Invalid Firebase Auth token" }, 401);
+    return jsonResponse({ error: "Invalid Cloudflare Access token" }, 401);
   }
-  if (!admin) return jsonResponse({ error: "Missing Bearer token" }, 401);
-  if (!admin.authorized) return jsonResponse({ error: "User is not in admins whitelist" }, 403);
+  if (!admin) return jsonResponse({ error: "Missing Cloudflare Access token" }, 401);
 
   const accessToken = await getGoogleAccessToken(env);
   if (!accessToken) {
@@ -3854,15 +3808,14 @@ async function handleAdminUpdateRemoteConfig(request: Request, env: Env): Promis
     return jsonResponse({ error: "Content-Type must be application/json" }, 415);
   }
 
-  let admin: ResolvedAdmin | null;
+  let admin: { email: string } | null;
   try {
-    admin = await ensureAdminAccess(request, env);
+    admin = await verifyAccessRequest(request, env);
   } catch (error) {
     console.warn("[admin-api] adminUpdateRemoteConfig auth failed", error);
-    return jsonResponse({ error: "Invalid Firebase Auth token" }, 401);
+    return jsonResponse({ error: "Invalid Cloudflare Access token" }, 401);
   }
-  if (!admin) return jsonResponse({ error: "Missing Bearer token" }, 401);
-  if (!admin.authorized) return jsonResponse({ error: "User is not in admins whitelist" }, 403);
+  if (!admin) return jsonResponse({ error: "Missing Cloudflare Access token" }, 401);
 
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   const key = typeof body.key === "string" ? body.key.trim() : "";
@@ -3965,8 +3918,6 @@ export default {
           builtAt: env.SERVICE_BUILD_TIMESTAMP,
           workerVersion: env.CF_VERSION_METADATA,
         });
-      } else if (path === "/adminAccessCheck") {
-        response = await handleAdminAccessCheck(request, env);
       } else if (path === "/adminGetFlavorHubSummary") {
         response = await handleAdminGetFlavorHubSummary(request, env);
       } else if (path === "/adminGetAnalyticsSummary") {
