@@ -7,6 +7,8 @@ import {
   handleAdminSaveScheduledEvent,
   handleAdminDeleteScheduledEvent,
   handleAdminPreviewTargetDevices,
+  handleAdminLookupDevice,
+  handleAdminListRecentDevices,
 } from "../.test-dist/index.js";
 
 const TEAM_DOMAIN = "makerpars.cloudflareaccess.com";
@@ -144,6 +146,11 @@ function mockFetch({ certsKeys = [], firestore = {} } = {}) {
       return firestore.del
         ? firestore.del(urlStr, init)
         : new Response(JSON.stringify({}), { status: 200 });
+    }
+    if (urlStr.startsWith(`${DOCUMENTS_BASE}/devices/`) && method === "GET") {
+      return firestore.getDevice
+        ? firestore.getDevice(urlStr, init)
+        : new Response(JSON.stringify({}), { status: 404 });
     }
     throw new Error(`Unexpected fetch in test: ${method} ${urlStr}`);
   });
@@ -494,4 +501,240 @@ test("adminPreviewTargetDevices: counts only devices with notificationsEnabled, 
       "com.parsfilo.kible": 1,
     },
   });
+});
+
+// ---------------------------------------------------------------------------
+// handleAdminLookupDevice
+// ---------------------------------------------------------------------------
+
+test("adminLookupDevice: 401 when Cf-Access-Jwt-Assertion header is missing", async () => {
+  mockFetch();
+  const response = await handleAdminLookupDevice(
+    jsonRequest("https://admin-api.parsfilo.com/adminLookupDevice", { body: { id: "device-1" } }),
+    baseEnv(),
+  );
+  assert.equal(response.status, 401);
+  assert.deepEqual(await responseJson(response), { error: "Missing Cloudflare Access token" });
+});
+
+test("adminLookupDevice: 401 when the Access token fails verification", async () => {
+  const signer = await createSigner();
+  const token = await signer.sign();
+  mockFetch({ certsKeys: [] }); // no matching kid -> verifyAccessRequest throws
+
+  const response = await handleAdminLookupDevice(
+    jsonRequest("https://admin-api.parsfilo.com/adminLookupDevice", { token, body: { id: "device-1" } }),
+    baseEnv(),
+  );
+  assert.equal(response.status, 401);
+  assert.deepEqual(await responseJson(response), { error: "Invalid Cloudflare Access token" });
+});
+
+test("adminLookupDevice: 400 when id is missing", async () => {
+  const signer = await createSigner();
+  const token = await signer.sign();
+  mockFetch({ certsKeys: [signer.jwk] });
+
+  const response = await handleAdminLookupDevice(
+    jsonRequest("https://admin-api.parsfilo.com/adminLookupDevice", { token, body: {} }),
+    baseEnv(),
+  );
+  assert.equal(response.status, 400);
+  assert.deepEqual(await responseJson(response), { error: "id is required" });
+});
+
+test("adminLookupDevice: returns { device: null } when the document does not exist", async () => {
+  const signer = await createSigner();
+  const token = await signer.sign();
+  let requestedUrl = null;
+  mockFetch({
+    certsKeys: [signer.jwk],
+    firestore: {
+      getDevice: (url) => {
+        requestedUrl = url;
+        return new Response(JSON.stringify({ error: { code: 404, message: "not found" } }), { status: 404 });
+      },
+    },
+  });
+
+  const response = await handleAdminLookupDevice(
+    jsonRequest("https://admin-api.parsfilo.com/adminLookupDevice", { token, body: { id: "missing-device" } }),
+    baseEnv(),
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await responseJson(response), { device: null });
+  assert.equal(requestedUrl, `${DOCUMENTS_BASE}/devices/missing-device`);
+});
+
+test("adminLookupDevice: returns the parsed device for a found document", async () => {
+  const signer = await createSigner();
+  const token = await signer.sign();
+  mockFetch({
+    certsKeys: [signer.jwk],
+    firestore: {
+      getDevice: () =>
+        new Response(
+          JSON.stringify({
+            name: `projects/${PROJECT_ID}/databases/(default)/documents/devices/device-1`,
+            fields: {
+              packageName: { stringValue: "com.parsfilo.yasinsuresi" },
+              fcmToken: { stringValue: "token-abc" },
+              notificationsEnabled: { booleanValue: true },
+              locale: { stringValue: "tr-TR" },
+              updatedAt: { timestampValue: "2026-08-01T00:00:00.000Z" },
+            },
+          }),
+          { status: 200 },
+        ),
+    },
+  });
+
+  const response = await handleAdminLookupDevice(
+    jsonRequest("https://admin-api.parsfilo.com/adminLookupDevice", { token, body: { id: "device-1" } }),
+    baseEnv(),
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await responseJson(response), {
+    device: {
+      id: "device-1",
+      packageName: "com.parsfilo.yasinsuresi",
+      fcmToken: "token-abc",
+      notificationsEnabled: true,
+      locale: "tr-TR",
+      updatedAt: "2026-08-01T00:00:00.000Z",
+    },
+  });
+});
+
+test("adminLookupDevice: URL-encodes the id when building the Firestore document path", async () => {
+  const signer = await createSigner();
+  const token = await signer.sign();
+  let requestedUrl = null;
+  mockFetch({
+    certsKeys: [signer.jwk],
+    firestore: {
+      getDevice: (url) => {
+        requestedUrl = url;
+        return new Response(JSON.stringify({ error: { code: 404 } }), { status: 404 });
+      },
+    },
+  });
+
+  await handleAdminLookupDevice(
+    jsonRequest("https://admin-api.parsfilo.com/adminLookupDevice", { token, body: { id: "device/with/slash" } }),
+    baseEnv(),
+  );
+
+  assert.equal(requestedUrl, `${DOCUMENTS_BASE}/devices/device%2Fwith%2Fslash`);
+});
+
+// ---------------------------------------------------------------------------
+// handleAdminListRecentDevices
+// ---------------------------------------------------------------------------
+
+test("adminListRecentDevices: 401 when Cf-Access-Jwt-Assertion header is missing", async () => {
+  mockFetch();
+  const response = await handleAdminListRecentDevices(
+    jsonRequest("https://admin-api.parsfilo.com/adminListRecentDevices"),
+    baseEnv(),
+  );
+  assert.equal(response.status, 401);
+  assert.deepEqual(await responseJson(response), { error: "Missing Cloudflare Access token" });
+});
+
+test("adminListRecentDevices: 401 when the Access token fails verification", async () => {
+  const signer = await createSigner();
+  const token = await signer.sign();
+  mockFetch({ certsKeys: [] }); // no matching kid -> verifyAccessRequest throws
+
+  const response = await handleAdminListRecentDevices(
+    jsonRequest("https://admin-api.parsfilo.com/adminListRecentDevices", { token }),
+    baseEnv(),
+  );
+  assert.equal(response.status, 401);
+  assert.deepEqual(await responseJson(response), { error: "Invalid Cloudflare Access token" });
+});
+
+test("adminListRecentDevices: sends a runQuery request ordered by updatedAt desc with limit 50, and returns the parsed array", async () => {
+  const signer = await createSigner();
+  const token = await signer.sign();
+  let sentStructuredQuery = null;
+  mockFetch({
+    certsKeys: [signer.jwk],
+    firestore: {
+      runQuery: (_url, init) => {
+        sentStructuredQuery = JSON.parse(init.body).structuredQuery;
+        return new Response(
+          JSON.stringify([
+            {
+              document: {
+                name: `projects/${PROJECT_ID}/databases/(default)/documents/devices/device-1`,
+                fields: {
+                  packageName: { stringValue: "com.parsfilo.yasinsuresi" },
+                  updatedAt: { timestampValue: "2026-08-10T00:00:00.000Z" },
+                },
+              },
+            },
+            {
+              document: {
+                name: `projects/${PROJECT_ID}/databases/(default)/documents/devices/device-2`,
+                fields: {
+                  packageName: { stringValue: "com.parsfilo.kible" },
+                  updatedAt: { timestampValue: "2026-08-09T00:00:00.000Z" },
+                },
+              },
+            },
+          ]),
+          { status: 200 },
+        );
+      },
+    },
+  });
+
+  const response = await handleAdminListRecentDevices(
+    jsonRequest("https://admin-api.parsfilo.com/adminListRecentDevices", { token }),
+    baseEnv(),
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(sentStructuredQuery, {
+    from: [{ collectionId: "devices" }],
+    orderBy: [{ field: { fieldPath: "updatedAt" }, direction: "DESCENDING" }],
+    limit: 50,
+  });
+  assert.deepEqual(await responseJson(response), {
+    devices: [
+      {
+        id: "device-1",
+        packageName: "com.parsfilo.yasinsuresi",
+        updatedAt: "2026-08-10T00:00:00.000Z",
+      },
+      {
+        id: "device-2",
+        packageName: "com.parsfilo.kible",
+        updatedAt: "2026-08-09T00:00:00.000Z",
+      },
+    ],
+  });
+});
+
+test("adminListRecentDevices: returns an empty array when there are no devices", async () => {
+  const signer = await createSigner();
+  const token = await signer.sign();
+  mockFetch({
+    certsKeys: [signer.jwk],
+    firestore: {
+      runQuery: () => new Response(JSON.stringify([]), { status: 200 }),
+    },
+  });
+
+  const response = await handleAdminListRecentDevices(
+    jsonRequest("https://admin-api.parsfilo.com/adminListRecentDevices", { token }),
+    baseEnv(),
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await responseJson(response), { devices: [] });
 });

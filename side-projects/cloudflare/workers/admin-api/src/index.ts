@@ -1105,6 +1105,50 @@ export async function handleAdminPreviewTargetDevices(request: Request, env: Env
   return jsonResponse({ total, byPackage });
 }
 
+export async function handleAdminLookupDevice(request: Request, env: Env): Promise<Response> {
+  let admin: { email: string } | null;
+  try {
+    admin = await verifyAccessRequest(request, env);
+  } catch (error) {
+    console.warn("[admin-api] adminLookupDevice auth failed", error);
+    return jsonResponse({ error: "Invalid Cloudflare Access token" }, 401);
+  }
+  if (!admin) return jsonResponse({ error: "Missing Cloudflare Access token" }, 401);
+
+  const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+  const { id } = body;
+  if (typeof id !== "string" || !id) {
+    return jsonResponse({ error: "id is required" }, 400);
+  }
+
+  const doc = await getFirestoreDoc(env, `devices/${encodeURIComponent(id)}`);
+  if (!doc) {
+    return jsonResponse({ device: null });
+  }
+
+  return jsonResponse({ device: { id: extractDocumentId(doc) || id, ...parseFirestoreDocument(doc) } });
+}
+
+export async function handleAdminListRecentDevices(request: Request, env: Env): Promise<Response> {
+  let admin: { email: string } | null;
+  try {
+    admin = await verifyAccessRequest(request, env);
+  } catch (error) {
+    console.warn("[admin-api] adminListRecentDevices auth failed", error);
+    return jsonResponse({ error: "Invalid Cloudflare Access token" }, 401);
+  }
+  if (!admin) return jsonResponse({ error: "Missing Cloudflare Access token" }, 401);
+
+  const docs = await runFirestoreQuery(env, {
+    from: [{ collectionId: "devices" }],
+    orderBy: [{ field: { fieldPath: "updatedAt" }, direction: "DESCENDING" }],
+    limit: 50,
+  });
+
+  const devices = docs.map((doc) => ({ id: extractDocumentId(doc), ...parseFirestoreDocument(doc) }));
+  return jsonResponse({ devices });
+}
+
 function sanitizeOptionalText(value: unknown, maxLength: number): string | undefined {
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
@@ -4068,6 +4112,10 @@ export default {
         response = await handleAdminDeleteScheduledEvent(request, env);
       } else if (path === "/adminPreviewTargetDevices") {
         response = await handleAdminPreviewTargetDevices(request, env);
+      } else if (path === "/adminLookupDevice") {
+        response = await handleAdminLookupDevice(request, env);
+      } else if (path === "/adminListRecentDevices") {
+        response = await handleAdminListRecentDevices(request, env);
       } else if (path === "/registerDevice" || path === "/register-device") {
         response = await handleRegisterDevice(request, env);
       } else if (
