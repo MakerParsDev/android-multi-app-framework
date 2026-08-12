@@ -1,15 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  type DocumentData,
-} from "firebase/firestore";
-import { firestore, functionsBaseUrl } from "./firebase";
+import type { DocumentData } from "firebase/firestore";
+import { functionsBaseUrl } from "./firebase";
 import {
   DEFAULT_FORM,
   type AdminTab,
@@ -419,9 +410,17 @@ export default function App() {
     setDeviceFinderError("");
     setDeviceFinderMessage("");
     try {
-      const snap = await getDoc(doc(firestore, "devices", id));
-      if (snap.exists()) {
-        setDeviceFinderResults([parseDeviceFinderItem(snap.id, snap.data())]);
+      const response = await fetch(`${functionsBaseUrl}/adminLookupDevice`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const body = (await response.json()) as { device?: unknown; error?: string };
+      if (!response.ok) throw new Error(body.error ?? `HTTP ${response.status}`);
+      if (body.device) {
+        const raw = body.device as { id: string };
+        setDeviceFinderResults([parseDeviceFinderItem(raw.id, raw as DocumentData)]);
         setDeviceFinderMessage("Found 1 device.");
       } else {
         setDeviceFinderResults([]);
@@ -440,9 +439,17 @@ export default function App() {
     setDeviceFinderError("");
     setDeviceFinderMessage("");
     try {
-      const q = query(collection(firestore, "devices"), orderBy("updatedAt", "desc"), limit(50));
-      const snap = await getDocs(q);
-      const items = snap.docs.map((d) => parseDeviceFinderItem(d.id, d.data()));
+      const response = await fetch(`${functionsBaseUrl}/adminListRecentDevices`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      const body = (await response.json()) as { devices?: unknown[]; error?: string };
+      if (!response.ok) throw new Error(body.error ?? `HTTP ${response.status}`);
+      const items = (body.devices ?? []).map((raw) =>
+        parseDeviceFinderItem((raw as { id: string }).id, raw as DocumentData),
+      );
       setDeviceFinderResults(items);
       setDeviceFinderMessage(`Loaded ${items.length} recent device(s).`);
     } catch (err) {

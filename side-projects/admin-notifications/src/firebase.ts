@@ -1,6 +1,3 @@
-import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
-
 const env = import.meta.env as Record<string, string | undefined>;
 
 function envValue(...keys: string[]): string | undefined {
@@ -42,11 +39,8 @@ if (missingFirebaseEnv.length > 0) {
   );
 }
 
-const app: FirebaseApp = getApps()[0] ?? initializeApp(firebaseConfig);
-
 const functionsRegion = envValue("VITE_FIREBASE_FUNCTIONS_REGION") ?? "europe-west1";
 const explicitFunctionsBaseUrl = envValue("VITE_FUNCTIONS_BASE_URL");
 
-export const firestore = getFirestore(app);
 export const functionsBaseUrl =
   explicitFunctionsBaseUrl ?? `https://${functionsRegion}-${firebaseConfig.projectId}.cloudfunctions.net`;
