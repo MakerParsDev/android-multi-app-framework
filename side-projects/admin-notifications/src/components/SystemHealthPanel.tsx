@@ -20,7 +20,7 @@ export default function SystemHealthPanel() {
     const contentApiBase = import.meta.env.VITE_CONTENT_API_URL?.trim().replace(/\/$/, "");
     const services: ServiceHealth[] = [
       {
-        name: "Firebase Functions",
+        name: "Admin API Worker",
         url: `${functionsBaseUrl}/healthCheck`,
         status: "unknown",
         latencyMs: null,
@@ -77,6 +77,7 @@ export default function SystemHealthPanel() {
               ? { "Content-Type": "application/json" }
               : {},
             body: service.url.includes("healthCheck") ? "{}" : undefined,
+            credentials: service.url.includes("healthCheck") ? "include" : "same-origin",
             signal: AbortSignal.timeout(10000),
           });
           const latencyMs = Math.round(performance.now() - start);
