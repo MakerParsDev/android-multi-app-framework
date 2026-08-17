@@ -18,19 +18,19 @@
     "deploy": "node ../../scripts/ci/deploy_verified_side_project.mjs admin-notifications"
   },
   "dependencies": {
-    "firebase": "^12.9.0",
+    "firebase": "^12.17.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
   "devDependencies": {
-    "@types/react": "^19.1.10",
-    "@types/react-dom": "^19.1.7",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^5.0.0",
     "typescript": "^5.7.3",
-    "vite": "^8.0.14",
-    "eslint": "^10.7.0",
-    "typescript-eslint": "^8.65.0",
+    "vite": "^8.2.1",
+    "eslint": "^10.8.1",
+    "typescript-eslint": "^8.66.0",
     "vitest": "^4.1.10",
-    "wrangler": "^4.0.0"
+    "wrangler": "^4.120.0"
   }
 }
