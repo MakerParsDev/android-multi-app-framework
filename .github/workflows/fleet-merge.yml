@@ -1,0 +1,53 @@
+name: Jules Fleet Merge
+
+on:
+  schedule:
+    - cron: '0 */4 * * *'  # Run every 4 hours
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: fleet-merge-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  merge:
+    name: Execute Fleet Merges
+    runs-on: ubuntu-latest
+    if: ${{ vars.JULES_FLEET_ENABLED != 'false' }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '20'
+
+      - name: Resolve JULES_API_KEY from Doppler
+        id: resolve-key
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+        run: |
+          bash scripts/ci/resolve_jules_api_key.sh
+
+      - name: Execute Fleet Merge Sequence
+        env:
+          JULES_API_KEY: ${{ env.JULES_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AUTO_MERGE_ENABLED: ${{ vars.JULES_FLEET_AUTO_MERGE_ENABLED }}
+        run: |
+          if [ "$AUTO_MERGE_ENABLED" = "true" ]; then
+            echo "Auto-merge enabled. Running fleet merge..."
+            npx --yes @google/jules-fleet@0.0.1-experimental.35 merge --mode="label" --redispatch
+          else
+            echo "Auto-merge is currently DISABLED (JULES_FLEET_AUTO_MERGE_ENABLED != 'true'). Running in dry-run mode."
+            npx --yes @google/jules-fleet@0.0.1-experimental.35 merge --mode="label" --dry-run
+          fi

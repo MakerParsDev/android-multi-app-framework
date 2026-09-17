@@ -80,3 +80,19 @@ and receives no production secret.
 Managed-device timing is diagnostic. Release performance comparisons remain the
 responsibility of the serial physical-device workflow. See
 `docs/PERFORMANCE_TESTING.md` for the device, measurement, and artifact contract.
+
+
+## Jules Fleet Maintenance Workflows
+
+The repository uses  for autonomous repository maintenance:
+
+| Workflow | Trigger | Purpose | Risk Control |
+|---|---|---|---|
+|  | Scheduled (6h), manual | Analyzes  and creates issues | Read-only permissions, isolated  |
+|  | Scheduled (2h), manual | Dispatches Jules worker sessions for Fleet issues | No production secrets or  |
+|  | PR target events | Classifies PR changed files via LOW_RISK | Metadata-only, never executes PR code |
+|  | Scheduled (4h), manual | Merges  PRs when CI passes | Guarded by  variable |
+
+Control plane variables:
+- : Master switch (/).
+- : Auto-merge switch (/).

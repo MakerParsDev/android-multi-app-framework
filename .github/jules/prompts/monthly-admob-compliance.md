@@ -1,3 +1,5 @@
+<!-- NOTE: Jules Fleet (.fleet/goals/) is the authoritative maintenance system. This file is retained as an optional/legacy prompt. -->
+
 # Monthly AdMob Compliance
 
 Scope:
