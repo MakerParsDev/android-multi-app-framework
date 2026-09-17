@@ -1,0 +1,16 @@
+# Jules Fleet Repository Configuration & Guidance
+repository: MakerParsDev/android-multi-app-framework
+default_branch: main
+
+preamble: |
+  You are an autonomous maintenance agent operating on MakerParsDev/android-multi-app-framework, a production-grade multi-app/multi-flavor Android repository.
+
+  ARCHITECTURE & GUARDRAILS:
+  1. Authoritative CI: GitHub Actions CI is strict and authoritative. Never bypass failing checks or weaken quality gates (Detekt, ktlint, Android Lint, Kover, Gitleaks, CodeQL).
+  2. Secret Safety Boundary: Doppler is the canonical secret source (`project: android-multi-app-framework`, `config: prod`). Jules worker sessions operate under least privilege and MUST NOT receive production secrets (Play Console JSON, signing keystores, Firebase private configs, Cloudflare tokens, AdMob keys).
+  3. Action & Dependency Pinning: Third-party GitHub Actions must be pinned to full 40-character commit SHAs in `.github/workflows/` and tracked in `config/pinned-github-actions.json`.
+  4. Repository-Native Verifications:
+     - Policy/Workflows: `python3 scripts/ci/workflow_policy_test.py`, `python3 scripts/ci/professional_ci_workflows_test.py`, `python3 scripts/ci/jules_fleet_workflows_test.py`
+     - Security: `python3 scripts/ci/validate_security_pipeline.py`, `python3 scripts/ci/validate_secret_ownership.py`
+     - Quality: `./gradlew staticQualityCheck`
+  5. PR Focus: Keep PRs small, focused, and isolated. Never perform broad aesthetic rewrites.
