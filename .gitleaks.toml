@@ -3,6 +3,8 @@ title = "Android multi-app framework secret scanning"
 [extend]
 useDefault = true
 
-# Repository-specific allowlists are intentionally not defined here.
-# Time-limited historical fingerprints must be owned in
-# config/secret-scan-policy.json and synchronized into .gitleaksignore.
+[allowlist]
+description = "Ignore public Cloudflare Access AUD ID"
+regexes = [
+  '''5069a4e84e68eb9898e8831ce46e9d93a5c26a3892f19bde0f37e57a94948287'''
+]
