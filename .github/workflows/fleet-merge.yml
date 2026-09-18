@@ -18,7 +18,7 @@ jobs:
   merge:
     name: Execute Fleet Merges
     runs-on: ubuntu-latest
-    if: ${{ vars.JULES_FLEET_ENABLED != 'false' }}
+    if: ${{ vars.JULES_FLEET_ENABLED == 'true' }}
 
     steps:
       - name: Checkout Repository
@@ -39,6 +39,7 @@ jobs:
           bash scripts/ci/resolve_jules_api_key.sh
 
       - name: Execute Fleet Merge Sequence
+        if: ${{ env.JULES_API_KEY != '' }}
         env:
           JULES_API_KEY: ${{ env.JULES_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

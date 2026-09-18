@@ -17,7 +17,7 @@ jobs:
   classify:
     name: Classify PR Risk
     runs-on: ubuntu-latest
-    if: ${{ vars.JULES_FLEET_ENABLED != 'false' }}
+    if: ${{ vars.JULES_FLEET_ENABLED == 'true' }}
 
     steps:
       - name: Checkout Repository (Trusted Main)

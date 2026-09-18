@@ -16,7 +16,7 @@ jobs:
   analyze:
     name: Fleet Analyze
     runs-on: ubuntu-latest
-    if: ${{ vars.JULES_FLEET_ENABLED != 'false' }}
+    if: ${{ vars.JULES_FLEET_ENABLED == 'true' }}
 
     steps:
       - name: Checkout Repository
@@ -42,6 +42,7 @@ jobs:
           bash scripts/ci/resolve_jules_api_key.sh
 
       - name: Ensure Maintenance Milestone Exists
+        if: ${{ env.JULES_API_KEY != '' }}
         id: milestone
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -50,6 +51,7 @@ jobs:
           npx --yes @google/jules-fleet@0.0.1-experimental.35 configure milestones --title "$MILESTONE_TITLE" --auth token || true
 
       - name: Execute Fleet Analyze
+        if: ${{ env.JULES_API_KEY != '' }}
         env:
           JULES_API_KEY: ${{ env.JULES_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
