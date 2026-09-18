@@ -16,6 +16,13 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 
+if [ "$MODE" = "pr" ]; then
+  MODE="range"
+  if [ -z "$BASE_REF" ]; then
+    BASE_REF="refs/remotes/origin/main"
+  fi
+fi
+
 cd "$REPO_ROOT"
 args=(--mode "$MODE" --report-dir "$REPO_ROOT/build/reports/security")
 if [ -n "$BASE_REF" ]; then args+=(--base-ref "$BASE_REF"); fi

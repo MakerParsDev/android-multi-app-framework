@@ -49,17 +49,15 @@ jobs:
           python-version: '3.13'
 
       - name: Run security gate
-        run: bash scripts/ci/security_gate.sh --mode history
-
-      - name: Secret scan PR range
-        if: github.event_name == 'pull_request'
         env:
           BASE_REF: ${{ github.base_ref }}
         run: |
-          git fetch origin "$BASE_REF" --depth=1 || true
-          bash scripts/ci/run_secret_scan.sh \
-            --mode range \
-            --base-ref "refs/remotes/origin/$BASE_REF"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch origin "$BASE_REF" --depth=1 || true
+            bash scripts/ci/security_gate.sh --mode pr --base-ref "refs/remotes/origin/$BASE_REF"
+          else
+            bash scripts/ci/security_gate.sh --mode history
+          fi
 
       - name: Validate secret scan policy
         run: python3 scripts/ci/validate_secret_scan_policy.py
