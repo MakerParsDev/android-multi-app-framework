@@ -16,6 +16,7 @@ from classify_pr import (
     fetch_pr_provenance,
     is_verified_fleet_pr,
     update_pr_labels,
+    main,
 )
 
 
@@ -121,6 +122,32 @@ class TestClassifyPR(unittest.TestCase):
             },
         }
         self.assertFalse(is_verified_fleet_pr("owner/repo", no_fleet_issue))
+
+    @patch("classify_pr.update_pr_labels")
+    @patch("classify_pr.fetch_all_pr_files")
+    @patch("classify_pr.is_verified_fleet_pr")
+    @patch("classify_pr.fetch_pr_provenance")
+    def test_main_non_fleet_exits_before_file_classification_or_label_writes(
+        self,
+        mock_provenance: MagicMock,
+        mock_verified: MagicMock,
+        mock_files: MagicMock,
+        mock_update: MagicMock,
+    ):
+        mock_provenance.return_value = {"headRefName": "feature/human"}
+        mock_verified.return_value = False
+        with patch.dict(
+            os.environ,
+            {
+                "GITHUB_REPOSITORY": "owner/repo",
+                "PR_NUMBER": "123",
+                "GITHUB_TOKEN": "token",
+            },
+            clear=True,
+        ):
+            self.assertEqual(main(), 0)
+        mock_files.assert_not_called()
+        mock_update.assert_not_called()
 
     @patch("classify_pr._make_request")
     def test_low_risk_non_fleet_removes_fleet_ready(self, mock_req: MagicMock):

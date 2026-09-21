@@ -93,7 +93,7 @@ class TestJulesFleetWorkflowsContract(unittest.TestCase):
         classify_job_perms = classify_parsed["jobs"]["classify"].get("permissions")
         self.assertEqual(
             classify_job_perms,
-            {"contents": "read", "issues": "write", "pull-requests": "read"},
+            {"contents": "read", "issues": "read", "pull-requests": "write"},
         )
 
         # Merge audit is permanently read-only; Mergify is the sole merge authority.
@@ -148,13 +148,14 @@ class TestJulesFleetWorkflowsContract(unittest.TestCase):
             # Must require github.ref == 'refs/heads/main'
             self.assertIn("github.ref == 'refs/heads/main'", content)
 
-        # Classifier requires both fail-closed switches and Jules provenance shape.
+        # Classifier runs only when both switches are enabled and the PR targets main.
+        # Jules provenance is verified inside trusted base-branch Python before any label write.
         content, _ = self._load_workflow("fleet-classify.yml")
         self.assertIn("vars.AUTONOMOUS_MAINTENANCE_ENABLED == 'true'", content)
         self.assertIn("vars.JULES_FLEET_ENABLED == 'true'", content)
-        self.assertIn("github.event.pull_request.head.repo.full_name == github.repository", content)
-        self.assertIn("jules.google.com/task/", content)
-        self.assertNotIn("startsWith(github.head_ref, 'jules/')", content)
+        self.assertIn("github.base_ref == 'main'", content)
+        self.assertNotIn("github.event.pull_request.head.repo.full_name", content)
+        self.assertNotIn("startsWith(github.head_ref", content)
         self.assertNotIn("!= 'false'", content)
 
     def test_manual_analyze_supports_single_goal_canary(self):

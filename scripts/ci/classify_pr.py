@@ -241,24 +241,31 @@ def main() -> int:
         )
         return 1
 
-    changed_files = fetch_all_pr_files(args.repo, args.pr_number, args.token)
-    print(f"Retrieved {len(changed_files)} changed file(s) for PR #{args.pr_number}")
-
     provenance = fetch_pr_provenance(args.repo, args.pr_number, args.token)
     fleet_verified = is_verified_fleet_pr(args.repo, provenance)
     print(f"Verified Jules Fleet provenance: {fleet_verified}")
+    write_github_output("FLEET_VERIFIED", str(fleet_verified).lower())
+
+    if not fleet_verified:
+        print(
+            "PR is not a verified Jules Fleet worker PR; "
+            "no Fleet/risk labels will be mutated."
+        )
+        return 0
+
+    changed_files = fetch_all_pr_files(args.repo, args.pr_number, args.token)
+    print(f"Retrieved {len(changed_files)} changed file(s) for PR #{args.pr_number}")
 
     risk = classify_changed_files(changed_files)
     print(f"Evaluated risk classification: {risk}")
     write_github_output("RISK_LEVEL", risk)
-    write_github_output("FLEET_VERIFIED", str(fleet_verified).lower())
 
     update_pr_labels(
         args.repo,
         args.pr_number,
         args.token,
         risk,
-        fleet_verified=fleet_verified,
+        fleet_verified=True,
     )
     return 0
 
