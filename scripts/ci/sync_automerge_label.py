@@ -2,10 +2,15 @@
 """
 Sync Auto-Merge Authorization Label.
 
-Reads AUTONOMOUS_MERGE_ENABLED repository variable and applies/removes
-the 'automerge:enabled' label on all open PRs accordingly.
+Reads AUTONOMOUS_MERGE_ENABLED repository variable and synchronizes the
+'automerge:enabled' label only for explicitly authorized PR classes.
 
-Fail-closed: if variable is missing, not 'true', or API fails, label is NOT applied.
+Eligible positive-authorization classes are Dependabot PRs and Jules Fleet PRs
+already marked fleet-merge-ready + risk:low. Explicit hold/disable labels and
+drafts fail closed. Mergify remains the final package/path/check policy engine.
+
+Fail-closed: if the variable is missing, not 'true', the PR is not an eligible
+class, or API access fails, positive authorization is not granted.
 """
 
 from __future__ import annotations
@@ -106,6 +111,39 @@ def remove_label_from_pr(repo: str, pr_number: int, token: str, label: str) -> N
         )
 
 
+def _label_names(pr: dict[str, Any]) -> set[str]:
+    return {
+        str(label.get("name"))
+        for label in pr.get("labels", [])
+        if isinstance(label, dict) and label.get("name")
+    }
+
+
+def is_positive_authorization_candidate(pr: dict[str, Any]) -> bool:
+    """Return True only for PR classes allowed to receive automerge:enabled.
+
+    Mergify still enforces the final dependency-type/package/path/check policy.
+    This controller deliberately avoids placing a positive authorization label
+    on unrelated human PRs or PRs carrying an explicit hold/disable signal.
+    """
+    labels = _label_names(pr)
+    if labels.intersection({"automerge:disabled", "hold", "do-not-merge"}):
+        return False
+    if bool(pr.get("draft")):
+        return False
+
+    user = pr.get("user") if isinstance(pr.get("user"), dict) else {}
+    login = str(user.get("login") or "")
+    if login in {"dependabot[bot]", "app/dependabot"}:
+        return True
+
+    return (
+        "fleet-merge-ready" in labels
+        and "risk:low" in labels
+        and "fleet-review-required" not in labels
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Sync automerge:enabled label based on AUTONOMOUS_MERGE_ENABLED variable"
@@ -141,10 +179,11 @@ def main() -> int:
         failures: list[tuple[int, str]] = []
         for pr in open_prs:
             pr_number = pr["number"]
-            existing_labels = {label["name"] for label in pr.get("labels", [])}
+            existing_labels = _label_names(pr)
+            candidate = enabled and is_positive_authorization_candidate(pr)
 
             try:
-                if enabled:
+                if candidate:
                     if "automerge:enabled" not in existing_labels:
                         ensure_label_on_pr(
                             args.repo, pr_number, args.token, "automerge:enabled"
@@ -152,14 +191,22 @@ def main() -> int:
                     else:
                         print(f"PR #{pr_number} already has automerge:enabled")
                 else:
-                    # Fail-closed disable pass: attempt EVERY PR even after failures.
+                    # Fail-closed removal pass: disabled globally OR not in an
+                    # explicitly authorized PR class. Attempt every PR even after
+                    # individual API failures so stale positive labels are cleared.
                     if "automerge:enabled" in existing_labels:
                         remove_label_from_pr(
                             args.repo, pr_number, args.token, "automerge:enabled"
                         )
                     else:
+                        reason = (
+                            "global auto-merge disabled"
+                            if not enabled
+                            else "PR is not an authorized auto-merge candidate"
+                        )
                         print(
-                            f"PR #{pr_number} does not have automerge:enabled (already removed)"
+                            f"PR #{pr_number} does not have automerge:enabled "
+                            f"({reason})"
                         )
             except RuntimeError as err:
                 failures.append((pr_number, str(err)))
