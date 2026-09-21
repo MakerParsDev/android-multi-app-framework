@@ -119,8 +119,30 @@ Once activated, repository rulesets on `main` will enforce:
 **Do NOT enable GitHub native merge queue.** Mergify queue remains the only queue.
 
 ---
+## 7. Security Scanning Architecture
 
-## 7. SonarQube Cloud Integration
+The `security.yml` workflow runs four security checks:
+
+| Check | Job Name | Type | Required for Merge |
+|-------|----------|------|-------------------|
+| Secret Scan | `secret-scan` | Hard (Gitleaks full history + SARIF) | Yes |
+| Workflow Audit | `workflow-audit` | Hard (validate_security_pipeline.py + validate_android_toolchain_config.py) | Yes |
+| Dependency Review | `dependency-review` | Hard (GitHub native action, fail-on-severity: high) | Yes |
+| Semgrep SAST | `semgrep` | **Advisory** (`continue-on-error: true`) | No |
+
+**Decision: actionlint is advisory.**
+- The `workflow-audit` job runs `actionlint` with `continue-on-error: true`, so it cannot block the Workflow Audit check.
+- The `workflow-audit` hard gate is based solely on its deterministic hard validators: `validate_security_pipeline.py` and `validate_android_toolchain_config.py`.
+- Semgrep SAST also runs with `continue-on-error: true` and is advisory.
+- This decision is intentional: actionlint and Semgrep may produce false positives on legitimate patterns; they provide visibility via SARIF upload but do not block merges.
+
+**Hard security checks required for merge (in Mergify + Ruleset):**
+- `Secret Scan`
+- `Workflow Audit`
+- `Dependency Review`
+
+---
+## 8. SonarQube Cloud Integration
 
 - **Model:** GitHub App Automatic Analysis / Clean-as-You-Code.
 - **Status:** Hard Quality Gate required for merge eligibility.
@@ -128,7 +150,7 @@ Once activated, repository rulesets on `main` will enforce:
 
 ---
 
-## 8. Codecov Integration
+## 9. Codecov Integration
 
 - **Engine:** `codecov/codecov-action` pinned to full commit SHA (`0fb7174895f61a3b6b78fc075e0cd60383518dac`, v5.5.5).
 - **Authentication:** OIDC tokenless upload (`use_oidc: true` with `id-token: write` permission). No `CODECOV_TOKEN` secret required for public repositories.
@@ -137,8 +159,7 @@ Once activated, repository rulesets on `main` will enforce:
 - **Bootstrap:** If OIDC fails (e.g., private repo), create `CODECOV_TOKEN` secret manually in GitHub repo settings.
 
 ---
-
-## 9. CodeQL & Kotlin Compatibility Ceiling
+## 10. CodeQL & Kotlin Compatibility Ceiling
 
 - **Ceiling Policy:** Recorded in `config/codeql-compatibility-policy.json`.
 - **Enforcement:** `scripts/ci/codeql_kotlin_compatibility_test.py` validates that `gradle/libs.versions.toml` Kotlin compiler stays below the CodeQL ceiling (currently `< 2.4.10` for CodeQL bundle 2.26.1).
@@ -155,7 +176,7 @@ Once activated, repository rulesets on `main` will enforce:
 
 ---
 
-## 11. Circuit Breakers & Kill Switches
+## 12. Circuit Breakers & Kill Switches
 
 1. **Global Maintenance Kill Switch:**
    - Variable `AUTONOMOUS_MAINTENANCE_ENABLED=false` disables automated Fleet issue/PR creation.
@@ -166,7 +187,7 @@ Once activated, repository rulesets on `main` will enforce:
 
 ---
 
-## 12. Maintenance Health Controller & Dashboard
+## 13. Maintenance Health Controller & Dashboard
 
 - **Workflow:** `.github/workflows/maintenance-health.yml` runs daily at 06:00 UTC.
 - **Script:** `scripts/ci/maintenance_health_controller.py`.
@@ -174,7 +195,7 @@ Once activated, repository rulesets on `main` will enforce:
 
 ---
 
-## 13. How to Safely Disable Automation
+## 14. How to Safely Disable Automation
 
 To completely suspend all autonomous actions:
 ```bash
@@ -190,11 +211,11 @@ gh variable set AUTONOMOUS_MERGE_ENABLED --body "true"
 ```
 
 ---
-## 14. GitHub Ruleset Bootstrap Procedure
+## 16. GitHub Ruleset Bootstrap Procedure
 
 The GitHub ruleset is **not yet active** (BOOTSTRAP_PENDING). After this PR merges, an administrator with repo admin permissions must apply the ruleset.
 
-### 14.1 Post-Merge Bootstrap Command
+### 15.1 Post-Merge Bootstrap Command
 
 ```bash
 # Apply the ruleset (requires admin:repo_hook permission)
@@ -202,7 +223,7 @@ gh api --method POST repos/MakerParsDev/android-multi-app-framework/rulesets \
   --input scripts/ci/github-ruleset-payload.json
 ```
 
-### 14.2 Ruleset Payload (scripts/ci/github-ruleset-payload.json)
+### 15.2 Ruleset Payload (scripts/ci/github-ruleset-payload.json)
 
 ```json
 {
@@ -212,7 +233,7 @@ gh api --method POST repos/MakerParsDev/android-multi-app-framework/rulesets \
   "conditions": {
     "ref_name": {
       "exclude": [],
-      "include": ["~main"]
+      "include": ["~DEFAULT_BRANCH"]
     }
   },
   "rules": [
@@ -237,7 +258,7 @@ gh api --method POST repos/MakerParsDev/android-multi-app-framework/rulesets \
 }
 ```
 
-### 14.3 Required Variables (Set After Ruleset Applied)
+### 15.3 Required Variables (Set After Ruleset Applied)
 
 After successful ruleset activation, set these variables in order:
 
@@ -256,16 +277,16 @@ gh variable set JULES_FLEET_ENABLED --body "true"
 #    Mergify is the SOLE merge authority
 ```
 
-### 14.4 Variables That Must Remain Disabled
+### 15.4 Variables That Must Remain Disabled
 
 | Variable / Setting | Value | Reason |
 |----------|-------|--------|
 | `JULES_FLEET_AUTO_MERGE_ENABLED` | `false` | Jules Fleet must NEVER auto-merge; Mergify is sole authority |
 | GitHub native merge queue | Disabled | Prevents dual-queue race conditions |
 | GitHub `allow_auto_merge` | `false` | Mergify is sole merge authority; GitHub native auto-merge is a separate mechanism that would create race conditions |
-
 ---
-## 15. Auto-Merge Control Plane
+
+## 17. Auto-Merge Control Plane
 
 The `automerge-control.yml` workflow runs hourly on `main` and manages the `automerge:enabled` label on all open PRs based on the `AUTONOMOUS_MERGE_ENABLED` repository variable.
 

@@ -46,11 +46,13 @@ merge_protections_settings:
         # Class A: Dependabot patch/minor updates (excluding sensitive toolchain)
         # Positive authorization: requires global automerge:enabled label
         # Sensitive denylist applies to ALL dependency types (dev and production)
+        # Protected files (control plane) are NEVER auto-merged
         - and:
             - author = dependabot[bot]
             - dependabot-update-type != version-update:semver-major
             - label = automerge:enabled
             - -dependabot-dependency-name ~= ^(com\.android|org\.jetbrains\.kotlin|com\.google\.devtools\.ksp|com\.google\.dagger|androidx\.room|com\.google\.gms|com\.google\.firebase|com\.github\.triplet\.play|com\.android\.billingclient)
+            - -files ~= ^(\.github/|config/|\.gitleaks\.toml|gradle/wrapper/|buildSrc/|docs/AUTONOMOUS_MAINTENANCE\.md|\.mergify\.yml|codecov\.yml|\.fleet/|\.agents/|\.claude/|\.codex/|scripts/ci/autonomous_maintenance_test\.py|scripts/ci/maintenance_health_controller\.py|scripts/ci/fleet_pr_risk\.py|scripts/ci/classify_pr\.py)
             - or:
                 - dependabot-dependency-type = development
                 - and:
@@ -59,6 +61,7 @@ merge_protections_settings:
             - -label = automerge:disabled
         # Class A: Jules Fleet low-risk PRs
         # Positive authorization: requires global automerge:enabled label
+        # Protected files (control plane) are NEVER auto-merged
         - and:
             - label = fleet-merge-ready
             - label = risk:low

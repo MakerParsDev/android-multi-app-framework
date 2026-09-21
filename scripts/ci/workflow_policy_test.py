@@ -192,9 +192,18 @@ def test_performance_contract_inherits_read_only_permissions_without_secrets() -
     assert workflow["permissions"] == {"contents": "read"}
     for job_name in ("kover-coverage", "static-analysis", "validate-and-test"):
         job = workflow["jobs"][job_name]
-        assert "permissions" not in job, (
-            f"{job_name} should not have job-level permissions"
-        )
+        if job_name == "kover-coverage":
+            # kover-coverage needs id-token: write for Codecov OIDC upload
+            assert job.get("permissions") == {
+                "contents": "read",
+                "id-token": "write",
+            }, (
+                f"kover-coverage should have permissions with id-token: write for Codecov OIDC"
+            )
+        else:
+            assert "permissions" not in job, (
+                f"{job_name} should not have job-level permissions"
+            )
         assert "secrets" not in job, f"{job_name} should not have secrets"
         assert "environment" not in job, f"{job_name} should not have environment"
 

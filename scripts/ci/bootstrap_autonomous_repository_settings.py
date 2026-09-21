@@ -113,7 +113,8 @@ def plan_changes(current: dict[str, Any], labels: dict[str, bool]) -> list[str]:
     # Ruleset
     rulesets = current.get("rulesets", [])
     has_main_ruleset = any(
-        rs.get("conditions", {}).get("ref_name", {}).get("include", []) == ["~main"]
+        rs.get("conditions", {}).get("ref_name", {}).get("include", [])
+        == ["~DEFAULT_BRANCH"]
         for rs in rulesets
     )
     if not has_main_ruleset:

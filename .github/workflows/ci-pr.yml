@@ -3,22 +3,6 @@ name: CI PR Quality Gate
 on:
   pull_request:
     branches: [main]
-    paths:
-      - 'app/**'
-      - 'core/**'
-      - 'feature/**'
-      - 'buildSrc/**'
-      - 'gradle/**'
-      - 'build.gradle.kts'
-      - 'settings.gradle.kts'
-      - 'gradle.properties'
-      - 'config/**'
-      - 'side-projects/**'
-      - '.gitleaks.toml'
-      - '.gitleaksignore'
-      - 'app-versions.properties'
-      - 'scripts/**'
-      - '.github/workflows/ci-pr.yml'
 
 concurrency:
   group: ci-pr-${{ github.head_ref || github.ref }}
@@ -348,6 +332,9 @@ jobs:
     timeout-minutes: 35
     needs: analyze-impact
     if: needs.analyze-impact.outputs.has_code == 'true'
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -408,8 +395,6 @@ jobs:
           files: build/reports/kover/xml/coverage.xml
           use_oidc: true
           fail_ci_if_error: false
-        permissions:
-          id-token: write
 
   repository-security:
     name: Repository Security
