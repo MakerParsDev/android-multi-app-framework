@@ -184,8 +184,9 @@ The `security.yml` workflow runs four security checks:
    - Jules Fleet analyze/dispatch/classify/merge jobs require this switch **and** `JULES_FLEET_ENABLED=true`.
    - Maintenance health evaluation remains read-only when disabled; dashboard issue synchronization is gated by this switch.
 2. **Global Auto-Merge Authorization:**
-   - Missing or `AUTONOMOUS_MERGE_ENABLED=false` means the trusted label controller must remove `automerge:enabled` from every open PR.
-   - Mergify does **not** read the repository variable directly; the variable becomes effective after the Auto-Merge Control workflow synchronizes labels.
+   - Missing or `AUTONOMOUS_MERGE_ENABLED=false` means the trusted label controller removes `automerge:enabled` from every open PR.
+   - When enabled, the controller grants `automerge:enabled` only to explicit candidate classes: Dependabot PRs or Fleet PRs already carrying `fleet-merge-ready` + `risk:low`; drafts and PRs with `automerge:disabled`, `hold`, or `do-not-merge` remain unauthorized.
+   - Mergify does **not** read the repository variable directly; the variable becomes effective after the Auto-Merge Control workflow synchronizes labels and Mergify then enforces dependency, protected-path, and required-check policy.
 3. **Per-PR Circuit Breaker Label:**
    - Adding `automerge:disabled`, `hold`, or `do-not-merge` immediately disqualifies the PR from autonomous merge.
 

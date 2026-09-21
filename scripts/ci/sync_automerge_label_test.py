@@ -15,11 +15,67 @@ from sync_automerge_label import (
     get_open_prs,
     ensure_label_on_pr,
     remove_label_from_pr,
+    is_positive_authorization_candidate,
     main,
 )
 
 
 class TestSyncAutoMergeLabel(unittest.TestCase):
+    def test_positive_authorization_candidate_policy(self):
+        self.assertTrue(
+            is_positive_authorization_candidate(
+                {
+                    "user": {"login": "dependabot[bot]"},
+                    "labels": [{"name": "dependencies"}],
+                    "draft": False,
+                }
+            )
+        )
+        self.assertTrue(
+            is_positive_authorization_candidate(
+                {
+                    "user": {"login": "human"},
+                    "labels": [
+                        {"name": "fleet-merge-ready"},
+                        {"name": "risk:low"},
+                    ],
+                    "draft": False,
+                }
+            )
+        )
+        for pr in (
+            {
+                "user": {"login": "human"},
+                "labels": [{"name": "risk:low"}],
+                "draft": False,
+            },
+            {
+                "user": {"login": "dependabot[bot]"},
+                "labels": [{"name": "automerge:disabled"}],
+                "draft": False,
+            },
+            {
+                "user": {"login": "human"},
+                "labels": [
+                    {"name": "fleet-merge-ready"},
+                    {"name": "risk:low"},
+                    {"name": "fleet-review-required"},
+                ],
+                "draft": False,
+            },
+            {
+                "user": {"login": "dependabot[bot]"},
+                "labels": [{"name": "dependencies"}],
+                "draft": True,
+            },
+            {
+                "user": {"login": "dependabot[bot]"},
+                "labels": [{"name": "hold"}],
+                "draft": False,
+            },
+        ):
+            self.assertFalse(is_positive_authorization_candidate(pr))
+
     @patch("sync_automerge_label._make_request")
     def test_get_open_prs_pagination(self, mock_req: MagicMock):
         page1 = [{"number": i, "labels": []} for i in range(1, 101)]
@@ -72,12 +128,33 @@ class TestSyncAutoMergeLabel(unittest.TestCase):
 
     @patch("sync_automerge_label.get_open_prs")
     @patch("sync_automerge_label.ensure_label_on_pr")
-    def test_main_enabled_adds_label(self, mock_ensure: MagicMock, mock_get: MagicMock):
+    def test_main_enabled_adds_label_only_to_candidates(
+        self, mock_ensure: MagicMock, mock_get: MagicMock
+    ):
         mock_get.return_value = [
-            {"number": 1, "labels": [{"name": "other"}]},
-            {"number": 2, "labels": [{"name": "automerge:enabled"}]},
+            {
+                "number": 1,
+                "user": {"login": "dependabot[bot]"},
+                "labels": [{"name": "dependencies"}],
+                "draft": False,
+            },
+            {
+                "number": 2,
+                "user": {"login": "human"},
+                "labels": [{"name": "other"}],
+                "draft": False,
+            },
+            {
+                "number": 3,
+                "user": {"login": "human"},
+                "labels": [
+                    {"name": "fleet-merge-ready"},
+                    {"name": "risk:low"},
+                    {"name": "automerge:enabled"},
+                ],
+                "draft": False,
+            },
         ]
-        # Mock sys.argv and env
         with patch.dict(
             os.environ,
             {
@@ -88,9 +165,45 @@ class TestSyncAutoMergeLabel(unittest.TestCase):
         ):
             result = main()
         self.assertEqual(result, 0)
-        # Should add label to PR 1 (doesn't have it), not PR 2 (already has it)
         self.assertEqual(mock_ensure.call_count, 1)
         mock_ensure.assert_called_with("owner/repo", 1, "token", "automerge:enabled")
+
+    @patch("sync_automerge_label.get_open_prs")
+    @patch("sync_automerge_label.remove_label_from_pr")
+    def test_main_enabled_removes_stale_authorization_from_ineligible_prs(
+        self, mock_remove: MagicMock, mock_get: MagicMock
+    ):
+        mock_get.return_value = [
+            {
+                "number": 11,
+                "user": {"login": "human"},
+                "labels": [{"name": "automerge:enabled"}],
+                "draft": False,
+            },
+            {
+                "number": 12,
+                "user": {"login": "dependabot[bot]"},
+                "labels": [
+                    {"name": "automerge:enabled"},
+                    {"name": "automerge:disabled"},
+                ],
+                "draft": False,
+            },
+        ]
+        with patch.dict(
+            os.environ,
+            {
+                "GITHUB_REPOSITORY": "owner/repo",
+                "GITHUB_TOKEN": "token",
+                "AUTONOMOUS_MERGE_ENABLED": "true",
+            },
+            clear=True,
+        ):
+            result = main()
+        self.assertEqual(result, 0)
+        self.assertEqual(mock_remove.call_count, 2)
+        mock_remove.assert_any_call("owner/repo", 11, "token", "automerge:enabled")
+        mock_remove.assert_any_call("owner/repo", 12, "token", "automerge:enabled")
 
     @patch("sync_automerge_label.get_open_prs")
     @patch("sync_automerge_label.remove_label_from_pr")
