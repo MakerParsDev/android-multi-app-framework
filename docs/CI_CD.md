@@ -75,3 +75,7 @@ bash scripts/ci/security_gate.sh --mode history --self-test
 ```
 
 Operational ownership and incident response are documented in `docs/SECRET_OWNERSHIP_AND_ROTATION.md`.
+
+## Autonomous maintenance & Mergify merge engine
+
+As of 2026-09-21, **Mergify** is the sole authoritative merge engine for this repository. Mergify Merge Protections enforce that all required status checks (`CI Required`, `Repository Security`, `Security Gate`, `SonarCloud Code Analysis`) pass before pull requests enter the merge queue. Automated merging is restricted to Class A low-risk updates (Dependabot dev patch/minor updates and Jules Fleet low-risk remediations). Semver-major updates, toolchain jumps, and changes to protected infrastructure require manual approval. Continuous monitoring is provided by `.github/workflows/maintenance-health.yml` and documented in [`docs/AUTONOMOUS_MAINTENANCE.md`](file:///C:/Users/Admin/Desktop/MOBILE_REPOS/android-multi-app-framework/docs/AUTONOMOUS_MAINTENANCE.md).

@@ -1,0 +1,55 @@
+# Mergify configuration for MakerParsDev/android-multi-app-framework
+# Mergify is the sole authoritative merge engine for this repository.
+# Manual/high-risk, major dependencies, and protected paths are never auto-merged.
+
+queue_rules:
+  - name: default
+    merge_method: squash
+    batch_size: 1
+    queue_conditions:
+      - base = main
+      - -draft
+      - -closed
+      - -label = do-not-merge
+      - -label = hold
+      - -label = automerge:disabled
+    merge_conditions:
+      - check-success = CI Required
+      - check-success = Repository Security
+      - check-success = Security Gate
+      - check-success = SonarCloud Code Analysis
+
+merge_protections:
+  - name: main-branch-protection
+    if:
+      - base = main
+    success_conditions:
+      - check-success = CI Required
+      - check-success = Repository Security
+      - check-success = Security Gate
+      - check-success = SonarCloud Code Analysis
+      - -draft
+      - -closed
+      - -label = do-not-merge
+      - -label = hold
+
+merge_protections_settings:
+  auto_merge_conditions:
+    - or:
+        # Class A: Dependabot dev patch or minor updates (excluding sensitive toolchain)
+        - and:
+            - author = dependabot[bot]
+            - dependabot-update-type != version-update:semver-major
+            - or:
+                - dependabot-dependency-type = development
+                - and:
+                    - dependabot-update-type = version-update:semver-patch
+                    - -dependabot-dependency-name ~= ^(com\.android|org\.jetbrains\.kotlin|com\.google\.devtools\.ksp|com\.google\.dagger|androidx\.room|com\.google\.gms|com\.google\.firebase|com\.github\.triplet\.play|com\.android\.billingclient)
+            - -label = automerge:disabled
+        # Class A: Jules Fleet low-risk PRs
+        - and:
+            - label = fleet-merge-ready
+            - label = risk:low
+            - -label = fleet-review-required
+            - -label = automerge:disabled
+            - -files ~= ^(\.github/|config/|\.gitleaks\.toml|gradle/wrapper/|buildSrc/|docs/AUTONOMOUS_MAINTENANCE\.md|\.mergify\.yml)

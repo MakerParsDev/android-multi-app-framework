@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "codeql_bundle_version": "2.26.1",
+  "kotlin": {
+    "current_configured_version": "2.4.0",
+    "supported_max_exclusive": "2.4.10",
+    "owner": "platform-engineering/ci",
+    "checked_on": "2026-09-21",
+    "next_review_on": "2026-10-21",
+    "reference": "https://docs.github.com/en/code-security/code-scanning/creating-an-advanced-setup-for-code-scanning/supported-languages-and-frameworks#kotlin",
+    "rationale": "CodeQL bundle 2.26.1 rejects Kotlin versions >= 2.4.10 with KotlinVersionTooRecentError; toolchain must stay below 2.4.10 until GitHub runner CodeQL bundle is updated."
+  }
+}

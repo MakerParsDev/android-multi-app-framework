@@ -51,40 +51,31 @@ Quality runs also execute Gradle with `--warning-mode all` and preserve the comp
 
 `validate_gradle_warning_report.py` blocks any new Gradle deprecation, D8 warning, or ASM unresolved-class warning that does not match an owned, unexpired policy entry. Android Lint HTML/SARIF reports remain the blocking deprecated/obsolete API control. The warning ratchet supplements lint with Gradle, D8, ASM, and plugin lifecycle diagnostics.
 
-## Azure update strategy
+## Dependency update strategy
 
-The repository uses Azure Pipelines as the active CI system. GitHub dependency workflows remain disabled.
+The repository uses **GitHub Actions** and **Dependabot** for automated dependency tracking across all monorepo ecosystems (Gradle, GitHub Actions, pip, and npm side projects):
 
-`azure-pipelines/dependency-audit.yml` is a report-only weekly pipeline:
-
-- runs every Monday at `03:00 UTC`;
-- validates the stable catalog policy;
-- resolves the representative `amenerrasuluDebugRuntimeClasspath` graph;
-- assembles `namazsurelerivedualarsesliDebug` so D8 and ASM instrumentation warnings are exercised;
-- emits all Gradle warnings;
-- publishes `dependency-audit-reports`.
-
-The YAML file must be registered once as an Azure Pipeline. Repository YAML schedules are the source of truth after registration; UI schedules must not override them.
-
-The weekly pipeline does not modify the catalog or open pull requests. Upgrade changes remain explicit, reviewable pull requests.
+- Dependabot runs weekly on Sundays (`schedule: interval: weekly`);
+- Patch and minor updates are grouped to reduce noise;
+- High-risk dependencies (Gradle, Kotlin, AGP, KSP, Hilt, Room, Firebase plugins, Play Billing) are isolated and never grouped;
+- **Mergify** governs all dependency pull request queues. Only Class A low-risk dev patch/minor updates are eligible for auto-merging after passing all required quality and security gates;
+- Major updates and sensitive toolchains require explicit human review and approval;
+- Continuous monitoring and drift detection are managed by `.github/workflows/maintenance-health.yml`.
 
 ## Upgrade pull-request gate
 
-Every normal Azure CI run executes the full `qualityCheck`, including:
+Every CI run executes the required verification gates:
 
 - `validateFlavorVersions`;
-- 17 application flavor lint tasks;
-- 17 application flavor unit-test tasks;
-- 20 Android library lint tasks;
-- 20 Android library unit-test tasks;
-- ktlint and Detekt;
-- aggregate Kover reports and verification;
-- critical runtime coverage thresholds;
-- dependency catalog audit.
+- affected application and Android library tasks;
+- ktlint and Detekt static analysis;
+- aggregate Kover reports and critical coverage verification;
+- dependency catalog audit (`auditDependencyCatalog`);
+- CodeQL Java and Kotlin analysis;
+- SonarCloud quality gate;
+- Security gate (Gitleaks, Semgrep SAST/OSS, Dependency Review).
 
-After the quality gate, the representative `namazsurelerivedualarsesliDebug` APK is assembled to exercise D8 and ASM instrumentation. Then `scripts/ci/release_task_graph_dry_run.sh` constructs all 17 release bundle task graphs and executes a Gradle dry-run. This verifies release variant/task wiring without signing or publishing.
-
-A dependency upgrade must not be merged unless all blocking checks pass. Independent approval requirements remain repository-governance policy and are not bypassed by this runbook.
+A dependency upgrade must not be merged unless all blocking checks pass. Autonomous merging is restricted strictly to qualified low-risk PRs as defined in `docs/AUTONOMOUS_MAINTENANCE.md`.
 
 ## Adding a new dependency
 

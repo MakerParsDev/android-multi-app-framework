@@ -37,6 +37,8 @@ PROTECTED_EXACT_FILES = {
     ".gitleaks.toml",
     ".gitleaksignore",
     ".pre-commit-config.yaml",
+    ".mergify.yml",
+    "codecov.yml",
 }
 
 LOW_RISK_PREFIXES = (
