@@ -173,14 +173,16 @@ The `security.yml` workflow runs four security checks:
 |---|---|---|
 | **Class A (Autonomous)** | Non-sensitive Dependabot development patch/minor, non-sensitive production patch, Jules Fleet `risk:low` outside protected paths | Auto-queued and merged by Mergify after all hard gates pass |
 | **Class B (Enhanced Guarded)** | Selected non-sensitive runtime/side-project production patches | Eligible only when the Mergify contract permits them and full CI/integration gates pass |
-| **Class C (Manual Approval Required)** | Any semver-major bump, GitHub Actions updates, Gradle/Kotlin/AGP/KSP toolchain, Auth/Crypto, Billing, DB migrations, `.github/**`, `.mergify.yml`, `scripts/ci/**` | Never auto-merged; human approval required |
+| **Class C (Manual Approval Required)** | Any semver-major bump, GitHub Actions updates, Gradle/Kotlin/AGP/KSP toolchain, root build control files (`build.gradle.kts`, `settings.gradle.kts`, `gradle.properties`, wrapper), Auth/Crypto, Billing, DB migrations, `.github/**`, `.mergify.yml`, `scripts/ci/**` | Never auto-merged; human approval required |
 
 ---
 
 ## 12. Circuit Breakers & Kill Switches
 
 1. **Global Maintenance Kill Switch:**
-   - Missing or `AUTONOMOUS_MAINTENANCE_ENABLED=false` is fail-closed for autonomous maintenance creation.
+   - Missing or any value other than `AUTONOMOUS_MAINTENANCE_ENABLED=true` is fail-closed for write-capable autonomous maintenance.
+   - Jules Fleet analyze/dispatch/classify/merge jobs require this switch **and** `JULES_FLEET_ENABLED=true`.
+   - Maintenance health evaluation remains read-only when disabled; dashboard issue synchronization is gated by this switch.
 2. **Global Auto-Merge Authorization:**
    - Missing or `AUTONOMOUS_MERGE_ENABLED=false` means the trusted label controller must remove `automerge:enabled` from every open PR.
    - Mergify does **not** read the repository variable directly; the variable becomes effective after the Auto-Merge Control workflow synchronizes labels.
@@ -205,7 +207,8 @@ Wait for the workflow to finish, then verify that no open pull request retains `
 
 - **Workflow:** `.github/workflows/maintenance-health.yml` runs daily at 06:00 UTC.
 - **Script:** `scripts/ci/maintenance_health_controller.py`.
-- **Dashboard Issue:** Automatically creates or updates the single consolidated issue: `"Autonomous Maintenance Dashboard"`. No issue spam.
+- **Read-only health check:** Always runs with `contents: read` so disabling maintenance does not disable observability.
+- **Dashboard Issue:** Creation/update of the single consolidated `"Autonomous Maintenance Dashboard"` issue occurs only when `AUTONOMOUS_MAINTENANCE_ENABLED=true`.
 
 ---
 

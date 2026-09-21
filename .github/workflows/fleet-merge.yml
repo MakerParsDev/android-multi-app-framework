@@ -19,6 +19,7 @@ jobs:
     timeout-minutes: 30
     if: >-
       github.ref == 'refs/heads/main' &&
+      vars.AUTONOMOUS_MAINTENANCE_ENABLED == 'true' &&
       vars.JULES_FLEET_ENABLED == 'true'
     permissions:
       contents: write

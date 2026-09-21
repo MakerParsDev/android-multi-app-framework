@@ -463,6 +463,10 @@ class AutonomousMaintenanceContractTest(unittest.TestCase):
         self.assertIn("scripts/ci/", protected)
         self.assertIn("\\.github/", protected)
         self.assertIn("\\.mergify\\.yml", protected)
+        self.assertIn("build\\.gradle\\.kts", protected)
+        self.assertIn("settings\\.gradle\\.kts", protected)
+        self.assertIn("gradle\\.properties", protected)
+        self.assertIn("gradle/wrapper/", protected)
 
         denylist = next(
             item for item in conditions if item.startswith("-dependabot-dependency-name")
