@@ -27,7 +27,7 @@ buildscript {
             // Force secure BouncyCastle, Guava, and other transitive build plugin deps
             force("org.bouncycastle:bcprov-jdk18on:1.84")
             force("org.bouncycastle:bcpkix-jdk18on:1.84")
-            force("com.google.guava:guava:33.6.0-jre")
+            force("com.google.guava:guava:33.7.1-jre")
             force("org.jdom:jdom2:2.0.6.1")
             force("org.bitbucket.b_c:jose4j:0.9.6")
             force("org.apache.commons:commons-lang3:3.18.0")
