@@ -27,7 +27,7 @@
     {
       "type": "required_status_checks",
       "parameters": {
-        "required_checks": [
+        "required_status_checks": [
           {
             "context": "CI Required"
           },
