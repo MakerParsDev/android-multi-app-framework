@@ -84,6 +84,12 @@ def supply_fixture(root: Path):
         "validateDistributionUrl=true\n",
         encoding="utf-8",
     )
+    (root / "settings.gradle.kts").write_text(
+        'buildscript { configurations.all { resolutionStrategy { '
+        'force("org.example:secure-lib:1.2.3")'
+        " } } }\n",
+        encoding="utf-8",
+    )
     return {
         "schema_version": 1,
         "gradle_wrapper": {
@@ -96,6 +102,13 @@ def supply_fixture(root: Path):
             "next_review_on": "2026-10-01",
             "reason": "Dependency verification remains deferred while artifact churn is measured under blocking catalog, wrapper, and scheduled audit controls.",
         },
+        "transitive_security_overrides": [
+            {
+                "coordinate": "org.example:secure-lib",
+                "version": "1.2.3",
+                "reason": "Fixture security override documents a reviewed transitive dependency floor.",
+            }
+        ],
     }
 
 
@@ -152,6 +165,35 @@ class SecurityGatePolicyTest(unittest.TestCase):
                     "JAR SHA-256" in error
                     for error in validate_supply(root, policy, date(2026, 7, 12))
                 )
+            )
+
+    def test_transitive_security_override_drift_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            policy = supply_fixture(root)
+            (root / "settings.gradle.kts").write_text(
+                'force("org.example:secure-lib:1.2.2")\n',
+                encoding="utf-8",
+            )
+            errors = validate_supply(root, policy, date(2026, 7, 12))
+            self.assertTrue(
+                any(
+                    "org.example:secure-lib must be forced to policy version 1.2.3"
+                    in error
+                    for error in errors
+                )
+            )
+
+    def test_transitive_security_override_duplicates_fail(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            policy = supply_fixture(root)
+            policy["transitive_security_overrides"].append(
+                dict(policy["transitive_security_overrides"][0])
+            )
+            errors = validate_supply(root, policy, date(2026, 7, 12))
+            self.assertTrue(
+                any("Duplicate transitive security override" in error for error in errors)
             )
 
     def test_expired_dependency_review_fails(self):
