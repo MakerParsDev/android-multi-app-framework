@@ -84,15 +84,15 @@ responsibility of the serial physical-device workflow. See
 
 ## Jules Fleet Maintenance Workflows
 
-The repository uses  for autonomous repository maintenance:
+The repository uses Jules Fleet (`@google/jules-fleet@0.0.1-experimental.35`) for autonomous repository maintenance:
 
 | Workflow | Trigger | Purpose | Risk Control |
 |---|---|---|---|
-|  | Scheduled (6h), manual | Analyzes  and creates issues | Read-only permissions, isolated  |
-|  | Scheduled (2h), manual | Dispatches Jules worker sessions for Fleet issues | No production secrets or  |
-|  | PR target events | Classifies PR changed files via LOW_RISK | Metadata-only, never executes PR code |
-|  | Scheduled (4h), manual | Merges  PRs when CI passes | Guarded by  variable |
+| `fleet-analyze.yml` | Scheduled (6h), manual (`workflow_dispatch`) | Analyzes goals in `.fleet/goals/` and creates issues | Trusted `main` only, fail-closed `JULES_FLEET_ENABLED == 'true'`, isolated `JULES_API_KEY` from Doppler, job-level write scopes |
+| `fleet-dispatch.yml` | Scheduled (2h), manual (`workflow_dispatch`) | Dispatches Jules worker sessions for Fleet issues | Trusted `main` only, fail-closed `JULES_FLEET_ENABLED == 'true'`, isolated `JULES_API_KEY`, no production secrets |
+| `fleet-classify.yml` | `pull_request` (`opened`, `synchronize`, `reopened`, `ready_for_review`) | Classifies PR changed files via `fleet_pr_risk.py` | Metadata-only, trusted base checkout, never executes PR code, no Doppler or Jules secrets |
+| `fleet-merge.yml` | Scheduled (4h), manual (`workflow_dispatch`) | Merges `fleet-merge-ready` PRs when CI passes | Trusted `main` only, fail-closed `JULES_FLEET_ENABLED == 'true'`, guarded by `JULES_FLEET_AUTO_MERGE_ENABLED == 'true'` (otherwise dry-run) |
 
 Control plane variables:
-- : Master switch (/).
-- : Auto-merge switch (/).
+- `JULES_FLEET_ENABLED`: Master switch (`true` / `false`, default fail-closed). Must be explicitly set to `true` to enable execution.
+- `JULES_FLEET_AUTO_MERGE_ENABLED`: Auto-merge switch (`true` / `false`, default fail-closed). Must be explicitly set to `true` to perform writes; otherwise performs safe dry-run.

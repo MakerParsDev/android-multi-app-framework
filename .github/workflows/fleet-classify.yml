@@ -1,13 +1,11 @@
 name: Jules Fleet PR Classifier
 
 on:
-  pull_request_target:
-    types: [opened, synchronize, reopened, labeled, unlabeled]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
   contents: read
-  pull-requests: write
-  issues: read
 
 concurrency:
   group: fleet-classify-${{ github.event.pull_request.number }}
@@ -17,12 +15,18 @@ jobs:
   classify:
     name: Classify PR Risk
     runs-on: ubuntu-latest
-    if: ${{ vars.JULES_FLEET_ENABLED != 'false' }}
+    timeout-minutes: 10
+    if: ${{ vars.JULES_FLEET_ENABLED == 'true' }}
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
 
     steps:
-      - name: Checkout Repository (Trusted Main)
+      - name: Checkout Repository (Trusted Base)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.base_ref }}
           persist-credentials: false
 
       - name: Setup Python
@@ -30,79 +34,10 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Fetch PR Changed Files Metadata
-        id: fetch-files
+      - name: Evaluate Risk and Synchronize Labels
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          python3 -c "
-          import os, json, urllib.request
-
-          pr_num = os.environ['PR_NUMBER']
-          token = os.environ['GITHUB_TOKEN']
-          repo = os.environ['GITHUB_REPOSITORY']
-
-          url = f'https://api.github.com/repos/{repo}/pulls/{pr_num}/files?per_page=100'
-          req = urllib.request.Request(url, headers={
-              'Authorization': f'token {token}',
-              'Accept': 'application/vnd.github.v3+json'
-          })
-
-          with urllib.request.urlopen(req) as response:
-              files_data = json.loads(response.read().decode())
-
-          changed_files = [f['filename'] for f in files_data]
-          with open('pr_changed_files.txt', 'w') as out:
-              for cf in changed_files:
-                  out.write(cf + '\n')
-          "
-
-      - name: Evaluate Risk Classification
-        id: eval-risk
-        run: |
-          RISK=$(python3 scripts/ci/fleet_pr_risk.py --files-file pr_changed_files.txt)
-          echo "RISK_LEVEL=$RISK" >> "$GITHUB_OUTPUT"
-          echo "Evaluated PR risk level: $RISK"
-
-      - name: Update Labels on PR
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          RISK: ${{ steps.eval-risk.outputs.RISK_LEVEL }}
-        run: |
-          python3 -c "
-          import os, json, urllib.request
-
-          pr_num = os.environ['PR_NUMBER']
-          token = os.environ['GITHUB_TOKEN']
-          repo = os.environ['GITHUB_REPOSITORY']
-          risk = os.environ['RISK']
-
-          # Label assignments
-          to_add = 'fleet-merge-ready' if risk == 'LOW_RISK' else 'fleet-review-required'
-          to_remove = 'fleet-review-required' if risk == 'LOW_RISK' else 'fleet-merge-ready'
-
-          # Add new label
-          url_add = f'https://api.github.com/repos/{repo}/issues/{pr_num}/labels'
-          req_add = urllib.request.Request(url_add, data=json.dumps({'labels': [to_add]}).encode(), headers={
-              'Authorization': f'token {token}',
-              'Content-Type': 'application/json',
-              'Accept': 'application/vnd.github.v3+json'
-          })
-          try:
-              urllib.request.urlopen(req_add)
-          except Exception as e:
-              print(f'Add label warning: {e}')
-
-          # Remove opposite label if present
-          url_del = f'https://api.github.com/repos/{repo}/issues/{pr_num}/labels/{to_remove}'
-          req_del = urllib.request.Request(url_del, method='DELETE', headers={
-              'Authorization': f'token {token}',
-              'Accept': 'application/vnd.github.v3+json'
-          })
-          try:
-              urllib.request.urlopen(req_del)
-          except Exception as e:
-              pass
-          "
+          python3 scripts/ci/classify_pr.py

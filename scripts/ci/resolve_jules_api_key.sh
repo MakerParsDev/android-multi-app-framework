@@ -15,16 +15,28 @@ if [ -z "${DOPPLER_TOKEN:-}" ]; then
   exit 1
 fi
 
-if ! command -v doppler &> /dev/null; then
+BIN_DIR="${RUNNER_TEMP:-/tmp}/doppler-bin"
+DOPPLER_BIN="${BIN_DIR}/doppler"
+
+if command -v doppler &> /dev/null; then
+  DOPPLER_CMD="doppler"
+elif [ -x "$DOPPLER_BIN" ]; then
+  DOPPLER_CMD="$DOPPLER_BIN"
+else
   echo "Doppler CLI not found. Installing..."
-  bash scripts/ci/install_doppler_cli.sh
+  bash scripts/ci/install_doppler_cli.sh "$BIN_DIR"
+  DOPPLER_CMD="$DOPPLER_BIN"
 fi
+export PATH="${BIN_DIR}:${PATH}"
 
 echo "Fetching JULES_API_KEY from Doppler (project: android-multi-app-framework, config: prod)..."
-KEY_VAL=$(doppler secrets get JULES_API_KEY --project android-multi-app-framework --config prod --plain 2>/dev/null || true)
+if ! KEY_VAL=$("$DOPPLER_CMD" secrets get JULES_API_KEY --project android-multi-app-framework --config prod --plain); then
+  echo "Error: Doppler CLI failed while retrieving JULES_API_KEY." >&2
+  exit 1
+fi
 
 if [ -z "${KEY_VAL}" ]; then
-  echo "Error: Failed to retrieve JULES_API_KEY from Doppler." >&2
+  echo "Error: Retrieved JULES_API_KEY is empty." >&2
   exit 1
 fi
 

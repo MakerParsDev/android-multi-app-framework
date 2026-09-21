@@ -18,3 +18,6 @@ tar -xzf "$tmp/$asset" -C "$tmp"
 install -m 0755 "$tmp/doppler" "$bin_dir/doppler"
 "$bin_dir/doppler" --version >&2
 printf 'DOPPLER_BIN=%q\n' "$bin_dir/doppler"
+if [[ -n "${GITHUB_PATH:-}" ]]; then
+  echo "$bin_dir" >> "$GITHUB_PATH"
+fi
