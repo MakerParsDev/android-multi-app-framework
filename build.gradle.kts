@@ -27,6 +27,12 @@ plugins {
 val cores = Runtime.getRuntime().availableProcessors()
 tasks.withType<Test>().configureEach {
     maxParallelForks = (cores / 3).coerceAtLeast(1)
+    jvmArgs(
+        "--add-opens=java.base/java.lang=ALL-UNNAMED",
+        "--add-opens=java.base/java.lang.reflect=ALL-UNNAMED",
+        "--add-opens=java.base/java.util=ALL-UNNAMED",
+        "--add-opens=java.base/java.io=ALL-UNNAMED",
+    )
 }
 
 val testsDisabledForBuild = providers.gradleProperty("disableTests").map(String::toBoolean).orElse(false)
