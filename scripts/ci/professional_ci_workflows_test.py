@@ -8,11 +8,11 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 UPLOAD_SHA = "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
 DEPENDENCY_REVIEW_SHA = "a1d282b36b6f3519aa1f3fc636f609c47dddb294"
-GRADLE_ACTIONS_SHA = "3f131e8634966bd73d06cc69884922b02e6faf92"
-CODEQL_SHA = "e0647621c2984b5ed2f768cb892365bf2a616ad1"
-ATTEST_SHA = "f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6"
+GRADLE_ACTIONS_SHA = "9c971963bec38e04b3d30dcc455b5382be2fdbfb"
+CODEQL_SHA = "1c5b675653bb5c22dbe9b12b556ec555138e09fd"
+ATTEST_SHA = "1e69f48acb82d1966a394da916b4c1698aa569d6"
 SETUP_NODE_SHA = "820762786026740c76f36085b0efc47a31fe5020"
-SETUP_PYTHON_SHA = "a26af69be951a213d495a4c3e4e4022e16d87065"
+SETUP_PYTHON_SHA = "e797f83bcb11b83ae66e0230d6156d7c80228e7c"
 
 
 def load(path: str) -> dict:
@@ -130,7 +130,7 @@ def test_codeql_uses_manual_kotlin_build_and_cleans_placeholder() -> None:
     workflow = load(".github/workflows/codeql.yml")
     job = workflow["jobs"]["analyze-java-kotlin"]
     assert job["permissions"] == {"contents": "read", "security-events": "write"}
-    assert "dependabot[bot]" in job["if"]
+    assert "if" not in job, "CodeQL required check must also run for Dependabot PRs"
     init = named_step(job, "Initialize CodeQL")
     assert init["uses"] == f"github/codeql-action/init@{CODEQL_SHA}"
     assert init["with"] == {

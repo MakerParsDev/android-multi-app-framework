@@ -1,6 +1,7 @@
 # Mergify configuration for MakerParsDev/android-multi-app-framework
 # Mergify is the sole authoritative merge engine for this repository.
 # Manual/high-risk, major dependencies, and protected paths are never auto-merged.
+# Positive authorization: PRs MUST have label 'automerge:enabled' to be eligible for auto-merge.
 
 queue_rules:
   - name: default
@@ -15,9 +16,12 @@ queue_rules:
       - -label = automerge:disabled
     merge_conditions:
       - check-success = CI Required
-      - check-success = Repository Security
-      - check-success = Security Gate
+      - check-success = Security Required
+      - check-success = Secret Scan
+      - check-success = Workflow Audit
+      - check-success = Dependency Review
       - check-success = SonarCloud Code Analysis
+      - check-success = Analyze Java and Kotlin
 
 merge_protections:
   - name: main-branch-protection
@@ -25,9 +29,12 @@ merge_protections:
       - base = main
     success_conditions:
       - check-success = CI Required
-      - check-success = Repository Security
-      - check-success = Security Gate
+      - check-success = Security Required
+      - check-success = Secret Scan
+      - check-success = Workflow Audit
+      - check-success = Dependency Review
       - check-success = SonarCloud Code Analysis
+      - check-success = Analyze Java and Kotlin
       - -draft
       - -closed
       - -label = do-not-merge
@@ -36,20 +43,29 @@ merge_protections:
 merge_protections_settings:
   auto_merge_conditions:
     - or:
-        # Class A: Dependabot dev patch or minor updates (excluding sensitive toolchain)
+        # Class A: Dependabot patch/minor updates (excluding sensitive toolchain)
+        # Positive authorization: requires global automerge:enabled label
+        # Sensitive denylist applies to ALL dependency types (dev and production)
+        # Protected files (control plane) are NEVER auto-merged
         - and:
             - author = dependabot[bot]
             - dependabot-update-type != version-update:semver-major
+            - label = automerge:enabled
+            - -dependabot-dependency-name ~= ^(com\.android|org\.jetbrains\.kotlin|com\.google\.devtools\.ksp|com\.google\.dagger|androidx\.room|androidx\.credentials|com\.google\.gms|com\.google\.firebase|com\.google\.crypto\.tink|com\.github\.triplet\.play|com\.android\.billingclient|org\.bouncycastle|org\.bitbucket\.b_c|firebase-admin$|firebase-functions$|firebase-functions-test$|firebase-tools$|jose$|jsonwebtoken$|wrangler$|@cloudflare/)
+            - -files ~= ^(\.github/|config/|\.gitleaks\.toml|gradle/wrapper/|buildSrc/|docs/AUTONOMOUS_MAINTENANCE\.md|\.mergify\.yml|codecov\.yml|\.fleet/|\.agents/|\.claude/|\.codex/|scripts/ci/)
             - or:
                 - dependabot-dependency-type = development
                 - and:
+                    - dependabot-dependency-type = production
                     - dependabot-update-type = version-update:semver-patch
-                    - -dependabot-dependency-name ~= ^(com\.android|org\.jetbrains\.kotlin|com\.google\.devtools\.ksp|com\.google\.dagger|androidx\.room|com\.google\.gms|com\.google\.firebase|com\.github\.triplet\.play|com\.android\.billingclient)
             - -label = automerge:disabled
         # Class A: Jules Fleet low-risk PRs
+        # Positive authorization: requires global automerge:enabled label
+        # Protected files (control plane) are NEVER auto-merged
         - and:
             - label = fleet-merge-ready
             - label = risk:low
             - -label = fleet-review-required
+            - label = automerge:enabled
             - -label = automerge:disabled
-            - -files ~= ^(\.github/|config/|\.gitleaks\.toml|gradle/wrapper/|buildSrc/|docs/AUTONOMOUS_MAINTENANCE\.md|\.mergify\.yml)
+            - -files ~= ^(\.github/|config/|\.gitleaks\.toml|gradle/wrapper/|buildSrc/|docs/AUTONOMOUS_MAINTENANCE\.md|\.mergify\.yml|codecov\.yml|\.fleet/|\.agents/|\.claude/|\.codex/|scripts/ci/)

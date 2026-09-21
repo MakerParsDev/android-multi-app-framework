@@ -1,7 +1,7 @@
 {
   "actions/attest": {
-    "sha": "f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6",
-    "version": "v4.2.0"
+    "sha": "1e69f48acb82d1966a394da916b4c1698aa569d6",
+    "version": "v4.2.2"
   },
   "actions/checkout": {
     "sha": "3d3c42e5aac5ba805825da76410c181273ba90b1",
@@ -40,11 +40,11 @@
     "version": "v5.5.5"
   },
   "github/codeql-action": {
-    "sha": "e0647621c2984b5ed2f768cb892365bf2a616ad1",
-    "version": "v4.37.2"
+    "sha": "1c5b675653bb5c22dbe9b12b556ec555138e09fd",
+    "version": "v4.38.1"
   },
   "gradle/actions": {
-    "sha": "3f131e8634966bd73d06cc69884922b02e6faf92",
-    "version": "v6.2.0"
+    "sha": "9c971963bec38e04b3d30dcc455b5382be2fdbfb",
+    "version": "v6.3.0"
   }
 }

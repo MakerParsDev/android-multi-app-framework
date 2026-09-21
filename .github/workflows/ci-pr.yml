@@ -3,22 +3,6 @@ name: CI PR Quality Gate
 on:
   pull_request:
     branches: [main]
-    paths:
-      - 'app/**'
-      - 'core/**'
-      - 'feature/**'
-      - 'buildSrc/**'
-      - 'gradle/**'
-      - 'build.gradle.kts'
-      - 'settings.gradle.kts'
-      - 'gradle.properties'
-      - 'config/**'
-      - 'side-projects/**'
-      - '.gitleaks.toml'
-      - '.gitleaksignore'
-      - 'app-versions.properties'
-      - 'scripts/**'
-      - '.github/workflows/ci-pr.yml'
 
 concurrency:
   group: ci-pr-${{ github.head_ref || github.ref }}
@@ -268,8 +252,9 @@ jobs:
         if: env.FIREBASE_CONFIGS_ZIP_BASE64 != ''
         env:
           FIREBASE_CONFIGS_ZIP_BASE64: ${{ secrets.FIREBASE_CONFIGS_ZIP_BASE64 }}
+          FLAVORS_JSON: ${{ needs.analyze-impact.outputs.flavors_json }}
         run: |
-          FLAVORS_CSV="$(echo '${{ needs.analyze-impact.outputs.flavors_json }}' | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d' | paste -sd,)"
+          FLAVORS_CSV="$(echo "$FLAVORS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d' | paste -sd,)"
           python3 scripts/ci/materialize_firebase_configs.py \
             --flavors "$FLAVORS_CSV" \
             --mode warn \
@@ -301,17 +286,19 @@ jobs:
         if: env.FIREBASE_CONFIGS_ZIP_BASE64 != ''
         env:
           FIREBASE_CONFIGS_ZIP_BASE64: ${{ secrets.FIREBASE_CONFIGS_ZIP_BASE64 }}
+          FLAVORS_JSON: ${{ needs.analyze-impact.outputs.flavors_json }}
         run: |
-          FLAVORS_CSV="$(echo '${{ needs.analyze-impact.outputs.flavors_json }}' | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d' | paste -sd,)"
+          FLAVORS_CSV="$(echo "$FLAVORS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d' | paste -sd,)"
           python3 scripts/ci/materialize_firebase_configs.py \
             --flavors "$FLAVORS_CSV" \
             --mode warn \
             --allow-existing || true
 
       - name: Run lint for affected flavors
+        env:
+          FLAVORS_JSON: ${{ needs.analyze-impact.outputs.flavors_json }}
         run: |
           set -euo pipefail
-          FLAVORS_JSON='${{ needs.analyze-impact.outputs.flavors_json }}'
           mapfile -t FLAVORS < <(
             echo "$FLAVORS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d'
           )
@@ -348,6 +335,9 @@ jobs:
     timeout-minutes: 35
     needs: analyze-impact
     if: needs.analyze-impact.outputs.has_code == 'true'
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -365,8 +355,9 @@ jobs:
         if: env.FIREBASE_CONFIGS_ZIP_BASE64 != ''
         env:
           FIREBASE_CONFIGS_ZIP_BASE64: ${{ secrets.FIREBASE_CONFIGS_ZIP_BASE64 }}
+          FLAVORS_JSON: ${{ needs.analyze-impact.outputs.flavors_json }}
         run: |
-          FLAVORS_CSV="$(echo '${{ needs.analyze-impact.outputs.flavors_json }}' | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d' | paste -sd,)"
+          FLAVORS_CSV="$(echo "$FLAVORS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d' | paste -sd,)"
           python3 scripts/ci/materialize_firebase_configs.py \
             --flavors "$FLAVORS_CSV" \
             --mode warn \
@@ -406,7 +397,7 @@ jobs:
         continue-on-error: true
         with:
           files: build/reports/kover/xml/coverage.xml
-          token: ${{ secrets.CODECOV_TOKEN }}
+          use_oidc: true
           fail_ci_if_error: false
 
   repository-security:
@@ -417,27 +408,65 @@ jobs:
     if: always()
     steps:
       - name: Verify security gate passed
+        env:
+          SECURITY_GATE_RESULT: ${{ needs.security-gate.result }}
         run: |
-          if [ "${{ needs.security-gate.result }}" != "success" ]; then
-            echo "::error::Security gate did not pass (result: ${{ needs.security-gate.result }})"
+          if [ "$SECURITY_GATE_RESULT" != "success" ]; then
+            echo "::error::Security gate did not pass (result: $SECURITY_GATE_RESULT)"
             exit 1
           fi
           echo "Security gate passed"
+
+  security-required:
+    name: Security Required
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [security-gate, repository-security]
+    if: always()
+    steps:
+      - name: Aggregate hard security checks
+        env:
+          SECURITY_GATE_RESULT: ${{ needs.security-gate.result }}
+          REPOSITORY_SECURITY_RESULT: ${{ needs.repository-security.result }}
+        run: |
+          set -euo pipefail
+          # Hard security jobs that must pass (Semgrep is advisory, not included)
+          failed=0
+          for item in "security-gate:$SECURITY_GATE_RESULT" "repository-security:$REPOSITORY_SECURITY_RESULT"; do
+            job="${item%%:*}"
+            result="${item#*:}"
+            if [ "$result" != "success" ]; then
+              echo "::error::Hard security job '$job' failed with result: $result"
+              failed=1
+            fi
+          done
+          if [ "$failed" -eq 1 ]; then
+            echo "::error::One or more hard security gates failed"
+            exit 1
+          fi
+          echo "All hard security gates passed"
 
   aggregate-gate:
     name: CI Required
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [security-gate, analyze-impact, side-projects, static-analysis, validate-and-test, android-lint, kover-coverage, repository-security]
+    needs: [security-gate, analyze-impact, side-projects, static-analysis, validate-and-test, android-lint, kover-coverage, repository-security, security-required]
     if: always()
     steps:
       - name: Check required jobs
+        env:
+          SECURITY_GATE_RESULT: ${{ needs.security-gate.result }}
+          STATIC_ANALYSIS_RESULT: ${{ needs.static-analysis.result }}
+          VALIDATE_TEST_RESULT: ${{ needs.validate-and-test.result }}
+          ANDROID_LINT_RESULT: ${{ needs.android-lint.result }}
+          KOVER_COVERAGE_RESULT: ${{ needs.kover-coverage.result }}
+          SECURITY_REQUIRED_RESULT: ${{ needs.security-required.result }}
         run: |
           set -euo pipefail
-          NEEDS_JSON='{"security-gate":"${{ needs.security-gate.result }}","static-analysis":"${{ needs.static-analysis.result }}","validate-and-test":"${{ needs.validate-and-test.result }}","android-lint":"${{ needs.android-lint.result }}","kover-coverage":"${{ needs.kover-coverage.result }}"}'
           failed=0
-          for job in security-gate static-analysis validate-and-test android-lint kover-coverage; do
-            result=$(echo "$NEEDS_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin).get('$job','missing'))")
+          for item in             "security-gate:$SECURITY_GATE_RESULT"             "static-analysis:$STATIC_ANALYSIS_RESULT"             "validate-and-test:$VALIDATE_TEST_RESULT"             "android-lint:$ANDROID_LINT_RESULT"             "kover-coverage:$KOVER_COVERAGE_RESULT"             "security-required:$SECURITY_REQUIRED_RESULT"; do
+            job="${item%%:*}"
+            result="${item#*:}"
             if [ "$result" != "success" ] && [ "$result" != "skipped" ]; then
               echo "::error::Required job '$job' failed with result: $result"
               failed=1

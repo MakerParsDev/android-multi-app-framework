@@ -37,6 +37,31 @@ REQUIRED_FLEET_LABELS = [
         "color": "d93f0b",
         "description": "Protected or ambiguous changes require human review",
     },
+    {
+        "name": "risk:low",
+        "color": "0e8a16",
+        "description": "Low-risk change eligible for autonomous merge",
+    },
+    {
+        "name": "risk:protected",
+        "color": "d93f0b",
+        "description": "Protected change requiring human review",
+    },
+    {
+        "name": "automerge:enabled",
+        "color": "1d76db",
+        "description": "Global autonomous merge authorized by control plane",
+    },
+    {
+        "name": "automerge:disabled",
+        "color": "d93f0b",
+        "description": "Global autonomous merge disabled by control plane",
+    },
+    {
+        "name": "maintenance",
+        "color": "5319e7",
+        "description": "Autonomous maintenance dashboard issue",
+    },
 ]
 
 
@@ -81,7 +106,9 @@ def resolve_open_milestone(
         url = f"https://api.github.com/repos/{repo}/milestones?state=open&per_page=100&page={page}"
         status, data = _make_request(url, token)
         if status != 200 or not isinstance(data, list):
-            raise RuntimeError(f"Failed to list milestones for {repo}: HTTP {status} {data}")
+            raise RuntimeError(
+                f"Failed to list milestones for {repo}: HTTP {status} {data}"
+            )
         for m in data:
             if m.get("title") == title:
                 return int(m["number"])
@@ -117,7 +144,9 @@ def ensure_milestone(
         if existing_any is not None:
             return existing_any
 
-    raise RuntimeError(f"Failed to create milestone '{title}' for {repo}: HTTP {status} {data}")
+    raise RuntimeError(
+        f"Failed to create milestone '{title}' for {repo}: HTTP {status} {data}"
+    )
 
 
 def ensure_labels(repo: str, token: str) -> None:
@@ -142,7 +171,9 @@ def ensure_labels(repo: str, token: str) -> None:
             if post_status == 422:
                 # Label was created concurrently
                 continue
-            raise RuntimeError(f"Failed to create label '{name}': HTTP {post_status} {post_data}")
+            raise RuntimeError(
+                f"Failed to create label '{name}': HTTP {post_status} {post_data}"
+            )
         raise RuntimeError(f"Failed to inspect label '{name}': HTTP {status}")
 
 
@@ -158,19 +189,37 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--repo", default=os.environ.get("GITHUB_REPOSITORY"))
     parser.add_argument("--token", default=os.environ.get("GITHUB_TOKEN"))
     parser.add_argument("--title", default=DEFAULT_MILESTONE_TITLE)
-    parser.add_argument("--ensure", action="store_true", help="Ensure milestone exists, creating if missing")
-    parser.add_argument("--resolve", action="store_true", help="Resolve milestone number without creating")
-    parser.add_argument("--ensure-labels", action="store_true", help="Ensure required Fleet labels exist")
+    parser.add_argument(
+        "--ensure",
+        action="store_true",
+        help="Ensure milestone exists, creating if missing",
+    )
+    parser.add_argument(
+        "--resolve",
+        action="store_true",
+        help="Resolve milestone number without creating",
+    )
+    parser.add_argument(
+        "--ensure-labels",
+        action="store_true",
+        help="Ensure required Fleet labels exist",
+    )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
     if not args.repo:
-        print("Error: Repository not specified (set GITHUB_REPOSITORY or --repo).", file=sys.stderr)
+        print(
+            "Error: Repository not specified (set GITHUB_REPOSITORY or --repo).",
+            file=sys.stderr,
+        )
         return 1
     if not args.token:
-        print("Error: GitHub token not specified (set GITHUB_TOKEN or --token).", file=sys.stderr)
+        print(
+            "Error: GitHub token not specified (set GITHUB_TOKEN or --token).",
+            file=sys.stderr,
+        )
         return 1
 
     if args.ensure_labels:
@@ -182,9 +231,14 @@ def main() -> int:
         milestone_number = ensure_milestone(args.repo, args.token, title=args.title)
         print(f"Milestone '{args.title}' ensured with number: {milestone_number}")
     elif args.resolve:
-        milestone_number = resolve_open_milestone(args.repo, args.token, title=args.title)
+        milestone_number = resolve_open_milestone(
+            args.repo, args.token, title=args.title
+        )
         if milestone_number is None:
-            print(f"Error: Milestone '{args.title}' not found in {args.repo}.", file=sys.stderr)
+            print(
+                f"Error: Milestone '{args.title}' not found in {args.repo}.",
+                file=sys.stderr,
+            )
             return 1
         print(f"Milestone '{args.title}' resolved to number: {milestone_number}")
 
