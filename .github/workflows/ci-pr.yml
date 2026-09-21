@@ -406,8 +406,10 @@ jobs:
         continue-on-error: true
         with:
           files: build/reports/kover/xml/coverage.xml
-          token: ${{ secrets.CODECOV_TOKEN }}
+          use_oidc: true
           fail_ci_if_error: false
+        permissions:
+          id-token: write
 
   repository-security:
     name: Repository Security
@@ -424,19 +426,45 @@ jobs:
           fi
           echo "Security gate passed"
 
+  security-required:
+    name: Security Required
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [security-gate, repository-security]
+    if: always()
+    steps:
+      - name: Aggregate hard security checks
+        run: |
+          set -euo pipefail
+          # Hard security jobs that must pass (Semgrep is advisory, not included)
+          NEEDS_JSON='{"security-gate":"${{ needs.security-gate.result }}","repository-security":"${{ needs.repository-security.result }}"}'
+          failed=0
+          for job in security-gate repository-security; do
+            result=$(echo "$NEEDS_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin).get('$job','missing'))")
+            if [ "$result" != "success" ]; then
+              echo "::error::Hard security job '$job' failed with result: $result"
+              failed=1
+            fi
+          done
+          if [ "$failed" -eq 1 ]; then
+            echo "::error::One or more hard security gates failed"
+            exit 1
+          fi
+          echo "All hard security gates passed"
+
   aggregate-gate:
     name: CI Required
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [security-gate, analyze-impact, side-projects, static-analysis, validate-and-test, android-lint, kover-coverage, repository-security]
+    needs: [security-gate, analyze-impact, side-projects, static-analysis, validate-and-test, android-lint, kover-coverage, repository-security, security-required]
     if: always()
     steps:
       - name: Check required jobs
         run: |
           set -euo pipefail
-          NEEDS_JSON='{"security-gate":"${{ needs.security-gate.result }}","static-analysis":"${{ needs.static-analysis.result }}","validate-and-test":"${{ needs.validate-and-test.result }}","android-lint":"${{ needs.android-lint.result }}","kover-coverage":"${{ needs.kover-coverage.result }}"}'
+          NEEDS_JSON='{"security-gate":"${{ needs.security-gate.result }}","static-analysis":"${{ needs.static-analysis.result }}","validate-and-test":"${{ needs.validate-and-test.result }}","android-lint":"${{ needs.android-lint.result }}","kover-coverage":"${{ needs.kover-coverage.result }}","security-required":"${{ needs.security-required.result }}"}'
           failed=0
-          for job in security-gate static-analysis validate-and-test android-lint kover-coverage; do
+          for job in security-gate static-analysis validate-and-test android-lint kover-coverage security-required; do
             result=$(echo "$NEEDS_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin).get('$job','missing'))")
             if [ "$result" != "success" ] && [ "$result" != "skipped" ]; then
               echo "::error::Required job '$job' failed with result: $result"

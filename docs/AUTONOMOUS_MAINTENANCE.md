@@ -105,12 +105,16 @@ Configured in `.mergify.yml` using the latest official schema:
 
 ## 6. GitHub Rulesets (Hard Security Boundary)
 
-Repository rulesets on `main` enforce:
+**Current State: BOOTSTRAP_PENDING** — The GitHub ruleset has not yet been applied. See Section 14 for bootstrap procedure.
+
+Once activated, repository rulesets on `main` will enforce:
 - Required PR before merging.
 - No direct push.
 - No force push.
 - No branch deletion.
-- Required status checks: `CI Required`, `Repository Security`, `Security Gate`, `SonarCloud Code Analysis`, `Mergify Merge Protections`.
+- Required status checks: `CI Required`, `Security Required`, `SonarCloud Code Analysis`, `Mergify Merge Protections`, `Analyze Java and Kotlin`.
+
+**Do NOT enable GitHub native merge queue.** Mergify queue remains the only queue.
 
 ---
 
@@ -125,8 +129,10 @@ Repository rulesets on `main` enforce:
 ## 8. Codecov Integration
 
 - **Engine:** `codecov/codecov-action` pinned to full commit SHA (`0fb7174895f61a3b6b78fc075e0cd60383518dac`, v5.5.5).
+- **Authentication:** OIDC tokenless upload (`use_oidc: true` with `id-token: write` permission). No `CODECOV_TOKEN` secret required for public repositories.
 - **Policy:** Informational (`informational: true` in `codecov.yml`, `fail_ci_if_error: false` in workflows).
 - **Local Source of Truth:** Kover remains the authoritative coverage validator.
+- **Bootstrap:** If OIDC fails (e.g., private repo), create `CODECOV_TOKEN` secret manually in GitHub repo settings.
 
 ---
 
@@ -180,3 +186,85 @@ To re-enable:
 gh variable set AUTONOMOUS_MAINTENANCE_ENABLED --body "true"
 gh variable set AUTONOMOUS_MERGE_ENABLED --body "true"
 ```
+
+---
+## 14. GitHub Ruleset Bootstrap Procedure
+
+The GitHub ruleset is **not yet active** (BOOTSTRAP_PENDING). After this PR merges, an administrator with repo admin permissions must apply the ruleset.
+
+### 14.1 Post-Merge Bootstrap Command
+
+```bash
+# Apply the ruleset (requires admin:repo_hook permission)
+gh api --method POST repos/MakerParsDev/android-multi-app-framework/rulesets \
+  --input scripts/ci/github-ruleset-payload.json
+```
+
+### 14.2 Ruleset Payload (scripts/ci/github-ruleset-payload.json)
+
+```json
+{
+  "name": "main-branch-protection",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "exclude": [],
+      "include": ["~main"]
+    }
+  },
+  "rules": [
+    {"type": "pull_request", "parameters": {"required_approving_review_count": 0}},
+    {"type": "required_status_checks", "parameters": {
+      "required_checks": [
+        {"context": "CI Required"},
+        {"context": "Security Required"},
+        {"context": "SonarCloud Code Analysis"},
+        {"context": "Mergify Merge Protections"},
+        {"context": "Analyze Java and Kotlin"}
+      ],
+      "strict_required_status_checks_policy": true
+    }},
+    {"type": "non_fast_forward"},
+    {"type": "deletion"}
+  ],
+  "bypass_actors": []
+}
+```
+
+### 14.3 Required Variables (Set After Ruleset Applied)
+
+After successful ruleset activation, set these variables in order:
+
+```bash
+# 1. Enable maintenance automation (issue/PR creation)
+gh variable set AUTONOMOUS_MAINTENANCE_ENABLED --body "true"
+
+# 2. Enable auto-merge qualification (requires ruleset active)
+gh variable set AUTONOMOUS_MERGE_ENABLED --body "true"
+
+# 3. Enable Jules Fleet analysis/dispatch (dry-run only)
+gh variable set JULES_FLEET_ENABLED --body "true"
+
+# 4. JULES_FLEET_AUTO_MERGE_ENABLED MUST REMAIN false
+#    Jules Fleet must NEVER independently auto-merge
+#    Mergify is the SOLE merge authority
+```
+
+### 14.4 Variables That Must Remain Disabled
+
+| Variable | Value | Reason |
+|----------|-------|--------|
+| `JULES_FLEET_AUTO_MERGE_ENABLED` | `false` | Jules Fleet must NEVER auto-merge; Mergify is sole authority |
+| GitHub native merge queue | Disabled | Prevents dual-queue race conditions |
+
+---
+## 15. Auto-Merge Control Plane
+
+The `automerge-control.yml` workflow runs hourly on `main` and manages the `automerge:enabled` label on all open PRs based on the `AUTONOMOUS_MERGE_ENABLED` repository variable.
+
+- **`AUTONOMOUS_MERGE_ENABLED=true`** → Adds `automerge:enabled` label to all open PRs
+- **`AUTONOMOUS_MERGE_ENABLED=false`** (or missing) → Removes `automerge:enabled` label from all open PRs
+- **Fail-closed**: Variable missing or not explicitly `true` = no auto-merge
+
+This provides a **positive authorization** model: PRs must have `automerge:enabled` label to be eligible for Mergify auto-merge, rather than relying on a negative-only block.

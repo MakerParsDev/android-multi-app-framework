@@ -20,7 +20,6 @@ from fleet_milestone import (
 
 
 class TestFleetMilestone(unittest.TestCase):
-
     @patch("fleet_milestone._make_request")
     def test_resolve_open_milestone_found(self, mock_req: MagicMock):
         mock_req.return_value = (
@@ -30,7 +29,9 @@ class TestFleetMilestone(unittest.TestCase):
                 {"number": 42, "title": DEFAULT_MILESTONE_TITLE},
             ],
         )
-        num = resolve_open_milestone("owner/repo", "fake-token", DEFAULT_MILESTONE_TITLE)
+        num = resolve_open_milestone(
+            "owner/repo", "fake-token", DEFAULT_MILESTONE_TITLE
+        )
         self.assertEqual(num, 42)
 
     @patch("fleet_milestone._make_request")
@@ -41,7 +42,9 @@ class TestFleetMilestone(unittest.TestCase):
                 {"number": 1, "title": "Other Milestone"},
             ],
         )
-        num = resolve_open_milestone("owner/repo", "fake-token", DEFAULT_MILESTONE_TITLE)
+        num = resolve_open_milestone(
+            "owner/repo", "fake-token", DEFAULT_MILESTONE_TITLE
+        )
         self.assertIsNone(num)
 
     @patch("fleet_milestone.resolve_open_milestone")
@@ -68,15 +71,14 @@ class TestFleetMilestone(unittest.TestCase):
 
     @patch("fleet_milestone._make_request")
     def test_ensure_labels_creates_missing(self, mock_req: MagicMock):
-        # First call GET label -> 404, second call POST label -> 201
-        mock_req.side_effect = [
-            (404, None),
-            (201, {}),
-            (200, {}),
-            (200, {}),
-        ]
+        # For each of 8 labels: GET -> 404, POST -> 201
+        side_effect = []
+        for _ in range(8):
+            side_effect.append((404, None))
+            side_effect.append((201, {}))
+        mock_req.side_effect = side_effect
         ensure_labels("owner/repo", "fake-token")
-        self.assertEqual(mock_req.call_count, 4)
+        self.assertEqual(mock_req.call_count, 16)
 
 
 if __name__ == "__main__":

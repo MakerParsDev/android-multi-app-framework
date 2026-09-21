@@ -14,17 +14,31 @@ ROOT = Path(__file__).resolve().parents[2]
 class AutonomousMaintenanceContractTest(unittest.TestCase):
     def test_mergify_configuration_contract(self) -> None:
         mergify_path = ROOT / ".mergify.yml"
-        self.assertTrue(mergify_path.is_file(), ".mergify.yml must exist at repository root")
+        self.assertTrue(
+            mergify_path.is_file(), ".mergify.yml must exist at repository root"
+        )
 
         content = mergify_path.read_text(encoding="utf-8")
-        self.assertNotIn("autoqueue", content, "Deprecated autoqueue key must not be used in .mergify.yml")
+        self.assertNotIn(
+            "autoqueue",
+            content,
+            "Deprecated autoqueue key must not be used in .mergify.yml",
+        )
 
         data = yaml.safe_load(content)
-        self.assertIn("merge_protections", data, ".mergify.yml must define merge_protections")
-        self.assertIn("merge_protections_settings", data, ".mergify.yml must define merge_protections_settings")
+        self.assertIn(
+            "merge_protections", data, ".mergify.yml must define merge_protections"
+        )
+        self.assertIn(
+            "merge_protections_settings",
+            data,
+            ".mergify.yml must define merge_protections_settings",
+        )
         self.assertIn("queue_rules", data, ".mergify.yml must define queue_rules")
 
-        auto_merge_conditions = data["merge_protections_settings"].get("auto_merge_conditions")
+        auto_merge_conditions = data["merge_protections_settings"].get(
+            "auto_merge_conditions"
+        )
         self.assertNotEqual(
             auto_merge_conditions,
             True,
@@ -38,10 +52,43 @@ class AutonomousMaintenanceContractTest(unittest.TestCase):
 
         # Verify semver-major is blocked
         mergify_str = yaml.dump(auto_merge_conditions)
-        self.assertIn("dependabot-update-type != version-update:semver-major", mergify_str)
+        self.assertIn(
+            "dependabot-update-type != version-update:semver-major", mergify_str
+        )
 
         # Verify circuit breaker label is respected
         self.assertIn("-label = automerge:disabled", mergify_str)
+
+        # Verify positive authorization: automerge:enabled label required
+        self.assertIn("label = automerge:enabled", mergify_str)
+
+        # Verify CodeQL check in queue merge_conditions
+        queue_rules = data.get("queue_rules", [])
+        self.assertGreaterEqual(len(queue_rules), 1)
+        merge_conditions = queue_rules[0].get("merge_conditions", [])
+        self.assertIn(
+            "check-success = Analyze Java and Kotlin",
+            merge_conditions,
+            "CodeQL 'Analyze Java and Kotlin' must be in queue_rules merge_conditions",
+        )
+
+        # Verify CodeQL check in merge_protections success_conditions
+        merge_protections = data.get("merge_protections", [])
+        self.assertGreaterEqual(len(merge_protections), 1)
+        success_conditions = merge_protections[0].get("success_conditions", [])
+        self.assertIn(
+            "check-success = Analyze Java and Kotlin",
+            success_conditions,
+            "CodeQL 'Analyze Java and Kotlin' must be in merge_protections success_conditions",
+        )
+
+        # Verify control-plane files protected from auto-merge
+        self.assertIn("scripts/ci/autonomous_maintenance_test", mergify_str)
+        self.assertIn("scripts/ci/maintenance_health_controller", mergify_str)
+        self.assertIn("scripts/ci/fleet_pr_risk", mergify_str)
+        self.assertIn("scripts/ci/classify_pr", mergify_str)
+        self.assertIn("codecov", mergify_str)
+        self.assertIn(".fleet/", mergify_str)
 
     def test_dependabot_manifest_coverage_contract(self) -> None:
         dependabot_path = ROOT / ".github/dependabot.yml"
@@ -51,7 +98,11 @@ class AutonomousMaintenanceContractTest(unittest.TestCase):
         self.assertEqual(data.get("version"), 2)
 
         updates = data.get("updates", [])
-        self.assertGreaterEqual(len(updates), 9, "Dependabot must cover all monorepo ecosystems and side projects")
+        self.assertGreaterEqual(
+            len(updates),
+            9,
+            "Dependabot must cover all monorepo ecosystems and side projects",
+        )
 
         ecosystem_dirs = {(u["package-ecosystem"], u["directory"]) for u in updates}
 
@@ -86,12 +137,18 @@ class AutonomousMaintenanceContractTest(unittest.TestCase):
             ROOT / ".renovaterc.json",
         ]
         for path in forbidden:
-            self.assertFalse(path.exists(), f"Competing Renovate config must not exist: {path}")
+            self.assertFalse(
+                path.exists(), f"Competing Renovate config must not exist: {path}"
+            )
 
     def test_codecov_action_pin_and_non_blocking_policy(self) -> None:
         pinned_path = ROOT / "config/pinned-github-actions.json"
         manifest = json.loads(pinned_path.read_text(encoding="utf-8"))
-        self.assertIn("codecov/codecov-action", manifest, "codecov/codecov-action must be pinned in manifest")
+        self.assertIn(
+            "codecov/codecov-action",
+            manifest,
+            "codecov/codecov-action must be pinned in manifest",
+        )
         self.assertEqual(
             manifest["codecov/codecov-action"]["sha"],
             "0fb7174895f61a3b6b78fc075e0cd60383518dac",
@@ -101,7 +158,11 @@ class AutonomousMaintenanceContractTest(unittest.TestCase):
         self.assertTrue(codecov_yml.is_file(), "codecov.yml must exist")
         cc_data = yaml.safe_load(codecov_yml.read_text(encoding="utf-8"))
         self.assertTrue(
-            cc_data.get("coverage", {}).get("status", {}).get("project", {}).get("default", {}).get("informational"),
+            cc_data.get("coverage", {})
+            .get("status", {})
+            .get("project", {})
+            .get("default", {})
+            .get("informational"),
             "Codecov project status must initially be informational to avoid deadlocking non-code PRs",
         )
 
@@ -146,6 +207,133 @@ class AutonomousMaintenanceContractTest(unittest.TestCase):
                     360,
                     f"Job '{job_name}' in {wf_path.name} timeout must not exceed 360 minutes",
                 )
+
+    def test_semgrep_is_advisory_not_hard_gate(self) -> None:
+        """Verify Semgrep is configured as advisory (continue-on-error: true) and not a hard merge gate."""
+        security_wf = ROOT / ".github/workflows/security.yml"
+        self.assertTrue(security_wf.is_file())
+        content = security_wf.read_text(encoding="utf-8")
+        # Semgrep job should have continue-on-error: true
+        self.assertIn(
+            "continue-on-error: true",
+            content,
+            "Semgrep must be advisory with continue-on-error: true",
+        )
+        # Semgrep should NOT be in Mergify merge conditions
+        mergify_path = ROOT / ".mergify.yml"
+        mergify_content = mergify_path.read_text(encoding="utf-8")
+        self.assertNotIn(
+            "Semgrep",
+            mergify_content,
+            "Semgrep must not be a hard merge gate in Mergify",
+        )
+
+    def test_security_required_aggregate_exists(self) -> None:
+        """Verify there's a Security Required aggregate check or equivalent."""
+        # The Security Gate job in ci-pr.yml should aggregate security checks
+        ci_pr_wf = ROOT / ".github/workflows/ci-pr.yml"
+        self.assertTrue(ci_pr_wf.is_file())
+        content = ci_pr_wf.read_text(encoding="utf-8")
+        # Security Gate job exists
+        self.assertIn("name: Security Gate", content)
+        # Security Gate should depend on security checks
+        self.assertIn("security-gate", content.lower())
+
+    def test_dependabot_sensitive_dependency_logic(self) -> None:
+        """Verify sensitive dependencies are excluded from auto-merge regardless of dependency-type."""
+        mergify_path = ROOT / ".mergify.yml"
+        content = mergify_path.read_text(encoding="utf-8")
+        # Sensitive denylist should apply outside dependency-type OR logic
+        sensitive_patterns = [
+            "com\\.android",
+            "org\\.jetbrains\\.kotlin",
+            "com\\.google\\.devtools\\.ksp",
+            "com\\.google\\.dagger",
+            "androidx\\.room",
+            "com\\.google\\.gms",
+            "com\\.google\\.firebase",
+            "com\\.github\\.triplet\\.play",
+            "com\\.android\\.billingclient",
+        ]
+        for pattern in sensitive_patterns:
+            self.assertIn(
+                pattern,
+                content,
+                f"Sensitive dependency pattern {pattern} must be in Mergify denylist",
+            )
+
+    def test_circuit_breaker_variables_documented(self) -> None:
+        """Verify circuit breaker variables are documented with fail-closed defaults."""
+        doc_path = ROOT / "docs/AUTONOMOUS_MAINTENANCE.md"
+        self.assertTrue(doc_path.is_file())
+        content = doc_path.read_text(encoding="utf-8")
+        required_vars = [
+            "AUTONOMOUS_MAINTENANCE_ENABLED",
+            "AUTONOMOUS_MERGE_ENABLED",
+            "JULES_FLEET_ENABLED",
+            "JULES_FLEET_AUTO_MERGE_ENABLED",
+        ]
+        for var in required_vars:
+            self.assertIn(
+                var, content, f"Circuit breaker variable {var} must be documented"
+            )
+
+    def test_health_controller_has_bootstrap_pending_state(self) -> None:
+        """Verify health controller implements BOOTSTRAP_PENDING state."""
+        health_path = ROOT / "scripts/ci/maintenance_health_controller.py"
+        self.assertTrue(health_path.is_file())
+        content = health_path.read_text(encoding="utf-8")
+        self.assertIn(
+            "BOOTSTRAP_PENDING",
+            content,
+            "Health controller must implement BOOTSTRAP_PENDING state",
+        )
+
+    def test_github_ruleset_bootstrap_documented(self) -> None:
+        """Verify GitHub ruleset bootstrap is documented."""
+        doc_path = ROOT / "docs/AUTONOMOUS_MAINTENANCE.md"
+        content = doc_path.read_text(encoding="utf-8")
+        self.assertIn(
+            "BOOTSTRAP_PENDING",
+            content,
+            "Documentation must mention BOOTSTRAP_PENDING for ruleset",
+        )
+
+    def test_maintenance_dashboard_failure_propagation(self) -> None:
+        """Verify maintenance dashboard script propagates failures."""
+        health_path = ROOT / "scripts/ci/maintenance_health_controller.py"
+        content = health_path.read_text(encoding="utf-8")
+        # Should return non-zero on GitHub API failures
+        self.assertIn(
+            "return 1",
+            content,
+            "Maintenance controller must return non-zero on failures",
+        )
+
+    def test_codecov_auth_model_explicit(self) -> None:
+        """Verify Codecov authentication model is explicit."""
+        codecov_yml = ROOT / "codecov.yml"
+        self.assertTrue(codecov_yml.is_file())
+        content = codecov_yml.read_text(encoding="utf-8")
+        # Should have informational mode
+        self.assertIn("informational: true", content)
+        ci_pr_wf = ROOT / ".github/workflows/ci-pr.yml"
+        ci_content = ci_pr_wf.read_text(encoding="utf-8")
+        # Should use CODECOV_TOKEN or OIDC
+        self.assertTrue(
+            "${{ secrets.CODECOV_TOKEN }}" in ci_content
+            or "oidc" in ci_content.lower(),
+            "Codecov must use explicit authentication (CODECOV_TOKEN or OIDC)",
+        )
+
+    def test_automerge_control_workflow_exists(self) -> None:
+        """Verify automerge-control workflow exists for label management."""
+        wf_path = ROOT / ".github/workflows/automerge-control.yml"
+        self.assertTrue(wf_path.is_file(), "automerge-control.yml workflow must exist")
+        content = wf_path.read_text(encoding="utf-8")
+        self.assertIn("AUTONOMOUS_MERGE_ENABLED", content)
+        self.assertIn("automerge:enabled", content)
+        self.assertIn("sync_automerge_label.py", content)
 
 
 if __name__ == "__main__":

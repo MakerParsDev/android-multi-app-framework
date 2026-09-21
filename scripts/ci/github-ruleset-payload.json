@@ -1,0 +1,27 @@
+{
+  "name": "main-branch-protection",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "exclude": [],
+      "include": ["~main"]
+    }
+  },
+  "rules": [
+    {"type": "pull_request", "parameters": {"required_approving_review_count": 0}},
+    {"type": "required_status_checks", "parameters": {
+      "required_checks": [
+        {"context": "CI Required"},
+        {"context": "Security Required"},
+        {"context": "SonarCloud Code Analysis"},
+        {"context": "Mergify Merge Protections"},
+        {"context": "Analyze Java and Kotlin"}
+      ],
+      "strict_required_status_checks_policy": true
+    }},
+    {"type": "non_fast_forward"},
+    {"type": "deletion"}
+  ],
+  "bypass_actors": []
+}

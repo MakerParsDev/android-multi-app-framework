@@ -60,7 +60,9 @@ def fetch_all_pr_files(repo: str, pr_number: int, token: str) -> list[str]:
         url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}/files?per_page=100&page={page}"
         status, data = _make_request(url, token)
         if status != 200 or not isinstance(data, list):
-            raise RuntimeError(f"Failed to fetch PR #{pr_number} files (page {page}): HTTP {status} {data}")
+            raise RuntimeError(
+                f"Failed to fetch PR #{pr_number} files (page {page}): HTTP {status} {data}"
+            )
 
         for item in data:
             if isinstance(item, dict) and "filename" in item:
@@ -79,36 +81,42 @@ def update_pr_labels(
     token: str,
     risk: str,
 ) -> None:
-    to_add = "fleet-merge-ready" if risk == "LOW_RISK" else "fleet-review-required"
-    to_remove = "fleet-review-required" if risk == "LOW_RISK" else "fleet-merge-ready"
-
-    # Add new label (must succeed, failure fails the job)
-    url_add = f"https://api.github.com/repos/{repo}/issues/{pr_number}/labels"
-    status_add, data_add = _make_request(
-        url_add,
-        token,
-        method="POST",
-        data={"labels": [to_add]},
-    )
-    if status_add not in (200, 201):
-        raise RuntimeError(
-            f"Failed to add label '{to_add}' to PR #{pr_number}: HTTP {status_add} {data_add}"
-        )
-    print(f"Applied label '{to_add}' to PR #{pr_number}")
-
-    # Remove opposite label (404 is allowed if label was not present, all other errors fail)
-    encoded_remove = urllib.parse.quote(to_remove, safe="")
-    url_del = f"https://api.github.com/repos/{repo}/issues/{pr_number}/labels/{encoded_remove}"
-    status_del, data_del = _make_request(url_del, token, method="DELETE")
-    if status_del in (200, 204):
-        print(f"Removed label '{to_remove}' from PR #{pr_number}")
-    elif status_del == 404:
-        # Expected when label wasn't assigned
-        pass
+    if risk == "LOW_RISK":
+        to_add = ["fleet-merge-ready", "risk:low"]
+        to_remove = ["fleet-review-required", "risk:protected"]
     else:
-        raise RuntimeError(
-            f"Failed to remove label '{to_remove}' from PR #{pr_number}: HTTP {status_del} {data_del}"
+        to_add = ["fleet-review-required", "risk:protected"]
+        to_remove = ["fleet-merge-ready", "risk:low"]
+
+    # Add new labels (must succeed, failure fails the job)
+    url_add = f"https://api.github.com/repos/{repo}/issues/{pr_number}/labels"
+    for label in to_add:
+        status_add, data_add = _make_request(
+            url_add,
+            token,
+            method="POST",
+            data={"labels": [label]},
         )
+        if status_add not in (200, 201):
+            raise RuntimeError(
+                f"Failed to add label '{label}' to PR #{pr_number}: HTTP {status_add} {data_add}"
+            )
+        print(f"Applied label '{label}' to PR #{pr_number}")
+
+    # Remove opposite labels (404 is allowed if label was not present, all other errors fail)
+    for label in to_remove:
+        encoded_remove = urllib.parse.quote(label, safe="")
+        url_del = f"https://api.github.com/repos/{repo}/issues/{pr_number}/labels/{encoded_remove}"
+        status_del, data_del = _make_request(url_del, token, method="DELETE")
+        if status_del in (200, 204):
+            print(f"Removed label '{label}' from PR #{pr_number}")
+        elif status_del == 404:
+            # Expected when label wasn't assigned
+            pass
+        else:
+            raise RuntimeError(
+                f"Failed to remove label '{label}' from PR #{pr_number}: HTTP {status_del} {data_del}"
+            )
 
 
 def write_github_output(name: str, value: str) -> None:
@@ -129,13 +137,22 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     if not args.repo:
-        print("Error: Repository not specified (set GITHUB_REPOSITORY or --repo).", file=sys.stderr)
+        print(
+            "Error: Repository not specified (set GITHUB_REPOSITORY or --repo).",
+            file=sys.stderr,
+        )
         return 1
     if not args.pr_number:
-        print("Error: PR number not specified (set PR_NUMBER or --pr-number).", file=sys.stderr)
+        print(
+            "Error: PR number not specified (set PR_NUMBER or --pr-number).",
+            file=sys.stderr,
+        )
         return 1
     if not args.token:
-        print("Error: GitHub token not specified (set GITHUB_TOKEN or --token).", file=sys.stderr)
+        print(
+            "Error: GitHub token not specified (set GITHUB_TOKEN or --token).",
+            file=sys.stderr,
+        )
         return 1
 
     changed_files = fetch_all_pr_files(args.repo, args.pr_number, args.token)
