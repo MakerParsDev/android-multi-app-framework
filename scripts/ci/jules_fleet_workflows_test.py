@@ -67,12 +67,25 @@ class TestJulesFleetWorkflowsContract(unittest.TestCase):
             {"contents": "read", "issues": "write", "pull-requests": "read"},
         )
 
-        # Dispatch
+        # Dispatch preview is read-only and cannot access Jules credentials.
         _, dispatch_parsed = self._load_workflow("fleet-dispatch.yml")
+        preview_job_perms = dispatch_parsed["jobs"]["preview"].get("permissions")
+        self.assertEqual(
+            preview_job_perms,
+            {
+                "contents": "read",
+                "issues": "read",
+                "pull-requests": "read",
+            },
+        )
         dispatch_job_perms = dispatch_parsed["jobs"]["dispatch"].get("permissions")
         self.assertEqual(
             dispatch_job_perms,
-            {"contents": "read", "issues": "write"},
+            {
+                "contents": "read",
+                "issues": "write",
+                "pull-requests": "read",
+            },
         )
 
         # Classify
@@ -83,12 +96,12 @@ class TestJulesFleetWorkflowsContract(unittest.TestCase):
             {"contents": "read", "issues": "write", "pull-requests": "read"},
         )
 
-        # Merge
+        # Merge audit is permanently read-only; Mergify is the sole merge authority.
         _, merge_parsed = self._load_workflow("fleet-merge.yml")
         merge_job_perms = merge_parsed["jobs"]["merge"].get("permissions")
         self.assertEqual(
             merge_job_perms,
-            {"contents": "write", "pull-requests": "write", "issues": "write"},
+            {"contents": "read", "pull-requests": "read"},
         )
 
     def test_external_actions_are_sha_pinned(self):
@@ -140,7 +153,8 @@ class TestJulesFleetWorkflowsContract(unittest.TestCase):
         self.assertIn("vars.AUTONOMOUS_MAINTENANCE_ENABLED == 'true'", content)
         self.assertIn("vars.JULES_FLEET_ENABLED == 'true'", content)
         self.assertIn("github.event.pull_request.head.repo.full_name == github.repository", content)
-        self.assertIn("startsWith(github.head_ref, 'jules/')", content)
+        self.assertIn("jules.google.com/task/", content)
+        self.assertNotIn("startsWith(github.head_ref, 'jules/')", content)
         self.assertNotIn("!= 'false'", content)
 
     def test_manual_analyze_supports_single_goal_canary(self):
@@ -153,15 +167,29 @@ class TestJulesFleetWorkflowsContract(unittest.TestCase):
         self.assertIn('--goal "$FLEET_GOAL"', content)
         self.assertIn('--goals-dir=".fleet/goals"', content)
 
-    def test_manual_dispatch_defaults_to_dry_run(self):
+    def test_manual_dispatch_preview_is_credential_free_and_read_only(self):
         content, parsed = self._load_workflow("fleet-dispatch.yml")
         on_val = parsed.get("on") or parsed.get(True)
         dry_run = on_val["workflow_dispatch"]["inputs"]["dry_run"]
         self.assertTrue(dry_run["required"])
         self.assertTrue(dry_run["default"])
         self.assertEqual(dry_run["type"], "boolean")
-        self.assertIn("github.event_name == 'workflow_dispatch' && inputs.dry_run", content)
-        self.assertIn("--dry-run", content)
+
+        jobs = parsed["jobs"]
+        preview = jobs["preview"]
+        dispatch = jobs["dispatch"]
+        self.assertIn("github.event_name == 'workflow_dispatch'", preview["if"])
+        self.assertIn("inputs.dry_run == true", preview["if"])
+        self.assertIn("inputs.dry_run == false", dispatch["if"])
+
+        preview_text = yaml.safe_dump(preview, sort_keys=False)
+        dispatch_text = yaml.safe_dump(dispatch, sort_keys=False)
+        self.assertIn("fleet_dispatch_preview.py", preview_text)
+        self.assertNotIn("DOPPLER_TOKEN", preview_text)
+        self.assertNotIn("JULES_API_KEY", preview_text)
+        self.assertNotIn("@google/jules-fleet", preview_text)
+        self.assertIn("@google/jules-fleet", dispatch_text)
+        self.assertNotIn("--dry-run", content)
 
     def test_maintenance_health_write_path_is_globally_gated(self):
         path = os.path.join(WORKFLOWS_DIR, "maintenance-health.yml")
@@ -235,9 +263,12 @@ class TestJulesFleetWorkflowsContract(unittest.TestCase):
 
     def test_exact_jules_fleet_version_consistent_across_repo(self):
         expected_pkg = f"@google/jules-fleet@{EXPECTED_JULES_VERSION}"
-        for wf_name in ["fleet-analyze.yml", "fleet-dispatch.yml", "fleet-merge.yml"]:
+        for wf_name in ["fleet-analyze.yml", "fleet-dispatch.yml"]:
             content, _ = self._load_workflow(wf_name)
             self.assertIn(expected_pkg, content)
+
+        merge_content, _ = self._load_workflow("fleet-merge.yml")
+        self.assertNotIn("@google/jules-fleet", merge_content)
 
         plan_path = os.path.join(DOCS_DIR, "JULES_AUTOMATION_PLAN.md")
         with open(plan_path, "r", encoding="utf-8") as f:
@@ -298,10 +329,21 @@ class TestJulesFleetWorkflowsContract(unittest.TestCase):
         self.assertIn("fleet_milestone.py --resolve", dispatch_content)
         self.assertIn('--milestone "$FLEET_MILESTONE"', dispatch_content)
 
-    def test_merge_dry_run_when_disabled(self):
-        merge_content, _ = self._load_workflow("fleet-merge.yml")
-        self.assertIn('--dry-run', merge_content)
-        self.assertIn('--redispatch', merge_content)
+    def test_merge_is_permanently_read_only_and_mergify_authoritative(self):
+        merge_content, parsed = self._load_workflow("fleet-merge.yml")
+        merge_job = parsed["jobs"]["merge"]
+        self.assertIn("fleet_merge_preview.py", merge_content)
+        self.assertNotIn("@google/jules-fleet", merge_content)
+        self.assertNotIn("DOPPLER_TOKEN", merge_content)
+        self.assertNotIn("JULES_API_KEY", merge_content)
+        self.assertIn(
+            "JULES_FLEET_AUTO_MERGE_ENABLED must remain false",
+            merge_content,
+        )
+        self.assertEqual(
+            merge_job["permissions"],
+            {"contents": "read", "pull-requests": "read"},
+        )
 
 
 if __name__ == "__main__":

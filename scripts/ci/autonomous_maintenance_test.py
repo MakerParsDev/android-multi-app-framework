@@ -509,7 +509,7 @@ class AutonomousMaintenanceContractTest(unittest.TestCase):
         self.assertIn("dependabot-update-type != version-update:semver-minor", prod)
 
         fleet_and = auto[0]["or"][1]["and"]
-        self.assertIn("head ~= ^jules/", fleet_and)
+        self.assertIn("head ~= -[0-9]{10,}$", fleet_and)
         self.assertIn("-from-fork", fleet_and)
         self.assertIn("label = fleet-merge-ready", fleet_and)
         self.assertIn("label = risk:low", fleet_and)

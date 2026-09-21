@@ -71,7 +71,7 @@ merge_protections_settings:
         # Positive authorization: requires global automerge:enabled label
         # Protected files (control plane) are NEVER auto-merged
         - and:
-            - head ~= ^jules/
+            - head ~= -[0-9]{10,}$
             - -from-fork
             - label = fleet-merge-ready
             - label = risk:low
