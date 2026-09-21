@@ -135,10 +135,12 @@ class TestJulesFleetWorkflowsContract(unittest.TestCase):
             # Must require github.ref == 'refs/heads/main'
             self.assertIn("github.ref == 'refs/heads/main'", content)
 
-        # Classifier requires both fail-closed switches.
+        # Classifier requires both fail-closed switches and Jules provenance shape.
         content, _ = self._load_workflow("fleet-classify.yml")
         self.assertIn("vars.AUTONOMOUS_MAINTENANCE_ENABLED == 'true'", content)
         self.assertIn("vars.JULES_FLEET_ENABLED == 'true'", content)
+        self.assertIn("github.event.pull_request.head.repo.full_name == github.repository", content)
+        self.assertIn("startsWith(github.head_ref, 'jules/')", content)
         self.assertNotIn("!= 'false'", content)
 
     def test_maintenance_health_write_path_is_globally_gated(self):

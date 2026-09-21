@@ -16,7 +16,11 @@ jobs:
     name: Classify PR Risk
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    if: ${{ vars.AUTONOMOUS_MAINTENANCE_ENABLED == 'true' && vars.JULES_FLEET_ENABLED == 'true' }}
+    if: >-
+      vars.AUTONOMOUS_MAINTENANCE_ENABLED == 'true' &&
+      vars.JULES_FLEET_ENABLED == 'true' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.head_ref, 'jules/')
     permissions:
       contents: read
       issues: write

@@ -5,9 +5,11 @@ Sync Auto-Merge Authorization Label.
 Reads AUTONOMOUS_MERGE_ENABLED repository variable and synchronizes the
 'automerge:enabled' label only for explicitly authorized PR classes.
 
-Eligible positive-authorization classes are Dependabot PRs and Jules Fleet PRs
-already marked fleet-merge-ready + risk:low. Explicit hold/disable labels and
-drafts fail closed. Mergify remains the final package/path/check policy engine.
+Eligible positive-authorization classes are Dependabot PRs and verified-shape
+Jules Fleet PRs already marked fleet-merge-ready + risk:low. Fleet candidates
+must be same-repository jules/* branches with a Jules session marker. Explicit
+hold/disable labels and drafts fail closed. Mergify remains the final
+package/path/check policy engine.
 
 Fail-closed: if the variable is missing, not 'true', the PR is not an eligible
 class, or API access fails, positive authorization is not granted.
@@ -18,6 +20,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.parse
@@ -119,7 +122,38 @@ def _label_names(pr: dict[str, Any]) -> set[str]:
     }
 
 
-def is_positive_authorization_candidate(pr: dict[str, Any]) -> bool:
+def _has_verified_jules_shape(pr: dict[str, Any], repo: str) -> bool:
+    """Require a same-repository Jules branch with a session provenance marker."""
+    head = pr.get("head") if isinstance(pr.get("head"), dict) else {}
+    head_repo = head.get("repo") if isinstance(head.get("repo"), dict) else {}
+    if head_repo.get("full_name") != repo:
+        return False
+
+    head_ref = str(head.get("ref") or "")
+    if not head_ref.startswith("jules/"):
+        return False
+
+    last_segment = head_ref.rsplit("/", 1)[-1]
+    if re.fullmatch(r"s-[A-Za-z0-9][A-Za-z0-9._-]*", last_segment):
+        return True
+
+    body = str(pr.get("body") or "")
+    if re.search(
+        r"https://jules\.google\.com/session/s-[A-Za-z0-9][A-Za-z0-9._-]*",
+        body,
+    ):
+        return True
+
+    return bool(
+        re.search(
+            r"(?:source\s*[:=]\s*|source:\s*)jules:session:s-[A-Za-z0-9][A-Za-z0-9._-]*",
+            body,
+            flags=re.IGNORECASE,
+        )
+    )
+
+
+def is_positive_authorization_candidate(pr: dict[str, Any], repo: str) -> bool:
     """Return True only for PR classes allowed to receive automerge:enabled.
 
     Mergify still enforces the final dependency-type/package/path/check policy.
@@ -141,6 +175,7 @@ def is_positive_authorization_candidate(pr: dict[str, Any]) -> bool:
         "fleet-merge-ready" in labels
         and "risk:low" in labels
         and "fleet-review-required" not in labels
+        and _has_verified_jules_shape(pr, repo)
     )
 
 
@@ -180,7 +215,7 @@ def main() -> int:
         for pr in open_prs:
             pr_number = pr["number"]
             existing_labels = _label_names(pr)
-            candidate = enabled and is_positive_authorization_candidate(pr)
+            candidate = enabled and is_positive_authorization_candidate(pr, args.repo)
 
             try:
                 if candidate:

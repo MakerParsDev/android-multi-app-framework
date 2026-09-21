@@ -81,7 +81,7 @@ To eliminate race conditions and split-brain states:
 - **Goal-Driven Self-Healing:** Jules analyzes CI health, dependency posture, and security alerts, raising focused remediation issues and PRs.
 - **Safety Boundaries:**
   - Automated PRs run the deterministic `classify_pr.py` classifier.
-  - Changes are labeled `risk:low` / `fleet-merge-ready` only if they touch unprivileged app code or docs.
+  - Low-risk classification alone is insufficient for Fleet readiness. `fleet-merge-ready` is granted only to same-repository `jules/*` PRs with a Jules session provenance marker and a closing issue carrying the `fleet` label; unrelated low-risk PRs receive no Fleet-ready label.
   - Any PR touching protected infrastructure receives `fleet-review-required` and cannot auto-merge.
 
 ---
@@ -98,7 +98,7 @@ Configured in `.mergify.yml` using the latest official schema:
   - `SonarCloud Code Analysis`
 - **`auto_merge_conditions`**: Restricted solely to:
   - Dependabot **dev-only** groups with patch/minor updates, or **production-only** groups where every update is a patch, excluding sensitive coordinates and protected control-plane files. Mixed development/production groups fail closed because Mergify list conditions otherwise use "any" semantics. GitHub Actions updates remain manual because `.github/**` is part of the trust boundary.
-  - Jules Fleet PRs verified as `risk:low` with label `fleet-merge-ready`.
+  - Jules Fleet PRs verified as same-repository `jules/*` branches with Jules session provenance, a closing `fleet` issue, `risk:low`, and `fleet-merge-ready`.
   - Circuit breaker label `-label = automerge:disabled`.
 - **`queue_rules`**:
   - `name: default`, `merge_method: squash`, `batch_size: 1`.
@@ -186,7 +186,7 @@ The `security.yml` workflow runs four security checks:
    - Maintenance health evaluation remains read-only when disabled; dashboard issue synchronization is gated by this switch.
 2. **Global Auto-Merge Authorization:**
    - Missing or `AUTONOMOUS_MERGE_ENABLED=false` means the trusted label controller removes `automerge:enabled` from every open PR.
-   - When enabled, the controller grants `automerge:enabled` only to explicit candidate classes: Dependabot PRs or Fleet PRs already carrying `fleet-merge-ready` + `risk:low`; drafts and PRs with `automerge:disabled`, `hold`, or `do-not-merge` remain unauthorized.
+   - When enabled, the controller grants `automerge:enabled` only to explicit candidate classes: Dependabot PRs, or same-repository `jules/*` Fleet PRs carrying a Jules session marker plus `fleet-merge-ready` + `risk:low`; drafts, forks, unrelated human PRs, and PRs with `automerge:disabled`, `hold`, or `do-not-merge` remain unauthorized.
    - Mergify does **not** read the repository variable directly; the variable becomes effective after the Auto-Merge Control workflow synchronizes labels and Mergify then enforces dependency, protected-path, and required-check policy.
 3. **Per-PR Circuit Breaker Label:**
    - Adding `automerge:disabled`, `hold`, or `do-not-merge` immediately disqualifies the PR from autonomous merge.
@@ -282,7 +282,7 @@ If the canary fails, immediately set `AUTONOMOUS_MERGE_ENABLED=false`, manually 
 
 The `automerge-control.yml` workflow runs hourly on `main` and synchronizes the `automerge:enabled` label from the `AUTONOMOUS_MERGE_ENABLED` repository variable.
 
-- **`AUTONOMOUS_MERGE_ENABLED=true`** → Grants `automerge:enabled` only to explicit candidate classes: Dependabot PRs, or Fleet PRs already carrying `fleet-merge-ready` + `risk:low`. Drafts and PRs with `automerge:disabled`, `hold`, or `do-not-merge` remain unauthorized.
+- **`AUTONOMOUS_MERGE_ENABLED=true`** → Grants `automerge:enabled` only to explicit candidate classes: Dependabot PRs, or same-repository `jules/*` Fleet PRs with a Jules session marker and `fleet-merge-ready` + `risk:low`. Drafts, forks, unrelated human PRs, and PRs with `automerge:disabled`, `hold`, or `do-not-merge` remain unauthorized.
 - **`AUTONOMOUS_MERGE_ENABLED=false`** (or missing) → Removes `automerge:enabled` from every open PR.
 - **Fail-closed**: unrelated human PRs and stale/explicitly disabled candidates have positive authorization removed.
 

@@ -3,8 +3,10 @@
 PR Risk Classifier and Label Synchronizer for Jules Fleet.
 
 Fetches ALL changed files from a GitHub Pull Request using pagination,
-evaluates risk using fleet_pr_risk.py, and applies or removes fleet labels.
-Fails closed if the file list is empty or label assignment fails.
+evaluates risk using fleet_pr_risk.py, and synchronizes risk/Fleet labels.
+Fleet readiness requires same-repository Jules session provenance plus a closing
+issue labeled 'fleet'. Low-risk non-Fleet PRs never receive fleet-merge-ready.
+Fails closed if metadata is unavailable, the file list is empty, or labels fail.
 """
 
 from __future__ import annotations
@@ -12,6 +14,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.parse
@@ -19,6 +22,8 @@ import urllib.request
 from typing import Any
 
 from fleet_pr_risk import classify_changed_files
+
+JULES_SESSION_RE = re.compile(r"(?<![A-Za-z0-9_-])s-[A-Za-z0-9][A-Za-z0-9._-]*")
 
 
 def _make_request(
@@ -75,18 +80,119 @@ def fetch_all_pr_files(repo: str, pr_number: int, token: str) -> list[str]:
     return all_files
 
 
+def fetch_pr_provenance(repo: str, pr_number: int, token: str) -> dict[str, Any]:
+    """Fetch trusted PR provenance and closing-issue labels via GitHub GraphQL."""
+    try:
+        owner, name = repo.split("/", 1)
+    except ValueError as err:
+        raise RuntimeError(f"Invalid repository name {repo!r}") from err
+
+    query = """
+    query($owner: String!, $name: String!, $number: Int!) {
+      repository(owner: $owner, name: $name) {
+        pullRequest(number: $number) {
+          headRefName
+          headRepository { nameWithOwner }
+          body
+          closingIssuesReferences(first: 20) {
+            nodes {
+              number
+              labels(first: 100) { nodes { name } }
+            }
+          }
+        }
+      }
+    }
+    """
+    status, payload = _make_request(
+        "https://api.github.com/graphql",
+        token,
+        method="POST",
+        data={
+            "query": query,
+            "variables": {"owner": owner, "name": name, "number": pr_number},
+        },
+    )
+    if status != 200 or not isinstance(payload, dict) or payload.get("errors"):
+        raise RuntimeError(
+            f"Failed to fetch PR #{pr_number} provenance: HTTP {status} {payload}"
+        )
+
+    repository = payload.get("data", {}).get("repository")
+    pr = repository.get("pullRequest") if isinstance(repository, dict) else None
+    if not isinstance(pr, dict):
+        raise RuntimeError(f"PR #{pr_number} provenance response is incomplete")
+    return pr
+
+
+def _has_jules_session_marker(head_ref: str, body: str) -> bool:
+    if head_ref.startswith("jules/"):
+        last_segment = head_ref.rsplit("/", 1)[-1]
+        if JULES_SESSION_RE.fullmatch(last_segment):
+            return True
+
+    if re.search(r"https://jules\.google\.com/session/s-[A-Za-z0-9][A-Za-z0-9._-]*", body):
+        return True
+
+    return bool(
+        re.search(
+            r"(?:source\s*[:=]\s*|source:\s*)jules:session:s-[A-Za-z0-9][A-Za-z0-9._-]*",
+            body,
+            flags=re.IGNORECASE,
+        )
+    )
+
+
+def is_verified_fleet_pr(repo: str, provenance: dict[str, Any]) -> bool:
+    """Require same-repo Jules provenance plus a closing issue labeled fleet."""
+    head_repo = provenance.get("headRepository")
+    head_repo_name = (
+        head_repo.get("nameWithOwner") if isinstance(head_repo, dict) else None
+    )
+    if head_repo_name != repo:
+        return False
+
+    head_ref = str(provenance.get("headRefName") or "")
+    body = str(provenance.get("body") or "")
+    if not head_ref.startswith("jules/") or not _has_jules_session_marker(head_ref, body):
+        return False
+
+    refs = provenance.get("closingIssuesReferences")
+    nodes = refs.get("nodes", []) if isinstance(refs, dict) else []
+    for issue in nodes:
+        if not isinstance(issue, dict):
+            continue
+        labels = issue.get("labels")
+        label_nodes = labels.get("nodes", []) if isinstance(labels, dict) else []
+        if any(
+            isinstance(label, dict) and label.get("name") == "fleet"
+            for label in label_nodes
+        ):
+            return True
+    return False
+
+
 def update_pr_labels(
     repo: str,
     pr_number: int,
     token: str,
     risk: str,
+    fleet_verified: bool = False,
 ) -> None:
     if risk == "LOW_RISK":
-        to_add = ["fleet-merge-ready", "risk:low"]
-        to_remove = ["fleet-review-required", "risk:protected"]
+        to_add = ["risk:low"]
+        to_remove = ["risk:protected", "fleet-review-required"]
+        if fleet_verified:
+            to_add.insert(0, "fleet-merge-ready")
+        else:
+            to_remove.append("fleet-merge-ready")
     else:
-        to_add = ["fleet-review-required", "risk:protected"]
+        to_add = ["risk:protected"]
         to_remove = ["fleet-merge-ready", "risk:low"]
+        if fleet_verified:
+            to_add.insert(0, "fleet-review-required")
+        else:
+            to_remove.append("fleet-review-required")
 
     # Add new labels (must succeed, failure fails the job)
     url_add = f"https://api.github.com/repos/{repo}/issues/{pr_number}/labels"
@@ -158,11 +264,22 @@ def main() -> int:
     changed_files = fetch_all_pr_files(args.repo, args.pr_number, args.token)
     print(f"Retrieved {len(changed_files)} changed file(s) for PR #{args.pr_number}")
 
+    provenance = fetch_pr_provenance(args.repo, args.pr_number, args.token)
+    fleet_verified = is_verified_fleet_pr(args.repo, provenance)
+    print(f"Verified Jules Fleet provenance: {fleet_verified}")
+
     risk = classify_changed_files(changed_files)
     print(f"Evaluated risk classification: {risk}")
     write_github_output("RISK_LEVEL", risk)
+    write_github_output("FLEET_VERIFIED", str(fleet_verified).lower())
 
-    update_pr_labels(args.repo, args.pr_number, args.token, risk)
+    update_pr_labels(
+        args.repo,
+        args.pr_number,
+        args.token,
+        risk,
+        fleet_verified=fleet_verified,
+    )
     return 0
 
 
