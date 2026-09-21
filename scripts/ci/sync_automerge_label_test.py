@@ -50,6 +50,44 @@ class TestSyncAutoMergeLabel(unittest.TestCase):
                 repo,
             )
         )
+        self.assertTrue(
+            is_positive_authorization_candidate(
+                {
+                    "user": {"login": "human"},
+                    "head": {
+                        "ref": "jules/fix-42-14900125275473977334",
+                        "repo": {"full_name": repo},
+                    },
+                    "labels": [
+                        {"name": "fleet-merge-ready"},
+                        {"name": "risk:low"},
+                    ],
+                    "draft": False,
+                },
+                repo,
+            )
+        )
+        self.assertTrue(
+            is_positive_authorization_candidate(
+                {
+                    "user": {"login": "human"},
+                    "head": {
+                        "ref": "jules/fix-42/generated",
+                        "repo": {"full_name": repo},
+                    },
+                    "body": (
+                        "Session: "
+                        "https://jules.google.com/session/14900125275473977334"
+                    ),
+                    "labels": [
+                        {"name": "fleet-merge-ready"},
+                        {"name": "risk:low"},
+                    ],
+                    "draft": False,
+                },
+                repo,
+            )
+        )
         rejected = (
             {
                 "user": {"login": "human"},
