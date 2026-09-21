@@ -78,6 +78,20 @@ class MaintenanceHealthControllerTest(unittest.TestCase):
         _text, state = health.generate_dashboard_markdown("o/r")
         self.assertEqual(state, "UNKNOWN")
 
+    @patch("maintenance_health_controller.check_expirations", return_value=[])
+    @patch("maintenance_health_controller.check_automerge_control", return_value=(True, "ok"))
+    @patch("maintenance_health_controller.check_github_ruleset_state", return_value=("HEALTHY", "ok"))
+    @patch("maintenance_health_controller.check_dependabot_coverage", return_value=(True, "ok"))
+    @patch("maintenance_health_controller.check_mergify_configuration", return_value=(True, "ok"))
+    @patch("maintenance_health_controller.check_codeql_kotlin_compatibility", return_value=(True, "ok"))
+    @patch("maintenance_health_controller.check_pinned_actions", return_value=(True, "ok"))
+    def test_dashboard_reports_read_only_fleet_merge_architecture(self, *_mocks):
+        text, state = health.generate_dashboard_markdown("o/r")
+        self.assertEqual(state, "HEALTHY")
+        self.assertIn("Jules Fleet Merge Status:** Read-only audit only", text)
+        self.assertIn("Mergify is the sole merge authority", text)
+        self.assertNotIn("Jules Fleet Merge Status:** Dry-run only", text)
+
     @patch("maintenance_health_controller.check_expirations", return_value=["expired"])
     @patch("maintenance_health_controller.check_automerge_control", return_value=(True, "ok"))
     @patch("maintenance_health_controller.check_github_ruleset_state", return_value=("HEALTHY", "ok"))
