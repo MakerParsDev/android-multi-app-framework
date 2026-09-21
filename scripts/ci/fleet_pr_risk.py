@@ -57,7 +57,7 @@ def classify_file(path: str) -> str:
     path = path.strip().lstrip("./")
 
     if not path:
-        return "LOW_RISK"
+        return "PROTECTED"
 
     # Check protected exact files
     if path in PROTECTED_EXACT_FILES:
@@ -84,7 +84,7 @@ def classify_file(path: str) -> str:
 
 def classify_changed_files(files: list) -> str:
     if not files:
-        return "LOW_RISK"
+        return "PROTECTED"
 
     for f in files:
         status = classify_file(f)

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 import tempfile
 import textwrap
 
@@ -19,7 +20,7 @@ def write(path: Path, content: str) -> None:
 
 def run_validator(repo: Path) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        ["python3", str(VALIDATOR), "--repo", str(repo)],
+        [sys.executable, str(VALIDATOR), "--repo", str(repo)],
         check=False,
         text=True,
         capture_output=True,

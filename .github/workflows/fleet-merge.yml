@@ -6,9 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-  pull-requests: write
-  issues: write
+  contents: read
 
 concurrency:
   group: fleet-merge-${{ github.ref }}
@@ -18,7 +16,14 @@ jobs:
   merge:
     name: Execute Fleet Merges
     runs-on: ubuntu-latest
-    if: ${{ vars.JULES_FLEET_ENABLED != 'false' }}
+    timeout-minutes: 30
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      vars.JULES_FLEET_ENABLED == 'true'
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
 
     steps:
       - name: Checkout Repository
@@ -29,10 +34,16 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: '20'
+          node-version: '22'
+
+      - name: Setup Python
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: '3.12'
 
       - name: Resolve JULES_API_KEY from Doppler
         id: resolve-key
+        if: ${{ vars.JULES_FLEET_AUTO_MERGE_ENABLED == 'true' }}
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
         run: |
@@ -40,14 +51,13 @@ jobs:
 
       - name: Execute Fleet Merge Sequence
         env:
-          JULES_API_KEY: ${{ env.JULES_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           AUTO_MERGE_ENABLED: ${{ vars.JULES_FLEET_AUTO_MERGE_ENABLED }}
         run: |
           if [ "$AUTO_MERGE_ENABLED" = "true" ]; then
-            echo "Auto-merge enabled. Running fleet merge..."
-            npx --yes @google/jules-fleet@0.0.1-experimental.35 merge --mode="label" --redispatch
+            echo "Auto-merge enabled. Executing fleet merge..."
+            npx --yes --package=@google/jules-fleet@0.0.1-experimental.35 jules-fleet merge --mode="label" --redispatch
           else
-            echo "Auto-merge is currently DISABLED (JULES_FLEET_AUTO_MERGE_ENABLED != 'true'). Running in dry-run mode."
-            npx --yes @google/jules-fleet@0.0.1-experimental.35 merge --mode="label" --dry-run
+            echo "Auto-merge is disabled (vars.JULES_FLEET_AUTO_MERGE_ENABLED != 'true'). Running safe dry-run."
+            npx --yes --package=@google/jules-fleet@0.0.1-experimental.35 jules-fleet merge --mode="label" --dry-run
           fi
