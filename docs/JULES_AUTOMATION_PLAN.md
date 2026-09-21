@@ -55,6 +55,10 @@ Jules automation operates as an autonomous orchestration layer (`@google/jules-f
 - `JULES_FLEET_ENABLED`: Repository variable. Default is fail-closed: must be explicitly set to `"true"` to enable Fleet execution. If unset or any other value, all Fleet workflows exit immediately without consuming secrets or compute.
 - `JULES_FLEET_AUTO_MERGE_ENABLED`: Repository variable. Kept `false` in the current architecture so `fleet-merge.yml` is diagnostic dry-run only and Mergify remains the sole automated merge authority.
 
+## Live Canary Verification
+
+On 2026-09-21 UTC, the single-goal Analyze canary for `.fleet/goals/docs-config-drift.md` completed successfully against `main` with the pinned Fleet runtime. It successfully resolved `JULES_API_KEY` from Doppler, ensured milestone `Jules Fleet Maintenance` (#5), and started numeric Jules session `14900125275473977334`. Note that this evidence does not enable Jules auto-merge; Mergify remains the sole merge authority.
+
 ## Local Validation
 
 Run local contract and policy tests before pushing workflow changes:
