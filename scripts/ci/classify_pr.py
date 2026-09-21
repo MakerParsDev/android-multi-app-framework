@@ -14,7 +14,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
 import sys
 import urllib.error
 import urllib.parse
@@ -22,11 +21,7 @@ import urllib.request
 from typing import Any
 
 from fleet_pr_risk import classify_changed_files
-
-# Jules Fleet 0.0.1-experimental.35 emits numeric Jules session IDs and its
-# conflict resolver extracts them from branch names ending in -<10+ digits>.
-# Retain s-* support for Fleet metadata produced by older SDK paths.
-JULES_SESSION_ID_PATTERN = r"(?:s-[A-Za-z0-9][A-Za-z0-9._-]*|[0-9]{10,})"
+from jules_provenance import has_verified_jules_session_provenance
 
 
 def _make_request(
@@ -128,29 +123,6 @@ def fetch_pr_provenance(repo: str, pr_number: int, token: str) -> dict[str, Any]
     return pr
 
 
-def _has_jules_session_marker(head_ref: str, body: str) -> bool:
-    if head_ref.startswith("jules/"):
-        last_segment = head_ref.rsplit("/", 1)[-1]
-        if re.fullmatch(JULES_SESSION_ID_PATTERN, last_segment):
-            return True
-        if re.search(rf"-{JULES_SESSION_ID_PATTERN}$", head_ref):
-            return True
-
-    if re.search(
-        rf"https://jules\.google\.com/session/{JULES_SESSION_ID_PATTERN}(?=$|[/?#\s)\]])",
-        body,
-    ):
-        return True
-
-    return bool(
-        re.search(
-            rf"(?:source\s*[:=]\s*|source:\s*)jules:session:{JULES_SESSION_ID_PATTERN}(?=$|\s)",
-            body,
-            flags=re.IGNORECASE,
-        )
-    )
-
-
 def is_verified_fleet_pr(repo: str, provenance: dict[str, Any]) -> bool:
     """Require same-repo Jules provenance plus a closing issue labeled fleet."""
     head_repo = provenance.get("headRepository")
@@ -162,7 +134,7 @@ def is_verified_fleet_pr(repo: str, provenance: dict[str, Any]) -> bool:
 
     head_ref = str(provenance.get("headRefName") or "")
     body = str(provenance.get("body") or "")
-    if not head_ref.startswith("jules/") or not _has_jules_session_marker(head_ref, body):
+    if not has_verified_jules_session_provenance(head_ref, body):
         return False
 
     refs = provenance.get("closingIssuesReferences")
@@ -269,24 +241,31 @@ def main() -> int:
         )
         return 1
 
-    changed_files = fetch_all_pr_files(args.repo, args.pr_number, args.token)
-    print(f"Retrieved {len(changed_files)} changed file(s) for PR #{args.pr_number}")
-
     provenance = fetch_pr_provenance(args.repo, args.pr_number, args.token)
     fleet_verified = is_verified_fleet_pr(args.repo, provenance)
     print(f"Verified Jules Fleet provenance: {fleet_verified}")
+    write_github_output("FLEET_VERIFIED", str(fleet_verified).lower())
+
+    if not fleet_verified:
+        print(
+            "PR is not a verified Jules Fleet worker PR; "
+            "no Fleet/risk labels will be mutated."
+        )
+        return 0
+
+    changed_files = fetch_all_pr_files(args.repo, args.pr_number, args.token)
+    print(f"Retrieved {len(changed_files)} changed file(s) for PR #{args.pr_number}")
 
     risk = classify_changed_files(changed_files)
     print(f"Evaluated risk classification: {risk}")
     write_github_output("RISK_LEVEL", risk)
-    write_github_output("FLEET_VERIFIED", str(fleet_verified).lower())
 
     update_pr_labels(
         args.repo,
         args.pr_number,
         args.token,
         risk,
-        fleet_verified=fleet_verified,
+        fleet_verified=True,
     )
     return 0
 

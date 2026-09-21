@@ -90,14 +90,14 @@ The repository uses Jules Fleet (`@google/jules-fleet@0.0.1-experimental.35`) fo
 | Workflow | Trigger | Purpose | Risk Control |
 |---|---|---|---|
 | `fleet-analyze.yml` | Scheduled (6h), manual (`workflow_dispatch`) | Analyzes goals in `.fleet/goals/` and creates issues; manual runs may select one `.fleet/goals/*.md` goal for a canary | Trusted `main` only; both `AUTONOMOUS_MAINTENANCE_ENABLED` and `JULES_FLEET_ENABLED` must be exactly `true`; isolated `JULES_API_KEY` from Doppler; manual goal paths are constrained to the goals directory |
-| `fleet-dispatch.yml` | Scheduled (2h), manual (`workflow_dispatch`) | Dispatches Jules worker sessions for Fleet issues; manual runs default to `dry_run=true` | Trusted `main` only; both fail-closed switches must be `true`; isolated `JULES_API_KEY`, no production secrets; operators must explicitly disable dry-run to create sessions |
-| `fleet-classify.yml` | `pull_request` (`opened`, `synchronize`, `reopened`, `ready_for_review`) | Classifies verified same-repo `jules/*` PRs and synchronizes Fleet risk labels | Metadata-only, trusted base checkout, both fail-closed switches required; `fleet-merge-ready` additionally requires Jules session provenance plus a closing issue labeled `fleet`; never executes PR code or receives Doppler/Jules secrets |
-| `fleet-merge.yml` | Scheduled (4h), manual (`workflow_dispatch`) | Evaluates `fleet-merge-ready` PRs | Trusted `main` only; both fail-closed switches required; `JULES_FLEET_AUTO_MERGE_ENABLED` remains a separate merge switch and defaults to dry-run |
+| `fleet-dispatch.yml` | Scheduled (2h), manual (`workflow_dispatch`) | Dispatches Jules worker sessions for Fleet issues; manual runs default to a repository-owned read-only preview | Trusted `main` only; both fail-closed switches must be `true`; preview receives no Doppler/Jules credential and never invokes Jules Fleet; operators must explicitly set `dry_run=false` before session creation |
+| `fleet-classify.yml` | `pull_request` (`opened`, `synchronize`, `reopened`, `ready_for_review`) | Metadata-gates PRs to `main`, then classifies only verified Jules worker PRs | Trusted base checkout and both fail-closed switches required; non-Fleet/fork/Dependabot PRs exit before file classification or label writes; verified current-runtime provenance correlates the numeric branch suffix with the same `jules.google.com/task/<id>` body marker and a closing issue labeled `fleet`; never executes PR code or receives Doppler/Jules secrets |
+| `fleet-merge.yml` | Scheduled (4h), manual (`workflow_dispatch`) | Read-only audit of verified `fleet-merge-ready` PRs for Mergify | Trusted `main` only; both fail-closed switches required; never invokes Jules merge or receives Jules/Doppler credentials; fails closed if `JULES_FLEET_AUTO_MERGE_ENABLED=true` because Mergify is the sole merge authority |
 
 Control plane variables:
 - `AUTONOMOUS_MAINTENANCE_ENABLED`: Global write-capable maintenance switch. Missing or anything other than `true` is fail-closed.
 - `JULES_FLEET_ENABLED`: Fleet-specific switch. Fleet execution requires this **and** the global maintenance switch to be exactly `true`.
-- `JULES_FLEET_AUTO_MERGE_ENABLED`: Separate Fleet merge switch. Kept `false` because Mergify is authoritative.
+- `JULES_FLEET_AUTO_MERGE_ENABLED`: Permanent invariant: must remain `false`. Fleet merge workflow is read-only and Mergify is authoritative.
 
 ## Autonomous Maintenance & Health Monitoring
 

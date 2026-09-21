@@ -19,12 +19,11 @@ jobs:
     if: >-
       vars.AUTONOMOUS_MAINTENANCE_ENABLED == 'true' &&
       vars.JULES_FLEET_ENABLED == 'true' &&
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      startsWith(github.head_ref, 'jules/')
+      github.base_ref == 'main'
     permissions:
       contents: read
-      issues: write
-      pull-requests: read
+      issues: read
+      pull-requests: write
 
     steps:
       - name: Checkout Repository (Trusted Base)

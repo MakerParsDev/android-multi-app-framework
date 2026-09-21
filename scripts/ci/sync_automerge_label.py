@@ -5,10 +5,11 @@ Sync Auto-Merge Authorization Label.
 Reads AUTONOMOUS_MERGE_ENABLED repository variable and synchronizes the
 'automerge:enabled' label only for explicitly authorized PR classes.
 
-Eligible positive-authorization classes are Dependabot PRs and verified-shape
-Jules Fleet PRs already marked fleet-merge-ready + risk:low. Fleet candidates
-must be same-repository jules/* branches with a Jules session marker. Explicit
-hold/disable labels and drafts fail closed. Mergify remains the final
+Eligible positive-authorization classes are Dependabot PRs and verified
+Jules Fleet PRs already marked fleet-merge-ready + risk:low. Current Fleet
+candidates must be same-repository PRs whose numeric branch suffix and Jules
+task URL carry the same session ID; legacy jules/* + s-* provenance is retained.
+Explicit hold/disable labels and drafts fail closed. Mergify remains the final
 package/path/check policy engine.
 
 Fail-closed: if the variable is missing, not 'true', the PR is not an eligible
@@ -20,16 +21,13 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
 import sys
 import urllib.error
 import urllib.parse
 import urllib.request
 from typing import Any
 
-# Jules Fleet 0.0.1-experimental.35 currently uses numeric session IDs and
-# branch names ending in -<10+ digits>; older Fleet metadata may use s-* IDs.
-JULES_SESSION_ID_PATTERN = r"(?:s-[A-Za-z0-9][A-Za-z0-9._-]*|[0-9]{10,})"
+from jules_provenance import has_verified_jules_session_provenance
 
 
 def _make_request(
@@ -127,36 +125,15 @@ def _label_names(pr: dict[str, Any]) -> set[str]:
 
 
 def _has_verified_jules_shape(pr: dict[str, Any], repo: str) -> bool:
-    """Require a same-repository Jules branch with a session provenance marker."""
+    """Require same-repository, branch/body-correlated Jules provenance."""
     head = pr.get("head") if isinstance(pr.get("head"), dict) else {}
     head_repo = head.get("repo") if isinstance(head.get("repo"), dict) else {}
     if head_repo.get("full_name") != repo:
         return False
 
     head_ref = str(head.get("ref") or "")
-    if not head_ref.startswith("jules/"):
-        return False
-
-    last_segment = head_ref.rsplit("/", 1)[-1]
-    if re.fullmatch(JULES_SESSION_ID_PATTERN, last_segment):
-        return True
-    if re.search(rf"-{JULES_SESSION_ID_PATTERN}$", head_ref):
-        return True
-
     body = str(pr.get("body") or "")
-    if re.search(
-        rf"https://jules\.google\.com/session/{JULES_SESSION_ID_PATTERN}(?=$|[/?#\s)\]])",
-        body,
-    ):
-        return True
-
-    return bool(
-        re.search(
-            rf"(?:source\s*[:=]\s*|source:\s*)jules:session:{JULES_SESSION_ID_PATTERN}(?=$|\s)",
-            body,
-            flags=re.IGNORECASE,
-        )
-    )
+    return has_verified_jules_session_provenance(head_ref, body)
 
 
 def is_positive_authorization_candidate(pr: dict[str, Any], repo: str) -> bool:
