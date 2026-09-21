@@ -16,7 +16,7 @@ jobs:
     name: Classify PR Risk
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    if: ${{ vars.JULES_FLEET_ENABLED == 'true' }}
+    if: ${{ vars.AUTONOMOUS_MAINTENANCE_ENABLED == 'true' && vars.JULES_FLEET_ENABLED == 'true' }}
     permissions:
       contents: read
       issues: write

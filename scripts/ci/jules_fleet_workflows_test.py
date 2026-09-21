@@ -128,16 +128,31 @@ class TestJulesFleetWorkflowsContract(unittest.TestCase):
     def test_fail_closed_master_switch_and_trusted_main_restriction(self):
         for wf_name in ["fleet-analyze.yml", "fleet-dispatch.yml", "fleet-merge.yml"]:
             content, parsed = self._load_workflow(wf_name)
-            # Must require vars.JULES_FLEET_ENABLED == 'true'
+            # Must require both global maintenance and Fleet switches.
+            self.assertIn("vars.AUTONOMOUS_MAINTENANCE_ENABLED == 'true'", content)
             self.assertIn("vars.JULES_FLEET_ENABLED == 'true'", content)
             self.assertNotIn("!= 'false'", content, f"{wf_name} uses fail-open switch")
             # Must require github.ref == 'refs/heads/main'
             self.assertIn("github.ref == 'refs/heads/main'", content)
 
-        # Classifier requires fail-closed switch
+        # Classifier requires both fail-closed switches.
         content, _ = self._load_workflow("fleet-classify.yml")
+        self.assertIn("vars.AUTONOMOUS_MAINTENANCE_ENABLED == 'true'", content)
         self.assertIn("vars.JULES_FLEET_ENABLED == 'true'", content)
         self.assertNotIn("!= 'false'", content)
+
+    def test_maintenance_health_write_path_is_globally_gated(self):
+        path = os.path.join(WORKFLOWS_DIR, "maintenance-health.yml")
+        with open(path, "r", encoding="utf-8") as f:
+            content = f.read()
+        parsed = yaml.safe_load(content)
+        jobs = parsed["jobs"]
+        self.assertEqual(jobs["health-check"]["permissions"], {"contents": "read"})
+        sync = jobs["dashboard-sync"]
+        self.assertIn("vars.AUTONOMOUS_MAINTENANCE_ENABLED == 'true'", sync["if"])
+        self.assertEqual(sync["permissions"], {"contents": "read", "issues": "write"})
+        self.assertIn("--check", content)
+        self.assertIn("--sync-issue", content)
 
     def test_classifier_does_not_use_pull_request_target(self):
         content, parsed = self._load_workflow("fleet-classify.yml")

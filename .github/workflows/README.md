@@ -9,7 +9,7 @@ and must not be re-enabled by copying or renaming them.
 | CI | PR, `main` push | policy, secrets, quality, 17-flavor lint/assemble | skipped for Dependabot |
 | Security | PR, `main` push, weekly, manual | actionlint, zizmor, Gitleaks, dependency review | dependency review only on PR |
 | Dependency Submission | dependency/build changes on `main`, manual | submit resolved Gradle dependency graph | trusted `main` only |
-| CodeQL | human PR, `main`, weekly, manual | Java/Kotlin manual-build analysis | one representative flavor |
+| CodeQL | PR, `main`, weekly, manual | Java/Kotlin manual-build analysis | one representative flavor; required for Dependabot too |
 | Device Smoke | nightly, manual | two instrumentation smoke tests on a Gradle Managed Device | one flavor, one ATD |
 | Baseline Profiles | weekly, manual | generate variant-scoped profiles for all 17 flavors and update one automation PR | full-speed managed-device matrix |
 | Physical Performance | manual | serial startup/frame benchmarks on one dedicated Android device | self-hosted `android-performance` runner |
@@ -32,8 +32,9 @@ job. Production Firebase credentials are never exposed to pull-request jobs.
 
 Dependabot version updates are consolidated into one monthly Android maintenance
 pull request covering GitHub Actions and Gradle. Dependabot pull requests run the
-workflow/security gates and a lightweight Gradle smoke check, but skip Android
-quality, CodeQL, and the full app-build matrix to avoid runner congestion.
+workflow/security gates, the required CodeQL job, and a lightweight Gradle smoke
+check, while still skipping the full Android quality/app-build matrix to avoid
+runner congestion.
 
 All active workflows must use immutable action SHAs approved in
 `config/pinned-github-actions.json`, workflow-level `permissions: contents: read`,
@@ -88,14 +89,15 @@ The repository uses Jules Fleet (`@google/jules-fleet@0.0.1-experimental.35`) fo
 
 | Workflow | Trigger | Purpose | Risk Control |
 |---|---|---|---|
-| `fleet-analyze.yml` | Scheduled (6h), manual (`workflow_dispatch`) | Analyzes goals in `.fleet/goals/` and creates issues | Trusted `main` only, fail-closed `JULES_FLEET_ENABLED == 'true'`, isolated `JULES_API_KEY` from Doppler, job-level write scopes |
-| `fleet-dispatch.yml` | Scheduled (2h), manual (`workflow_dispatch`) | Dispatches Jules worker sessions for Fleet issues | Trusted `main` only, fail-closed `JULES_FLEET_ENABLED == 'true'`, isolated `JULES_API_KEY`, no production secrets |
-| `fleet-classify.yml` | `pull_request` (`opened`, `synchronize`, `reopened`, `ready_for_review`) | Classifies PR changed files via `fleet_pr_risk.py` | Metadata-only, trusted base checkout, never executes PR code, no Doppler or Jules secrets |
-| `fleet-merge.yml` | Scheduled (4h), manual (`workflow_dispatch`) | Merges `fleet-merge-ready` PRs when CI passes | Trusted `main` only, fail-closed `JULES_FLEET_ENABLED == 'true'`, guarded by `JULES_FLEET_AUTO_MERGE_ENABLED == 'true'` (otherwise dry-run) |
+| `fleet-analyze.yml` | Scheduled (6h), manual (`workflow_dispatch`) | Analyzes goals in `.fleet/goals/` and creates issues | Trusted `main` only; both `AUTONOMOUS_MAINTENANCE_ENABLED` and `JULES_FLEET_ENABLED` must be exactly `true`; isolated `JULES_API_KEY` from Doppler |
+| `fleet-dispatch.yml` | Scheduled (2h), manual (`workflow_dispatch`) | Dispatches Jules worker sessions for Fleet issues | Trusted `main` only; both fail-closed switches must be `true`; isolated `JULES_API_KEY`, no production secrets |
+| `fleet-classify.yml` | `pull_request` (`opened`, `synchronize`, `reopened`, `ready_for_review`) | Classifies PR changed files via `fleet_pr_risk.py` | Metadata-only, trusted base checkout, both fail-closed switches required, never executes PR code, no Doppler or Jules secrets |
+| `fleet-merge.yml` | Scheduled (4h), manual (`workflow_dispatch`) | Evaluates `fleet-merge-ready` PRs | Trusted `main` only; both fail-closed switches required; `JULES_FLEET_AUTO_MERGE_ENABLED` remains a separate merge switch and defaults to dry-run |
 
 Control plane variables:
-- `JULES_FLEET_ENABLED`: Master switch (`true` / `false`, default fail-closed). Must be explicitly set to `true` to enable execution.
-- `JULES_FLEET_AUTO_MERGE_ENABLED`: Auto-merge switch (`true` / `false`, default fail-closed). Kept `false` as Mergify is authoritative.
+- `AUTONOMOUS_MAINTENANCE_ENABLED`: Global write-capable maintenance switch. Missing or anything other than `true` is fail-closed.
+- `JULES_FLEET_ENABLED`: Fleet-specific switch. Fleet execution requires this **and** the global maintenance switch to be exactly `true`.
+- `JULES_FLEET_AUTO_MERGE_ENABLED`: Separate Fleet merge switch. Kept `false` because Mergify is authoritative.
 
 ## Autonomous Maintenance & Health Monitoring
 
@@ -103,4 +105,4 @@ The repository uses **Mergify** as the single authoritative merge engine and `.g
 
 | Workflow | Trigger | Purpose | Risk Control |
 |---|---|---|---|
-| `maintenance-health.yml` | Scheduled (daily 06:00 UTC), manual (`workflow_dispatch`) | Evaluates toolchain drift, policy expirations, pinned action integrity, and updates the consolidated Dashboard issue | Least privilege (`contents: read`, `issues: write`), deduplicated issue sync, fail-closed |
+| `maintenance-health.yml` | Scheduled (daily 06:00 UTC), manual (`workflow_dispatch`) | Always evaluates health read-only; optionally updates the consolidated Dashboard issue | Health job is `contents: read`; the separate issue-write job runs only when `AUTONOMOUS_MAINTENANCE_ENABLED == 'true'` |
