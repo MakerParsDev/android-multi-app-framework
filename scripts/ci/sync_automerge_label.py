@@ -27,6 +27,10 @@ import urllib.parse
 import urllib.request
 from typing import Any
 
+# Jules Fleet 0.0.1-experimental.35 currently uses numeric session IDs and
+# branch names ending in -<10+ digits>; older Fleet metadata may use s-* IDs.
+JULES_SESSION_ID_PATTERN = r"(?:s-[A-Za-z0-9][A-Za-z0-9._-]*|[0-9]{10,})"
+
 
 def _make_request(
     url: str,
@@ -134,19 +138,21 @@ def _has_verified_jules_shape(pr: dict[str, Any], repo: str) -> bool:
         return False
 
     last_segment = head_ref.rsplit("/", 1)[-1]
-    if re.fullmatch(r"s-[A-Za-z0-9][A-Za-z0-9._-]*", last_segment):
+    if re.fullmatch(JULES_SESSION_ID_PATTERN, last_segment):
+        return True
+    if re.search(rf"-{JULES_SESSION_ID_PATTERN}$", head_ref):
         return True
 
     body = str(pr.get("body") or "")
     if re.search(
-        r"https://jules\.google\.com/session/s-[A-Za-z0-9][A-Za-z0-9._-]*",
+        rf"https://jules\.google\.com/session/{JULES_SESSION_ID_PATTERN}(?=$|[/?#\s)\]])",
         body,
     ):
         return True
 
     return bool(
         re.search(
-            r"(?:source\s*[:=]\s*|source:\s*)jules:session:s-[A-Za-z0-9][A-Za-z0-9._-]*",
+            rf"(?:source\s*[:=]\s*|source:\s*)jules:session:{JULES_SESSION_ID_PATTERN}(?=$|\s)",
             body,
             flags=re.IGNORECASE,
         )

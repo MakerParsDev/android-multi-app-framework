@@ -23,7 +23,10 @@ from typing import Any
 
 from fleet_pr_risk import classify_changed_files
 
-JULES_SESSION_RE = re.compile(r"(?<![A-Za-z0-9_-])s-[A-Za-z0-9][A-Za-z0-9._-]*")
+# Jules Fleet 0.0.1-experimental.35 emits numeric Jules session IDs and its
+# conflict resolver extracts them from branch names ending in -<10+ digits>.
+# Retain s-* support for Fleet metadata produced by older SDK paths.
+JULES_SESSION_ID_PATTERN = r"(?:s-[A-Za-z0-9][A-Za-z0-9._-]*|[0-9]{10,})"
 
 
 def _make_request(
@@ -128,15 +131,20 @@ def fetch_pr_provenance(repo: str, pr_number: int, token: str) -> dict[str, Any]
 def _has_jules_session_marker(head_ref: str, body: str) -> bool:
     if head_ref.startswith("jules/"):
         last_segment = head_ref.rsplit("/", 1)[-1]
-        if JULES_SESSION_RE.fullmatch(last_segment):
+        if re.fullmatch(JULES_SESSION_ID_PATTERN, last_segment):
+            return True
+        if re.search(rf"-{JULES_SESSION_ID_PATTERN}$", head_ref):
             return True
 
-    if re.search(r"https://jules\.google\.com/session/s-[A-Za-z0-9][A-Za-z0-9._-]*", body):
+    if re.search(
+        rf"https://jules\.google\.com/session/{JULES_SESSION_ID_PATTERN}(?=$|[/?#\s)\]])",
+        body,
+    ):
         return True
 
     return bool(
         re.search(
-            r"(?:source\s*[:=]\s*|source:\s*)jules:session:s-[A-Za-z0-9][A-Za-z0-9._-]*",
+            rf"(?:source\s*[:=]\s*|source:\s*)jules:session:{JULES_SESSION_ID_PATTERN}(?=$|\s)",
             body,
             flags=re.IGNORECASE,
         )

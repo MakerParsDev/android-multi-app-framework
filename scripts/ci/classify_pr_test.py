@@ -77,6 +77,22 @@ class TestClassifyPR(unittest.TestCase):
         }
         self.assertTrue(is_verified_fleet_pr("owner/repo", good))
 
+        numeric_branch = {
+            **good,
+            "headRefName": "jules/fix-42-14900125275473977334",
+        }
+        self.assertTrue(is_verified_fleet_pr("owner/repo", numeric_branch))
+
+        numeric_session_url = {
+            **good,
+            "headRefName": "jules/fix-42/generated",
+            "body": (
+                "Fixes #42\n"
+                "Session: https://jules.google.com/session/14900125275473977334"
+            ),
+        }
+        self.assertTrue(is_verified_fleet_pr("owner/repo", numeric_session_url))
+
         forked = {**good, "headRepository": {"nameWithOwner": "fork/repo"}}
         self.assertFalse(is_verified_fleet_pr("owner/repo", forked))
 
