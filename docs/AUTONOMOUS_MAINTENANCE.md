@@ -173,7 +173,7 @@ The `security.yml` workflow runs four security checks:
 |---|---|---|
 | **Class A (Autonomous)** | Non-sensitive Dependabot development patch/minor, non-sensitive production patch, Jules Fleet `risk:low` outside protected paths | Auto-queued and merged by Mergify after all hard gates pass |
 | **Class B (Enhanced Guarded)** | Selected non-sensitive runtime/side-project production patches | Eligible only when the Mergify contract permits them and full CI/integration gates pass |
-| **Class C (Manual Approval Required)** | Any semver-major bump, GitHub Actions updates, Gradle/Kotlin/AGP/KSP toolchain, Auth/Crypto, Billing, DB migrations, `.github/**`, `.mergify.yml`, `scripts/ci/**` | Never auto-merged; human approval required |
+| **Class C (Manual Approval Required)** | Any semver-major bump, GitHub Actions updates, Gradle/Kotlin/AGP/KSP toolchain, root build control files (`build.gradle.kts`, `settings.gradle.kts`, `gradle.properties`, wrapper), Auth/Crypto, Billing, DB migrations, `.github/**`, `.mergify.yml`, `scripts/ci/**` | Never auto-merged; human approval required |
 
 ---
 
