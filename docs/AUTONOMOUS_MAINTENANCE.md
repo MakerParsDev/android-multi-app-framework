@@ -51,7 +51,7 @@ flowchart TD
 
 To eliminate race conditions and split-brain states:
 - **Single Merge Authority:** **Mergify** is the sole automated merge authority.
-- **Jules Fleet Merge:** Kept strictly in diagnostic dry-run mode (`JULES_FLEET_AUTO_MERGE_ENABLED=false`).
+- **Jules Fleet Merge:** Permanently read-only audit mode (`JULES_FLEET_AUTO_MERGE_ENABLED=false`). The workflow never invokes Jules merge; Mergify is the sole automated merge authority.
 - **Native GitHub Merge Queue:** Disabled to prevent conflicting dual-queue synchronization.
 
 ---
@@ -81,7 +81,7 @@ To eliminate race conditions and split-brain states:
 - **Goal-Driven Self-Healing:** Jules analyzes CI health, dependency posture, and security alerts, raising focused remediation issues and PRs.
 - **Safety Boundaries:**
   - Automated PRs run the deterministic `classify_pr.py` classifier.
-  - Low-risk classification alone is insufficient for Fleet readiness. `fleet-merge-ready` is granted only to same-repository `jules/*` PRs with a Jules session provenance marker and a closing issue carrying the `fleet` label; unrelated low-risk PRs receive no Fleet-ready label.
+  - Low-risk classification alone is insufficient for Fleet readiness. For the current pinned Fleet runtime, `fleet-merge-ready` is granted only when the same-repository branch ends in a 10+ digit Jules session ID, the PR body contains `jules.google.com/task/<same id>`, and a closing issue carries the `fleet` label. Legacy `jules/*` + `s-*` session provenance remains supported; unrelated low-risk PRs receive no Fleet-ready label.
   - Any PR touching protected infrastructure receives `fleet-review-required` and cannot auto-merge.
 
 ---
@@ -98,7 +98,7 @@ Configured in `.mergify.yml` using the latest official schema:
   - `SonarCloud Code Analysis`
 - **`auto_merge_conditions`**: Restricted solely to:
   - Dependabot **dev-only** groups with patch/minor updates, or **production-only** groups where every update is a patch, excluding sensitive coordinates and protected control-plane files. Mixed development/production groups fail closed because Mergify list conditions otherwise use "any" semantics. GitHub Actions updates remain manual because `.github/**` is part of the trust boundary.
-  - Jules Fleet PRs verified as same-repository `jules/*` branches with Jules session provenance, a closing `fleet` issue, `risk:low`, and `fleet-merge-ready`.
+  - Jules Fleet PRs verified by correlated same-repository session provenance, a closing `fleet` issue, `risk:low`, and `fleet-merge-ready`.
   - Circuit breaker label `-label = automerge:disabled`.
 - **`queue_rules`**:
   - `name: default`, `merge_method: squash`, `batch_size: 1`.
@@ -186,7 +186,7 @@ The `security.yml` workflow runs four security checks:
    - Maintenance health evaluation remains read-only when disabled; dashboard issue synchronization is gated by this switch.
 2. **Global Auto-Merge Authorization:**
    - Missing or `AUTONOMOUS_MERGE_ENABLED=false` means the trusted label controller removes `automerge:enabled` from every open PR.
-   - When enabled, the controller grants `automerge:enabled` only to explicit candidate classes: Dependabot PRs, or same-repository `jules/*` Fleet PRs carrying a Jules session marker plus `fleet-merge-ready` + `risk:low`; drafts, forks, unrelated human PRs, and PRs with `automerge:disabled`, `hold`, or `do-not-merge` remain unauthorized.
+   - When enabled, the controller grants `automerge:enabled` only to explicit candidate classes: Dependabot PRs, or same-repository Fleet PRs whose branch/body contain a correlated Jules session ID plus `fleet-merge-ready` + `risk:low`; drafts, forks, unrelated human PRs, mismatched provenance, and PRs with `automerge:disabled`, `hold`, or `do-not-merge` remain unauthorized.
    - Mergify does **not** read the repository variable directly; the variable becomes effective after the Auto-Merge Control workflow synchronizes labels and Mergify then enforces dependency, protected-path, and required-check policy.
 3. **Per-PR Circuit Breaker Label:**
    - Adding `automerge:disabled`, `hold`, or `do-not-merge` immediately disqualifies the PR from autonomous merge.
@@ -265,7 +265,7 @@ The helper creates missing circuit-breaker variables as `false`, keeps GitHub na
 2. **Maintenance canary:** set only `AUTONOMOUS_MAINTENANCE_ENABLED=true`. Keep merge and Jules switches false and observe a maintenance cycle.
 3. **One Dependabot canary:** choose one non-sensitive, non-protected patch PR. Keep `automerge:disabled` on all other existing Dependabot PRs, remove it only from the canary, set `AUTONOMOUS_MERGE_ENABLED=true`, and immediately run the Auto-Merge Control workflow. Verify the canary alone receives `automerge:enabled`, all hard gates pass, and Mergify performs the squash merge.
 4. **Gradual rollout:** release eligible Dependabot PRs in small batches. Toolchain, auth/crypto, billing, Firebase admin/deploy tooling, Cloudflare deployment tooling, GitHub Actions and control-plane changes remain manual.
-5. **Jules last:** only after the dependency path is stable, set `JULES_FLEET_ENABLED=true`. Start with a manual single-goal Analyze canary, then a manual Dispatch run with the default `dry_run=true`; only after inspecting the generated issue/milestone and dry-run candidate set should an operator run Dispatch with `dry_run=false`. Keep `AUTONOMOUS_MERGE_ENABLED=false` during this first Jules canary. `JULES_FLEET_AUTO_MERGE_ENABLED=false` remains permanent unless the architecture is intentionally redesigned.
+5. **Jules last:** only after the dependency path is stable, set `JULES_FLEET_ENABLED=true`. Start with a manual single-goal Analyze canary, then a manual Dispatch run with the default `dry_run=true`. That preview is repository-owned and read-only: it does not invoke Jules Fleet and receives no Jules/Doppler credential. Only after inspecting the issue/milestone and preview candidate set should an operator run Dispatch with `dry_run=false`. Keep `AUTONOMOUS_MERGE_ENABLED=false` during the first worker canary. `JULES_FLEET_AUTO_MERGE_ENABLED=false` is a permanent invariant.
 
 If the canary fails, immediately set `AUTONOMOUS_MERGE_ENABLED=false`, manually trigger Auto-Merge Control, verify all `automerge:enabled` labels are removed, and restore `automerge:disabled` containment.
 
@@ -282,7 +282,7 @@ If the canary fails, immediately set `AUTONOMOUS_MERGE_ENABLED=false`, manually 
 
 The `automerge-control.yml` workflow runs hourly on `main` and synchronizes the `automerge:enabled` label from the `AUTONOMOUS_MERGE_ENABLED` repository variable.
 
-- **`AUTONOMOUS_MERGE_ENABLED=true`** → Grants `automerge:enabled` only to explicit candidate classes: Dependabot PRs, or same-repository `jules/*` Fleet PRs with a Jules session marker and `fleet-merge-ready` + `risk:low`. Drafts, forks, unrelated human PRs, and PRs with `automerge:disabled`, `hold`, or `do-not-merge` remain unauthorized.
+- **`AUTONOMOUS_MERGE_ENABLED=true`** → Grants `automerge:enabled` only to explicit candidate classes: Dependabot PRs, or same-repository Fleet PRs with a branch/body-correlated Jules session ID and `fleet-merge-ready` + `risk:low`. Drafts, forks, mismatched provenance, unrelated human PRs, and PRs with `automerge:disabled`, `hold`, or `do-not-merge` remain unauthorized.
 - **`AUTONOMOUS_MERGE_ENABLED=false`** (or missing) → Removes `automerge:enabled` from every open PR.
 - **Fail-closed**: unrelated human PRs and stale/explicitly disabled candidates have positive authorization removed.
 
