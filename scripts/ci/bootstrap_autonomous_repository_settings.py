@@ -99,8 +99,14 @@ def plan_changes(current: dict[str, Any], labels: dict[str, bool]) -> list[str]:
     changes = []
 
     # Repository settings
-    if not current.get("allow_auto_merge"):
-        changes.append("Enable allow_auto_merge (required for Mergify queue)")
+    # NOTE: allow_auto_merge should remain FALSE.
+    # Mergify is the sole merge authority; GitHub native auto-merge would create
+    # a second merge mechanism and race conditions. Mergify Merge Queue works
+    # independently and does not require GitHub's allow_auto_merge setting.
+    if current.get("allow_auto_merge"):
+        changes.append(
+            "WARNING: allow_auto_merge is TRUE - should be FALSE (Mergify is sole merge authority)"
+        )
     if not current.get("delete_branch_on_merge"):
         changes.append("Enable delete_branch_on_merge")
 
@@ -140,13 +146,16 @@ def apply_changes(repo: str, plan: list[str]) -> bool:
     success = True
 
     # Apply repository settings
-    if "Enable allow_auto_merge" in "\n".join(plan):
-        _, err = run_gh_api("PATCH", f"repos/{repo}", {"allow_auto_merge": True})
+    # NOTE: allow_auto_merge is intentionally NOT enabled.
+    # Mergify is the sole merge authority; GitHub native auto-merge would create
+    # a second merge mechanism. Mergify Merge Queue works independently.
+    if "WARNING: allow_auto_merge is TRUE" in "\n".join(plan):
+        _, err = run_gh_api("PATCH", f"repos/{repo}", {"allow_auto_merge": False})
         if err:
-            print(f"Failed to enable allow_auto_merge: {err}", file=sys.stderr)
+            print(f"Failed to disable allow_auto_merge: {err}", file=sys.stderr)
             success = False
         else:
-            print("✓ Enabled allow_auto_merge")
+            print("✓ Disabled allow_auto_merge (Mergify is sole merge authority)")
 
     if "Enable delete_branch_on_merge" in "\n".join(plan):
         _, err = run_gh_api("PATCH", f"repos/{repo}", {"delete_branch_on_merge": True})

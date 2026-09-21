@@ -229,15 +229,51 @@ class AutonomousMaintenanceContractTest(unittest.TestCase):
         )
 
     def test_security_required_aggregate_exists(self) -> None:
-        """Verify there's a Security Required aggregate check or equivalent."""
-        # The Security Gate job in ci-pr.yml should aggregate security checks
+        """Verify there's a Security Required aggregate check for in-workflow security gates."""
+        # The Security Required job in ci-pr.yml aggregates in-workflow security checks
         ci_pr_wf = ROOT / ".github/workflows/ci-pr.yml"
         self.assertTrue(ci_pr_wf.is_file())
         content = ci_pr_wf.read_text(encoding="utf-8")
-        # Security Gate job exists
-        self.assertIn("name: Security Gate", content)
-        # Security Gate should depend on security checks
-        self.assertIn("security-gate", content.lower())
+        # Security Required job exists and aggregates security-gate + repository-security
+        self.assertIn("name: Security Required", content)
+        self.assertIn("security-gate", content)
+        self.assertIn("repository-security", content)
+
+    def test_external_security_checks_documented(self) -> None:
+        """Verify external security checks (from security.yml) are documented as separate hard checks."""
+        # These run in security.yml workflow and produce separate check contexts
+        security_wf = ROOT / ".github/workflows/security.yml"
+        self.assertTrue(security_wf.is_file())
+        content = security_wf.read_text(encoding="utf-8")
+
+        # Hard security checks (must pass for merge)
+        self.assertIn("name: Secret Scan", content)
+        self.assertIn("name: Workflow Audit", content)
+        self.assertIn("name: Dependency Review", content)
+
+        # Advisory check (not hard gate)
+        self.assertIn("name: Semgrep SAST", content)
+        self.assertIn("continue-on-error: true", content)
+
+        # Mergify should require the hard checks independently
+        mergify_path = ROOT / ".mergify.yml"
+        mergify_content = mergify_path.read_text(encoding="utf-8")
+        # These check contexts should be required in Mergify (exact names from workflow)
+        hard_checks = [
+            "Secret Scan",
+            "Workflow Audit",
+            "Dependency Review",
+        ]
+        for check in hard_checks:
+            # Check may be in queue merge_conditions or merge_protections success_conditions
+            self.assertIn(
+                check,
+                mergify_content,
+                f"External hard check '{check}' must be required in Mergify",
+            )
+
+        # Semgrep should NOT be a hard gate in Mergify
+        self.assertNotIn("Semgrep", mergify_content)
 
     def test_dependabot_sensitive_dependency_logic(self) -> None:
         """Verify sensitive dependencies are excluded from auto-merge regardless of dependency-type."""
@@ -261,6 +297,32 @@ class AutonomousMaintenanceContractTest(unittest.TestCase):
                 content,
                 f"Sensitive dependency pattern {pattern} must be in Mergify denylist",
             )
+
+        # Verify the denylist is at the top level of the AND condition (outside dependency-type OR)
+        # Parse the YAML to verify structure
+        data = yaml.safe_load(content)
+        auto_merge_conditions = data["merge_protections_settings"][
+            "auto_merge_conditions"
+        ]
+        # Structure: auto_merge_conditions[0]["or"][0]["and"] contains the dependabot condition
+        dependabot_and = auto_merge_conditions[0]["or"][0]["and"]
+
+        # The sensitive denylist should be a direct child of the AND (not nested inside dependency-type OR)
+        # This means it should appear as a string in the AND list
+        denylist_found_at_top_level = False
+        for cond in dependabot_and:
+            if (
+                isinstance(cond, str)
+                and "-dependabot-dependency-name" in cond
+                and "kotlin" in cond
+            ):
+                denylist_found_at_top_level = True
+                break
+
+        self.assertTrue(
+            denylist_found_at_top_level,
+            "Sensitive dependency denylist must be at top level of AND condition (outside dependency-type OR)",
+        )
 
     def test_circuit_breaker_variables_documented(self) -> None:
         """Verify circuit breaker variables are documented with fail-closed defaults."""

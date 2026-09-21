@@ -91,11 +91,13 @@ To eliminate race conditions and split-brain states:
 Configured in `.mergify.yml` using the latest official schema:
 - **`merge_protections`**: Enforces that hard gates pass before any PR is merge-eligible:
   - `CI Required`
-  - `Repository Security`
-  - `Security Gate`
+  - `Security Required` (aggregates in-workflow: Security Gate + Repository Security)
+  - `Secret Scan` (from security.yml workflow)
+  - `Workflow Audit` (from security.yml workflow)
+  - `Dependency Review` (from security.yml workflow)
   - `SonarCloud Code Analysis`
 - **`auto_merge_conditions`**: Restricted solely to:
-  - Dependabot dev patch and minor updates (excluding sensitive coordinates).
+  - Dependabot dev/prod patch and minor updates (excluding sensitive coordinates; sensitive denylist applies to ALL dependency types).
   - Jules Fleet PRs verified as `risk:low` with label `fleet-merge-ready`.
   - Circuit breaker label `-label = automerge:disabled`.
 - **`queue_rules`**:
@@ -112,7 +114,7 @@ Once activated, repository rulesets on `main` will enforce:
 - No direct push.
 - No force push.
 - No branch deletion.
-- Required status checks: `CI Required`, `Security Required`, `SonarCloud Code Analysis`, `Mergify Merge Protections`, `Analyze Java and Kotlin`.
+- Required status checks: `CI Required`, `Security Required`, `Secret Scan`, `Workflow Audit`, `Dependency Review`, `SonarCloud Code Analysis`, `Mergify Merge Protections`, `Analyze Java and Kotlin`.
 
 **Do NOT enable GitHub native merge queue.** Mergify queue remains the only queue.
 
@@ -219,6 +221,9 @@ gh api --method POST repos/MakerParsDev/android-multi-app-framework/rulesets \
       "required_checks": [
         {"context": "CI Required"},
         {"context": "Security Required"},
+        {"context": "Secret Scan"},
+        {"context": "Workflow Audit"},
+        {"context": "Dependency Review"},
         {"context": "SonarCloud Code Analysis"},
         {"context": "Mergify Merge Protections"},
         {"context": "Analyze Java and Kotlin"}
@@ -253,10 +258,11 @@ gh variable set JULES_FLEET_ENABLED --body "true"
 
 ### 14.4 Variables That Must Remain Disabled
 
-| Variable | Value | Reason |
+| Variable / Setting | Value | Reason |
 |----------|-------|--------|
 | `JULES_FLEET_AUTO_MERGE_ENABLED` | `false` | Jules Fleet must NEVER auto-merge; Mergify is sole authority |
 | GitHub native merge queue | Disabled | Prevents dual-queue race conditions |
+| GitHub `allow_auto_merge` | `false` | Mergify is sole merge authority; GitHub native auto-merge is a separate mechanism that would create race conditions |
 
 ---
 ## 15. Auto-Merge Control Plane

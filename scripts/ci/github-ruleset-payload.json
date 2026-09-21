@@ -14,6 +14,9 @@
       "required_checks": [
         {"context": "CI Required"},
         {"context": "Security Required"},
+        {"context": "Secret Scan"},
+        {"context": "Workflow Audit"},
+        {"context": "Dependency Review"},
         {"context": "SonarCloud Code Analysis"},
         {"context": "Mergify Merge Protections"},
         {"context": "Analyze Java and Kotlin"}

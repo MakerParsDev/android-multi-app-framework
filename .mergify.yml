@@ -17,6 +17,9 @@ queue_rules:
     merge_conditions:
       - check-success = CI Required
       - check-success = Security Required
+      - check-success = Secret Scan
+      - check-success = Workflow Audit
+      - check-success = Dependency Review
       - check-success = SonarCloud Code Analysis
       - check-success = Analyze Java and Kotlin
 
@@ -27,6 +30,9 @@ merge_protections:
     success_conditions:
       - check-success = CI Required
       - check-success = Security Required
+      - check-success = Secret Scan
+      - check-success = Workflow Audit
+      - check-success = Dependency Review
       - check-success = SonarCloud Code Analysis
       - check-success = Analyze Java and Kotlin
       - -draft
@@ -37,17 +43,19 @@ merge_protections:
 merge_protections_settings:
   auto_merge_conditions:
     - or:
-        # Class A: Dependabot dev patch or minor updates (excluding sensitive toolchain)
+        # Class A: Dependabot patch/minor updates (excluding sensitive toolchain)
         # Positive authorization: requires global automerge:enabled label
+        # Sensitive denylist applies to ALL dependency types (dev and production)
         - and:
             - author = dependabot[bot]
             - dependabot-update-type != version-update:semver-major
             - label = automerge:enabled
+            - -dependabot-dependency-name ~= ^(com\.android|org\.jetbrains\.kotlin|com\.google\.devtools\.ksp|com\.google\.dagger|androidx\.room|com\.google\.gms|com\.google\.firebase|com\.github\.triplet\.play|com\.android\.billingclient)
             - or:
                 - dependabot-dependency-type = development
                 - and:
+                    - dependabot-dependency-type = production
                     - dependabot-update-type = version-update:semver-patch
-                    - -dependabot-dependency-name ~= ^(com\.android|org\.jetbrains\.kotlin|com\.google\.devtools\.ksp|com\.google\.dagger|androidx\.room|com\.google\.gms|com\.google\.firebase|com\.github\.triplet\.play|com\.android\.billingclient)
             - -label = automerge:disabled
         # Class A: Jules Fleet low-risk PRs
         # Positive authorization: requires global automerge:enabled label
