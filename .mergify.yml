@@ -54,10 +54,18 @@ merge_protections_settings:
             - -dependabot-dependency-name ~= ^(com\.android|org\.jetbrains\.kotlin|com\.google\.devtools\.ksp|com\.google\.dagger|androidx\.room|androidx\.credentials|com\.google\.gms|com\.google\.firebase|com\.google\.crypto\.tink|com\.github\.triplet\.play|com\.android\.billingclient|org\.bouncycastle|org\.bitbucket\.b_c|firebase-admin$|firebase-functions$|firebase-functions-test$|firebase-tools$|jose$|jsonwebtoken$|wrangler$|@cloudflare/)
             - -files ~= ^(\.github/|config/|\.gitleaks\.toml|build\.gradle\.kts|settings\.gradle\.kts|gradle\.properties|gradlew$|gradlew\.bat$|gradle/wrapper/|buildSrc/|docs/AUTONOMOUS_MAINTENANCE\.md|\.mergify\.yml|codecov\.yml|\.fleet/|\.agents/|\.claude/|\.codex/|scripts/ci/)
             - or:
-                - dependabot-dependency-type = development
+                # Dev-only groups may contain patch/minor updates, but no
+                # production dependency may piggy-back on the list match.
+                - and:
+                    - dependabot-dependency-type = development
+                    - dependabot-dependency-type != production
+                # Production groups are eligible only when every update is a
+                # patch and no development dependency is mixed into the group.
                 - and:
                     - dependabot-dependency-type = production
+                    - dependabot-dependency-type != development
                     - dependabot-update-type = version-update:semver-patch
+                    - dependabot-update-type != version-update:semver-minor
             - -label = automerge:disabled
         # Class A: Jules Fleet low-risk PRs
         # Positive authorization: requires global automerge:enabled label
