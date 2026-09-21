@@ -22,8 +22,8 @@ jobs:
       github.base_ref == 'main'
     permissions:
       contents: read
-      issues: write
-      pull-requests: read
+      issues: read
+      pull-requests: write
 
     steps:
       - name: Checkout Repository (Trusted Base)

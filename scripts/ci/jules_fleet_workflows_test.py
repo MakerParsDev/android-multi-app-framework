@@ -93,7 +93,7 @@ class TestJulesFleetWorkflowsContract(unittest.TestCase):
         classify_job_perms = classify_parsed["jobs"]["classify"].get("permissions")
         self.assertEqual(
             classify_job_perms,
-            {"contents": "read", "issues": "write", "pull-requests": "read"},
+            {"contents": "read", "issues": "read", "pull-requests": "write"},
         )
 
         # Merge audit is permanently read-only; Mergify is the sole merge authority.
