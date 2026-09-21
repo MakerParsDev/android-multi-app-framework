@@ -11,30 +11,30 @@ Jules automation operates as an autonomous orchestration layer (`@google/jules-f
 ## Operating Architecture
 
 1. **Jules Fleet Analyze** (`fleet-analyze.yml`):
-   - Trigger: Scheduled every 6 hours (`cron: '0 */6 * * *'`) and manual `workflow_dispatch`.
-   - Security Boundary: Runs only on trusted `refs/heads/main` when `vars.JULES_FLEET_ENABLED == 'true'`.
+   - Trigger: Scheduled every 6 hours (`cron: '0 */6 * * *'`) and manual `workflow_dispatch`. Manual runs may supply one `.fleet/goals/*.md` path for a single-goal canary; invalid/out-of-directory paths fail closed.
+   - Security Boundary: Runs only on trusted `refs/heads/main` when both `vars.AUTONOMOUS_MAINTENANCE_ENABLED == 'true'` and `vars.JULES_FLEET_ENABLED == 'true'`.
    - Permissions: Workflow top-level `contents: read`; job-level `contents: read`, `issues: write`, `pull-requests: read`.
-   - Lifecycle: Resolves `JULES_API_KEY` from Doppler via `scripts/ci/resolve_jules_api_key.sh`, deterministically ensures the "Jules Fleet Maintenance" milestone and required labels exist via `scripts/ci/fleet_milestone.py --ensure --ensure-labels`, and runs `jules-fleet analyze --goals-dir=".fleet/goals" --milestone "$FLEET_MILESTONE"`.
+   - Lifecycle: Resolves `JULES_API_KEY` from Doppler via `scripts/ci/resolve_jules_api_key.sh`, deterministically ensures the "Jules Fleet Maintenance" milestone and required labels exist via `scripts/ci/fleet_milestone.py --ensure --ensure-labels`, then runs either `jules-fleet analyze --goal "$FLEET_GOAL" --milestone "$FLEET_MILESTONE"` for a manual canary or the scheduled all-goals form `jules-fleet analyze --goals-dir=".fleet/goals" --milestone "$FLEET_MILESTONE"`.
    - Concurrency: `cancel-in-progress: false` to avoid terminating in-flight analysis sessions.
 
 2. **Jules Fleet Dispatch** (`fleet-dispatch.yml`):
-   - Trigger: Scheduled every 2 hours (`cron: '30 */2 * * *'`) and manual `workflow_dispatch`.
-   - Security Boundary: Runs only on trusted `refs/heads/main` when `vars.JULES_FLEET_ENABLED == 'true'`.
+   - Trigger: Scheduled every 2 hours (`cron: '30 */2 * * *'`) and manual `workflow_dispatch`. Manual runs default to `dry_run=true`; creating Jules worker sessions requires an explicit `dry_run=false` selection.
+   - Security Boundary: Runs only on trusted `refs/heads/main` when both `vars.AUTONOMOUS_MAINTENANCE_ENABLED == 'true'` and `vars.JULES_FLEET_ENABLED == 'true'`.
    - Permissions: Workflow top-level `contents: read`; job-level `contents: read`, `issues: write`.
-   - Lifecycle: Resolves `JULES_API_KEY` from Doppler, resolves the "Jules Fleet Maintenance" milestone number via `scripts/ci/fleet_milestone.py --resolve`, and dispatches worker sessions with `jules-fleet dispatch --milestone "$FLEET_MILESTONE"`.
+   - Lifecycle: Resolves `JULES_API_KEY` from Doppler and the "Jules Fleet Maintenance" milestone number via `scripts/ci/fleet_milestone.py --resolve`. Manual dry-runs execute `jules-fleet dispatch --milestone "$FLEET_MILESTONE" --dry-run`; scheduled runs and explicit manual `dry_run=false` runs may create worker sessions with `jules-fleet dispatch --milestone "$FLEET_MILESTONE"`.
    - Concurrency: `cancel-in-progress: false` to avoid interrupting worker dispatch cycles.
 
 3. **Jules PR Risk Classification** (`fleet-classify.yml`):
    - Trigger: Standard `pull_request` event (`types: [opened, synchronize, reopened, ready_for_review]`). Never uses `pull_request_target`.
-   - Security Boundary: Checks out trusted base branch (`ref: ${{ github.base_ref }}`). Evaluates metadata only; never executes PR code with write permissions.
+   - Security Boundary: Runs only when both fail-closed maintenance/Fleet switches are `true` and only for same-repository `jules/*` pull requests; it checks out the trusted base branch (`ref: ${{ github.base_ref }}`), evaluates metadata only, and never executes PR code with write permissions. Fork PRs and unrelated human/Dependabot PRs are not Fleet-classified.
    - Permissions: Workflow top-level `contents: read`; job-level `contents: read`, `issues: write`, `pull-requests: read`.
    - Secrets: NEVER receives `DOPPLER_TOKEN` or `JULES_API_KEY`.
-   - Lifecycle: Executes `scripts/ci/classify_pr.py`, which paginates all changed files from GitHub API, evaluates risk via `scripts/ci/fleet_pr_risk.py`, applies `fleet-merge-ready` (low-risk) or `fleet-review-required` (protected), and removes the opposing label. Fails closed if changed file list is empty or label update fails.
+   - Lifecycle: Executes `scripts/ci/classify_pr.py`, which paginates all changed files, verifies same-repository Jules session provenance through trusted GitHub metadata, requires at least one closing issue labeled `fleet`, and evaluates risk via `scripts/ci/fleet_pr_risk.py`. Only a verified low-risk Fleet PR receives `fleet-merge-ready`; a verified protected Fleet PR receives `fleet-review-required`; unrelated low-risk PRs cannot gain Fleet readiness. Missing metadata, empty file lists, or label failures fail closed.
    - Concurrency: `cancel-in-progress: true` to prioritize the newest PR commit.
 
 4. **Jules Fleet Merge** (`fleet-merge.yml`):
    - Trigger: Scheduled every 4 hours (`cron: '0 */4 * * *'`) and manual `workflow_dispatch`.
-   - Security Boundary: Runs only on trusted `refs/heads/main` when `vars.JULES_FLEET_ENABLED == 'true'`.
+   - Security Boundary: Runs only on trusted `refs/heads/main` when both `vars.AUTONOMOUS_MAINTENANCE_ENABLED == 'true'` and `vars.JULES_FLEET_ENABLED == 'true'`.
    - Permissions: Workflow top-level `contents: read`; job-level `contents: write`, `pull-requests: write`, `issues: write`.
    - Execution:
      - When `vars.JULES_FLEET_AUTO_MERGE_ENABLED == 'true'`: fetches `JULES_API_KEY` and runs `jules-fleet merge --mode="label" --redispatch`.
@@ -51,8 +51,9 @@ Jules automation operates as an autonomous orchestration layer (`@google/jules-f
 
 ## Control Plane & Fail-Closed Defaults
 
+- `AUTONOMOUS_MAINTENANCE_ENABLED`: Global repository variable. Write-capable Fleet jobs require this to be exactly `"true"` in addition to the Fleet-specific switch.
 - `JULES_FLEET_ENABLED`: Repository variable. Default is fail-closed: must be explicitly set to `"true"` to enable Fleet execution. If unset or any other value, all Fleet workflows exit immediately without consuming secrets or compute.
-- `JULES_FLEET_AUTO_MERGE_ENABLED`: Repository variable. Default is fail-closed: must be explicitly set to `"true"` to allow merging.
+- `JULES_FLEET_AUTO_MERGE_ENABLED`: Repository variable. Kept `false` in the current architecture so `fleet-merge.yml` is diagnostic dry-run only and Mergify remains the sole automated merge authority.
 
 ## Local Validation
 

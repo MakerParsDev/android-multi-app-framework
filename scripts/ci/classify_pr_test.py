@@ -11,7 +11,12 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, os.path.dirname(__file__))
-from classify_pr import fetch_all_pr_files, update_pr_labels
+from classify_pr import (
+    fetch_all_pr_files,
+    fetch_pr_provenance,
+    is_verified_fleet_pr,
+    update_pr_labels,
+)
 
 
 class TestClassifyPR(unittest.TestCase):
@@ -31,6 +36,87 @@ class TestClassifyPR(unittest.TestCase):
         self.assertEqual(mock_req.call_count, 2)
 
     @patch("classify_pr._make_request")
+    def test_fetch_pr_provenance_uses_graphql(self, mock_req: MagicMock):
+        payload = {
+            "data": {
+                "repository": {
+                    "pullRequest": {
+                        "headRefName": "jules/fix-42/s-abc123",
+                        "headRepository": {"nameWithOwner": "owner/repo"},
+                        "body": "Fixes #42",
+                        "closingIssuesReferences": {
+                            "nodes": [
+                                {
+                                    "number": 42,
+                                    "labels": {"nodes": [{"name": "fleet"}]},
+                                }
+                            ]
+                        },
+                    }
+                }
+            }
+        }
+        mock_req.return_value = (200, payload)
+        provenance = fetch_pr_provenance("owner/repo", 123, "fake-token")
+        self.assertEqual(provenance["headRefName"], "jules/fix-42/s-abc123")
+        call = mock_req.call_args
+        self.assertEqual(call[0][0], "https://api.github.com/graphql")
+        self.assertEqual(call[1]["method"], "POST")
+        self.assertEqual(call[1]["data"]["variables"]["number"], 123)
+
+    def test_verified_fleet_pr_requires_all_provenance_signals(self):
+        good = {
+            "headRefName": "jules/fix-42/s-abc123",
+            "headRepository": {"nameWithOwner": "owner/repo"},
+            "body": "Fixes #42",
+            "closingIssuesReferences": {
+                "nodes": [
+                    {"number": 42, "labels": {"nodes": [{"name": "fleet"}]}}
+                ]
+            },
+        }
+        self.assertTrue(is_verified_fleet_pr("owner/repo", good))
+
+        forked = {**good, "headRepository": {"nameWithOwner": "fork/repo"}}
+        self.assertFalse(is_verified_fleet_pr("owner/repo", forked))
+
+        no_session = {**good, "headRefName": "jules/fix-42/not-a-session"}
+        self.assertFalse(is_verified_fleet_pr("owner/repo", no_session))
+
+        no_fleet_issue = {
+            **good,
+            "closingIssuesReferences": {
+                "nodes": [
+                    {"number": 42, "labels": {"nodes": [{"name": "bug"}]}}
+                ]
+            },
+        }
+        self.assertFalse(is_verified_fleet_pr("owner/repo", no_fleet_issue))
+
+    @patch("classify_pr._make_request")
+    def test_low_risk_non_fleet_removes_fleet_ready(self, mock_req: MagicMock):
+        mock_req.return_value = (200, {})
+        update_pr_labels(
+            "owner/repo",
+            123,
+            "fake-token",
+            "LOW_RISK",
+            fleet_verified=False,
+        )
+        added = [
+            call[1]["data"]["labels"][0]
+            for call in mock_req.call_args_list
+            if call[1].get("method") == "POST"
+        ]
+        deleted_urls = [
+            call[0][0]
+            for call in mock_req.call_args_list
+            if call[1].get("method") == "DELETE"
+        ]
+        self.assertEqual(added, ["risk:low"])
+        self.assertTrue(any("fleet-merge-ready" in url for url in deleted_urls))
+
+    @patch("classify_pr._make_request")
     def test_update_labels_low_risk(self, mock_req: MagicMock):
         mock_req.side_effect = [
             (200, {}),  # add fleet-merge-ready
@@ -38,7 +124,7 @@ class TestClassifyPR(unittest.TestCase):
             (200, {}),  # del fleet-review-required
             (200, {}),  # del risk:protected
         ]
-        update_pr_labels("owner/repo", 123, "fake-token", "LOW_RISK")
+        update_pr_labels("owner/repo", 123, "fake-token", "LOW_RISK", fleet_verified=True)
         self.assertEqual(mock_req.call_count, 4)
 
         add_call = mock_req.call_args_list[0]
@@ -56,7 +142,7 @@ class TestClassifyPR(unittest.TestCase):
             (200, {}),  # del fleet-merge-ready
             (200, {}),  # del risk:low
         ]
-        update_pr_labels("owner/repo", 123, "fake-token", "PROTECTED")
+        update_pr_labels("owner/repo", 123, "fake-token", "PROTECTED", fleet_verified=True)
         self.assertEqual(mock_req.call_count, 4)
 
         add_call = mock_req.call_args_list[0]
@@ -73,7 +159,7 @@ class TestClassifyPR(unittest.TestCase):
             {"message": "Resource not accessible by integration"},
         )
         with self.assertRaises(RuntimeError) as ctx:
-            update_pr_labels("owner/repo", 123, "fake-token", "LOW_RISK")
+            update_pr_labels("owner/repo", 123, "fake-token", "LOW_RISK", fleet_verified=True)
         self.assertIn("Failed to add label", str(ctx.exception))
 
     @patch("classify_pr._make_request")
@@ -86,7 +172,7 @@ class TestClassifyPR(unittest.TestCase):
             (404, {"message": "Label does not exist"}),  # del risk:protected
         ]
         # Should NOT raise
-        update_pr_labels("owner/repo", 123, "fake-token", "LOW_RISK")
+        update_pr_labels("owner/repo", 123, "fake-token", "LOW_RISK", fleet_verified=True)
         self.assertEqual(mock_req.call_count, 4)
 
     @patch("classify_pr._make_request")
@@ -99,8 +185,8 @@ class TestClassifyPR(unittest.TestCase):
             (500, {"message": "Internal Server Error"}),  # del risk:protected
         ]
         with self.assertRaises(RuntimeError) as ctx:
-            update_pr_labels("owner/repo", 123, "fake-token", "LOW_RISK")
-        self.assertIn("Failed to remove label 'risk:protected'", str(ctx.exception))
+            update_pr_labels("owner/repo", 123, "fake-token", "LOW_RISK", fleet_verified=True)
+        self.assertIn("Failed to remove label 'fleet-review-required'", str(ctx.exception))
 
 
 if __name__ == "__main__":

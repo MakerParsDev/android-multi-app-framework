@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: '30 */2 * * *'  # Run every 2 hours
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'List dispatchable Fleet issues without creating Jules sessions'
+        required: true
+        default: true
+        type: boolean
 
 permissions:
   contents: read
@@ -59,5 +65,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FLEET_MILESTONE: ${{ steps.fleet-milestone.outputs.number }}
+          DISPATCH_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
         run: |
-          npx --yes --package=@google/jules-fleet@0.0.1-experimental.35 jules-fleet dispatch --milestone "$FLEET_MILESTONE"
+          if [ "$DISPATCH_DRY_RUN" = "true" ]; then
+            npx --yes --package=@google/jules-fleet@0.0.1-experimental.35 jules-fleet dispatch --milestone "$FLEET_MILESTONE" --dry-run
+          else
+            npx --yes --package=@google/jules-fleet@0.0.1-experimental.35 jules-fleet dispatch --milestone "$FLEET_MILESTONE"
+          fi

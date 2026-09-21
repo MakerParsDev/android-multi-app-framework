@@ -22,31 +22,62 @@ from sync_automerge_label import (
 
 class TestSyncAutoMergeLabel(unittest.TestCase):
     def test_positive_authorization_candidate_policy(self):
+        repo = "owner/repo"
         self.assertTrue(
             is_positive_authorization_candidate(
                 {
                     "user": {"login": "dependabot[bot]"},
                     "labels": [{"name": "dependencies"}],
                     "draft": False,
-                }
+                },
+                repo,
             )
         )
         self.assertTrue(
             is_positive_authorization_candidate(
                 {
                     "user": {"login": "human"},
+                    "head": {
+                        "ref": "jules/fix-42/s-abc123",
+                        "repo": {"full_name": repo},
+                    },
                     "labels": [
                         {"name": "fleet-merge-ready"},
                         {"name": "risk:low"},
                     ],
                     "draft": False,
-                }
+                },
+                repo,
             )
         )
-        for pr in (
+        rejected = (
             {
                 "user": {"login": "human"},
                 "labels": [{"name": "risk:low"}],
+                "draft": False,
+            },
+            {
+                "user": {"login": "human"},
+                "head": {
+                    "ref": "feature/spoof",
+                    "repo": {"full_name": repo},
+                },
+                "labels": [
+                    {"name": "fleet-merge-ready"},
+                    {"name": "risk:low"},
+                ],
+                "draft": False,
+            },
+            {
+                "user": {"login": "human"},
+                "head": {
+                    "ref": "jules/fix-42/s-abc123",
+                    "repo": {"full_name": "fork/repo"},
+                },
+                "labels": [
+                    {"name": "fleet-merge-ready"},
+                    {"name": "risk:low"},
+                ],
                 "draft": False,
             },
             {
@@ -56,6 +87,10 @@ class TestSyncAutoMergeLabel(unittest.TestCase):
             },
             {
                 "user": {"login": "human"},
+                "head": {
+                    "ref": "jules/fix-42/s-abc123",
+                    "repo": {"full_name": repo},
+                },
                 "labels": [
                     {"name": "fleet-merge-ready"},
                     {"name": "risk:low"},
@@ -73,8 +108,9 @@ class TestSyncAutoMergeLabel(unittest.TestCase):
                 "labels": [{"name": "hold"}],
                 "draft": False,
             },
-        ):
-            self.assertFalse(is_positive_authorization_candidate(pr))
+        )
+        for pr in rejected:
+            self.assertFalse(is_positive_authorization_candidate(pr, repo))
 
     @patch("sync_automerge_label._make_request")
     def test_get_open_prs_pagination(self, mock_req: MagicMock):
@@ -147,6 +183,10 @@ class TestSyncAutoMergeLabel(unittest.TestCase):
             {
                 "number": 3,
                 "user": {"login": "human"},
+                "head": {
+                    "ref": "jules/fix-42/s-abc123",
+                    "repo": {"full_name": "owner/repo"},
+                },
                 "labels": [
                     {"name": "fleet-merge-ready"},
                     {"name": "risk:low"},

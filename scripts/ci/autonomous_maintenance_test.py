@@ -508,6 +508,12 @@ class AutonomousMaintenanceContractTest(unittest.TestCase):
         self.assertIn("dependabot-update-type = version-update:semver-patch", prod)
         self.assertIn("dependabot-update-type != version-update:semver-minor", prod)
 
+        fleet_and = auto[0]["or"][1]["and"]
+        self.assertIn("head ~= ^jules/", fleet_and)
+        self.assertIn("-from-fork", fleet_and)
+        self.assertIn("label = fleet-merge-ready", fleet_and)
+        self.assertIn("label = risk:low", fleet_and)
+
     def test_ruleset_contract_is_complete(self) -> None:
         payload = json.loads(
             (ROOT / "scripts/ci/github-ruleset-payload.json").read_text(encoding="utf-8")

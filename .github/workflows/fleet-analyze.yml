@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '0 */6 * * *'  # Run every 6 hours
   workflow_dispatch:
+    inputs:
+      goal:
+        description: 'Optional .fleet/goals/*.md path for a single-goal canary'
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -60,5 +65,21 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FLEET_MILESTONE: ${{ steps.fleet-resources.outputs.number }}
+          FLEET_GOAL: ${{ inputs.goal }}
         run: |
-          npx --yes --package=@google/jules-fleet@0.0.1-experimental.35 jules-fleet analyze --goals-dir=".fleet/goals" --milestone "$FLEET_MILESTONE"
+          if [ -n "$FLEET_GOAL" ]; then
+            case "$FLEET_GOAL" in
+              .fleet/goals/*.md) ;;
+              *)
+                echo "::error::Manual goal must be a .fleet/goals/*.md path"
+                exit 1
+                ;;
+            esac
+            if [ ! -f "$FLEET_GOAL" ]; then
+              echo "::error::Manual goal does not exist: $FLEET_GOAL"
+              exit 1
+            fi
+            npx --yes --package=@google/jules-fleet@0.0.1-experimental.35 jules-fleet analyze --goal "$FLEET_GOAL" --milestone "$FLEET_MILESTONE"
+          else
+            npx --yes --package=@google/jules-fleet@0.0.1-experimental.35 jules-fleet analyze --goals-dir=".fleet/goals" --milestone "$FLEET_MILESTONE"
+          fi
