@@ -143,6 +143,26 @@ class TestJulesFleetWorkflowsContract(unittest.TestCase):
         self.assertIn("startsWith(github.head_ref, 'jules/')", content)
         self.assertNotIn("!= 'false'", content)
 
+    def test_manual_analyze_supports_single_goal_canary(self):
+        content, parsed = self._load_workflow("fleet-analyze.yml")
+        on_val = parsed.get("on") or parsed.get(True)
+        dispatch = on_val["workflow_dispatch"]
+        self.assertIn("goal", dispatch["inputs"])
+        self.assertIn("FLEET_GOAL: ${{ inputs.goal }}", content)
+        self.assertIn(".fleet/goals/*.md", content)
+        self.assertIn('--goal "$FLEET_GOAL"', content)
+        self.assertIn('--goals-dir=".fleet/goals"', content)
+
+    def test_manual_dispatch_defaults_to_dry_run(self):
+        content, parsed = self._load_workflow("fleet-dispatch.yml")
+        on_val = parsed.get("on") or parsed.get(True)
+        dry_run = on_val["workflow_dispatch"]["inputs"]["dry_run"]
+        self.assertTrue(dry_run["required"])
+        self.assertTrue(dry_run["default"])
+        self.assertEqual(dry_run["type"], "boolean")
+        self.assertIn("github.event_name == 'workflow_dispatch' && inputs.dry_run", content)
+        self.assertIn("--dry-run", content)
+
     def test_maintenance_health_write_path_is_globally_gated(self):
         path = os.path.join(WORKFLOWS_DIR, "maintenance-health.yml")
         with open(path, "r", encoding="utf-8") as f:
