@@ -95,4 +95,12 @@ The repository uses Jules Fleet (`@google/jules-fleet@0.0.1-experimental.35`) fo
 
 Control plane variables:
 - `JULES_FLEET_ENABLED`: Master switch (`true` / `false`, default fail-closed). Must be explicitly set to `true` to enable execution.
-- `JULES_FLEET_AUTO_MERGE_ENABLED`: Auto-merge switch (`true` / `false`, default fail-closed). Must be explicitly set to `true` to perform writes; otherwise performs safe dry-run.
+- `JULES_FLEET_AUTO_MERGE_ENABLED`: Auto-merge switch (`true` / `false`, default fail-closed). Kept `false` as Mergify is authoritative.
+
+## Autonomous Maintenance & Health Monitoring
+
+The repository uses **Mergify** as the single authoritative merge engine and `.github/workflows/maintenance-health.yml` for automated controller monitoring:
+
+| Workflow | Trigger | Purpose | Risk Control |
+|---|---|---|---|
+| `maintenance-health.yml` | Scheduled (daily 06:00 UTC), manual (`workflow_dispatch`) | Evaluates toolchain drift, policy expirations, pinned action integrity, and updates the consolidated Dashboard issue | Least privilege (`contents: read`, `issues: write`), deduplicated issue sync, fail-closed |
