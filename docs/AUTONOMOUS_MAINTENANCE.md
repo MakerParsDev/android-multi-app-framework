@@ -97,7 +97,7 @@ Configured in `.mergify.yml` using the latest official schema:
   - `Dependency Review` (from security.yml workflow)
   - `SonarCloud Code Analysis`
 - **`auto_merge_conditions`**: Restricted solely to:
-  - Dependabot development patch/minor updates and production patch updates only, excluding sensitive coordinates and protected control-plane files. GitHub Actions updates remain manual because `.github/**` is part of the trust boundary.
+  - Dependabot **dev-only** groups with patch/minor updates, or **production-only** groups where every update is a patch, excluding sensitive coordinates and protected control-plane files. Mixed development/production groups fail closed because Mergify list conditions otherwise use "any" semantics. GitHub Actions updates remain manual because `.github/**` is part of the trust boundary.
   - Jules Fleet PRs verified as `risk:low` with label `fleet-merge-ready`.
   - Circuit breaker label `-label = automerge:disabled`.
 - **`queue_rules`**:
@@ -107,14 +107,15 @@ Configured in `.mergify.yml` using the latest official schema:
 
 ## 6. GitHub Rulesets (Hard Security Boundary)
 
-**Current State: BOOTSTRAP_PENDING** — The GitHub ruleset has not yet been applied. See Section 14 for bootstrap procedure.
+**Current State: ACTIVE** — The live `main-branch-protection` ruleset is applied and continuously drift-checked by the maintenance controller.
 
-Once activated, repository rulesets on `main` will enforce:
+The repository ruleset on `main` enforces:
 - Required PR before merging.
 - No direct push.
 - No force push.
 - No branch deletion.
 - Required status checks: `CI Required`, `Security Required`, `Secret Scan`, `Workflow Audit`, `Dependency Review`, `SonarCloud Code Analysis`, `Mergify Merge Protections`, `Analyze Java and Kotlin`.
+- GitHub `strict_required_status_checks_policy` is intentionally **false**. Mergify's queue updates PRs against the latest base before testing; GitHub's separate "Require branches to be up to date before merging" flag is incompatible with Mergify batch-PR checks and would deadlock the queue.
 
 **Do NOT enable GitHub native merge queue.** Mergify queue remains the only queue.
 
@@ -233,12 +234,14 @@ Re-enablement is intentionally staged; do not turn all switches on at once. Foll
 
 The ruleset is **BOOTSTRAP_PENDING** until the live GitHub ruleset exists and matches `scripts/ci/github-ruleset-payload.json`. Ruleset writes require repository administrator authority; fine-grained credentials must grant repository **Administration: write**. The `admin:repo_hook` scope is unrelated to ruleset administration.
 
-Current rollout state before activation:
+Expected fail-closed state before a fresh bootstrap:
 - `JULES_FLEET_ENABLED=false`
 - `JULES_FLEET_AUTO_MERGE_ENABLED=false`
-- `AUTONOMOUS_MAINTENANCE_ENABLED` may be missing and is therefore fail-closed.
-- `AUTONOMOUS_MERGE_ENABLED` may be missing and is therefore fail-closed.
+- `AUTONOMOUS_MAINTENANCE_ENABLED` missing or `false`.
+- `AUTONOMOUS_MERGE_ENABLED` missing or `false`.
 - GitHub native `allow_auto_merge=false`.
+
+The production repository has already completed ruleset bootstrap; these values describe the recovery/re-bootstrap baseline, not the current staged rollout state.
 
 ### 16.1 Safe Bootstrap
 
@@ -277,10 +280,10 @@ If the canary fails, immediately set `AUTONOMOUS_MERGE_ENABLED=false`, manually 
 
 ## 17. Auto-Merge Control Plane
 
-The `automerge-control.yml` workflow runs hourly on `main` and manages the `automerge:enabled` label on all open PRs based on the `AUTONOMOUS_MERGE_ENABLED` repository variable.
+The `automerge-control.yml` workflow runs hourly on `main` and synchronizes the `automerge:enabled` label from the `AUTONOMOUS_MERGE_ENABLED` repository variable.
 
-- **`AUTONOMOUS_MERGE_ENABLED=true`** → Adds `automerge:enabled` label to all open PRs
-- **`AUTONOMOUS_MERGE_ENABLED=false`** (or missing) → Removes `automerge:enabled` label from all open PRs
-- **Fail-closed**: Variable missing or not explicitly `true` = no auto-merge
+- **`AUTONOMOUS_MERGE_ENABLED=true`** → Grants `automerge:enabled` only to explicit candidate classes: Dependabot PRs, or Fleet PRs already carrying `fleet-merge-ready` + `risk:low`. Drafts and PRs with `automerge:disabled`, `hold`, or `do-not-merge` remain unauthorized.
+- **`AUTONOMOUS_MERGE_ENABLED=false`** (or missing) → Removes `automerge:enabled` from every open PR.
+- **Fail-closed**: unrelated human PRs and stale/explicitly disabled candidates have positive authorization removed.
 
-This provides a **positive authorization** model: PRs must have `automerge:enabled` label to be eligible for Mergify auto-merge, rather than relying on a negative-only block.
+This provides a **positive authorization** model: candidate selection happens in the trusted controller, while Mergify independently enforces dependency type/update type, protected paths, sensitive package deny-lists, and required checks.

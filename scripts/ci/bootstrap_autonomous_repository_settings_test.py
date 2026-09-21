@@ -241,7 +241,7 @@ class BootstrapSettingsTest(unittest.TestCase):
         checks = next(
             rule for rule in payload["rules"] if rule["type"] == "required_status_checks"
         )["parameters"]
-        self.assertTrue(checks["strict_required_status_checks_policy"])
+        self.assertFalse(checks["strict_required_status_checks_policy"])
         self.assertFalse(checks["do_not_enforce_on_create"])
         contexts = {item["context"] for item in checks["required_status_checks"]}
         self.assertEqual(

@@ -490,10 +490,23 @@ class AutonomousMaintenanceContractTest(unittest.TestCase):
         dependency_type = next(
             item["or"] for item in dependabot_and if isinstance(item, dict) and "or" in item
         )
-        self.assertIn("dependabot-dependency-type = development", dependency_type)
-        prod = next(item["and"] for item in dependency_type if isinstance(item, dict))
-        self.assertIn("dependabot-dependency-type = production", prod)
+        dev = next(
+            item["and"]
+            for item in dependency_type
+            if isinstance(item, dict)
+            and "dependabot-dependency-type = development" in item.get("and", [])
+        )
+        self.assertIn("dependabot-dependency-type != production", dev)
+
+        prod = next(
+            item["and"]
+            for item in dependency_type
+            if isinstance(item, dict)
+            and "dependabot-dependency-type = production" in item.get("and", [])
+        )
+        self.assertIn("dependabot-dependency-type != development", prod)
         self.assertIn("dependabot-update-type = version-update:semver-patch", prod)
+        self.assertIn("dependabot-update-type != version-update:semver-minor", prod)
 
     def test_ruleset_contract_is_complete(self) -> None:
         payload = json.loads(
@@ -514,7 +527,10 @@ class AutonomousMaintenanceContractTest(unittest.TestCase):
         status = next(
             rule for rule in payload["rules"] if rule["type"] == "required_status_checks"
         )["parameters"]
-        self.assertTrue(status["strict_required_status_checks_policy"])
+        self.assertFalse(
+            status["strict_required_status_checks_policy"],
+            "Mergify merge queue is incompatible with GitHub strict required-status policy",
+        )
         self.assertFalse(status["do_not_enforce_on_create"])
 
 
