@@ -37,12 +37,17 @@
         "typescript-eslint": "^8.24.0"
     },
     "overrides": {
-        "brace-expansion": "^1.1.12",
+        "brace-expansion": "^1.1.18",
         "glob": "^10.4.5",
         "minimatch": "^3.1.2",
         "rimraf": "^5.0.10",
         "gaxios": "^7.1.4",
-        "uuid": "^11.1.1"
+        "uuid": "^11.1.1",
+        "js-yaml": "^4.3.2",
+        "qs": "^6.16.0",
+        "@istanbuljs/load-nyc-config": {
+            "js-yaml": "^3.15.2"
+        }
     },
     "private": true
 }

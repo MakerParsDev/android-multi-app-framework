@@ -21,5 +21,10 @@
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.65.0",
     "wrangler": "^4.112.0"
+  },
+  "overrides": {
+    "brace-expansion": "^5.0.9",
+    "sharp": "^0.35.4",
+    "undici": "^7.29.0"
   }
 }
