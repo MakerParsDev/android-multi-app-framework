@@ -51,8 +51,8 @@ merge_protections_settings:
             - author = dependabot[bot]
             - dependabot-update-type != version-update:semver-major
             - label = automerge:enabled
-            - -dependabot-dependency-name ~= ^(com\.android|org\.jetbrains\.kotlin|com\.google\.devtools\.ksp|com\.google\.dagger|androidx\.room|com\.google\.gms|com\.google\.firebase|com\.github\.triplet\.play|com\.android\.billingclient)
-            - -files ~= ^(\.github/|config/|\.gitleaks\.toml|gradle/wrapper/|buildSrc/|docs/AUTONOMOUS_MAINTENANCE\.md|\.mergify\.yml|codecov\.yml|\.fleet/|\.agents/|\.claude/|\.codex/|scripts/ci/autonomous_maintenance_test\.py|scripts/ci/maintenance_health_controller\.py|scripts/ci/fleet_pr_risk\.py|scripts/ci/classify_pr\.py)
+            - -dependabot-dependency-name ~= ^(com\.android|org\.jetbrains\.kotlin|com\.google\.devtools\.ksp|com\.google\.dagger|androidx\.room|androidx\.credentials|com\.google\.gms|com\.google\.firebase|com\.google\.crypto\.tink|com\.github\.triplet\.play|com\.android\.billingclient|org\.bouncycastle|org\.bitbucket\.b_c|firebase-admin$|firebase-functions$|firebase-functions-test$|firebase-tools$|jose$|jsonwebtoken$|wrangler$|@cloudflare/)
+            - -files ~= ^(\.github/|config/|\.gitleaks\.toml|gradle/wrapper/|buildSrc/|docs/AUTONOMOUS_MAINTENANCE\.md|\.mergify\.yml|codecov\.yml|\.fleet/|\.agents/|\.claude/|\.codex/|scripts/ci/)
             - or:
                 - dependabot-dependency-type = development
                 - and:
@@ -68,4 +68,4 @@ merge_protections_settings:
             - -label = fleet-review-required
             - label = automerge:enabled
             - -label = automerge:disabled
-            - -files ~= ^(\.github/|config/|\.gitleaks\.toml|gradle/wrapper/|buildSrc/|docs/AUTONOMOUS_MAINTENANCE\.md|\.mergify\.yml|codecov\.yml|\.fleet/|\.agents/|\.claude/|\.codex/|scripts/ci/autonomous_maintenance_test\.py|scripts/ci/maintenance_health_controller\.py|scripts/ci/fleet_pr_risk\.py|scripts/ci/classify_pr\.py)
+            - -files ~= ^(\.github/|config/|\.gitleaks\.toml|gradle/wrapper/|buildSrc/|docs/AUTONOMOUS_MAINTENANCE\.md|\.mergify\.yml|codecov\.yml|\.fleet/|\.agents/|\.claude/|\.codex/|scripts/ci/)

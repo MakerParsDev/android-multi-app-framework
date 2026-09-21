@@ -138,29 +138,40 @@ def main() -> int:
         open_prs = get_open_prs(args.repo, args.token)
         print(f"Found {len(open_prs)} open PR(s)")
 
+        failures: list[tuple[int, str]] = []
         for pr in open_prs:
             pr_number = pr["number"]
             existing_labels = {label["name"] for label in pr.get("labels", [])}
 
-            if enabled:
-                # Add automerge:enabled label
-                if "automerge:enabled" not in existing_labels:
-                    ensure_label_on_pr(
-                        args.repo, pr_number, args.token, "automerge:enabled"
-                    )
+            try:
+                if enabled:
+                    if "automerge:enabled" not in existing_labels:
+                        ensure_label_on_pr(
+                            args.repo, pr_number, args.token, "automerge:enabled"
+                        )
+                    else:
+                        print(f"PR #{pr_number} already has automerge:enabled")
                 else:
-                    print(f"PR #{pr_number} already has automerge:enabled")
-            else:
-                # Remove automerge:enabled label
-                if "automerge:enabled" in existing_labels:
-                    remove_label_from_pr(
-                        args.repo, pr_number, args.token, "automerge:enabled"
-                    )
-                else:
-                    print(
-                        f"PR #{pr_number} does not have automerge:enabled (already removed)"
-                    )
+                    # Fail-closed disable pass: attempt EVERY PR even after failures.
+                    if "automerge:enabled" in existing_labels:
+                        remove_label_from_pr(
+                            args.repo, pr_number, args.token, "automerge:enabled"
+                        )
+                    else:
+                        print(
+                            f"PR #{pr_number} does not have automerge:enabled (already removed)"
+                        )
+            except RuntimeError as err:
+                failures.append((pr_number, str(err)))
+                print(f"PR #{pr_number} label synchronization failed: {err}", file=sys.stderr)
 
+        if failures:
+            failed_numbers = ", ".join(f"#{number}" for number, _ in failures)
+            print(
+                f"Auto-merge label synchronization failed for {len(failures)} PR(s): {failed_numbers}",
+                file=sys.stderr,
+            )
+            return 1
         return 0
     except Exception as err:
         print(f"Error: {err}", file=sys.stderr)

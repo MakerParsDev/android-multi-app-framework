@@ -252,8 +252,9 @@ jobs:
         if: env.FIREBASE_CONFIGS_ZIP_BASE64 != ''
         env:
           FIREBASE_CONFIGS_ZIP_BASE64: ${{ secrets.FIREBASE_CONFIGS_ZIP_BASE64 }}
+          FLAVORS_JSON: ${{ needs.analyze-impact.outputs.flavors_json }}
         run: |
-          FLAVORS_CSV="$(echo '${{ needs.analyze-impact.outputs.flavors_json }}' | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d' | paste -sd,)"
+          FLAVORS_CSV="$(echo "$FLAVORS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d' | paste -sd,)"
           python3 scripts/ci/materialize_firebase_configs.py \
             --flavors "$FLAVORS_CSV" \
             --mode warn \
@@ -285,17 +286,19 @@ jobs:
         if: env.FIREBASE_CONFIGS_ZIP_BASE64 != ''
         env:
           FIREBASE_CONFIGS_ZIP_BASE64: ${{ secrets.FIREBASE_CONFIGS_ZIP_BASE64 }}
+          FLAVORS_JSON: ${{ needs.analyze-impact.outputs.flavors_json }}
         run: |
-          FLAVORS_CSV="$(echo '${{ needs.analyze-impact.outputs.flavors_json }}' | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d' | paste -sd,)"
+          FLAVORS_CSV="$(echo "$FLAVORS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d' | paste -sd,)"
           python3 scripts/ci/materialize_firebase_configs.py \
             --flavors "$FLAVORS_CSV" \
             --mode warn \
             --allow-existing || true
 
       - name: Run lint for affected flavors
+        env:
+          FLAVORS_JSON: ${{ needs.analyze-impact.outputs.flavors_json }}
         run: |
           set -euo pipefail
-          FLAVORS_JSON='${{ needs.analyze-impact.outputs.flavors_json }}'
           mapfile -t FLAVORS < <(
             echo "$FLAVORS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d'
           )
@@ -352,8 +355,9 @@ jobs:
         if: env.FIREBASE_CONFIGS_ZIP_BASE64 != ''
         env:
           FIREBASE_CONFIGS_ZIP_BASE64: ${{ secrets.FIREBASE_CONFIGS_ZIP_BASE64 }}
+          FLAVORS_JSON: ${{ needs.analyze-impact.outputs.flavors_json }}
         run: |
-          FLAVORS_CSV="$(echo '${{ needs.analyze-impact.outputs.flavors_json }}' | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d' | paste -sd,)"
+          FLAVORS_CSV="$(echo "$FLAVORS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d' | paste -sd,)"
           python3 scripts/ci/materialize_firebase_configs.py \
             --flavors "$FLAVORS_CSV" \
             --mode warn \
@@ -404,9 +408,11 @@ jobs:
     if: always()
     steps:
       - name: Verify security gate passed
+        env:
+          SECURITY_GATE_RESULT: ${{ needs.security-gate.result }}
         run: |
-          if [ "${{ needs.security-gate.result }}" != "success" ]; then
-            echo "::error::Security gate did not pass (result: ${{ needs.security-gate.result }})"
+          if [ "$SECURITY_GATE_RESULT" != "success" ]; then
+            echo "::error::Security gate did not pass (result: $SECURITY_GATE_RESULT)"
             exit 1
           fi
           echo "Security gate passed"
@@ -419,13 +425,16 @@ jobs:
     if: always()
     steps:
       - name: Aggregate hard security checks
+        env:
+          SECURITY_GATE_RESULT: ${{ needs.security-gate.result }}
+          REPOSITORY_SECURITY_RESULT: ${{ needs.repository-security.result }}
         run: |
           set -euo pipefail
           # Hard security jobs that must pass (Semgrep is advisory, not included)
-          NEEDS_JSON='{"security-gate":"${{ needs.security-gate.result }}","repository-security":"${{ needs.repository-security.result }}"}'
           failed=0
-          for job in security-gate repository-security; do
-            result=$(echo "$NEEDS_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin).get('$job','missing'))")
+          for item in "security-gate:$SECURITY_GATE_RESULT" "repository-security:$REPOSITORY_SECURITY_RESULT"; do
+            job="${item%%:*}"
+            result="${item#*:}"
             if [ "$result" != "success" ]; then
               echo "::error::Hard security job '$job' failed with result: $result"
               failed=1
@@ -445,12 +454,19 @@ jobs:
     if: always()
     steps:
       - name: Check required jobs
+        env:
+          SECURITY_GATE_RESULT: ${{ needs.security-gate.result }}
+          STATIC_ANALYSIS_RESULT: ${{ needs.static-analysis.result }}
+          VALIDATE_TEST_RESULT: ${{ needs.validate-and-test.result }}
+          ANDROID_LINT_RESULT: ${{ needs.android-lint.result }}
+          KOVER_COVERAGE_RESULT: ${{ needs.kover-coverage.result }}
+          SECURITY_REQUIRED_RESULT: ${{ needs.security-required.result }}
         run: |
           set -euo pipefail
-          NEEDS_JSON='{"security-gate":"${{ needs.security-gate.result }}","static-analysis":"${{ needs.static-analysis.result }}","validate-and-test":"${{ needs.validate-and-test.result }}","android-lint":"${{ needs.android-lint.result }}","kover-coverage":"${{ needs.kover-coverage.result }}","security-required":"${{ needs.security-required.result }}"}'
           failed=0
-          for job in security-gate static-analysis validate-and-test android-lint kover-coverage security-required; do
-            result=$(echo "$NEEDS_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin).get('$job','missing'))")
+          for item in             "security-gate:$SECURITY_GATE_RESULT"             "static-analysis:$STATIC_ANALYSIS_RESULT"             "validate-and-test:$VALIDATE_TEST_RESULT"             "android-lint:$ANDROID_LINT_RESULT"             "kover-coverage:$KOVER_COVERAGE_RESULT"             "security-required:$SECURITY_REQUIRED_RESULT"; do
+            job="${item%%:*}"
+            result="${item#*:}"
             if [ "$result" != "success" ] && [ "$result" != "skipped" ]; then
               echo "::error::Required job '$job' failed with result: $result"
               failed=1

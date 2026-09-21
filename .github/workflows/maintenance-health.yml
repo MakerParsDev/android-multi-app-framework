@@ -33,6 +33,7 @@ jobs:
 
       - name: Run Maintenance Controller
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          python3 scripts/ci/maintenance_health_controller.py --sync-issue
+          python3 scripts/ci/maintenance_health_controller.py --sync-issue --repo "$GITHUB_REPOSITORY"

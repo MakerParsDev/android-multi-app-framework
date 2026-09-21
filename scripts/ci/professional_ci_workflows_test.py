@@ -130,7 +130,7 @@ def test_codeql_uses_manual_kotlin_build_and_cleans_placeholder() -> None:
     workflow = load(".github/workflows/codeql.yml")
     job = workflow["jobs"]["analyze-java-kotlin"]
     assert job["permissions"] == {"contents": "read", "security-events": "write"}
-    assert "dependabot[bot]" in job["if"]
+    assert "if" not in job, "CodeQL required check must also run for Dependabot PRs"
     init = named_step(job, "Initialize CodeQL")
     assert init["uses"] == f"github/codeql-action/init@{CODEQL_SHA}"
     assert init["with"] == {

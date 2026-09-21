@@ -82,11 +82,8 @@ class AutonomousMaintenanceContractTest(unittest.TestCase):
             "CodeQL 'Analyze Java and Kotlin' must be in merge_protections success_conditions",
         )
 
-        # Verify control-plane files protected from auto-merge
-        self.assertIn("scripts/ci/autonomous_maintenance_test", mergify_str)
-        self.assertIn("scripts/ci/maintenance_health_controller", mergify_str)
-        self.assertIn("scripts/ci/fleet_pr_risk", mergify_str)
-        self.assertIn("scripts/ci/classify_pr", mergify_str)
+        # Verify the whole CI control-plane directory is protected from auto-merge
+        self.assertIn("scripts/ci/", mergify_str)
         self.assertIn("codecov", mergify_str)
         self.assertIn(".fleet/", mergify_str)
 
@@ -396,6 +393,125 @@ class AutonomousMaintenanceContractTest(unittest.TestCase):
         self.assertIn("AUTONOMOUS_MERGE_ENABLED", content)
         self.assertIn("automerge:enabled", content)
         self.assertIn("sync_automerge_label.py", content)
+
+    def test_structured_ci_security_and_codecov_contract(self) -> None:
+        """Parse workflows and verify exact hard/advisory and OIDC contracts."""
+        ci_pr = yaml.safe_load(
+            (ROOT / ".github/workflows/ci-pr.yml").read_text(encoding="utf-8")
+        )
+        jobs = ci_pr["jobs"]
+        security_required = jobs["security-required"]
+        self.assertEqual(
+            set(security_required["needs"]), {"security-gate", "repository-security"}
+        )
+        kover = jobs["kover-coverage"]
+        self.assertEqual(kover["permissions"]["contents"], "read")
+        self.assertEqual(kover["permissions"]["id-token"], "write")
+        codecov_step = next(
+            step for step in kover["steps"] if step.get("name") == "Upload coverage to Codecov"
+        )
+        self.assertTrue(codecov_step["with"]["use_oidc"])
+        self.assertNotIn("token", codecov_step["with"])
+
+        event_config = ci_pr.get("on", ci_pr.get(True))
+        self.assertIsInstance(event_config, dict)
+        pull_request = event_config["pull_request"]
+        self.assertNotIn(
+            "paths", pull_request, "CI Required producer must run for every PR to main"
+        )
+
+        security = yaml.safe_load(
+            (ROOT / ".github/workflows/security.yml").read_text(encoding="utf-8")
+        )
+        sec_jobs = security["jobs"]
+        semgrep_step = next(
+            step
+            for step in sec_jobs["semgrep"]["steps"]
+            if step.get("name") == "Run Semgrep"
+        )
+        self.assertTrue(semgrep_step["continue-on-error"])
+        workflow_steps = sec_jobs["workflow-audit"]["steps"]
+        self.assertTrue(
+            any(
+                step.get("name") == "Run actionlint" and step.get("continue-on-error")
+                for step in workflow_steps
+            )
+        )
+        policy_step = next(
+            step
+            for step in workflow_steps
+            if step.get("name") == "Enforce repository workflow policy"
+        )
+        self.assertEqual(policy_step["run"], "python3 scripts/ci/workflow_policy.py --repo .")
+
+        codeql = yaml.safe_load(
+            (ROOT / ".github/workflows/codeql.yml").read_text(encoding="utf-8")
+        )
+        codeql_job = codeql["jobs"]["analyze-java-kotlin"]
+        self.assertNotIn(
+            "if",
+            codeql_job,
+            "Required CodeQL check must run for Dependabot pull requests too",
+        )
+
+    def test_control_plane_paths_and_sensitive_dependencies_are_manual(self) -> None:
+        data = yaml.safe_load((ROOT / ".mergify.yml").read_text(encoding="utf-8"))
+        auto = data["merge_protections_settings"]["auto_merge_conditions"]
+        dependabot_and = auto[0]["or"][0]["and"]
+        conditions = [item for item in dependabot_and if isinstance(item, str)]
+        protected = next(item for item in conditions if item.startswith("-files ~="))
+        self.assertIn("scripts/ci/", protected)
+        self.assertIn("\\.github/", protected)
+        self.assertIn("\\.mergify\\.yml", protected)
+
+        denylist = next(
+            item for item in conditions if item.startswith("-dependabot-dependency-name")
+        )
+        for pattern in (
+            "org\\.bouncycastle",
+            "org\\.bitbucket\\.b_c",
+            "androidx\\.credentials",
+            "com\\.android\\.billingclient",
+            "org\\.jetbrains\\.kotlin",
+            "firebase-admin$",
+            "firebase-functions$",
+            "firebase-tools$",
+            "jose$",
+            "jsonwebtoken$",
+            "wrangler$",
+            "@cloudflare/",
+        ):
+            self.assertIn(pattern, denylist)
+
+        dependency_type = next(
+            item["or"] for item in dependabot_and if isinstance(item, dict) and "or" in item
+        )
+        self.assertIn("dependabot-dependency-type = development", dependency_type)
+        prod = next(item["and"] for item in dependency_type if isinstance(item, dict))
+        self.assertIn("dependabot-dependency-type = production", prod)
+        self.assertIn("dependabot-update-type = version-update:semver-patch", prod)
+
+    def test_ruleset_contract_is_complete(self) -> None:
+        payload = json.loads(
+            (ROOT / "scripts/ci/github-ruleset-payload.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(payload["conditions"]["ref_name"]["include"], ["~DEFAULT_BRANCH"])
+        pull = next(rule for rule in payload["rules"] if rule["type"] == "pull_request")
+        params = pull["parameters"]
+        self.assertEqual(params["allowed_merge_methods"], ["squash"])
+        for key in (
+            "dismiss_stale_reviews_on_push",
+            "require_code_owner_review",
+            "require_last_push_approval",
+            "required_approving_review_count",
+            "required_review_thread_resolution",
+        ):
+            self.assertIn(key, params)
+        status = next(
+            rule for rule in payload["rules"] if rule["type"] == "required_status_checks"
+        )["parameters"]
+        self.assertTrue(status["strict_required_status_checks_policy"])
+        self.assertFalse(status["do_not_enforce_on_create"])
 
 
 if __name__ == "__main__":

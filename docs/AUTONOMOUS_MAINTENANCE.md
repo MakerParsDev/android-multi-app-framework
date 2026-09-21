@@ -97,7 +97,7 @@ Configured in `.mergify.yml` using the latest official schema:
   - `Dependency Review` (from security.yml workflow)
   - `SonarCloud Code Analysis`
 - **`auto_merge_conditions`**: Restricted solely to:
-  - Dependabot dev/prod patch and minor updates (excluding sensitive coordinates; sensitive denylist applies to ALL dependency types).
+  - Dependabot development patch/minor updates and production patch updates only, excluding sensitive coordinates and protected control-plane files. GitHub Actions updates remain manual because `.github/**` is part of the trust boundary.
   - Jules Fleet PRs verified as `risk:low` with label `fleet-merge-ready`.
   - Circuit breaker label `-label = automerge:disabled`.
 - **`queue_rules`**:
@@ -163,6 +163,7 @@ The `security.yml` workflow runs four security checks:
 
 - **Ceiling Policy:** Recorded in `config/codeql-compatibility-policy.json`.
 - **Enforcement:** `scripts/ci/codeql_kotlin_compatibility_test.py` validates that `gradle/libs.versions.toml` Kotlin compiler stays below the CodeQL ceiling (currently `< 2.4.10` for CodeQL bundle 2.26.1).
+- **Dependabot:** The required `Analyze Java and Kotlin` job also runs for Dependabot pull requests. GitHub code scanning supports result upload for `pull_request`-triggered Dependabot analysis, so the required CodeQL context cannot be skipped on PRs intended for autonomous merge.
 
 ---
 
@@ -170,20 +171,33 @@ The `security.yml` workflow runs four security checks:
 
 | Tier | PR Types | Policy |
 |---|---|---|
-| **Class A (Autonomous)** | Dependabot dev patch/minor, Action patch/minor, Jules Fleet `risk:low` | Auto-queued and merged by Mergify after all gates pass |
-| **Class B (Enhanced Guarded)** | Side-project prod patch/minor, non-breaking runtime library patches | Allowed only if full CI and integration tests pass |
-| **Class C (Manual Approval Required)** | Any semver-major bump, Gradle/Kotlin/AGP toolchain, Auth, Billing, DB migrations, `.github/**`, `.mergify.yml` | Never auto-merged; human approval required |
+| **Class A (Autonomous)** | Non-sensitive Dependabot development patch/minor, non-sensitive production patch, Jules Fleet `risk:low` outside protected paths | Auto-queued and merged by Mergify after all hard gates pass |
+| **Class B (Enhanced Guarded)** | Selected non-sensitive runtime/side-project production patches | Eligible only when the Mergify contract permits them and full CI/integration gates pass |
+| **Class C (Manual Approval Required)** | Any semver-major bump, GitHub Actions updates, Gradle/Kotlin/AGP/KSP toolchain, Auth/Crypto, Billing, DB migrations, `.github/**`, `.mergify.yml`, `scripts/ci/**` | Never auto-merged; human approval required |
 
 ---
 
 ## 12. Circuit Breakers & Kill Switches
 
 1. **Global Maintenance Kill Switch:**
-   - Variable `AUTONOMOUS_MAINTENANCE_ENABLED=false` disables automated Fleet issue/PR creation.
-2. **Global Auto-Merge Kill Switch:**
-   - Variable `AUTONOMOUS_MERGE_ENABLED=false` disables automated Mergify qualification.
+   - Missing or `AUTONOMOUS_MAINTENANCE_ENABLED=false` is fail-closed for autonomous maintenance creation.
+2. **Global Auto-Merge Authorization:**
+   - Missing or `AUTONOMOUS_MERGE_ENABLED=false` means the trusted label controller must remove `automerge:enabled` from every open PR.
+   - Mergify does **not** read the repository variable directly; the variable becomes effective after the Auto-Merge Control workflow synchronizes labels.
 3. **Per-PR Circuit Breaker Label:**
-   - Adding label `automerge:disabled`, `hold`, or `do-not-merge` immediately disqualifies the PR from auto-merge.
+   - Adding `automerge:disabled`, `hold`, or `do-not-merge` immediately disqualifies the PR from autonomous merge.
+
+### Emergency Auto-Merge Shutdown
+
+Do not rely on the hourly schedule during an incident. Run the shutdown synchronously:
+
+```bash
+gh variable set AUTONOMOUS_MERGE_ENABLED --body "false" --repo MakerParsDev/android-multi-app-framework
+gh workflow run "Auto-Merge Control" --repo MakerParsDev/android-multi-app-framework
+gh run list --repo MakerParsDev/android-multi-app-framework --workflow "Auto-Merge Control" --limit 1
+```
+
+Wait for the workflow to finish, then verify that no open pull request retains `automerge:enabled`. If label synchronization fails, apply `automerge:disabled` to the affected open PRs as containment and keep the global variable false.
 
 ---
 
@@ -197,93 +211,64 @@ The `security.yml` workflow runs four security checks:
 
 ## 14. How to Safely Disable Automation
 
-To completely suspend all autonomous actions:
+To completely suspend autonomous actions, set every switch false and immediately
+run Auto-Merge Control so stale positive labels are removed:
+
 ```bash
-gh variable set AUTONOMOUS_MAINTENANCE_ENABLED --body "false"
-gh variable set AUTONOMOUS_MERGE_ENABLED --body "false"
-gh variable set JULES_FLEET_ENABLED --body "false"
-gh variable set JULES_FLEET_AUTO_MERGE_ENABLED --body "false"
+gh variable set AUTONOMOUS_MAINTENANCE_ENABLED --body "false" --repo MakerParsDev/android-multi-app-framework
+gh variable set AUTONOMOUS_MERGE_ENABLED --body "false" --repo MakerParsDev/android-multi-app-framework
+gh variable set JULES_FLEET_ENABLED --body "false" --repo MakerParsDev/android-multi-app-framework
+gh variable set JULES_FLEET_AUTO_MERGE_ENABLED --body "false" --repo MakerParsDev/android-multi-app-framework
+gh workflow run "Auto-Merge Control" --repo MakerParsDev/android-multi-app-framework
 ```
-To re-enable:
-```bash
-gh variable set AUTONOMOUS_MAINTENANCE_ENABLED --body "true"
-gh variable set AUTONOMOUS_MERGE_ENABLED --body "true"
-```
+
+Re-enablement is intentionally staged; do not turn all switches on at once. Follow Section 16.2.
 
 ---
 ## 16. GitHub Ruleset Bootstrap Procedure
 
-The GitHub ruleset is **not yet active** (BOOTSTRAP_PENDING). After this PR merges, an administrator with repo admin permissions must apply the ruleset.
+The ruleset is **BOOTSTRAP_PENDING** until the live GitHub ruleset exists and matches `scripts/ci/github-ruleset-payload.json`. Ruleset writes require repository administrator authority; fine-grained credentials must grant repository **Administration: write**. The `admin:repo_hook` scope is unrelated to ruleset administration.
 
-### 15.1 Post-Merge Bootstrap Command
+Current rollout state before activation:
+- `JULES_FLEET_ENABLED=false`
+- `JULES_FLEET_AUTO_MERGE_ENABLED=false`
+- `AUTONOMOUS_MAINTENANCE_ENABLED` may be missing and is therefore fail-closed.
+- `AUTONOMOUS_MERGE_ENABLED` may be missing and is therefore fail-closed.
+- GitHub native `allow_auto_merge=false`.
 
-```bash
-# Apply the ruleset (requires admin:repo_hook permission)
-gh api --method POST repos/MakerParsDev/android-multi-app-framework/rulesets \
-  --input scripts/ci/github-ruleset-payload.json
-```
+### 16.1 Safe Bootstrap
 
-### 15.2 Ruleset Payload (scripts/ci/github-ruleset-payload.json)
-
-```json
-{
-  "name": "main-branch-protection",
-  "target": "branch",
-  "enforcement": "active",
-  "conditions": {
-    "ref_name": {
-      "exclude": [],
-      "include": ["~DEFAULT_BRANCH"]
-    }
-  },
-  "rules": [
-    {"type": "pull_request", "parameters": {"required_approving_review_count": 0}},
-    {"type": "required_status_checks", "parameters": {
-      "required_checks": [
-        {"context": "CI Required"},
-        {"context": "Security Required"},
-        {"context": "Secret Scan"},
-        {"context": "Workflow Audit"},
-        {"context": "Dependency Review"},
-        {"context": "SonarCloud Code Analysis"},
-        {"context": "Mergify Merge Protections"},
-        {"context": "Analyze Java and Kotlin"}
-      ],
-      "strict_required_status_checks_policy": true
-    }},
-    {"type": "non_fast_forward"},
-    {"type": "deletion"}
-  ],
-  "bypass_actors": []
-}
-```
-
-### 15.3 Required Variables (Set After Ruleset Applied)
-
-After successful ruleset activation, set these variables in order:
+Use the idempotent helper rather than posting the JSON directly:
 
 ```bash
-# 1. Enable maintenance automation (issue/PR creation)
-gh variable set AUTONOMOUS_MAINTENANCE_ENABLED --body "true"
-
-# 2. Enable auto-merge qualification (requires ruleset active)
-gh variable set AUTONOMOUS_MERGE_ENABLED --body "true"
-
-# 3. Enable Jules Fleet analysis/dispatch (dry-run only)
-gh variable set JULES_FLEET_ENABLED --body "true"
-
-# 4. JULES_FLEET_AUTO_MERGE_ENABLED MUST REMAIN false
-#    Jules Fleet must NEVER independently auto-merge
-#    Mergify is the SOLE merge authority
+python scripts/ci/bootstrap_autonomous_repository_settings.py --repo MakerParsDev/android-multi-app-framework --check
+python scripts/ci/bootstrap_autonomous_repository_settings.py --repo MakerParsDev/android-multi-app-framework --plan
+# Review the plan before the only write step:
+python scripts/ci/bootstrap_autonomous_repository_settings.py --repo MakerParsDev/android-multi-app-framework --apply
+python scripts/ci/bootstrap_autonomous_repository_settings.py --repo MakerParsDev/android-multi-app-framework --check
+# Idempotence canary: a second apply must report no changes.
+python scripts/ci/bootstrap_autonomous_repository_settings.py --repo MakerParsDev/android-multi-app-framework --apply
 ```
 
-### 15.4 Variables That Must Remain Disabled
+The helper creates missing circuit-breaker variables as `false`, keeps GitHub native auto-merge disabled, creates missing labels, and creates or updates the single `main-branch-protection` ruleset. It uses `~DEFAULT_BRANCH`, the documented GitHub ruleset token for the repository default branch.
+
+### 16.2 Staged Activation
+
+1. **Bootstrap only:** verify exactly one active `main-branch-protection` ruleset, all four variables exist and are `false`, and all required labels exist.
+2. **Maintenance canary:** set only `AUTONOMOUS_MAINTENANCE_ENABLED=true`. Keep merge and Jules switches false and observe a maintenance cycle.
+3. **One Dependabot canary:** choose one non-sensitive, non-protected patch PR. Keep `automerge:disabled` on all other existing Dependabot PRs, remove it only from the canary, set `AUTONOMOUS_MERGE_ENABLED=true`, and immediately run the Auto-Merge Control workflow. Verify the canary alone receives `automerge:enabled`, all hard gates pass, and Mergify performs the squash merge.
+4. **Gradual rollout:** release eligible Dependabot PRs in small batches. Toolchain, auth/crypto, billing, Firebase admin/deploy tooling, Cloudflare deployment tooling, GitHub Actions and control-plane changes remain manual.
+5. **Jules last:** only after the dependency path is stable, set `JULES_FLEET_ENABLED=true`. `JULES_FLEET_AUTO_MERGE_ENABLED=false` remains permanent unless the architecture is intentionally redesigned.
+
+If the canary fails, immediately set `AUTONOMOUS_MERGE_ENABLED=false`, manually trigger Auto-Merge Control, verify all `automerge:enabled` labels are removed, and restore `automerge:disabled` containment.
+
+### 16.3 Settings That Stay Disabled
 
 | Variable / Setting | Value | Reason |
 |----------|-------|--------|
-| `JULES_FLEET_AUTO_MERGE_ENABLED` | `false` | Jules Fleet must NEVER auto-merge; Mergify is sole authority |
-| GitHub native merge queue | Disabled | Prevents dual-queue race conditions |
-| GitHub `allow_auto_merge` | `false` | Mergify is sole merge authority; GitHub native auto-merge is a separate mechanism that would create race conditions |
+| `JULES_FLEET_AUTO_MERGE_ENABLED` | `false` | Jules Fleet never merges independently; Mergify is the sole merge authority |
+| GitHub native merge queue | Disabled | Prevents dual-queue behavior |
+| GitHub `allow_auto_merge` | `false` | Native auto-merge is a separate mechanism and is not required by Mergify |
 ---
 
 ## 17. Auto-Merge Control Plane

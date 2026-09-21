@@ -216,12 +216,13 @@ jobs:
         env:
           FIREBASE_CONFIGS_ZIP_BASE64: ${{ secrets.FIREBASE_CONFIGS_ZIP_BASE64 }}
           FIREBASE_WEB_CLIENT_ID: ${{ secrets.FIREBASE_WEB_CLIENT_ID }}
+          RESOLVED_FLAVORS_CSV: ${{ needs.resolve-flavors.outputs.flavors_csv }}
         run: |
           python3 scripts/ci/materialize_firebase_configs.py \
-            --flavors "${{ needs.resolve-flavors.outputs.flavors_csv }}" \
+            --flavors "$RESOLVED_FLAVORS_CSV" \
             --mode strict
           python3 scripts/ci/verify_google_signin_config.py \
-            --flavors "${{ needs.resolve-flavors.outputs.flavors_csv }}" \
+            --flavors "$RESOLVED_FLAVORS_CSV" \
             --require-web-client-id
 
       - name: Decode keystore
@@ -242,19 +243,21 @@ jobs:
         if: inputs.do_quality
         env:
           VALIDATION_MODE: warn
+          RESOLVED_FLAVORS_CSV: ${{ needs.resolve-flavors.outputs.flavors_csv }}
         run: |
           python3 scripts/ci/validate_ci_apps_catalog.py \
             --mode warn \
-            --target-flavors "${{ needs.resolve-flavors.outputs.flavors_csv }}"
+            --target-flavors "$RESOLVED_FLAVORS_CSV"
           python3 scripts/ci/validate_admob_inventory.py \
             --mode warn \
-            --target-flavors "${{ needs.resolve-flavors.outputs.flavors_csv }}"
+            --target-flavors "$RESOLVED_FLAVORS_CSV"
           ./gradlew detekt ktlintCheck --stacktrace --no-daemon --max-workers=2
 
       - name: Auto-bump Play version codes
         if: (inputs.do_internal_test || inputs.do_publish) && inputs.build_type == 'Release'
         env:
           PLAY_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
+          RESOLVED_FLAVORS_CSV: ${{ needs.resolve-flavors.outputs.flavors_csv }}
         run: |
           echo "$PLAY_SERVICE_ACCOUNT_JSON_BASE64" | tr -d '\r\n\t ' | base64 -d > /tmp/service-account.json
           echo "PLAY_SERVICE_ACCOUNT_JSON=/tmp/service-account.json" >> "$GITHUB_ENV"
@@ -262,7 +265,7 @@ jobs:
           python3 scripts/ci/verify_play_service_account_project.py --expected-project-id makerpars-oaslananka-mobil
           python3 -m pip install --quiet google-api-python-client google-auth
           python3 scripts/ci/fetch_play_version_codes.py \
-            --flavors "${{ needs.resolve-flavors.outputs.flavors_csv }}" \
+            --flavors "$RESOLVED_FLAVORS_CSV" \
             --tracks all \
             --suggest-next \
             --apply-to-app-versions \
@@ -270,10 +273,17 @@ jobs:
 
       - name: Build AABs
         if: inputs.do_build
+        env:
+          BUILD_TYPE: ${{ inputs.build_type }}
+          FLAVORS_JSON: ${{ needs.resolve-flavors.outputs.flavors_json }}
+          DO_INTERNAL_TEST: ${{ inputs.do_internal_test }}
+          DO_PUBLISH: ${{ inputs.do_publish }}
+          KEYSTORE_FILE: ${{ env.KEYSTORE_FILE }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          BUILD_TYPE="${{ inputs.build_type }}"
-          FLAVORS_JSON='${{ needs.resolve-flavors.outputs.flavors_json }}'
           mapfile -t FLAVORS < <(
             echo "$FLAVORS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d'
           )
@@ -281,7 +291,7 @@ jobs:
           for flavor in "${FLAVORS[@]}"; do
             [ -z "$flavor" ] && continue
             cap="$(tr '[:lower:]' '[:upper:]' <<< "${flavor:0:1}")${flavor:1}"
-            if [ "$BUILD_TYPE" = "Release" ] && { [ "${{ inputs.do_internal_test }}" = "true" ] || [ "${{ inputs.do_publish }}" = "true" ]; }; then
+            if [ "$BUILD_TYPE" = "Release" ] && { [ "$DO_INTERNAL_TEST" = "true" ] || [ "$DO_PUBLISH" = "true" ]; }; then
               TASKS+=("bundle${cap}Release")
             else
               TASKS+=("assemble${cap}${BUILD_TYPE}")
@@ -289,11 +299,6 @@ jobs:
           done
           echo "Running Gradle tasks: ${TASKS[*]}"
           ./gradlew "${TASKS[@]}" --stacktrace --no-daemon --max-workers=2
-        env:
-          KEYSTORE_FILE: ${{ env.KEYSTORE_FILE }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: Upload build outputs
         if: always()
@@ -352,10 +357,11 @@ jobs:
       - name: Verify Play Console access
         env:
           PLAY_SERVICE_ACCOUNT_JSON: /tmp/service-account.json
+          RESOLVED_FLAVORS_CSV: ${{ needs.resolve-flavors.outputs.flavors_csv }}
         run: |
           python3 -m pip install --quiet google-api-python-client google-auth
           python3 scripts/ci/verify_play_console_access.py \
-            --flavors "${{ needs.resolve-flavors.outputs.flavors_csv }}"
+            --flavors "$RESOLVED_FLAVORS_CSV"
 
       - name: Publish to Play
         env:
@@ -364,19 +370,21 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          FLAVORS_JSON: ${{ needs.resolve-flavors.outputs.flavors_json }}
+          DO_PUBLISH: ${{ inputs.do_publish }}
+          UPDATE_PLAY_LISTING: ${{ inputs.update_play_listing }}
         run: |
           set -euo pipefail
-          FLAVORS_JSON='${{ needs.resolve-flavors.outputs.flavors_json }}'
           mapfile -t FLAVORS < <(
             echo "$FLAVORS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d'
           )
           TRACK="internal"
-          ${{ inputs.do_publish }} && TRACK="production"
+          if [ "$DO_PUBLISH" = "true" ]; then TRACK="production"; fi
           TASKS=()
           for flavor in "${FLAVORS[@]}"; do
             [ -z "$flavor" ] && continue
             cap="$(tr '[:lower:]' '[:upper:]' <<< "${flavor:0:1}")${flavor:1}"
-            ${{ inputs.update_play_listing }} && TASKS+=("publish${cap}ReleaseListing")
+            if [ "$UPDATE_PLAY_LISTING" = "true" ]; then TASKS+=("publish${cap}ReleaseListing"); fi
             TASKS+=("publish${cap}ReleaseBundle")
           done
           echo "Publishing tasks: ${TASKS[*]}"

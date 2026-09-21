@@ -122,6 +122,9 @@ jobs:
         with:
           python-version: '3.13'
 
+      - name: Install workflow policy dependencies
+        run: python3 -m pip install --disable-pip-version-check -r scripts/ci/requirements-workflow-policy.txt
+
       - name: Install workflow security tools
         run: |
           eval "$(bash scripts/ci/install_workflow_security_tools.sh)"
@@ -134,6 +137,16 @@ jobs:
 
       - name: Validate security pipeline
         run: python3 scripts/ci/validate_security_pipeline.py
+
+      - name: Enforce repository workflow policy
+        run: python3 scripts/ci/workflow_policy.py --repo .
+
+      - name: Test autonomous control plane
+        run: |
+          python3 scripts/ci/autonomous_maintenance_test.py
+          python3 scripts/ci/sync_automerge_label_test.py
+          python3 scripts/ci/bootstrap_autonomous_repository_settings_test.py
+          python3 scripts/ci/maintenance_health_controller_test.py
 
       - name: Validate Android toolchain config
         run: python3 scripts/ci/validate_android_toolchain_config.py

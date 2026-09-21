@@ -1,382 +1,416 @@
 #!/usr/bin/env python3
-"""
-Repository Settings Bootstrap Helper.
+"""Safely bootstrap repository settings for autonomous maintenance.
 
-Safely configures repository settings for autonomous maintenance.
-Supports --check (read-only), --plan (show what would change), and --apply (execute changes).
-
-NEVER defaults to writes. Requires explicit --apply flag.
+The helper is read-only unless --apply is explicitly supplied. It keeps GitHub
+native auto-merge disabled, creates missing fail-closed variables and labels,
+and creates or updates the repository ruleset idempotently.
 """
 
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
 import json
 import os
+from pathlib import Path
 import subprocess  # nosec B404
 import sys
-from pathlib import Path
 from typing import Any
 
+API_VERSION = "2026-03-10"
+RULESET_NAME = "main-branch-protection"
+RULESET_PAYLOAD = Path(__file__).with_name("github-ruleset-payload.json")
+VARIABLE_DEFAULTS = {
+    "AUTONOMOUS_MAINTENANCE_ENABLED": "false",
+    "AUTONOMOUS_MERGE_ENABLED": "false",
+    "JULES_FLEET_ENABLED": "false",
+    "JULES_FLEET_AUTO_MERGE_ENABLED": "false",
+}
+LABEL_SPECS = {
+    "fleet": ("1d76db", "Fleet-managed issue"),
+    "fleet-merge-ready": ("0e8a16", "Ready for fleet sequential merge"),
+    "fleet-review-required": ("d93f0b", "Protected or ambiguous changes require human review"),
+    "risk:low": ("0e8a16", "Low-risk change eligible for autonomous merge"),
+    "risk:protected": ("d93f0b", "Protected change requiring human review"),
+    "automerge:enabled": ("1d76db", "Global autonomous merge authorized by control plane"),
+    "automerge:disabled": ("d93f0b", "Temporarily disables autonomous merge"),
+    "maintenance": ("5319e7", "Autonomous maintenance dashboard issue"),
+}
 
-def run_gh_api(
-    method: str, endpoint: str, input_data: dict | None = None
-) -> tuple[int, Any]:
-    """Run gh api command."""
-    cmd = ["gh", "api", "--method", method, endpoint]
-    if input_data:
+
+@dataclass(frozen=True)
+class GhApiResult:
+    """Structured gh api result that never conflates data and errors."""
+
+    returncode: int
+    data: Any | None
+    stderr: str
+
+    @property
+    def ok(self) -> bool:
+        return self.returncode == 0
+
+
+def run_gh_api(method: str, endpoint: str, input_data: dict[str, Any] | None = None) -> GhApiResult:
+    """Run gh api with the current GitHub REST API version."""
+    cmd = [
+        "gh", "api", "--method", method,
+        "-H", "Accept: application/vnd.github+json",
+        "-H", f"X-GitHub-Api-Version: {API_VERSION}",
+        endpoint,
+    ]
+    if input_data is not None:
         cmd.extend(["--input", "-"])
-        result = subprocess.run(
-            cmd,
-            input=json.dumps(input_data),
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-    else:
-        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    result = subprocess.run(
+        cmd,
+        input=json.dumps(input_data) if input_data is not None else None,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
     if result.returncode != 0:
-        return result.returncode, result.stderr
+        return GhApiResult(result.returncode, None, result.stderr.strip())
+    stdout = result.stdout.strip()
+    if not stdout:
+        return GhApiResult(0, None, "")
     try:
-        return result.returncode, json.loads(
-            result.stdout
-        ) if result.stdout.strip() else None
+        return GhApiResult(0, json.loads(stdout), "")
     except json.JSONDecodeError:
-        return result.returncode, result.stdout
+        return GhApiResult(0, stdout, "")
+
+
+def load_ruleset_payload() -> dict[str, Any]:
+    """Load the version-controlled desired ruleset."""
+    return json.loads(RULESET_PAYLOAD.read_text(encoding="utf-8"))
+
+
+def _canonical_rule(rule: dict[str, Any]) -> dict[str, Any]:
+    """Return only rule fields intentionally controlled by this repository."""
+    rule_type = rule.get("type")
+    result: dict[str, Any] = {"type": rule_type}
+    params = dict(rule.get("parameters") or {})
+
+    if rule_type == "pull_request":
+        keys = (
+            "allowed_merge_methods",
+            "dismiss_stale_reviews_on_push",
+            "require_code_owner_review",
+            "require_last_push_approval",
+            "required_approving_review_count",
+            "required_review_thread_resolution",
+        )
+        result["parameters"] = {key: params.get(key) for key in keys}
+    elif rule_type == "required_status_checks":
+        checks = sorted(
+            (
+                {
+                    "context": item.get("context"),
+                    **(
+                        {"integration_id": item["integration_id"]}
+                        if item.get("integration_id") is not None
+                        else {}
+                    ),
+                }
+                for item in params.get("required_checks", [])
+            ),
+            key=lambda item: (str(item.get("context")), str(item.get("integration_id", ""))),
+        )
+        result["parameters"] = {
+            "do_not_enforce_on_create": bool(params.get("do_not_enforce_on_create", False)),
+            "required_checks": checks,
+            "strict_required_status_checks_policy": bool(
+                params.get("strict_required_status_checks_policy", False)
+            ),
+        }
+    return result
+
+
+def canonical_ruleset(data: dict[str, Any]) -> dict[str, Any]:
+    """Canonicalize relevant ruleset fields for idempotent comparison."""
+    return {
+        "name": data.get("name"),
+        "target": data.get("target"),
+        "enforcement": data.get("enforcement"),
+        "conditions": data.get("conditions") or {},
+        "rules": sorted(
+            (_canonical_rule(rule) for rule in data.get("rules", [])),
+            key=lambda item: str(item.get("type")),
+        ),
+        "bypass_actors": data.get("bypass_actors") or [],
+    }
+
+
+def fetch_ruleset_detail(repo: str, summaries: list[dict[str, Any]]) -> tuple[dict[str, Any] | None, str | None]:
+    """Fetch the full desired ruleset definition, if it already exists."""
+    match = next((item for item in summaries if item.get("name") == RULESET_NAME), None)
+    if not match:
+        return None, None
+    ruleset_id = match.get("id")
+    if ruleset_id is None:
+        return None, f"Ruleset {RULESET_NAME!r} summary has no id"
+    result = run_gh_api("GET", f"repos/{repo}/rulesets/{ruleset_id}")
+    if not result.ok or not isinstance(result.data, dict):
+        return None, result.stderr or f"Unable to fetch ruleset {ruleset_id}"
+    return result.data, None
 
 
 def check_repo_settings(repo: str) -> dict[str, Any]:
-    """Check current repository settings."""
-    settings = {}
+    """Read repository settings without changing them."""
+    settings: dict[str, Any] = {"errors": []}
 
-    # Check general settings
-    _, data = run_gh_api("GET", f"repos/{repo}")
-    if data:
-        settings["allow_auto_merge"] = data.get("allow_auto_merge", False)
-        settings["delete_branch_on_merge"] = data.get("delete_branch_on_merge", False)
-        settings["has_issues"] = data.get("has_issues", True)
-        settings["has_wiki"] = data.get("has_wiki", False)
-        settings["archived"] = data.get("archived", False)
+    repo_result = run_gh_api("GET", f"repos/{repo}")
+    if repo_result.ok and isinstance(repo_result.data, dict):
+        settings["allow_auto_merge"] = bool(repo_result.data.get("allow_auto_merge", False))
+        settings["delete_branch_on_merge"] = bool(repo_result.data.get("delete_branch_on_merge", False))
+        settings["permissions"] = repo_result.data.get("permissions", {})
+    else:
+        settings["errors"].append(repo_result.stderr or "Unable to read repository settings")
 
-    # Check branch protection (legacy)
-    _, bp_data = run_gh_api("GET", f"repos/{repo}/branches/main/protection")
-    settings["legacy_branch_protection"] = bp_data is not None and "message" not in str(
-        bp_data
-    )
+    protection = run_gh_api("GET", f"repos/{repo}/branches/main/protection")
+    if protection.ok:
+        settings["legacy_branch_protection"] = True
+    elif protection.returncode != 0 and "404" in protection.stderr:
+        settings["legacy_branch_protection"] = False
+    else:
+        settings["legacy_branch_protection"] = None
 
-    # Check rulesets
-    _, rs_data = run_gh_api("GET", f"repos/{repo}/rulesets")
-    settings["rulesets"] = rs_data if isinstance(rs_data, list) else []
+    rulesets = run_gh_api("GET", f"repos/{repo}/rulesets")
+    summaries = rulesets.data if rulesets.ok and isinstance(rulesets.data, list) else []
+    settings["rulesets"] = summaries
+    if not rulesets.ok:
+        settings["errors"].append(rulesets.stderr or "Unable to list repository rulesets")
+    detail, detail_error = fetch_ruleset_detail(repo, summaries)
+    settings["ruleset_detail"] = detail
+    if detail_error:
+        settings["errors"].append(detail_error)
 
-    # Check variables
-    _, var_data = run_gh_api("GET", f"repos/{repo}/variables")
-    settings["variables"] = (
-        {v["name"]: v["value"] for v in var_data} if isinstance(var_data, list) else {}
-    )
+    variables = run_gh_api("GET", f"repos/{repo}/actions/variables")
+    if variables.ok and isinstance(variables.data, dict):
+        items = variables.data.get("variables", [])
+        settings["variables"] = {
+            item["name"]: str(item.get("value", ""))
+            for item in items
+            if isinstance(item, dict) and item.get("name")
+        }
+    else:
+        settings["variables"] = {}
+        settings["errors"].append(variables.stderr or "Unable to list repository variables")
 
     return settings
 
 
-def check_required_labels(repo: str) -> dict[str, bool]:
-    """Check if required labels exist."""
-    required = [
-        "fleet",
-        "fleet-merge-ready",
-        "fleet-review-required",
-        "risk:low",
-        "risk:protected",
-        "automerge:enabled",
-        "automerge:disabled",
-        "maintenance",
-    ]
-    _, data = run_gh_api("GET", f"repos/{repo}/labels")
-    existing = {label["name"] for label in data} if isinstance(data, list) else set()
-    return {label: label in existing for label in required}
+def check_required_labels(repo: str) -> tuple[dict[str, bool], str | None]:
+    """Return required label presence and an optional API error."""
+    result = run_gh_api("GET", f"repos/{repo}/labels?per_page=100")
+    if not result.ok or not isinstance(result.data, list):
+        return {name: False for name in LABEL_SPECS}, result.stderr or "Unable to list labels"
+    existing = {str(label.get("name")) for label in result.data if isinstance(label, dict)}
+    return {name: name in existing for name in LABEL_SPECS}, None
 
 
-def plan_changes(current: dict[str, Any], labels: dict[str, bool]) -> list[str]:
-    """Generate plan of changes needed."""
-    changes = []
+def ruleset_drift(current: dict[str, Any] | None, desired: dict[str, Any]) -> bool:
+    """Return True when the current full ruleset differs from desired state."""
+    return current is None or canonical_ruleset(current) != canonical_ruleset(desired)
 
-    # Repository settings
-    # NOTE: allow_auto_merge should remain FALSE.
-    # Mergify is the sole merge authority; GitHub native auto-merge would create
-    # a second merge mechanism and race conditions. Mergify Merge Queue works
-    # independently and does not require GitHub's allow_auto_merge setting.
-    if current.get("allow_auto_merge"):
-        changes.append(
-            "WARNING: allow_auto_merge is TRUE - should be FALSE (Mergify is sole merge authority)"
-        )
-    if not current.get("delete_branch_on_merge"):
-        changes.append("Enable delete_branch_on_merge")
 
-    # Ruleset
-    rulesets = current.get("rulesets", [])
-    has_main_ruleset = any(
-        rs.get("conditions", {}).get("ref_name", {}).get("include", [])
-        == ["~DEFAULT_BRANCH"]
-        for rs in rulesets
-    )
-    if not has_main_ruleset:
-        changes.append(
-            "Create GitHub ruleset for main branch (see scripts/ci/github-ruleset-payload.json)"
-        )
+def plan_changes(current: dict[str, Any], labels: dict[str, bool], desired_ruleset: dict[str, Any]) -> list[str]:
+    """Generate an explicit change plan."""
+    changes: list[str] = []
+    if current.get("allow_auto_merge") is True:
+        changes.append("DISABLE_NATIVE_AUTO_MERGE")
+    if current.get("delete_branch_on_merge") is False:
+        changes.append("ENABLE_DELETE_BRANCH_ON_MERGE")
 
-    # Variables
-    vars_needed = {
-        "AUTONOMOUS_MAINTENANCE_ENABLED": "false",
-        "AUTONOMOUS_MERGE_ENABLED": "false",
-        "JULES_FLEET_ENABLED": "false",
-        "JULES_FLEET_AUTO_MERGE_ENABLED": "false",
-    }
-    current_vars = current.get("variables", {})
-    for var, default in vars_needed.items():
-        if var not in current_vars:
-            changes.append(f"Create variable {var}={default} (fail-closed default)")
+    detail = current.get("ruleset_detail")
+    summaries = current.get("rulesets", [])
+    summary = next((item for item in summaries if item.get("name") == RULESET_NAME), None)
+    if detail is None and summary is None:
+        changes.append("CREATE_RULESET")
+    elif detail is None:
+        changes.append("RULESET_READ_ERROR")
+    elif ruleset_drift(detail, desired_ruleset):
+        changes.append(f"UPDATE_RULESET:{detail.get('id')}")
 
-    # Labels
+    existing_vars = current.get("variables", {})
+    for name, value in VARIABLE_DEFAULTS.items():
+        if name not in existing_vars:
+            changes.append(f"CREATE_VARIABLE:{name}:{value}")
+
     for label, exists in labels.items():
         if not exists:
-            changes.append(f"Create label '{label}'")
+            changes.append(f"CREATE_LABEL:{label}")
 
     return changes
 
 
-def apply_changes(repo: str, plan: list[str]) -> bool:
-    """Apply the planned changes."""
+def apply_changes(repo: str, plan: list[str], desired_ruleset: dict[str, Any]) -> bool:
+    """Apply an explicit plan. Missing variables are created fail-closed only."""
     success = True
 
-    # Apply repository settings
-    # NOTE: allow_auto_merge is intentionally NOT enabled.
-    # Mergify is the sole merge authority; GitHub native auto-merge would create
-    # a second merge mechanism. Mergify Merge Queue works independently.
-    if "WARNING: allow_auto_merge is TRUE" in "\n".join(plan):
-        _, err = run_gh_api("PATCH", f"repos/{repo}", {"allow_auto_merge": False})
-        if err:
-            print(f"Failed to disable allow_auto_merge: {err}", file=sys.stderr)
-            success = False
-        else:
-            print("✓ Disabled allow_auto_merge (Mergify is sole merge authority)")
+    if "RULESET_READ_ERROR" in plan:
+        print("Refusing to apply because an existing ruleset could not be read.", file=sys.stderr)
+        return False
 
-    if "Enable delete_branch_on_merge" in "\n".join(plan):
-        _, err = run_gh_api("PATCH", f"repos/{repo}", {"delete_branch_on_merge": True})
-        if err:
-            print(f"Failed to enable delete_branch_on_merge: {err}", file=sys.stderr)
-            success = False
+    if "DISABLE_NATIVE_AUTO_MERGE" in plan:
+        result = run_gh_api("PATCH", f"repos/{repo}", {"allow_auto_merge": False})
+        if result.ok:
+            print("? Disabled GitHub native auto-merge")
         else:
-            print("✓ Enabled delete_branch_on_merge")
+            print(f"Failed to disable native auto-merge: {result.stderr}", file=sys.stderr)
+            success = False
 
-    # Apply ruleset
-    if any("Create GitHub ruleset" in p for p in plan):
-        payload_path = Path(__file__).parent / "github-ruleset-payload.json"
-        if payload_path.exists():
-            _, err = run_gh_api(
-                "POST", f"repos/{repo}/rulesets", json.loads(payload_path.read_text())
-            )
-            if err:
-                print(f"Failed to create ruleset: {err}", file=sys.stderr)
-                success = False
+    if "ENABLE_DELETE_BRANCH_ON_MERGE" in plan:
+        result = run_gh_api("PATCH", f"repos/{repo}", {"delete_branch_on_merge": True})
+        if result.ok:
+            print("? Enabled delete_branch_on_merge")
+        else:
+            print(f"Failed to enable delete_branch_on_merge: {result.stderr}", file=sys.stderr)
+            success = False
+
+    if "CREATE_RULESET" in plan:
+        result = run_gh_api("POST", f"repos/{repo}/rulesets", desired_ruleset)
+        if result.ok:
+            print("? Created main-branch-protection ruleset")
+        else:
+            print(f"Failed to create ruleset: {result.stderr}", file=sys.stderr)
+            success = False
+
+    for item in plan:
+        if item.startswith("UPDATE_RULESET:"):
+            ruleset_id = item.split(":", 1)[1]
+            result = run_gh_api("PUT", f"repos/{repo}/rulesets/{ruleset_id}", desired_ruleset)
+            if result.ok:
+                print(f"? Updated ruleset {ruleset_id}")
             else:
-                print("✓ Created GitHub ruleset for main branch")
-        else:
-            print("Ruleset payload not found", file=sys.stderr)
-            success = False
+                print(f"Failed to update ruleset {ruleset_id}: {result.stderr}", file=sys.stderr)
+                success = False
 
-    # Apply variables
     for item in plan:
-        if item.startswith("Create variable "):
-            # Parse: Create variable NAME=VALUE
-            parts = item.replace("Create variable ", "").split("=")
-            if len(parts) == 2:
-                name, value = parts
-                _, err = run_gh_api(
-                    "POST", f"repos/{repo}/variables", {"name": name, "value": value}
-                )
-                if err:
-                    print(f"Failed to create variable {name}: {err}", file=sys.stderr)
-                    success = False
-                else:
-                    print(f"✓ Created variable {name}={value}")
+        if item.startswith("CREATE_VARIABLE:"):
+            _, name, value = item.split(":", 2)
+            result = run_gh_api(
+                "POST",
+                f"repos/{repo}/actions/variables",
+                {"name": name, "value": value},
+            )
+            if result.ok:
+                print(f"? Created variable {name}={value}")
+            else:
+                print(f"Failed to create variable {name}: {result.stderr}", file=sys.stderr)
+                success = False
 
-    # Apply labels
     for item in plan:
-        if item.startswith("Create label '"):
-            label = item.replace("Create label '", "").replace("'", "")
-            label_specs = {
-                "fleet": {
-                    "name": "fleet",
-                    "color": "1d76db",
-                    "description": "Fleet-managed issue",
-                },
-                "fleet-merge-ready": {
-                    "name": "fleet-merge-ready",
-                    "color": "0e8a16",
-                    "description": "Ready for fleet sequential merge",
-                },
-                "fleet-review-required": {
-                    "name": "fleet-review-required",
-                    "color": "d93f0b",
-                    "description": "Protected or ambiguous changes require human review",
-                },
-                "risk:low": {
-                    "name": "risk:low",
-                    "color": "0e8a16",
-                    "description": "Low-risk change eligible for autonomous merge",
-                },
-                "risk:protected": {
-                    "name": "risk:protected",
-                    "color": "d93f0b",
-                    "description": "Protected change requiring human review",
-                },
-                "automerge:enabled": {
-                    "name": "automerge:enabled",
-                    "color": "1d76db",
-                    "description": "Global autonomous merge authorized by control plane",
-                },
-                "automerge:disabled": {
-                    "name": "automerge:disabled",
-                    "color": "d93f0b",
-                    "description": "Global autonomous merge disabled by control plane",
-                },
-                "maintenance": {
-                    "name": "maintenance",
-                    "color": "5319e7",
-                    "description": "Autonomous maintenance dashboard issue",
-                },
-            }
-            spec = label_specs.get(label)
-            if spec:
-                _, err = run_gh_api("POST", f"repos/{repo}/labels", spec)
-                if err and "already_exists" not in str(err).lower():
-                    print(f"Failed to create label {label}: {err}", file=sys.stderr)
-                    success = False
-                else:
-                    print(f"✓ Created label '{label}'")
+        if item.startswith("CREATE_LABEL:"):
+            label = item.split(":", 1)[1]
+            color, description = LABEL_SPECS[label]
+            result = run_gh_api(
+                "POST",
+                f"repos/{repo}/labels",
+                {"name": label, "color": color, "description": description},
+            )
+            if result.ok:
+                print(f"? Created label {label!r}")
+            else:
+                print(f"Failed to create label {label!r}: {result.stderr}", file=sys.stderr)
+                success = False
 
     return success
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--check", action="store_true", help="Read and print current state")
+    group.add_argument("--plan", action="store_true", help="Read and print planned changes")
+    group.add_argument("--apply", action="store_true", help="Apply planned changes")
+    parser.add_argument("--repo", default=os.environ.get("GITHUB_REPOSITORY"), help="owner/name")
+    return parser.parse_args()
+
+
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Repository settings bootstrap helper for autonomous maintenance",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  # Check current state (read-only, safe)
-  python3 scripts/ci/bootstrap_autonomous_repository_settings.py --check
-
-  # Show what would change (read-only, safe)
-  python3 scripts/ci/bootstrap_autonomous_repository_settings.py --plan
-
-  # Apply changes (requires admin:repo_hook permission)
-  python3 scripts/ci/bootstrap_autonomous_repository_settings.py --apply
-""",
-    )
-    parser.add_argument(
-        "--check",
-        action="store_true",
-        help="Check current repository settings (read-only)",
-    )
-    parser.add_argument(
-        "--plan",
-        action="store_true",
-        help="Show planned changes without applying (read-only)",
-    )
-    parser.add_argument(
-        "--apply",
-        action="store_true",
-        help="Apply changes (requires admin permissions)",
-    )
-    parser.add_argument(
-        "--repo",
-        default=os.environ.get("GITHUB_REPOSITORY"),
-        help="Repository (owner/name)",
-    )
-
-    args = parser.parse_args()
-
+    args = parse_args()
     if not args.repo:
+        print("Error: Repository not specified (set GITHUB_REPOSITORY or --repo)", file=sys.stderr)
+        return 1
+    if not (args.check or args.plan or args.apply):
+        args.check = True
+
+    desired = load_ruleset_payload()
+    current = check_repo_settings(args.repo)
+    labels, label_error = check_required_labels(args.repo)
+    if label_error:
+        current.setdefault("errors", []).append(label_error)
+
+    print(f"Repository: {args.repo}")
+    print(f"Mode: {'CHECK' if args.check else 'PLAN' if args.plan else 'APPLY'}")
+    print("\n=== Current Repository Settings ===")
+    print(f"  allow_auto_merge: {current.get('allow_auto_merge', 'UNKNOWN')}")
+    print(f"  delete_branch_on_merge: {current.get('delete_branch_on_merge', 'UNKNOWN')}")
+    print(f"  legacy_branch_protection: {current.get('legacy_branch_protection', 'UNKNOWN')}")
+    print(f"  rulesets count: {len(current.get('rulesets', []))}")
+    detail = current.get("ruleset_detail")
+    if isinstance(detail, dict):
+        print(f"  {RULESET_NAME}: id={detail.get('id')} enforcement={detail.get('enforcement')} drift={ruleset_drift(detail, desired)}")
+    else:
+        print(f"  {RULESET_NAME}: NOT PRESENT")
+
+    print("\n=== Circuit Breaker Variables ===")
+    for name in VARIABLE_DEFAULTS:
+        print(f"  {name}: {current.get('variables', {}).get(name, 'NOT SET')}")
+
+    print("\n=== Required Labels ===")
+    for label, exists in labels.items():
+        print(f"  {'OK' if exists else 'MISSING'} {label}")
+
+    errors = current.get("errors", [])
+    if errors:
+        print("\n=== Read Errors ===", file=sys.stderr)
+        for error in errors:
+            print(f"  - {error}", file=sys.stderr)
+        if args.apply:
+            print("Refusing --apply because repository state could not be read reliably.", file=sys.stderr)
+            return 1
+
+    if args.check:
+        return 1 if errors else 0
+
+    plan = plan_changes(current, labels, desired)
+    print("\n=== Planned Changes ===")
+    if plan:
+        for index, item in enumerate(plan, start=1):
+            print(f"  {index}. {item}")
+    else:
+        print("  No changes needed.")
+
+    if args.plan:
+        return 1 if errors else 0
+
+    repo_result = run_gh_api("GET", f"repos/{args.repo}")
+    if not repo_result.ok or not isinstance(repo_result.data, dict):
+        print(f"Cannot verify administrator permission: {repo_result.stderr}", file=sys.stderr)
+        return 1
+    if not repo_result.data.get("permissions", {}).get("admin"):
         print(
-            "Error: Repository not specified (set GITHUB_REPOSITORY or --repo)",
+            "Repository administrator permission is required. For fine-grained credentials, "
+            "ruleset writes require Administration: write.",
             file=sys.stderr,
         )
         return 1
 
-    # Default to --check if no action specified
-    if not any([args.check, args.plan, args.apply]):
-        args.check = True
-
-    # Prevent conflicting flags
-    if sum([args.check, args.plan, args.apply]) > 1:
-        print("Error: Specify only one of --check, --plan, or --apply", file=sys.stderr)
+    if not apply_changes(args.repo, plan, desired):
         return 1
 
-    print(f"Repository: {args.repo}")
-    print(f"Mode: {'CHECK' if args.check else 'PLAN' if args.plan else 'APPLY'}")
-    print()
-
-    # Check current state
-    print("Checking current repository state...")
-    current = check_repo_settings(args.repo)
-    labels = check_required_labels(args.repo)
-
-    # Print current state
-    print("\n=== Current Repository Settings ===")
-    print(f"  allow_auto_merge: {current.get('allow_auto_merge')}")
-    print(f"  delete_branch_on_merge: {current.get('delete_branch_on_merge')}")
-    print(f"  legacy_branch_protection: {current.get('legacy_branch_protection')}")
-    print(f"  rulesets count: {len(current.get('rulesets', []))}")
-
-    print("\n=== Circuit Breaker Variables ===")
-    for var in [
-        "AUTONOMOUS_MAINTENANCE_ENABLED",
-        "AUTONOMOUS_MERGE_ENABLED",
-        "JULES_FLEET_ENABLED",
-        "JULES_FLEET_AUTO_MERGE_ENABLED",
-    ]:
-        val = current.get("variables", {}).get(var, "NOT SET")
-        print(f"  {var}: {val}")
-
-    print("\n=== Required Labels ===")
-    for label, exists in labels.items():
-        status = "OK" if exists else "MISSING"
-        print(f"  {status} {label}")
-
-    if args.check:
-        return 0
-
-    # Generate plan
-    plan = plan_changes(current, labels)
-    print("\n=== Planned Changes ===")
-    if plan:
-        for i, change in enumerate(plan, 1):
-            print(f"  {i}. {change}")
-    else:
-        print("  No changes needed - repository is fully configured!")
-
-    if args.plan:
-        return 0
-
-    # Apply changes
-    if args.apply:
-        print("\n=== Applying Changes ===")
-        # Verify admin permission
-        _, test = run_gh_api("GET", f"repos/{args.repo}")
-        if isinstance(test, dict) and test.get("permissions", {}).get("admin"):
-            print("Admin permission confirmed")
-        else:
-            print(
-                "Warning: Admin permission not confirmed. Changes may fail.",
-                file=sys.stderr,
-            )
-
-        if apply_changes(args.repo, plan):
-            print("\n✓ All changes applied successfully")
-            return 0
-        else:
-            print("\n✗ Some changes failed", file=sys.stderr)
-            return 1
-
+    # Idempotence verification: re-read after writes and ensure no further plan remains.
+    post = check_repo_settings(args.repo)
+    post_labels, post_label_error = check_required_labels(args.repo)
+    if post.get("errors") or post_label_error:
+        print("Post-apply verification failed to read repository state.", file=sys.stderr)
+        return 1
+    residual = plan_changes(post, post_labels, desired)
+    if residual:
+        print(f"Post-apply verification found residual drift: {residual}", file=sys.stderr)
+        return 1
+    print("\n? Apply completed and idempotence verification passed.")
     return 0
 
 

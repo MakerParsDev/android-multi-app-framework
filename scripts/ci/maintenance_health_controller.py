@@ -17,10 +17,18 @@ from __future__ import annotations
 import argparse
 from datetime import date, datetime, timezone
 import json
+import os
 from pathlib import Path
 import subprocess  # nosec B404
 import sys
 from typing import Any
+
+from bootstrap_autonomous_repository_settings import (
+    RULESET_NAME,
+    load_ruleset_payload,
+    ruleset_drift,
+    run_gh_api,
+)
 
 if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     try:
@@ -140,21 +148,55 @@ def check_dependabot_coverage() -> tuple[bool, str]:
     )
 
 
-def check_github_ruleset_active() -> tuple[bool, str]:
-    """Check if GitHub ruleset is active on main branch.
-    Returns (is_active, message).
-    This is a local file check - real check requires GitHub API.
-    """
-    # Check if ruleset bootstrap is documented
-    doc_path = ROOT / "docs/AUTONOMOUS_MAINTENANCE.md"
-    if not doc_path.is_file():
-        return False, "Documentation missing"
-    content = doc_path.read_text(encoding="utf-8")
-    if "BOOTSTRAP_PENDING" in content:
-        return False, "GitHub ruleset bootstrap pending (BOOTSTRAP_PENDING)"
-    if "ACTIVE" in content and "GitHub Ruleset" in content:
-        return True, "GitHub ruleset documented as ACTIVE"
-    return False, "GitHub ruleset status unknown"
+def resolve_repository(explicit_repo: str | None = None) -> str | None:
+    """Resolve owner/name without guessing."""
+    if explicit_repo:
+        return explicit_repo
+    env_repo = os.environ.get("GITHUB_REPOSITORY")
+    if env_repo:
+        return env_repo
+    result = subprocess.run(
+        ["gh", "repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode == 0 and result.stdout.strip():
+        return result.stdout.strip()
+    return None
+
+
+def check_github_ruleset_state(repo: str | None) -> tuple[str, str]:
+    """Verify the live GitHub ruleset against the version-controlled payload."""
+    if not repo:
+        return "UNKNOWN", "Repository could not be resolved for live ruleset check"
+
+    listing = run_gh_api("GET", f"repos/{repo}/rulesets")
+    if not listing.ok or not isinstance(listing.data, list):
+        return "UNKNOWN", listing.stderr or "Unable to list repository rulesets"
+
+    summary = next(
+        (item for item in listing.data if isinstance(item, dict) and item.get("name") == RULESET_NAME),
+        None,
+    )
+    if summary is None:
+        return "BOOTSTRAP_PENDING", f"{RULESET_NAME} ruleset is not active yet"
+
+    ruleset_id = summary.get("id")
+    if ruleset_id is None:
+        return "UNKNOWN", f"{RULESET_NAME} ruleset summary has no id"
+
+    detail = run_gh_api("GET", f"repos/{repo}/rulesets/{ruleset_id}")
+    if not detail.ok or not isinstance(detail.data, dict):
+        return "UNKNOWN", detail.stderr or f"Unable to read ruleset {ruleset_id}"
+
+    desired = load_ruleset_payload()
+    if detail.data.get("enforcement") != "active":
+        return "ATTENTION_REQUIRED", f"{RULESET_NAME} enforcement is {detail.data.get('enforcement')!r}"
+    if ruleset_drift(detail.data, desired):
+        return "ATTENTION_REQUIRED", f"{RULESET_NAME} differs from the repository contract"
+
+    return "HEALTHY", f"{RULESET_NAME} is active and matches the repository contract"
 
 
 def check_automerge_control() -> tuple[bool, str]:
@@ -170,28 +212,38 @@ def check_automerge_control() -> tuple[bool, str]:
     return True, "Auto-merge control workflow present"
 
 
-def generate_dashboard_markdown() -> str:
+def generate_dashboard_markdown(repo: str | None = None) -> tuple[str, str]:
+    """Build dashboard markdown and return it with the computed state."""
     now_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    resolved_repo = resolve_repository(repo)
     actions_ok, actions_msg = check_pinned_actions()
     codeql_ok, codeql_msg = check_codeql_kotlin_compatibility()
     mergify_ok, mergify_msg = check_mergify_configuration()
     dependabot_ok, dependabot_msg = check_dependabot_coverage()
-    ruleset_ok, ruleset_msg = check_github_ruleset_active()
+    ruleset_state, ruleset_msg = check_github_ruleset_state(resolved_repo)
     automerge_ok, automerge_msg = check_automerge_control()
     expirations = check_expirations()
 
-    # Determine overall status
     critical_checks = [actions_ok, codeql_ok, mergify_ok, dependabot_ok, automerge_ok]
-    has_expirations = len(expirations) > 0
-
-    if not ruleset_ok:
-        overall_status = "BOOTSTRAP_PENDING"
-    elif all(critical_checks) and not has_expirations:
-        overall_status = "HEALTHY"
-    elif not all(critical_checks):
+    if not all(critical_checks):
         overall_status = "ATTENTION_REQUIRED"
-    else:
+    elif ruleset_state == "UNKNOWN":
+        overall_status = "UNKNOWN"
+    elif ruleset_state == "ATTENTION_REQUIRED":
+        overall_status = "ATTENTION_REQUIRED"
+    elif ruleset_state == "BOOTSTRAP_PENDING":
+        overall_status = "BOOTSTRAP_PENDING"
+    elif expirations:
         overall_status = "DEGRADED"
+    else:
+        overall_status = "HEALTHY"
+
+    ruleset_icon = {
+        "HEALTHY": "✅",
+        "BOOTSTRAP_PENDING": "⏳",
+        "ATTENTION_REQUIRED": "❌",
+        "UNKNOWN": "❓",
+    }.get(ruleset_state, "⚠️")
 
     lines = [
         "# Autonomous Maintenance Dashboard",
@@ -205,7 +257,7 @@ def generate_dashboard_markdown() -> str:
         f"- **Dependabot Automation:** {'✅' if dependabot_ok else '❌'} {dependabot_msg}",
         f"- **Toolchain & CodeQL Ceiling:** {'✅' if codeql_ok else '❌'} {codeql_msg}",
         f"- **Pinned GitHub Actions:** {'✅' if actions_ok else '❌'} {actions_msg}",
-        f"- **GitHub Ruleset:** {'✅' if ruleset_ok else '⏳'} {ruleset_msg}",
+        f"- **GitHub Ruleset:** {ruleset_icon} {ruleset_msg}",
         f"- **Auto-Merge Control:** {'✅' if automerge_ok else '❌'} {automerge_msg}",
         "",
         "## Policy Expirations & Exceptions",
@@ -231,8 +283,7 @@ def generate_dashboard_markdown() -> str:
             "*Automated report generated by `scripts/ci/maintenance_health_controller.py`.*",
         ]
     )
-
-    return "\n".join(lines)
+    return "\n".join(lines), overall_status
 
 
 def ensure_maintenance_label(repo: str, token: str) -> bool:
@@ -318,19 +369,18 @@ def sync_github_issue(body: str) -> int:
             (issue for issue in issues if issue.get("title") == title), None
         )
 
-        # Get repo and token for label check
-        repo = subprocess.run(
-            ["gh", "repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"],
-            capture_output=True,
-            text=True,
-            check=False,
-        ).stdout.strip()
-        token = subprocess.run(
-            ["gh", "auth", "token"],
-            capture_output=True,
-            text=True,
-            check=False,
-        ).stdout.strip()
+        # Resolve repo/token without assuming an interactive gh auth store.
+        repo = resolve_repository()
+        token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+        if not token:
+            token_result = subprocess.run(
+                ["gh", "auth", "token"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if token_result.returncode == 0:
+                token = token_result.stdout.strip()
 
         if not repo or not token:
             print("Error: Could not determine repo or token", file=sys.stderr)
@@ -399,16 +449,26 @@ def main() -> int:
         help="Sync status to GitHub Dashboard issue",
     )
     parser.add_argument(
-        "--check", action="store_true", help="Run local health verification"
+        "--check", action="store_true", help="Run live health verification"
+    )
+    parser.add_argument(
+        "--repo",
+        default=os.environ.get("GITHUB_REPOSITORY"),
+        help="Repository in owner/name form",
     )
     args = parser.parse_args()
 
-    dashboard_text = generate_dashboard_markdown()
+    dashboard_text, status = generate_dashboard_markdown(args.repo)
     print(dashboard_text)
 
+    sync_result = 0
     if args.sync_issue:
-        return sync_github_issue(dashboard_text)
+        sync_result = sync_github_issue(dashboard_text)
+        if sync_result != 0:
+            return sync_result
 
+    if args.check or args.sync_issue:
+        return 1 if status in {"ATTENTION_REQUIRED", "UNKNOWN"} else 0
     return 0
 
 

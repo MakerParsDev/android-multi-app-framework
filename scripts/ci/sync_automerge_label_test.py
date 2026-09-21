@@ -129,13 +129,72 @@ class TestSyncAutoMergeLabel(unittest.TestCase):
             {"GITHUB_REPOSITORY": "owner/repo", "GITHUB_TOKEN": "token"},
             clear=True,
         ):
-            # AUTONOMOUS_MERGE_ENABLED not set
             result = main()
         self.assertEqual(result, 0)
-        mock_get.assert_called()
         mock_remove.assert_called_once_with(
             "owner/repo", 1, "token", "automerge:enabled"
         )
+
+    @patch("sync_automerge_label.get_open_prs")
+    @patch("sync_automerge_label.remove_label_from_pr")
+    def test_disable_continues_after_first_removal_failure(
+        self, mock_remove: MagicMock, mock_get: MagicMock
+    ):
+        mock_get.return_value = [
+            {"number": 1, "labels": [{"name": "automerge:enabled"}]},
+            {"number": 2, "labels": [{"name": "automerge:enabled"}]},
+        ]
+        mock_remove.side_effect = [RuntimeError("boom"), None]
+        with patch.dict(
+            os.environ,
+            {
+                "GITHUB_REPOSITORY": "owner/repo",
+                "GITHUB_TOKEN": "token",
+                "AUTONOMOUS_MERGE_ENABLED": "false",
+            },
+            clear=True,
+        ):
+            result = main()
+        self.assertEqual(result, 1)
+        self.assertEqual(mock_remove.call_count, 2)
+
+    @patch("sync_automerge_label.get_open_prs")
+    @patch("sync_automerge_label.remove_label_from_pr")
+    def test_disable_aggregates_multiple_failures(
+        self, mock_remove: MagicMock, mock_get: MagicMock
+    ):
+        mock_get.return_value = [
+            {"number": 1, "labels": [{"name": "automerge:enabled"}]},
+            {"number": 2, "labels": [{"name": "automerge:enabled"}]},
+            {"number": 3, "labels": [{"name": "automerge:enabled"}]},
+        ]
+        mock_remove.side_effect = [RuntimeError("one"), None, RuntimeError("three")]
+        with patch.dict(
+            os.environ,
+            {
+                "GITHUB_REPOSITORY": "owner/repo",
+                "GITHUB_TOKEN": "token",
+                "AUTONOMOUS_MERGE_ENABLED": "false",
+            },
+            clear=True,
+        ):
+            result = main()
+        self.assertEqual(result, 1)
+        self.assertEqual(mock_remove.call_count, 3)
+
+    @patch("sync_automerge_label.get_open_prs", side_effect=RuntimeError("fetch failed"))
+    def test_fetch_failure_is_nonzero(self, mock_get: MagicMock):
+        with patch.dict(
+            os.environ,
+            {
+                "GITHUB_REPOSITORY": "owner/repo",
+                "GITHUB_TOKEN": "token",
+                "AUTONOMOUS_MERGE_ENABLED": "false",
+            },
+            clear=True,
+        ):
+            self.assertEqual(main(), 1)
+        mock_get.assert_called_once()
 
 
 if __name__ == "__main__":

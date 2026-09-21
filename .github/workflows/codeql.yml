@@ -18,7 +18,9 @@ concurrency:
 jobs:
   analyze-java-kotlin:
     name: Analyze Java and Kotlin
-    if: github.event_name != 'pull_request' || github.event.pull_request.user.login != 'dependabot[bot]'
+    # Dependabot PRs must produce this required check too. GitHub code scanning
+    # permits SARIF upload for pull_request-triggered analysis even though
+    # Dependabot otherwise receives fork-like token restrictions.
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     permissions:
