@@ -18,7 +18,7 @@ class BannerLayoutContractTest(unittest.TestCase):
         self.assertNotIn(".padding(horizontal = dimens.space6)", component)
 
     def test_failed_banner_load_collapses_the_ad_slot(self) -> None:
-        component = (ROOT / "feature/ads/src/main/java/com/parsfilo/contentapp/feature/ads/ui/BannerAd.kt").read_text()
+        component = (ROOT / "feature/ads/src/main/java/com/parsfilo/contentapp/feature/ads/ui/BannerAd.kt").read_text(encoding="utf-8")
 
         self.assertIn("BannerLoadState.FAILED", component)
         self.assertIn("loadState = BannerLoadState.FAILED", component)
@@ -26,7 +26,7 @@ class BannerLayoutContractTest(unittest.TestCase):
         self.assertIn("if (loadState == BannerLoadState.FAILED) return@BoxWithConstraints", component)
 
     def test_long_content_keeps_a_top_banner_alongside_inline_ads(self) -> None:
-        source = (ROOT / "feature/content/src/main/java/com/parsfilo/contentapp/feature/content/ui/NativeAdInsertionPolicy.kt").read_text()
+        source = (ROOT / "feature/content/src/main/java/com/parsfilo/contentapp/feature/content/ui/NativeAdInsertionPolicy.kt").read_text(encoding="utf-8")
 
         self.assertIn(
             "shouldShowTopBannerForScrollableContent(totalContentItems: Int): Boolean =\n    totalContentItems > 0",
@@ -57,7 +57,7 @@ class BannerLayoutContractTest(unittest.TestCase):
         }
         for relative_path, placement in expected.items():
             with self.subTest(path=relative_path):
-                source = (ROOT / relative_path).read_text()
+                source = (ROOT / relative_path).read_text(encoding="utf-8")
                 self.assertIn(f"placement = {placement}", source)
 
 

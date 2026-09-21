@@ -224,8 +224,8 @@ class PerformanceProfileStructureTest(unittest.TestCase):
 
     def test_toolchain_and_module_are_pinned(self) -> None:
         catalog = (ROOT / "gradle/libs.versions.toml").read_text(encoding="utf-8")
-        self.assertIn('baselineProfile = "1.5.0-alpha07"', catalog)
-        self.assertIn('benchmark = "1.4.1"', catalog)
+        self.assertIn('baselineProfile = "1.5.0"', catalog)
+        self.assertIn('benchmark = "1.5.0"', catalog)
         self.assertIn('profileInstaller = "1.4.1"', catalog)
         self.assertIn('uiautomator = "2.4.0"', catalog)
         self.assertIn(

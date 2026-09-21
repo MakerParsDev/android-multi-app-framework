@@ -122,14 +122,15 @@ jobs:
         with:
           python-version: '3.13'
 
-      - name: Install actionlint
+      - name: Install workflow security tools
         run: |
-          curl -sL https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz \
-            | tar xz -C /usr/local/bin actionlint
+          eval "$(bash scripts/ci/install_workflow_security_tools.sh)"
+          echo "ACTIONLINT_BIN=$ACTIONLINT_BIN" >> "$GITHUB_ENV"
 
       - name: Run actionlint
         continue-on-error: true
-        run: actionlint .github/workflows/*.yml
+        run: |
+          "$ACTIONLINT_BIN" .github/workflows/*.yml
 
       - name: Validate security pipeline
         run: python3 scripts/ci/validate_security_pipeline.py
