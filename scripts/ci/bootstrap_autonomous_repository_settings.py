@@ -111,13 +111,13 @@ def _canonical_rule(rule: dict[str, Any]) -> dict[str, Any]:
                         else {}
                     ),
                 }
-                for item in params.get("required_checks", [])
+                for item in params.get("required_status_checks", [])
             ),
             key=lambda item: (str(item.get("context")), str(item.get("integration_id", ""))),
         )
         result["parameters"] = {
             "do_not_enforce_on_create": bool(params.get("do_not_enforce_on_create", False)),
-            "required_checks": checks,
+            "required_status_checks": checks,
             "strict_required_status_checks_policy": bool(
                 params.get("strict_required_status_checks_policy", False)
             ),
