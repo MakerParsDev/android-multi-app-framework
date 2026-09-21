@@ -62,6 +62,14 @@ The repository uses **GitHub Actions** and **Dependabot** for automated dependen
 - Major updates and sensitive toolchains require explicit human review and approval;
 - Continuous monitoring and drift detection are managed by `.github/workflows/maintenance-health.yml`.
 
+### Autonomous merge rollout canary
+
+Before releasing containment labels on existing dependency PRs, changes to the
+autonomous merge control plane are verified with a documentation-only Fleet
+canary. The canary must be marked `fleet-merge-ready` and `risk:low`, must
+not touch protected paths, and must pass every required ruleset/Mergify check.
+Existing PRs carrying `automerge:disabled` remain contained during the canary.
+
 ## Upgrade pull-request gate
 
 Every CI run executes the required verification gates:
