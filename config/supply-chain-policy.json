@@ -47,8 +47,8 @@
     },
     {
       "coordinate": "org.bitbucket.b_c:jose4j",
-      "version": "0.9.6",
-      "reason": "Security floor for the compressed JWE denial-of-service advisory affecting jose4j versions below 0.9.6."
+      "version": "0.9.7",
+      "reason": "Reviewed jose4j floor retaining the compressed JWE denial-of-service fix from 0.9.6; 0.9.7 additionally caps JSON number size for better resource utilization."
     },
     {
       "coordinate": "org.jdom:jdom2",
@@ -67,8 +67,8 @@
     },
     {
       "coordinate": "com.google.guava:guava",
-      "version": "33.6.0-jre",
-      "reason": "Retain the repository's reviewed Guava floor above historical temporary-directory and information-disclosure advisories."
+      "version": "33.7.1-jre",
+      "reason": "Reviewed Guava JRE floor above historical temporary-directory and information-disclosure advisories; 33.7.1 also fixes the Java 9/10 manifest regression introduced in 33.7.0."
     }
   ],
   "schema_version": 1
