@@ -139,6 +139,39 @@ class OsvHealthTest(unittest.TestCase):
         self.assertEqual(summary["counts"]["high"], 1)
         self.assertEqual(summary["state"], "ATTENTION_REQUIRED")
 
+    def test_same_advisory_across_versions_is_counted_once(self):
+        advisory = vuln("GHSA-same", database_severity="MODERATE")
+        data = {
+            "results": [
+                {
+                    "packages": [
+                        {
+                            "package": {
+                                "name": "kotlin-gradle-plugin",
+                                "version": "2.3.21",
+                                "ecosystem": "Maven",
+                            },
+                            "vulnerabilities": [advisory],
+                            "groups": [{"ids": ["GHSA-same"]}],
+                        },
+                        {
+                            "package": {
+                                "name": "kotlin-gradle-plugin",
+                                "version": "2.4.0",
+                                "ecosystem": "Maven",
+                            },
+                            "vulnerabilities": [advisory],
+                            "groups": [{"ids": ["GHSA-same"]}],
+                        },
+                    ]
+                }
+            ]
+        }
+        summary = osv_health.summarize_osv_data(data)
+        self.assertEqual(summary["total"], 1)
+        self.assertEqual(summary["counts"]["medium"], 1)
+        self.assertEqual(summary["affected_packages"], 1)
+
     def test_medium_or_low_is_degraded(self):
         data = report_for(
             [

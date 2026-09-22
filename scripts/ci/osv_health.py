@@ -234,8 +234,8 @@ def summarize_osv_data(data: object) -> dict[str, Any]:
         raise OsvReportError("OSV report must contain a results array")
 
     counts = {name: 0 for name in ("critical", "high", "medium", "low", "unknown")}
-    affected_packages: set[tuple[str, str, str]] = set()
-    group_keys: set[tuple[str, str, str, tuple[str, ...]]] = set()
+    affected_packages: set[tuple[str, str]] = set()
+    group_severities: dict[tuple[str, ...], str] = {}
 
     for result in results:
         if not isinstance(result, dict):
@@ -265,7 +265,7 @@ def summarize_osv_data(data: object) -> dict[str, Any]:
             if not vuln_by_id:
                 continue
 
-            affected_packages.add((ecosystem, name, version))
+            affected_packages.add((ecosystem, name))
             groups = package_entry.get("groups")
             if isinstance(groups, list) and groups:
                 covered: set[str] = set()
@@ -282,23 +282,28 @@ def summarize_osv_data(data: object) -> dict[str, Any]:
                     if not ids:
                         continue
                     covered.update(ids)
-                    key = (ecosystem, name, version, tuple(ids))
-                    if key in group_keys:
-                        continue
-                    group_keys.add(key)
-                    counts[_group_severity(vuln_by_id, ids)] += 1
+                    key = tuple(ids)
+                    severity = _group_severity(vuln_by_id, ids)
+                    previous = group_severities.get(key)
+                    if previous is None or SEVERITY_ORDER[severity] > SEVERITY_ORDER[previous]:
+                        group_severities[key] = severity
 
                 for vuln_id in sorted(set(vuln_by_id) - covered):
-                    key = (ecosystem, name, version, (vuln_id,))
-                    if key not in group_keys:
-                        group_keys.add(key)
-                        counts[vulnerability_severity(vuln_by_id[vuln_id])] += 1
+                    key = (vuln_id,)
+                    severity = vulnerability_severity(vuln_by_id[vuln_id])
+                    previous = group_severities.get(key)
+                    if previous is None or SEVERITY_ORDER[severity] > SEVERITY_ORDER[previous]:
+                        group_severities[key] = severity
             else:
                 for vuln_id, vuln in vuln_by_id.items():
-                    key = (ecosystem, name, version, (vuln_id,))
-                    if key not in group_keys:
-                        group_keys.add(key)
-                        counts[vulnerability_severity(vuln)] += 1
+                    key = (vuln_id,)
+                    severity = vulnerability_severity(vuln)
+                    previous = group_severities.get(key)
+                    if previous is None or SEVERITY_ORDER[severity] > SEVERITY_ORDER[previous]:
+                        group_severities[key] = severity
+
+    for severity in group_severities.values():
+        counts[severity] += 1
 
     total = sum(counts.values())
     if counts["critical"] or counts["high"]:
