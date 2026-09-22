@@ -41,6 +41,7 @@ class CodeqlKotlinCompatibilityTest(unittest.TestCase):
 
         blocker = policy["kotlin"]["blocked_security_upgrade"]
         self.assertEqual(blocker["advisory"], "GHSA-r937-wjx7-w2jp")
+        self.assertEqual(blocker["tracking_issue"], "#183")
         self.assertEqual(blocker["minimum_fixed_version"], "2.4.20-Beta1")
         self.assertTrue(blocker["reason"].strip())
         self.assertTrue(blocker["upgrade_plan"].strip())

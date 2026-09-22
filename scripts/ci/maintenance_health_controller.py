@@ -129,6 +129,54 @@ def check_expirations() -> list[str]:
     return findings
 
 
+def list_active_security_exceptions() -> list[str]:
+    """Return non-expired, explicitly owned security exceptions for the dashboard."""
+    findings: list[str] = []
+    today = datetime.now(timezone.utc).date()
+
+    audit_policy = ROOT / "side-projects/audit-policy.json"
+    if audit_policy.is_file():
+        data = json.loads(audit_policy.read_text(encoding="utf-8"))
+        for entry in data.get("exceptions", []):
+            if not isinstance(entry, dict):
+                continue
+            expires_str = entry.get("expiresOn")
+            if not isinstance(expires_str, str) or not expires_str:
+                continue
+            try:
+                expires_on = date.fromisoformat(expires_str)
+            except ValueError:
+                continue
+            if expires_on <= today:
+                continue
+            project = str(entry.get("project") or "unknown")
+            advisory = str(entry.get("advisory") or "unknown")
+            tracking = str(entry.get("trackingIssue") or "untracked")
+            findings.append(
+                f"{project}: {advisory} tracked by {tracking}, expires {expires_str}"
+            )
+
+    codeql_policy = ROOT / "config/codeql-compatibility-policy.json"
+    if codeql_policy.is_file():
+        data = json.loads(codeql_policy.read_text(encoding="utf-8"))
+        blocker = data.get("kotlin", {}).get("blocked_security_upgrade")
+        if isinstance(blocker, dict):
+            expires_str = blocker.get("expires_on")
+            if isinstance(expires_str, str) and expires_str:
+                try:
+                    expires_on = date.fromisoformat(expires_str)
+                except ValueError:
+                    expires_on = None
+                if expires_on is not None and expires_on > today:
+                    advisory = str(blocker.get("advisory") or "unknown")
+                    tracking = str(blocker.get("tracking_issue") or "untracked")
+                    findings.append(
+                        f"Kotlin/CodeQL: {advisory} tracked by {tracking}, expires {expires_str}"
+                    )
+
+    return findings
+
+
 def check_mergify_configuration() -> tuple[bool, str]:
     mergify_path = ROOT / ".mergify.yml"
     if not mergify_path.is_file():
@@ -245,6 +293,7 @@ def generate_dashboard_markdown(repo: str | None = None) -> tuple[str, str]:
     ruleset_state, ruleset_msg = check_github_ruleset_state(resolved_repo)
     automerge_ok, automerge_msg = check_automerge_control()
     expirations = check_expirations()
+    active_exceptions = list_active_security_exceptions()
 
     critical_checks = [actions_ok, codeql_ok, mergify_ok, dependabot_ok, automerge_ok]
     if not all(critical_checks):
@@ -301,6 +350,9 @@ def generate_dashboard_markdown(repo: str | None = None) -> tuple[str, str]:
     else:
         for exp in expirations:
             lines.append(f"- ⚠️ **ACTION REQUIRED:** {exp}")
+
+    for exception in active_exceptions:
+        lines.append(f"- ℹ️ **ACTIVE EXCEPTION:** {exception}")
 
     lines.extend(
         [

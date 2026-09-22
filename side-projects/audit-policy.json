@@ -9,7 +9,7 @@
       "severity": "moderate",
       "scope": "development",
       "owner": "oaslananka",
-      "trackingIssue": "#124",
+      "trackingIssue": "#183",
       "expiresOn": "2026-10-01",
       "reason": "The latest firebase-functions-test release (3.5.0) depends on ts-deepmerge ^2.0.1; forcing ts-deepmerge 8 removes the CJS default export and crashes CloudEvent generation at runtime.",
       "upgradePlan": "Upgrade when upstream firebase-functions-test adopts ts-deepmerge 8 or a compatible deep merge implementation, then remove this entry."
@@ -20,7 +20,7 @@
       "severity": "moderate",
       "scope": "development",
       "owner": "oaslananka",
-      "trackingIssue": "#124",
+      "trackingIssue": "#183",
       "expiresOn": "2026-10-01",
       "reason": "The latest firebase-tools release depends on stream-json ^1.7.3; forcing stream-json 3 breaks module resolution (Pick/StreamObject) during CLI execution.",
       "upgradePlan": "Upgrade when upstream firebase-tools adopts stream-json 3 or a compatible streaming parser, then remove this entry."
