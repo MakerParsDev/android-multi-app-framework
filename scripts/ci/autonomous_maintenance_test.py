@@ -585,17 +585,17 @@ class AutonomousMaintenanceContractTest(unittest.TestCase):
             item["and"]
             for item in dependency_type
             if isinstance(item, dict)
-            and "dependabot-dependency-type = development" in item.get("and", [])
+            and "dependabot-dependency-type ~= :development$" in item.get("and", [])
         )
-        self.assertIn("dependabot-dependency-type != production", dev)
+        self.assertIn("-dependabot-dependency-type ~= :production$", dev)
 
         prod = next(
             item["and"]
             for item in dependency_type
             if isinstance(item, dict)
-            and "dependabot-dependency-type = production" in item.get("and", [])
+            and "dependabot-dependency-type ~= :production$" in item.get("and", [])
         )
-        self.assertIn("dependabot-dependency-type != development", prod)
+        self.assertIn("-dependabot-dependency-type ~= :development$", prod)
         self.assertIn("dependabot-update-type = version-update:semver-patch", prod)
         self.assertIn("dependabot-update-type != version-update:semver-minor", prod)
 
