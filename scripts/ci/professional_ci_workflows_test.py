@@ -115,14 +115,21 @@ def test_ci_enforces_and_uploads_kover_reports() -> None:
     assert upload["with"]["retention-days"] == 14
 
 
-def test_ci_materializes_firebase_configs_for_tests() -> None:
+def test_ci_generates_secret_free_firebase_configs_for_tests() -> None:
+    workflow_path = ROOT / ".github/workflows/ci-pr.yml"
+    raw = workflow_path.read_text(encoding="utf-8")
     quality = load(".github/workflows/ci-pr.yml")["jobs"]["validate-and-test"]
     steps = quality["steps"]
     names = [step.get("name") for step in steps]
-    assert "Materialize Firebase configs" in names
-    generate = named_step(quality, "Materialize Firebase configs")
-    assert "materialize_firebase_configs.py" in generate["run"]
-    assert names.index("Materialize Firebase configs") < names.index(
+    assert "FIREBASE_CONFIGS_ZIP_BASE64" not in raw
+    assert "materialize_firebase_configs.py" not in raw
+    assert "Generate secret-free Firebase placeholders" in names
+    generate = named_step(quality, "Generate secret-free Firebase placeholders")
+    cleanup = named_step(quality, "Clean secret-free Firebase placeholders")
+    assert "generate_ci_google_services.py --flavors all" in generate["run"]
+    assert cleanup["if"] == "always()"
+    assert "generate_ci_google_services.py --clean --flavors all" in cleanup["run"]
+    assert names.index("Generate secret-free Firebase placeholders") < names.index(
         "Run version validation and unit tests"
     )
 
@@ -481,7 +488,7 @@ def main() -> int:
         test_ci_security_gate_uses_full_history_checkout,
         test_ci_quality_jobs_depend_on_impact_analysis,
         test_ci_enforces_and_uploads_kover_reports,
-        test_ci_materializes_firebase_configs_for_tests,
+        test_ci_generates_secret_free_firebase_configs_for_tests,
         test_security_runs_dependency_review_only_for_pull_requests,
         test_dependency_submission_is_trusted_and_job_scoped,
         test_codeql_uses_manual_kotlin_build_and_cleans_placeholder,

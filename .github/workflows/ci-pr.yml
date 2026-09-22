@@ -260,20 +260,15 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
 
-      - name: Materialize Firebase configs
-        if: env.FIREBASE_CONFIGS_ZIP_BASE64 != ''
-        env:
-          FIREBASE_CONFIGS_ZIP_BASE64: ${{ secrets.FIREBASE_CONFIGS_ZIP_BASE64 }}
-          FLAVORS_JSON: ${{ needs.analyze-impact.outputs.flavors_json }}
-        run: |
-          FLAVORS_CSV="$(echo "$FLAVORS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d' | paste -sd,)"
-          python3 scripts/ci/materialize_firebase_configs.py \
-            --flavors "$FLAVORS_CSV" \
-            --mode warn \
-            --allow-existing || true
+      - name: Generate secret-free Firebase placeholders
+        run: python3 scripts/ci/generate_ci_google_services.py --flavors all
 
       - name: Run version validation and unit tests
         run: ./gradlew :app:validateFlavorVersions test --stacktrace --no-daemon --max-workers=2
+
+      - name: Clean secret-free Firebase placeholders
+        if: always()
+        run: python3 scripts/ci/generate_ci_google_services.py --clean --flavors all
 
   android-lint:
     name: Android Lint
@@ -294,17 +289,12 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
 
-      - name: Materialize Firebase configs for lint
-        if: env.FIREBASE_CONFIGS_ZIP_BASE64 != ''
+      - name: Generate secret-free Firebase placeholders for lint
         env:
-          FIREBASE_CONFIGS_ZIP_BASE64: ${{ secrets.FIREBASE_CONFIGS_ZIP_BASE64 }}
           FLAVORS_JSON: ${{ needs.analyze-impact.outputs.flavors_json }}
         run: |
           FLAVORS_CSV="$(echo "$FLAVORS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d' | paste -sd,)"
-          python3 scripts/ci/materialize_firebase_configs.py \
-            --flavors "$FLAVORS_CSV" \
-            --mode warn \
-            --allow-existing || true
+          python3 scripts/ci/generate_ci_google_services.py --flavors "$FLAVORS_CSV"
 
       - name: Run lint for affected flavors
         env:
@@ -324,6 +314,14 @@ jobs:
             echo "Running lint tasks: ${TASKS[*]}"
             ./gradlew "${TASKS[@]}" --stacktrace --no-daemon --max-workers=2
           fi
+
+      - name: Clean secret-free Firebase placeholders for lint
+        if: always()
+        env:
+          FLAVORS_JSON: ${{ needs.analyze-impact.outputs.flavors_json }}
+        run: |
+          FLAVORS_CSV="$(echo "$FLAVORS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d' | paste -sd,)"
+          python3 scripts/ci/generate_ci_google_services.py --clean --flavors "$FLAVORS_CSV"
 
       - name: Collect lint reports
         if: always()
@@ -363,17 +361,8 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
 
-      - name: Materialize Firebase configs
-        if: env.FIREBASE_CONFIGS_ZIP_BASE64 != ''
-        env:
-          FIREBASE_CONFIGS_ZIP_BASE64: ${{ secrets.FIREBASE_CONFIGS_ZIP_BASE64 }}
-          FLAVORS_JSON: ${{ needs.analyze-impact.outputs.flavors_json }}
-        run: |
-          FLAVORS_CSV="$(echo "$FLAVORS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d' | paste -sd,)"
-          python3 scripts/ci/materialize_firebase_configs.py \
-            --flavors "$FLAVORS_CSV" \
-            --mode warn \
-            --allow-existing || true
+      - name: Generate secret-free Firebase placeholders
+        run: python3 scripts/ci/generate_ci_google_services.py --flavors all
 
       - name: Run unit tests
         run: ./gradlew test --stacktrace --no-daemon --max-workers=2
@@ -393,6 +382,10 @@ jobs:
       - name: Generate Kover HTML report
         if: always()
         run: ./gradlew koverHtmlReportQuality --stacktrace --no-daemon || true
+
+      - name: Clean secret-free Firebase placeholders
+        if: always()
+        run: python3 scripts/ci/generate_ci_google_services.py --clean --flavors all
 
       - name: Upload coverage reports
         if: always()

@@ -98,6 +98,55 @@ def test_android_quality_jobs_are_impact_gated() -> None:
         )
 
 
+def test_pr_ci_uses_secret_free_firebase_placeholders() -> None:
+    workflow_path = ROOT / ".github/workflows/ci-pr.yml"
+    raw = workflow_path.read_text(encoding="utf-8")
+    workflow = load_yaml(workflow_path)
+    jobs = workflow["jobs"]
+
+    assert "FIREBASE_CONFIGS_ZIP_BASE64" not in raw
+    assert "materialize_firebase_configs.py" not in raw
+
+    def step(job_name: str, step_name: str) -> dict:
+        return next(
+            item
+            for item in jobs[job_name]["steps"]
+            if item.get("name") == step_name
+        )
+
+    validate_generate = step(
+        "validate-and-test", "Generate secret-free Firebase placeholders"
+    )
+    validate_clean = step(
+        "validate-and-test", "Clean secret-free Firebase placeholders"
+    )
+    assert "--flavors all" in validate_generate["run"]
+    assert validate_clean["if"] == "always()"
+    assert "--clean --flavors all" in validate_clean["run"]
+
+    lint_generate = step(
+        "android-lint", "Generate secret-free Firebase placeholders for lint"
+    )
+    lint_clean = step(
+        "android-lint", "Clean secret-free Firebase placeholders for lint"
+    )
+    selected = "${{ needs.analyze-impact.outputs.flavors_json }}"
+    assert lint_generate["env"]["FLAVORS_JSON"] == selected
+    assert lint_clean["env"]["FLAVORS_JSON"] == selected
+    assert lint_clean["if"] == "always()"
+    assert "--clean --flavors" in lint_clean["run"]
+
+    kover_generate = step(
+        "kover-coverage", "Generate secret-free Firebase placeholders"
+    )
+    kover_clean = step(
+        "kover-coverage", "Clean secret-free Firebase placeholders"
+    )
+    assert "--flavors all" in kover_generate["run"]
+    assert kover_clean["if"] == "always()"
+    assert "--clean --flavors all" in kover_clean["run"]
+
+
 def test_side_project_quality_is_blocking_when_side_projects_change() -> None:
     workflow = load_yaml(ROOT / ".github/workflows/ci-pr.yml")
     jobs = workflow["jobs"]
@@ -134,6 +183,7 @@ def main() -> int:
         test_dependabot_matches_autonomous_update_boundaries,
         test_ci_uses_impact_analysis_for_flavor_and_side_project_selection,
         test_android_quality_jobs_are_impact_gated,
+        test_pr_ci_uses_secret_free_firebase_placeholders,
         test_side_project_quality_is_blocking_when_side_projects_change,
         test_ci_load_tests_run_after_security_gate,
     ]

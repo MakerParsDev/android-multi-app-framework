@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -41,7 +43,7 @@ def make_repo(root: Path) -> None:
 
 def run_script(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        ["python3", str(SCRIPT), "--repo", str(repo), *args],
+        [sys.executable, str(SCRIPT), "--repo", str(repo), *args],
         check=False,
         text=True,
         capture_output=True,
@@ -82,7 +84,8 @@ def test_generates_valid_marked_placeholder() -> None:
             client["api_key"][0]["current_key"]
             == "AIzaSy000000000000000000000000000000000"
         )
-        assert target(repo).stat().st_mode & 0o777 == 0o600
+        if os.name != "nt":
+            assert target(repo).stat().st_mode & 0o777 == 0o600
 
 
 def test_refuses_to_overwrite_real_config() -> None:
@@ -123,10 +126,12 @@ def test_unknown_flavor_fails() -> None:
         assert "unknown flavor" in result.stderr.lower()
 
 
-def test_ci_workflow_materializes_firebase_configs() -> None:
+def test_ci_workflow_uses_secret_free_firebase_placeholders() -> None:
     workflow = (ROOT / ".github/workflows/ci-pr.yml").read_text(encoding="utf-8")
-    assert "materialize_firebase_configs.py" in workflow
-    assert "FIREBASE_CONFIGS_ZIP_BASE64" in workflow
+    assert "materialize_firebase_configs.py" not in workflow
+    assert "FIREBASE_CONFIGS_ZIP_BASE64" not in workflow
+    assert workflow.count("generate_ci_google_services.py --flavors") >= 3
+    assert workflow.count("generate_ci_google_services.py --clean --flavors") >= 3
 
 
 def test_ci_workflow_has_quality_checks() -> None:
@@ -143,7 +148,7 @@ def main() -> int:
         test_refuses_to_overwrite_real_config,
         test_clean_removes_only_generated_placeholder,
         test_unknown_flavor_fails,
-        test_ci_workflow_materializes_firebase_configs,
+        test_ci_workflow_uses_secret_free_firebase_placeholders,
         test_ci_workflow_has_quality_checks,
     ]
     for test in tests:
