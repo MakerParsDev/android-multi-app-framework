@@ -176,6 +176,9 @@ class BootstrapSettingsTest(unittest.TestCase):
             "CREATE_VARIABLE:AUTONOMOUS_MAINTENANCE_ENABLED:false", plan
         )
         self.assertIn("CREATE_VARIABLE:AUTONOMOUS_MERGE_ENABLED:false", plan)
+        self.assertIn(
+            "CREATE_VARIABLE:JULES_FLEET_SCHEDULED_ANALYZE_ENABLED:false", plan
+        )
         self.assertNotIn("CREATE_VARIABLE:JULES_FLEET_ENABLED:false", plan)
 
     def test_plan_is_idempotent_when_state_matches(self):

@@ -9,6 +9,11 @@ on:
         description: 'Optional .fleet/goals/*.md path for a single-goal canary'
         required: false
         type: string
+      full_scan:
+        description: 'Explicitly run every Fleet goal (creates one analyzer session per goal)'
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -25,7 +30,9 @@ jobs:
     if: >-
       github.ref == 'refs/heads/main' &&
       vars.AUTONOMOUS_MAINTENANCE_ENABLED == 'true' &&
-      vars.JULES_FLEET_ENABLED == 'true'
+      vars.JULES_FLEET_ENABLED == 'true' &&
+      (github.event_name != 'schedule' ||
+       vars.JULES_FLEET_SCHEDULED_ANALYZE_ENABLED == 'true')
     permissions:
       contents: read
       issues: write
@@ -66,7 +73,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FLEET_MILESTONE: ${{ steps.fleet-resources.outputs.number }}
           FLEET_GOAL: ${{ inputs.goal }}
+          FLEET_FULL_SCAN: ${{ inputs.full_scan }}
+          FLEET_EVENT_NAME: ${{ github.event_name }}
         run: |
+          if [ "$FLEET_EVENT_NAME" = "workflow_dispatch" ] && [ -z "$FLEET_GOAL" ] && [ "$FLEET_FULL_SCAN" != "true" ]; then
+            echo "::error::Manual Analyze requires either a single .fleet/goals/*.md goal or full_scan=true."
+            exit 1
+          fi
+
           if [ -n "$FLEET_GOAL" ]; then
             case "$FLEET_GOAL" in
               .fleet/goals/*.md) ;;

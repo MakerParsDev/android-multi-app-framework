@@ -185,6 +185,7 @@ The `security.yml` workflow runs four security checks:
 1. **Global Maintenance Kill Switch:**
    - Missing or any value other than `AUTONOMOUS_MAINTENANCE_ENABLED=true` is fail-closed for write-capable autonomous maintenance.
    - Jules Fleet analyze/dispatch/classify/merge jobs require this switch **and** `JULES_FLEET_ENABLED=true`.
+   - Scheduled all-goals Analyze has an additional fail-closed switch: `JULES_FLEET_SCHEDULED_ANALYZE_ENABLED=true`. Keep it false by default because the pinned Fleet Analyze command creates one Jules analyzer session per goal on every run.
    - Maintenance health evaluation remains read-only when disabled; dashboard issue synchronization is gated by this switch.
 2. **Global Auto-Merge Authorization:**
    - Missing or `AUTONOMOUS_MERGE_ENABLED=false` means the trusted label controller removes `automerge:enabled` from every open PR.
@@ -226,6 +227,7 @@ run Auto-Merge Control so stale positive labels are removed:
 gh variable set AUTONOMOUS_MAINTENANCE_ENABLED --body "false" --repo MakerParsDev/android-multi-app-framework
 gh variable set AUTONOMOUS_MERGE_ENABLED --body "false" --repo MakerParsDev/android-multi-app-framework
 gh variable set JULES_FLEET_ENABLED --body "false" --repo MakerParsDev/android-multi-app-framework
+gh variable set JULES_FLEET_SCHEDULED_ANALYZE_ENABLED --body "false" --repo MakerParsDev/android-multi-app-framework
 gh variable set JULES_FLEET_AUTO_MERGE_ENABLED --body "false" --repo MakerParsDev/android-multi-app-framework
 gh workflow run "Auto-Merge Control" --repo MakerParsDev/android-multi-app-framework
 ```
@@ -239,6 +241,7 @@ The ruleset is **BOOTSTRAP_PENDING** until the live GitHub ruleset exists and ma
 
 Expected fail-closed state before a fresh bootstrap:
 - `JULES_FLEET_ENABLED=false`
+- `JULES_FLEET_SCHEDULED_ANALYZE_ENABLED=false`
 - `JULES_FLEET_AUTO_MERGE_ENABLED=false`
 - `AUTONOMOUS_MAINTENANCE_ENABLED` missing or `false`.
 - `AUTONOMOUS_MERGE_ENABLED` missing or `false`.
