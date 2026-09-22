@@ -385,7 +385,6 @@ class AutonomousMaintenanceContractTest(unittest.TestCase):
             "@cloudflare/*",
             "firebase-admin",
             "firebase-functions",
-            "firebase-functions-test",
             "firebase-tools",
             "jose",
             "jsonwebtoken",
