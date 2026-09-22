@@ -53,13 +53,12 @@ updates:
           - 'org.apache.httpcomponents:httpclient'
           - 'com.squareup.wire:*'
           - 'gradle-wrapper'
-      gradle-prod-patch-minor:
+      gradle-prod-patch:
         dependency-type: production
         patterns:
           - '*'
         update-types:
           - patch
-          - minor
         exclude-patterns:
           - 'com.android.*'
           - 'org.jetbrains.kotlin.*'
@@ -102,14 +101,30 @@ updates:
     schedule:
       interval: weekly
       day: sunday
-    open-pull-requests-limit: 2
+    open-pull-requests-limit: 3
     groups:
-      npm-patch-minor:
+      npm-dev-patch-minor:
+        dependency-type: development
         patterns:
           - '*'
         update-types:
           - patch
           - minor
+        exclude-patterns:
+          - 'wrangler'
+          - '@cloudflare/*'
+          - 'firebase-admin'
+          - 'firebase-functions'
+          - 'firebase-functions-test'
+          - 'firebase-tools'
+          - 'jose'
+          - 'jsonwebtoken'
+      npm-prod-patch:
+        dependency-type: production
+        patterns:
+          - '*'
+        update-types:
+          - patch
         exclude-patterns:
           - 'wrangler'
           - '@cloudflare/*'
@@ -125,14 +140,30 @@ updates:
     schedule:
       interval: weekly
       day: sunday
-    open-pull-requests-limit: 2
+    open-pull-requests-limit: 3
     groups:
-      npm-patch-minor:
+      npm-dev-patch-minor:
+        dependency-type: development
         patterns:
           - '*'
         update-types:
           - patch
           - minor
+        exclude-patterns:
+          - 'wrangler'
+          - '@cloudflare/*'
+          - 'firebase-admin'
+          - 'firebase-functions'
+          - 'firebase-functions-test'
+          - 'firebase-tools'
+          - 'jose'
+          - 'jsonwebtoken'
+      npm-prod-patch:
+        dependency-type: production
+        patterns:
+          - '*'
+        update-types:
+          - patch
         exclude-patterns:
           - 'wrangler'
           - '@cloudflare/*'
@@ -148,14 +179,30 @@ updates:
     schedule:
       interval: weekly
       day: sunday
-    open-pull-requests-limit: 2
+    open-pull-requests-limit: 3
     groups:
-      npm-patch-minor:
+      npm-dev-patch-minor:
+        dependency-type: development
         patterns:
           - '*'
         update-types:
           - patch
           - minor
+        exclude-patterns:
+          - 'wrangler'
+          - '@cloudflare/*'
+          - 'firebase-admin'
+          - 'firebase-functions'
+          - 'firebase-functions-test'
+          - 'firebase-tools'
+          - 'jose'
+          - 'jsonwebtoken'
+      npm-prod-patch:
+        dependency-type: production
+        patterns:
+          - '*'
+        update-types:
+          - patch
         exclude-patterns:
           - 'wrangler'
           - '@cloudflare/*'
@@ -171,14 +218,30 @@ updates:
     schedule:
       interval: weekly
       day: sunday
-    open-pull-requests-limit: 2
+    open-pull-requests-limit: 3
     groups:
-      npm-patch-minor:
+      npm-dev-patch-minor:
+        dependency-type: development
         patterns:
           - '*'
         update-types:
           - patch
           - minor
+        exclude-patterns:
+          - 'wrangler'
+          - '@cloudflare/*'
+          - 'firebase-admin'
+          - 'firebase-functions'
+          - 'firebase-functions-test'
+          - 'firebase-tools'
+          - 'jose'
+          - 'jsonwebtoken'
+      npm-prod-patch:
+        dependency-type: production
+        patterns:
+          - '*'
+        update-types:
+          - patch
         exclude-patterns:
           - 'wrangler'
           - '@cloudflare/*'
@@ -194,14 +257,30 @@ updates:
     schedule:
       interval: weekly
       day: sunday
-    open-pull-requests-limit: 2
+    open-pull-requests-limit: 3
     groups:
-      npm-patch-minor:
+      npm-dev-patch-minor:
+        dependency-type: development
         patterns:
           - '*'
         update-types:
           - patch
           - minor
+        exclude-patterns:
+          - 'wrangler'
+          - '@cloudflare/*'
+          - 'firebase-admin'
+          - 'firebase-functions'
+          - 'firebase-functions-test'
+          - 'firebase-tools'
+          - 'jose'
+          - 'jsonwebtoken'
+      npm-prod-patch:
+        dependency-type: production
+        patterns:
+          - '*'
+        update-types:
+          - patch
         exclude-patterns:
           - 'wrangler'
           - '@cloudflare/*'
@@ -217,14 +296,30 @@ updates:
     schedule:
       interval: weekly
       day: sunday
-    open-pull-requests-limit: 2
+    open-pull-requests-limit: 3
     groups:
-      npm-patch-minor:
+      npm-dev-patch-minor:
+        dependency-type: development
         patterns:
           - '*'
         update-types:
           - patch
           - minor
+        exclude-patterns:
+          - 'wrangler'
+          - '@cloudflare/*'
+          - 'firebase-admin'
+          - 'firebase-functions'
+          - 'firebase-functions-test'
+          - 'firebase-tools'
+          - 'jose'
+          - 'jsonwebtoken'
+      npm-prod-patch:
+        dependency-type: production
+        patterns:
+          - '*'
+        update-types:
+          - patch
         exclude-patterns:
           - 'wrangler'
           - '@cloudflare/*'

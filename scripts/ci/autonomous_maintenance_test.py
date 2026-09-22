@@ -364,8 +364,17 @@ class AutonomousMaintenanceContractTest(unittest.TestCase):
             "com.squareup.wire:*",
             "gradle-wrapper",
         }
-        for group_name in ("gradle-dev-patch-minor", "gradle-prod-patch-minor"):
-            excluded = set(gradle["groups"][group_name]["exclude-patterns"])
+        gradle_dev = gradle["groups"]["gradle-dev-patch-minor"]
+        gradle_prod = gradle["groups"]["gradle-prod-patch"]
+        self.assertEqual(gradle_dev["dependency-type"], "development")
+        self.assertEqual(set(gradle_dev["update-types"]), {"patch", "minor"})
+        self.assertEqual(gradle_prod["dependency-type"], "production")
+        self.assertEqual(gradle_prod["update-types"], ["patch"])
+        for group_name, group in (
+            ("gradle-dev-patch-minor", gradle_dev),
+            ("gradle-prod-patch", gradle_prod),
+        ):
+            excluded = set(group["exclude-patterns"])
             self.assertTrue(
                 gradle_manual_only.issubset(excluded),
                 f"{group_name} must isolate every manual/protected Gradle dependency",
@@ -387,12 +396,21 @@ class AutonomousMaintenanceContractTest(unittest.TestCase):
         self.assertTrue(npm_updates)
         for update in npm_updates:
             groups = update.get("groups", {})
-            group = groups["npm-patch-minor"]
-            excluded = set(group.get("exclude-patterns", []))
-            self.assertTrue(
-                npm_manual_only.issubset(excluded),
-                f"{update['directory']} must isolate deployment/auth-sensitive npm packages",
-            )
+            dev = groups["npm-dev-patch-minor"]
+            prod = groups["npm-prod-patch"]
+            self.assertEqual(dev["dependency-type"], "development")
+            self.assertEqual(set(dev["update-types"]), {"patch", "minor"})
+            self.assertEqual(prod["dependency-type"], "production")
+            self.assertEqual(prod["update-types"], ["patch"])
+            for group_name, group in (
+                ("npm-dev-patch-minor", dev),
+                ("npm-prod-patch", prod),
+            ):
+                excluded = set(group.get("exclude-patterns", []))
+                self.assertTrue(
+                    npm_manual_only.issubset(excluded),
+                    f"{update['directory']} {group_name} must isolate deployment/auth-sensitive npm packages",
+                )
 
     def test_circuit_breaker_variables_documented(self) -> None:
         """Verify circuit breaker variables are documented with fail-closed defaults."""

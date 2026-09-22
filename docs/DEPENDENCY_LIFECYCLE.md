@@ -58,7 +58,7 @@ Quality runs also execute Gradle with `--warning-mode all` and preserve the comp
 The repository uses **GitHub Actions** and **Dependabot** for automated dependency tracking across all monorepo ecosystems (Gradle, GitHub Actions, pip, and npm side projects):
 
 - Dependabot runs weekly on Sundays (`schedule: interval: weekly`); `rebase-strategy: disabled` is deliberately absent so GitHub's default automatic rebasing keeps open update PRs current with `main`;
-- Patch and minor updates are grouped to reduce noise only when every member can share the same autonomy policy;
+- Development patch/minor updates are grouped separately from production updates; production groups contain patch updates only, while production minors and majors remain standalone/manual. This matches Mergify's eligibility contract and avoids mixed dev/production batches;
 - High-risk/protected dependencies are excluded from groups: Android/Kotlin toolchains, auth/crypto, Billing, Firebase/Cloudflare deployment tooling, Gradle wrapper, and dependencies force-pinned from protected root build files. They are raised separately so they cannot poison an otherwise auto-mergeable group;
 - **Mergify** governs all dependency pull request queues. Only Class A low-risk dev patch/minor updates and permitted production patches are eligible for auto-merging after passing all required quality and security gates;
 - Major updates and sensitive toolchains require explicit human review and approval;
