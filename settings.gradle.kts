@@ -24,15 +24,19 @@ buildscript {
             force("io.netty:netty-common:$nettyVersion")
             force("io.netty:netty-handler-proxy:$nettyVersion")
             
-            // Force secure BouncyCastle, Guava, and other transitive build plugin deps
-            force("org.bouncycastle:bcprov-jdk18on:1.84")
-            force("org.bouncycastle:bcpkix-jdk18on:1.84")
+            // Force secure versions for transitive build/plugin dependencies.
+            // Keep the Bouncy Castle family aligned to one release.
+            force("org.bouncycastle:bcprov-jdk18on:1.86")
+            force("org.bouncycastle:bcpkix-jdk18on:1.86")
+            force("org.bouncycastle:bcutil-jdk18on:1.86")
             force("com.google.guava:guava:33.6.0-jre")
             force("org.jdom:jdom2:2.0.6.1")
             force("org.bitbucket.b_c:jose4j:0.9.6")
             force("org.apache.commons:commons-lang3:3.18.0")
-            force("ch.qos.logback:logback-core:1.5.25")
+            force("ch.qos.logback:logback-core:1.5.34")
             force("org.apache.httpcomponents:httpclient:4.5.14")
+            force("com.squareup.wire:wire-runtime:6.4.7")
+            force("com.squareup.wire:wire-runtime-jvm:6.4.7")
         }
     }
 }

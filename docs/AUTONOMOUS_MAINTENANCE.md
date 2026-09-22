@@ -131,6 +131,8 @@ The `security.yml` workflow runs four security checks:
 | Dependency Review | `dependency-review` | Hard (GitHub native action, fail-on-severity: high) | Yes |
 | Semgrep SAST | `semgrep` | **Advisory** (`continue-on-error: true`) | No |
 
+**Transitive security floors:** `config/supply-chain-policy.json` owns reviewed version overrides for vulnerable build/plugin transitive dependencies. The hard Supply-chain Policy gate verifies that each policy coordinate is forced to the exact reviewed version in `settings.gradle.kts`. Current floors align Bouncy Castle to 1.86, Wire runtime to 6.4.7, and Logback Core to 1.5.34. These files remain Class C protected paths and are never autonomous-merge candidates.
+
 **Decision: actionlint is advisory.**
 - The `workflow-audit` job runs `actionlint` with `continue-on-error: true`, so it cannot block the Workflow Audit check.
 - The `workflow-audit` hard gate is based solely on its deterministic hard validators: `validate_security_pipeline.py` and `validate_android_toolchain_config.py`.

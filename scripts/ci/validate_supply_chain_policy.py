@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+MAVEN_COORDINATE_RE = re.compile(r"^[A-Za-z0-9_.-]+:[A-Za-z0-9_.-]+$")
 
 
 def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
@@ -116,6 +117,52 @@ def validate_dependency_decision(root: Path, decision: Any, today: date) -> List
     return errors
 
 
+def validate_transitive_security_overrides(root: Path, overrides: Any) -> List[str]:
+    """Require policy-owned Gradle force pins for vulnerable transitive tooling."""
+    if not isinstance(overrides, list) or not overrides:
+        return ["transitive_security_overrides must be a non-empty list"]
+
+    settings_path = root / "settings.gradle.kts"
+    if not settings_path.is_file():
+        return [f"Missing Gradle settings file: {settings_path}"]
+
+    settings_text = settings_path.read_text(encoding="utf-8")
+    errors: List[str] = []
+    seen: set[str] = set()
+
+    for index, override in enumerate(overrides):
+        prefix = f"transitive_security_overrides[{index}]"
+        if not isinstance(override, dict):
+            errors.append(f"{prefix} must be an object")
+            continue
+
+        coordinate = override.get("coordinate")
+        version = override.get("version")
+        reason = override.get("reason")
+
+        if not isinstance(coordinate, str) or not MAVEN_COORDINATE_RE.fullmatch(coordinate):
+            errors.append(f"{prefix}.coordinate must be a Maven group:artifact coordinate")
+            continue
+        if coordinate in seen:
+            errors.append(f"Duplicate transitive security override: {coordinate}")
+        seen.add(coordinate)
+
+        if not isinstance(version, str) or not version.strip():
+            errors.append(f"{prefix}.version must be a non-empty string")
+            continue
+        if not isinstance(reason, str) or len(reason.strip()) < 40:
+            errors.append(f"{prefix}.reason must document the security decision")
+            continue
+
+        expected = f'force("{coordinate}:{version}")'
+        if expected not in settings_text:
+            errors.append(
+                f"{coordinate} must be forced to policy version {version} in settings.gradle.kts"
+            )
+
+    return errors
+
+
 def validate_policy(root: Path, policy: Dict[str, Any], today: date) -> List[str]:
     errors: List[str] = []
     if policy.get("schema_version") != 1:
@@ -126,6 +173,11 @@ def validate_policy(root: Path, policy: Dict[str, Any], today: date) -> List[str
     if isinstance(wrapper, dict) and not wrapper_errors:
         errors.extend(validate_wrapper_files(root, wrapper))
     errors.extend(validate_dependency_decision(root, policy.get("dependency_verification"), today))
+    errors.extend(
+        validate_transitive_security_overrides(
+            root, policy.get("transitive_security_overrides")
+        )
+    )
     return errors
 
 
@@ -144,6 +196,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         "errors": errors,
         "gradleWrapper": policy.get("gradle_wrapper", {}),
         "dependencyVerification": policy.get("dependency_verification", {}),
+        "transitiveSecurityOverrides": policy.get("transitive_security_overrides", []),
     }
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -152,7 +205,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         for error in errors:
             print(f"  - {error}", file=sys.stderr)
         return 1
-    print("Supply-chain policy passed: Gradle wrapper checksums and review decision are current")
+    print(
+        "Supply-chain policy passed: Gradle wrapper, review decision, "
+        "and transitive security overrides are current"
+    )
     return 0
 
 
