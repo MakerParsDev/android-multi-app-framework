@@ -211,8 +211,9 @@ Wait for the workflow to finish, then verify that no open pull request retains `
 
 - **Workflow:** `.github/workflows/maintenance-health.yml` runs daily at 06:00 UTC.
 - **Script:** `scripts/ci/maintenance_health_controller.py`.
-- **Read-only health check:** Always runs with `contents: read` plus `security-events: read` so it can inspect Dependabot security alerts without write authority; disabling maintenance does not disable observability.
-- **Dashboard Issue:** Creation/update of the single consolidated `"Autonomous Maintenance Dashboard"` issue occurs only when `AUTONOMOUS_MAINTENANCE_ENABLED=true`. The sync job uses `always()` so the dashboard is still updated when the health-check job reports `ATTENTION_REQUIRED` or `UNKNOWN`; the workflow can remain red while preserving the diagnostic state.
+- **Read-only vulnerability health:** The health job uses only `contents: read`. It requests GitHub's asynchronous dependency-graph SPDX report (`generate-report` then `fetch-report`), scans the resulting SBOM with checksum-pinned OSV-Scanner v2.6.0, and never needs a PAT or `security-events` permission. This avoids coupling health visibility to the Dependabot Alerts REST permission while still scanning the repository's submitted dependency graph.
+- **Severity policy:** OSV critical/high findings map to `ATTENTION_REQUIRED`; medium/low/unknown-severity findings map to `DEGRADED`; scanner/SBOM failures map to `UNKNOWN`; a clean scan maps to `HEALTHY`. OSV alias groups are deduplicated before counting.
+- **Dashboard Issue:** Creation/update of the single consolidated `"Autonomous Maintenance Dashboard"` issue occurs only when `AUTONOMOUS_MAINTENANCE_ENABLED=true`. The read-only health job uploads the SBOM/OSV reports as a short-lived artifact and the sync job downloads them. The sync job uses `always()` so the dashboard is still updated when health reports `ATTENTION_REQUIRED` or `UNKNOWN`; issue mutation uses only the job-scoped `GITHUB_TOKEN` with `issues: write`.
 
 ---
 

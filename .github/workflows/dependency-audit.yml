@@ -38,20 +38,11 @@ jobs:
         with:
           python-version: '3.13'
 
-      - name: Install OSV-Scanner
-        run: |
-          curl -sL https://github.com/google/osv-scanner/releases/download/v2.4.0/osv-scanner_linux_amd64 \
-            -o /usr/local/bin/osv-scanner
-          chmod +x /usr/local/bin/osv-scanner
-
-      - name: OSV scan
-        continue-on-error: true
-        run: |
-          mkdir -p build/reports/dependencies
-          osv-scanner scan \
-            --lockfile build.gradle.kts \
-            --output build/reports/dependencies/osv-results.json \
-            --format json || true
+      - name: Scan GitHub SBOM with pinned OSV-Scanner
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash scripts/ci/run_repository_vulnerability_scan.sh
 
       - name: Audit dependency catalog
         run: |

@@ -198,10 +198,23 @@ class TestJulesFleetWorkflowsContract(unittest.TestCase):
             content = f.read()
         parsed = yaml.safe_load(content)
         jobs = parsed["jobs"]
+        health_job = jobs["health-check"]
         self.assertEqual(
-            jobs["health-check"]["permissions"],
-            {"contents": "read", "security-events": "read"},
+            health_job["permissions"],
+            {"contents": "read"},
         )
+        scan_step = next(
+            step
+            for step in health_job["steps"]
+            if step.get("name") == "Scan Repository Vulnerabilities"
+        )
+        self.assertTrue(scan_step["continue-on-error"])
+        self.assertIn("run_repository_vulnerability_scan.sh", scan_step["run"])
+        self.assertEqual(
+            scan_step["env"]["GITHUB_TOKEN"],
+            "${{ secrets.GITHUB_TOKEN }}",
+        )
+
         sync = jobs["dashboard-sync"]
         self.assertIn("always()", sync["if"])
         self.assertIn("vars.AUTONOMOUS_MAINTENANCE_ENABLED == 'true'", sync["if"])
@@ -210,9 +223,12 @@ class TestJulesFleetWorkflowsContract(unittest.TestCase):
             {
                 "contents": "read",
                 "issues": "write",
-                "security-events": "read",
             },
         )
+        self.assertNotIn("security-events", content)
+        self.assertNotIn("GH_PAT_TOKEN", content)
+        self.assertIn("Upload Vulnerability Reports", content)
+        self.assertIn("Download Vulnerability Reports", content)
         self.assertIn("--check", content)
         self.assertIn("--sync-issue", content)
 
