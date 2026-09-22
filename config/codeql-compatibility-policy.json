@@ -1,13 +1,22 @@
 {
-  "schema_version": 1,
-  "codeql_bundle_version": "2.26.1",
+  "schema_version": 2,
+  "codeql_bundle_version": "2.27.0",
   "kotlin": {
     "current_configured_version": "2.4.0",
-    "supported_max_exclusive": "2.4.10",
+    "supported_max_exclusive": "2.4.20",
     "owner": "platform-engineering/ci",
-    "checked_on": "2026-09-21",
-    "next_review_on": "2026-10-21",
+    "checked_on": "2026-09-22",
+    "next_review_on": "2026-10-01",
     "reference": "https://docs.github.com/en/code-security/code-scanning/creating-an-advanced-setup-for-code-scanning/supported-languages-and-frameworks#kotlin",
-    "rationale": "CodeQL bundle 2.26.1 rejects Kotlin versions >= 2.4.10 with KotlinVersionTooRecentError; toolchain must stay below 2.4.10 until GitHub runner CodeQL bundle is updated."
+    "rationale": "The live GitHub Actions CodeQL 2.27.0 extractor rejects Kotlin 2.4.20 with KotlinVersionTooRecentError and reports support only for versions below 2.4.20. The live repository canary is the enforcement authority when published documentation is broader or ambiguous.",
+    "blocked_security_upgrade": {
+      "advisory": "GHSA-r937-wjx7-w2jp",
+      "cve": "CVE-2026-53914",
+      "severity": "medium",
+      "minimum_fixed_version": "2.4.20-Beta1",
+      "reason": "The first stable fixed Kotlin release is 2.4.20, but CodeQL bundle 2.27.0 rejects that compiler version during extraction. Upgrading now would break a required merge gate.",
+      "upgrade_plan": "Re-test Kotlin 2.4.20 immediately after a CodeQL bundle newer than 2.27.0 is available in the pinned codeql-action runtime. Upgrade only after the full repository CodeQL canary succeeds.",
+      "expires_on": "2026-10-01"
+    }
   }
 }
