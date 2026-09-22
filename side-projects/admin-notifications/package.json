@@ -18,7 +18,7 @@
     "deploy": "node ../../scripts/ci/deploy_verified_side_project.mjs admin-notifications"
   },
   "dependencies": {
-    "firebase": "^12.9.0",
+    "firebase": "^12.19.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },
