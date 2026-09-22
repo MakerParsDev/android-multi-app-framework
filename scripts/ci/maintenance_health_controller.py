@@ -59,7 +59,7 @@ def check_codeql_kotlin_compatibility() -> tuple[bool, str]:
 
     try:
         policy = json.loads(policy_path.read_text(encoding="utf-8"))
-        max_str = policy["kotlin"]["supported_max_inclusive"]
+        max_str = policy["kotlin"]["supported_max_exclusive"]
         max_tup = tuple(int(x) for x in max_str.split("."))
 
         import tomllib
@@ -72,9 +72,9 @@ def check_codeql_kotlin_compatibility() -> tuple[bool, str]:
             return False, "CodeQL compatibility policy schema must be version 2"
         if policy["kotlin"].get("current_configured_version") != kotlin_str:
             return False, "CodeQL policy configured Kotlin version does not match the catalog"
-        if kotlin_tup <= max_tup:
-            return True, f"Kotlin {kotlin_str} <= CodeQL ceiling {max_str}"
-        return False, f"Kotlin {kotlin_str} exceeds CodeQL ceiling {max_str}"
+        if kotlin_tup < max_tup:
+            return True, f"Kotlin {kotlin_str} < live CodeQL ceiling {max_str}"
+        return False, f"Kotlin {kotlin_str} reaches/exceeds live CodeQL ceiling {max_str}"
     except Exception as err:
         return False, f"CodeQL compatibility check error: {err}"
 
