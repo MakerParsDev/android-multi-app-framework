@@ -118,10 +118,10 @@ class AutonomousMaintenanceContractTest(unittest.TestCase):
             self.assertIn(exp, ecosystem_dirs, f"Missing Dependabot coverage for {exp}")
 
         for u in updates:
-            self.assertEqual(
+            self.assertNotEqual(
                 u.get("rebase-strategy"),
                 "disabled",
-                f"rebase-strategy must be disabled for Mergify queue compatibility in {u.get('directory')}",
+                f"Dependabot automatic rebasing must remain enabled in {u.get('directory')}",
             )
 
     def test_no_competing_renovate_configuration_exists(self) -> None:
@@ -320,6 +320,79 @@ class AutonomousMaintenanceContractTest(unittest.TestCase):
             denylist_found_at_top_level,
             "Sensitive dependency denylist must be at top level of AND condition (outside dependency-type OR)",
         )
+
+    def test_dependabot_grouping_aligns_with_automerge_boundaries(self) -> None:
+        """Keep grouped updates from being poisoned by manual-only dependencies."""
+        config = yaml.safe_load(
+            (ROOT / ".github/dependabot.yml").read_text(encoding="utf-8")
+        )
+        updates = config["updates"]
+
+        for update in updates:
+            self.assertNotEqual(
+                update.get("rebase-strategy"),
+                "disabled",
+                "Dependabot automatic rebasing must remain enabled so candidates do not go stale",
+            )
+
+        gradle = next(
+            update
+            for update in updates
+            if update["package-ecosystem"] == "gradle"
+            and update["directory"] == "/"
+        )
+        gradle_manual_only = {
+            "com.android.*",
+            "org.jetbrains.kotlin.*",
+            "com.google.devtools.ksp",
+            "com.google.dagger.*",
+            "androidx.room.*",
+            "androidx.credentials.*",
+            "com.google.gms.*",
+            "com.google.firebase.*",
+            "com.google.crypto.tink.*",
+            "com.github.triplet.play",
+            "com.android.billingclient.*",
+            "io.netty:*",
+            "org.bouncycastle:*",
+            "com.google.guava:guava",
+            "org.jdom:jdom2",
+            "org.bitbucket.b_c:jose4j",
+            "org.apache.commons:commons-lang3",
+            "ch.qos.logback:*",
+            "org.apache.httpcomponents:httpclient",
+            "com.squareup.wire:*",
+            "gradle-wrapper",
+        }
+        for group_name in ("gradle-dev-patch-minor", "gradle-prod-patch-minor"):
+            excluded = set(gradle["groups"][group_name]["exclude-patterns"])
+            self.assertTrue(
+                gradle_manual_only.issubset(excluded),
+                f"{group_name} must isolate every manual/protected Gradle dependency",
+            )
+
+        npm_manual_only = {
+            "wrangler",
+            "@cloudflare/*",
+            "firebase-admin",
+            "firebase-functions",
+            "firebase-functions-test",
+            "firebase-tools",
+            "jose",
+            "jsonwebtoken",
+        }
+        npm_updates = [
+            update for update in updates if update["package-ecosystem"] == "npm"
+        ]
+        self.assertTrue(npm_updates)
+        for update in npm_updates:
+            groups = update.get("groups", {})
+            group = groups["npm-patch-minor"]
+            excluded = set(group.get("exclude-patterns", []))
+            self.assertTrue(
+                npm_manual_only.issubset(excluded),
+                f"{update['directory']} must isolate deployment/auth-sensitive npm packages",
+            )
 
     def test_circuit_breaker_variables_documented(self) -> None:
         """Verify circuit breaker variables are documented with fail-closed defaults."""
