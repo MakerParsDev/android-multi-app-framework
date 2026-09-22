@@ -115,51 +115,23 @@ def test_ci_enforces_and_uploads_kover_reports() -> None:
     assert upload["with"]["retention-days"] == 14
 
 
-def test_ci_materializes_or_generates_firebase_configs_for_required_jobs() -> None:
-    jobs = load(".github/workflows/ci-pr.yml")["jobs"]
-    cases = (
-        (
-            "validate-and-test",
-            "Materialize Firebase configs",
-            "Generate secret-free Firebase placeholders",
-            "Remove secret-free Firebase placeholders",
-            "Run version validation and unit tests",
-        ),
-        (
-            "android-lint",
-            "Materialize Firebase configs for lint",
-            "Generate secret-free Firebase placeholders for lint",
-            "Remove secret-free Firebase placeholders after lint",
-            "Run lint for affected flavors",
-        ),
-        (
-            "kover-coverage",
-            "Materialize Firebase configs",
-            "Generate secret-free Firebase placeholders",
-            "Remove secret-free Firebase placeholders after coverage",
-            "Run unit tests",
-        ),
+def test_ci_generates_secret_free_firebase_configs_for_tests() -> None:
+    workflow_path = ROOT / ".github/workflows/ci-pr.yml"
+    raw = workflow_path.read_text(encoding="utf-8")
+    quality = load(".github/workflows/ci-pr.yml")["jobs"]["validate-and-test"]
+    steps = quality["steps"]
+    names = [step.get("name") for step in steps]
+    assert "FIREBASE_CONFIGS_ZIP_BASE64" not in raw
+    assert "materialize_firebase_configs.py" not in raw
+    assert "Generate secret-free Firebase placeholders" in names
+    generate = named_step(quality, "Generate secret-free Firebase placeholders")
+    cleanup = named_step(quality, "Clean secret-free Firebase placeholders")
+    assert "generate_ci_google_services.py --flavors all" in generate["run"]
+    assert cleanup["if"] == "always()"
+    assert "generate_ci_google_services.py --clean --flavors all" in cleanup["run"]
+    assert names.index("Generate secret-free Firebase placeholders") < names.index(
+        "Run version validation and unit tests"
     )
-    for job_id, materialize_name, fallback_name, cleanup_name, quality_name in cases:
-        job = jobs[job_id]
-        assert job["env"]["FIREBASE_CONFIGS_ZIP_BASE64"] == (
-            "${{ secrets.FIREBASE_CONFIGS_ZIP_BASE64 }}"
-        )
-        names = [step.get("name") for step in job["steps"]]
-        materialize = named_step(job, materialize_name)
-        fallback = named_step(job, fallback_name)
-        cleanup = named_step(job, cleanup_name)
-
-        assert materialize["if"] == "env.FIREBASE_CONFIGS_ZIP_BASE64 != ''"
-        assert "materialize_firebase_configs.py" in materialize["run"]
-        assert fallback["if"].startswith("env.FIREBASE_CONFIGS_ZIP_BASE64 == ''")
-        assert "generate_ci_google_services.py --flavors" in fallback["run"]
-        assert cleanup["if"].startswith(
-            "always() && env.FIREBASE_CONFIGS_ZIP_BASE64 == ''"
-        )
-        assert "generate_ci_google_services.py --clean --flavors" in cleanup["run"]
-        assert names.index(materialize_name) < names.index(quality_name)
-        assert names.index(fallback_name) < names.index(quality_name)
 
 
 def test_security_runs_dependency_review_only_for_pull_requests() -> None:
@@ -516,7 +488,7 @@ def main() -> int:
         test_ci_security_gate_uses_full_history_checkout,
         test_ci_quality_jobs_depend_on_impact_analysis,
         test_ci_enforces_and_uploads_kover_reports,
-        test_ci_materializes_or_generates_firebase_configs_for_required_jobs,
+        test_ci_generates_secret_free_firebase_configs_for_tests,
         test_security_runs_dependency_review_only_for_pull_requests,
         test_dependency_submission_is_trusted_and_job_scoped,
         test_codeql_uses_manual_kotlin_build_and_cleans_placeholder,
