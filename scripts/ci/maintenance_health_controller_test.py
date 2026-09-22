@@ -96,13 +96,18 @@ class MaintenanceHealthControllerTest(unittest.TestCase):
         self, api: MagicMock
     ):
         api.return_value = self.api_result(
-            [
+            [[
                 {"security_advisory": {"severity": "critical"}},
                 {"security_advisory": {"severity": "high"}},
                 {"security_advisory": {"severity": "medium"}},
-            ]
+            ]]
         )
         state, message = health.check_dependabot_alerts("o/r")
+        api.assert_called_once_with(
+            "GET",
+            "repos/o/r/dependabot/alerts?state=open&per_page=100",
+            paginate=True,
+        )
         self.assertEqual(state, "ATTENTION_REQUIRED")
         self.assertIn("1 critical", message)
         self.assertIn("1 high", message)
@@ -110,14 +115,36 @@ class MaintenanceHealthControllerTest(unittest.TestCase):
     @patch("maintenance_health_controller.run_gh_api")
     def test_dependabot_alerts_medium_or_low_are_degraded(self, api: MagicMock):
         api.return_value = self.api_result(
-            [
+            [[
                 {"security_advisory": {"severity": "medium"}},
                 {"security_advisory": {"severity": "low"}},
-            ]
+            ]]
         )
         state, message = health.check_dependabot_alerts("o/r")
         self.assertEqual(state, "DEGRADED")
         self.assertIn("2 open alert", message)
+
+    @patch("maintenance_health_controller.run_gh_api")
+    def test_dependabot_alerts_later_page_severe_alert_requires_attention(
+        self, api: MagicMock
+    ):
+        api.return_value = self.api_result(
+            [
+                [{"security_advisory": {"severity": "low"}}] * 100,
+                [{"security_advisory": {"severity": "critical"}}],
+            ]
+        )
+        state, message = health.check_dependabot_alerts("o/r")
+        self.assertEqual(state, "ATTENTION_REQUIRED")
+        self.assertIn("1 critical", message)
+        self.assertIn("100 low", message)
+
+    @patch("maintenance_health_controller.run_gh_api")
+    def test_dependabot_alerts_invalid_page_shape_is_unknown(self, api: MagicMock):
+        api.return_value = self.api_result([[{"security_advisory": {"severity": "low"}}], {"bad": "shape"}])
+        state, message = health.check_dependabot_alerts("o/r")
+        self.assertEqual(state, "UNKNOWN")
+        self.assertIn("invalid page shape", message)
 
     @patch("maintenance_health_controller.run_gh_api")
     def test_dependabot_alerts_api_error_is_unknown(self, api: MagicMock):

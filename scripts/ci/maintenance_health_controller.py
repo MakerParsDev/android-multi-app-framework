@@ -160,12 +160,19 @@ def check_dependabot_alerts(repo: str | None) -> tuple[str, str]:
     result = run_gh_api(
         "GET",
         f"repos/{repo}/dependabot/alerts?state=open&per_page=100",
+        paginate=True,
     )
     if not result.ok or not isinstance(result.data, list):
         return "UNKNOWN", result.stderr or "Unable to list Dependabot alerts"
 
+    alerts: list[dict[str, Any]] = []
+    for page in result.data:
+        if not isinstance(page, list):
+            return "UNKNOWN", "Dependabot alert pagination returned an invalid page shape"
+        alerts.extend(item for item in page if isinstance(item, dict))
+
     counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
-    for item in result.data:
+    for item in alerts:
         if not isinstance(item, dict):
             continue
         advisory = item.get("security_advisory")
