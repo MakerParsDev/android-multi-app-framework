@@ -79,19 +79,23 @@ def check_expirations() -> list[str]:
     findings: list[str] = []
     today = datetime.now(timezone.utc).date()
 
-    # 1. Audit policy
+    # 1. Side-project npm audit policy
     audit_policy = ROOT / "side-projects/audit-policy.json"
     if audit_policy.is_file():
         data = json.loads(audit_policy.read_text(encoding="utf-8"))
-        for project, entries in data.get("dev_exceptions", {}).items():
-            for adv, info in entries.items():
-                expires_str = info.get("expires_on")
-                if expires_str:
-                    exp_date = date.fromisoformat(expires_str)
-                    if exp_date <= today:
-                        findings.append(
-                            f"Expired dev audit exception in {project}: {adv} (expired {expires_str})"
-                        )
+        for entry in data.get("exceptions", []):
+            if not isinstance(entry, dict):
+                continue
+            project = str(entry.get("project") or "unknown")
+            advisory = str(entry.get("advisory") or "unknown")
+            expires_str = entry.get("expiresOn")
+            if isinstance(expires_str, str) and expires_str:
+                exp_date = date.fromisoformat(expires_str)
+                if exp_date <= today:
+                    findings.append(
+                        "Expired dev audit exception in "
+                        f"{project}: {advisory} (expired {expires_str})"
+                    )
 
     # 2. Dependency policy
     dep_policy = ROOT / "config/dependency-policy.json"

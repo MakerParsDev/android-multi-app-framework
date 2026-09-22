@@ -3,8 +3,11 @@
 
 from __future__ import annotations
 
+import json
 import os
+from pathlib import Path
 import sys
+import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -55,6 +58,38 @@ class MaintenanceHealthControllerTest(unittest.TestCase):
         ]
         state, _ = health.check_github_ruleset_state("o/r")
         self.assertEqual(state, "HEALTHY")
+
+    def test_side_project_exception_expiry_uses_current_policy_schema(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            policy_path = root / "side-projects/audit-policy.json"
+            policy_path.parent.mkdir(parents=True)
+            policy_path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "exceptions": [
+                            {
+                                "project": "firebase-rules-tests",
+                                "advisory": "GHSA-example-test",
+                                "expiresOn": "2026-09-21",
+                            },
+                            {
+                                "project": "firebase-functions",
+                                "advisory": "GHSA-future-test",
+                                "expiresOn": "2026-10-01",
+                            },
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with patch.object(health, "ROOT", root):
+                findings = health.check_expirations()
+
+        self.assertEqual(len(findings), 1)
+        self.assertIn("firebase-rules-tests", findings[0])
+        self.assertIn("GHSA-example-test", findings[0])
 
     @patch("maintenance_health_controller.run_gh_api")
     def test_dependabot_alerts_critical_or_high_require_attention(
