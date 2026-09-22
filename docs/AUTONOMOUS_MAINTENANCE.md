@@ -110,7 +110,7 @@ Configured in `.mergify.yml` using the latest official schema:
 
 ## 6. GitHub Rulesets (Hard Security Boundary)
 
-**Current State: ACTIVE** — The live `main-branch-protection` ruleset is applied and continuously drift-checked by the maintenance controller.
+**Current State: ACTIVE** â€” The live `main-branch-protection` ruleset is applied and continuously drift-checked by the maintenance controller.
 
 The repository ruleset on `main` enforces:
 - Required PR before merging.
@@ -134,7 +134,7 @@ The `security.yml` workflow runs four security checks:
 | Dependency Review | `dependency-review` | Hard (GitHub native action, fail-on-severity: high) | Yes |
 | Semgrep SAST | `semgrep` | **Advisory** (`continue-on-error: true`) | No |
 
-**Transitive security floors:** `config/supply-chain-policy.json` owns reviewed version overrides for vulnerable build/plugin and project transitive dependencies. The hard Supply-chain Policy gate verifies each coordinate in `settings.gradle.kts` and requires the same floor in both the root plugin/buildscript classpath and every project configuration in `build.gradle.kts`. Current policy aligns the Bouncy Castle family at 1.86, Wire runtime/JVM at 7.0.3, Logback Core/Classic at 1.5.34, jose4j at 0.9.7, and Guava at 33.7.1-jre, while retaining reviewed floors for JDOM, Commons Lang, and HttpClient. These control-plane files remain Class C protected paths and are never autonomous-merge candidates.
+**Transitive security floors:** `config/supply-chain-policy.json` owns reviewed version overrides for vulnerable build/plugin and project transitive dependencies. The hard Supply-chain Policy gate verifies each coordinate in `settings.gradle.kts` and requires the same floor in both the root plugin/buildscript classpath and every project configuration in `build.gradle.kts`. Current policy aligns the Bouncy Castle family at 1.86, Wire runtime/JVM at 7.0.3, Logback Core/Classic at 1.6.3, jose4j at 0.9.7, and Guava at 33.7.1-jre, while retaining reviewed floors for JDOM, Commons Lang, and HttpClient. These control-plane files remain Class C protected paths and are never autonomous-merge candidates.
 
 **Decision: actionlint is advisory.**
 - The `workflow-audit` job runs `actionlint` with `continue-on-error: true`, so it cannot block the Workflow Audit check.
@@ -291,8 +291,8 @@ If the canary fails, immediately set `AUTONOMOUS_MERGE_ENABLED=false`, manually 
 
 The `automerge-control.yml` workflow runs hourly on `main` and synchronizes the `automerge:enabled` label from the `AUTONOMOUS_MERGE_ENABLED` repository variable.
 
-- **`AUTONOMOUS_MERGE_ENABLED=true`** → Grants `automerge:enabled` only to explicit candidate classes: Dependabot PRs, or same-repository Fleet PRs with a branch/body-correlated Jules session ID and `fleet-merge-ready` + `risk:low`. Drafts, forks, mismatched provenance, unrelated human PRs, and PRs with `automerge:disabled`, `hold`, or `do-not-merge` remain unauthorized.
-- **`AUTONOMOUS_MERGE_ENABLED=false`** (or missing) → Removes `automerge:enabled` from every open PR.
+- **`AUTONOMOUS_MERGE_ENABLED=true`** â†’ Grants `automerge:enabled` only to explicit candidate classes: Dependabot PRs, or same-repository Fleet PRs with a branch/body-correlated Jules session ID and `fleet-merge-ready` + `risk:low`. Drafts, forks, mismatched provenance, unrelated human PRs, and PRs with `automerge:disabled`, `hold`, or `do-not-merge` remain unauthorized.
+- **`AUTONOMOUS_MERGE_ENABLED=false`** (or missing) â†’ Removes `automerge:enabled` from every open PR.
 - **Fail-closed**: unrelated human PRs and stale/explicitly disabled candidates have positive authorization removed.
 
 This provides a **positive authorization** model: candidate selection happens in the trusted controller, while Mergify independently enforces dependency type/update type, protected paths, sensitive package deny-lists, and required checks.
