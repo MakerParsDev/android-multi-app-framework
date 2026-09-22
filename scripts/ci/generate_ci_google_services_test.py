@@ -126,10 +126,12 @@ def test_unknown_flavor_fails() -> None:
         assert "unknown flavor" in result.stderr.lower()
 
 
-def test_ci_workflow_materializes_firebase_configs() -> None:
+def test_ci_workflow_uses_secret_free_firebase_placeholders() -> None:
     workflow = (ROOT / ".github/workflows/ci-pr.yml").read_text(encoding="utf-8")
-    assert "materialize_firebase_configs.py" in workflow
-    assert "FIREBASE_CONFIGS_ZIP_BASE64" in workflow
+    assert "materialize_firebase_configs.py" not in workflow
+    assert "FIREBASE_CONFIGS_ZIP_BASE64" not in workflow
+    assert workflow.count("generate_ci_google_services.py --flavors") >= 3
+    assert workflow.count("generate_ci_google_services.py --clean --flavors") >= 3
 
 
 def test_ci_workflow_has_quality_checks() -> None:
@@ -146,7 +148,7 @@ def main() -> int:
         test_refuses_to_overwrite_real_config,
         test_clean_removes_only_generated_placeholder,
         test_unknown_flavor_fails,
-        test_ci_workflow_materializes_firebase_configs,
+        test_ci_workflow_uses_secret_free_firebase_placeholders,
         test_ci_workflow_has_quality_checks,
     ]
     for test in tests:
