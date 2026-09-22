@@ -28,6 +28,30 @@ class BootstrapSettingsTest(unittest.TestCase):
         self.assertEqual(result.stderr, "")
 
     @patch("bootstrap_autonomous_repository_settings.subprocess.run")
+    def test_run_gh_api_paginated_uses_gh_link_following(self, mock_run: MagicMock):
+        mock_run.return_value = MagicMock(
+            returncode=0,
+            stdout='[[{"page": 1}], [{"page": 2}]]',
+            stderr="",
+        )
+        result = bootstrap.run_gh_api("GET", "repos/o/r/items", paginate=True)
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data, [[{"page": 1}], [{"page": 2}]])
+        command = mock_run.call_args.args[0]
+        self.assertIn("--paginate", command)
+        self.assertIn("--slurp", command)
+
+    def test_run_gh_api_rejects_paginated_writes(self):
+        result = bootstrap.run_gh_api(
+            "POST",
+            "repos/o/r/items",
+            {"name": "x"},
+            paginate=True,
+        )
+        self.assertFalse(result.ok)
+        self.assertIn("GET requests", result.stderr)
+
+    @patch("bootstrap_autonomous_repository_settings.subprocess.run")
     def test_run_gh_api_success_no_content(self, mock_run: MagicMock):
         mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
         result = bootstrap.run_gh_api("PATCH", "repos/o/r/actions/variables/X")

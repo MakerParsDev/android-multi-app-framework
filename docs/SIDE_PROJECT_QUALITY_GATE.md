@@ -45,7 +45,7 @@ Every lockfile is audited twice after `npm ci`:
   be handled as an explicitly tested breaking upgrade.
 
 The current upstream-only dev exceptions are tracked by GitHub issue #124 and
-expire on 15 August 2026. The policy validator will block the pipeline after that
+expire on 1 October 2026. The policy validator will block the pipeline after that
 date unless the dependency tree is upgraded and the entries are removed.
 
 ## Supported deploy path

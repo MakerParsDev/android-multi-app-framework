@@ -51,14 +51,33 @@ class GhApiResult:
         return self.returncode == 0
 
 
-def run_gh_api(method: str, endpoint: str, input_data: dict[str, Any] | None = None) -> GhApiResult:
-    """Run gh api with the current GitHub REST API version."""
+def run_gh_api(
+    method: str,
+    endpoint: str,
+    input_data: dict[str, Any] | None = None,
+    *,
+    paginate: bool = False,
+) -> GhApiResult:
+    """Run gh api with the current GitHub REST API version.
+
+    Paginated mode uses ``gh api --paginate --slurp`` so GitHub's server-
+    provided pagination links are followed without implementing link handling
+    in this repository. It is opt-in to preserve existing response shapes.
+    """
     cmd = [
         "gh", "api", "--method", method,
         "-H", "Accept: application/vnd.github+json",
         "-H", f"X-GitHub-Api-Version: {API_VERSION}",
         endpoint,
     ]
+    if paginate:
+        if method.upper() != "GET" or input_data is not None:
+            return GhApiResult(
+                2,
+                None,
+                "Pagination is supported only for GET requests without input data",
+            )
+        cmd.extend(["--paginate", "--slurp"])
     if input_data is not None:
         cmd.extend(["--input", "-"])
     result = subprocess.run(
