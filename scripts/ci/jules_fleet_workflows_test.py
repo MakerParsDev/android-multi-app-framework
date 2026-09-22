@@ -154,6 +154,11 @@ class TestJulesFleetWorkflowsContract(unittest.TestCase):
         self.assertIn("vars.AUTONOMOUS_MAINTENANCE_ENABLED == 'true'", content)
         self.assertIn("vars.JULES_FLEET_ENABLED == 'true'", content)
         self.assertIn("github.base_ref == 'main'", content)
+        analyze_content, _ = self._load_workflow("fleet-analyze.yml")
+        self.assertIn(
+            "vars.JULES_FLEET_SCHEDULED_ANALYZE_ENABLED == 'true'",
+            analyze_content,
+        )
         self.assertNotIn("github.event.pull_request.head.repo.full_name", content)
         self.assertNotIn("startsWith(github.head_ref", content)
         self.assertNotIn("!= 'false'", content)
@@ -163,7 +168,15 @@ class TestJulesFleetWorkflowsContract(unittest.TestCase):
         on_val = parsed.get("on") or parsed.get(True)
         dispatch = on_val["workflow_dispatch"]
         self.assertIn("goal", dispatch["inputs"])
+        self.assertIn("full_scan", dispatch["inputs"])
+        full_scan = dispatch["inputs"]["full_scan"]
+        self.assertTrue(full_scan["required"])
+        self.assertFalse(full_scan["default"])
+        self.assertEqual(full_scan["type"], "boolean")
         self.assertIn("FLEET_GOAL: ${{ inputs.goal }}", content)
+        self.assertIn("FLEET_FULL_SCAN: ${{ inputs.full_scan }}", content)
+        self.assertIn("FLEET_EVENT_NAME: ${{ github.event_name }}", content)
+        self.assertIn("Manual Analyze requires either a single", content)
         self.assertIn(".fleet/goals/*.md", content)
         self.assertIn('--goal "$FLEET_GOAL"', content)
         self.assertIn('--goals-dir=".fleet/goals"', content)

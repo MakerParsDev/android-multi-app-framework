@@ -86,7 +86,7 @@ The repository uses Jules Fleet (`@google/jules-fleet@0.0.1-experimental.35`) fo
 
 | Workflow | Trigger | Purpose | Risk Control |
 |---|---|---|---|
-| `fleet-analyze.yml` | Scheduled (6h), manual (`workflow_dispatch`) | Analyzes goals in `.fleet/goals/` and creates issues; manual runs may select one `.fleet/goals/*.md` goal for a canary | Trusted `main` only; both `AUTONOMOUS_MAINTENANCE_ENABLED` and `JULES_FLEET_ENABLED` must be exactly `true`; isolated `JULES_API_KEY` from Doppler; manual goal paths are constrained to the goals directory |
+| `fleet-analyze.yml` | Scheduled (6h), manual (`workflow_dispatch`) | Runs Jules analyzer sessions for Fleet goals | Trusted `main` only; global + Fleet switches must be `true`; scheduled all-goals execution additionally requires `JULES_FLEET_SCHEDULED_ANALYZE_ENABLED=true` (default false); manual runs require either one `.fleet/goals/*.md` goal or explicit `full_scan=true` |
 | `fleet-dispatch.yml` | Scheduled (2h), manual (`workflow_dispatch`) | Dispatches Jules worker sessions for Fleet issues; manual runs default to a repository-owned read-only preview | Trusted `main` only; both fail-closed switches must be `true`; preview receives no Doppler/Jules credential and never invokes Jules Fleet; operators must explicitly set `dry_run=false` before session creation |
 | `fleet-classify.yml` | `pull_request` (`opened`, `synchronize`, `reopened`, `ready_for_review`) | Metadata-gates PRs to `main`, then classifies only verified Jules worker PRs | Trusted base checkout and both fail-closed switches required; non-Fleet/fork/Dependabot PRs exit before file classification or label writes; verified current-runtime provenance correlates the numeric branch suffix with the same `jules.google.com/task/<id>` body marker and a closing issue labeled `fleet`; never executes PR code or receives Doppler/Jules secrets |
 | `fleet-merge.yml` | Scheduled (4h), manual (`workflow_dispatch`) | Read-only audit of verified `fleet-merge-ready` PRs for Mergify | Trusted `main` only; both fail-closed switches required; never invokes Jules merge or receives Jules/Doppler credentials; fails closed if `JULES_FLEET_AUTO_MERGE_ENABLED=true` because Mergify is the sole merge authority |
@@ -94,6 +94,7 @@ The repository uses Jules Fleet (`@google/jules-fleet@0.0.1-experimental.35`) fo
 Control plane variables:
 - `AUTONOMOUS_MAINTENANCE_ENABLED`: Global write-capable maintenance switch. Missing or anything other than `true` is fail-closed.
 - `JULES_FLEET_ENABLED`: Fleet-specific switch. Fleet execution requires this **and** the global maintenance switch to be exactly `true`.
+- `JULES_FLEET_SCHEDULED_ANALYZE_ENABLED`: Dedicated opt-in for the high-cost 6-hour all-goals Analyze. Default `false`; keep it false unless one analyzer session per goal per schedule is intentionally desired.
 - `JULES_FLEET_AUTO_MERGE_ENABLED`: Permanent invariant: must remain `false`. Fleet merge workflow is read-only and Mergify is authoritative.
 
 ## Autonomous Maintenance & Health Monitoring

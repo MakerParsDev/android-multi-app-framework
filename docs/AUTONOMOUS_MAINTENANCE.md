@@ -185,6 +185,7 @@ The `security.yml` workflow runs four security checks:
 1. **Global Maintenance Kill Switch:**
    - Missing or any value other than `AUTONOMOUS_MAINTENANCE_ENABLED=true` is fail-closed for write-capable autonomous maintenance.
    - Jules Fleet analyze/dispatch/classify/merge jobs require this switch **and** `JULES_FLEET_ENABLED=true`.
+   - Scheduled all-goals Analyze has an additional fail-closed switch: `JULES_FLEET_SCHEDULED_ANALYZE_ENABLED=true`. Keep it false by default because the pinned Fleet Analyze command creates one Jules analyzer session per goal on every run.
    - Maintenance health evaluation remains read-only when disabled; dashboard issue synchronization is gated by this switch.
 2. **Global Auto-Merge Authorization:**
    - Missing or `AUTONOMOUS_MERGE_ENABLED=false` means the trusted label controller removes `automerge:enabled` from every open PR.
@@ -226,6 +227,7 @@ run Auto-Merge Control so stale positive labels are removed:
 gh variable set AUTONOMOUS_MAINTENANCE_ENABLED --body "false" --repo MakerParsDev/android-multi-app-framework
 gh variable set AUTONOMOUS_MERGE_ENABLED --body "false" --repo MakerParsDev/android-multi-app-framework
 gh variable set JULES_FLEET_ENABLED --body "false" --repo MakerParsDev/android-multi-app-framework
+gh variable set JULES_FLEET_SCHEDULED_ANALYZE_ENABLED --body "false" --repo MakerParsDev/android-multi-app-framework
 gh variable set JULES_FLEET_AUTO_MERGE_ENABLED --body "false" --repo MakerParsDev/android-multi-app-framework
 gh workflow run "Auto-Merge Control" --repo MakerParsDev/android-multi-app-framework
 ```
@@ -239,6 +241,7 @@ The ruleset is **BOOTSTRAP_PENDING** until the live GitHub ruleset exists and ma
 
 Expected fail-closed state before a fresh bootstrap:
 - `JULES_FLEET_ENABLED=false`
+- `JULES_FLEET_SCHEDULED_ANALYZE_ENABLED=false`
 - `JULES_FLEET_AUTO_MERGE_ENABLED=false`
 - `AUTONOMOUS_MAINTENANCE_ENABLED` missing or `false`.
 - `AUTONOMOUS_MERGE_ENABLED` missing or `false`.
@@ -264,11 +267,11 @@ The helper creates missing circuit-breaker variables as `false`, keeps GitHub na
 
 ### 16.2 Staged Activation
 
-1. **Bootstrap only:** verify exactly one active `main-branch-protection` ruleset, all four variables exist and are `false`, and all required labels exist.
+1. **Bootstrap only:** verify exactly one active `main-branch-protection` ruleset, all five control variables exist and are `false`, and all required labels exist.
 2. **Maintenance canary:** set only `AUTONOMOUS_MAINTENANCE_ENABLED=true`. Keep merge and Jules switches false and observe a maintenance cycle.
 3. **One Dependabot canary:** choose one non-sensitive, non-protected patch PR. Keep `automerge:disabled` on all other existing Dependabot PRs, remove it only from the canary, set `AUTONOMOUS_MERGE_ENABLED=true`, and immediately run the Auto-Merge Control workflow. Verify the canary alone receives `automerge:enabled`, all hard gates pass, and Mergify performs the squash merge.
 4. **Gradual rollout:** release eligible Dependabot PRs in small batches. Toolchain, auth/crypto, billing, Firebase admin/deploy tooling, Cloudflare deployment tooling, GitHub Actions and control-plane changes remain manual.
-5. **Jules last:** only after the dependency path is stable, set `JULES_FLEET_ENABLED=true`. Start with a manual single-goal Analyze canary, then a manual Dispatch run with the default `dry_run=true`. That preview is repository-owned and read-only: it does not invoke Jules Fleet and receives no Jules/Doppler credential. Only after inspecting the issue/milestone and preview candidate set should an operator run Dispatch with `dry_run=false`. Keep `AUTONOMOUS_MERGE_ENABLED=false` during the first worker canary. `JULES_FLEET_AUTO_MERGE_ENABLED=false` is a permanent invariant.
+5. **Jules last:** only after the dependency path is stable, set `JULES_FLEET_ENABLED=true` while keeping `JULES_FLEET_SCHEDULED_ANALYZE_ENABLED=false`. Start with a manual single-goal Analyze canary; a manual run with no goal must explicitly set `full_scan=true`. Then run Dispatch with the default `dry_run=true`. That preview is repository-owned and read-only: it does not invoke Jules Fleet and receives no Jules/Doppler credential. Only after inspecting the issue/milestone and preview candidate set should an operator run Dispatch with `dry_run=false`. Keep `AUTONOMOUS_MERGE_ENABLED=false` during the first worker canary. `JULES_FLEET_AUTO_MERGE_ENABLED=false` is a permanent invariant.
 
 If the canary fails, immediately set `AUTONOMOUS_MERGE_ENABLED=false`, manually trigger Auto-Merge Control, verify all `automerge:enabled` labels are removed, and restore `automerge:disabled` containment.
 

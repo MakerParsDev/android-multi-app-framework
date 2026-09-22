@@ -11,10 +11,10 @@ Jules automation operates as an autonomous orchestration layer (`@google/jules-f
 ## Operating Architecture
 
 1. **Jules Fleet Analyze** (`fleet-analyze.yml`):
-   - Trigger: Scheduled every 6 hours (`cron: '0 */6 * * *'`) and manual `workflow_dispatch`. Manual runs may supply one `.fleet/goals/*.md` path for a single-goal canary; invalid/out-of-directory paths fail closed.
-   - Security Boundary: Runs only on trusted `refs/heads/main` when both `vars.AUTONOMOUS_MAINTENANCE_ENABLED == 'true'` and `vars.JULES_FLEET_ENABLED == 'true'`.
+   - Trigger: The workflow keeps a 6-hour schedule (`cron: '0 */6 * * *'`) plus manual `workflow_dispatch`, but scheduled Analyze is fail-closed unless `JULES_FLEET_SCHEDULED_ANALYZE_ENABLED == 'true'`. The pinned Fleet CLI starts one analyzer session per goal, so the schedule is disabled by default to prevent session storms.
+   - Security Boundary: Runs only on trusted `refs/heads/main` when both `vars.AUTONOMOUS_MAINTENANCE_ENABLED == 'true'` and `vars.JULES_FLEET_ENABLED == 'true'`; scheduled runs additionally require the dedicated scheduled-Analyze switch.
    - Permissions: Workflow top-level `contents: read`; job-level `contents: read`, `issues: write`, `pull-requests: read`.
-   - Lifecycle: Resolves `JULES_API_KEY` from Doppler via `scripts/ci/resolve_jules_api_key.sh`, deterministically ensures the "Jules Fleet Maintenance" milestone and required labels exist via `scripts/ci/fleet_milestone.py --ensure --ensure-labels`, then runs either `jules-fleet analyze --goal "$FLEET_GOAL" --milestone "$FLEET_MILESTONE"` for a manual canary or the scheduled all-goals form `jules-fleet analyze --goals-dir=".fleet/goals" --milestone "$FLEET_MILESTONE"`.
+   - Lifecycle: Resolves `JULES_API_KEY` from Doppler via `scripts/ci/resolve_jules_api_key.sh`, deterministically ensures the "Jules Fleet Maintenance" milestone and required labels exist via `scripts/ci/fleet_milestone.py --ensure --ensure-labels`, then runs a single goal when `goal` is supplied. Manual full-repository Analyze requires an explicit `full_scan=true`; a manual run with neither a goal nor that opt-in fails closed. Scheduled full scans use the same all-goals CLI only when the dedicated schedule switch is explicitly enabled.
    - Concurrency: `cancel-in-progress: false` to avoid terminating in-flight analysis sessions.
 
 2. **Jules Fleet Dispatch** (`fleet-dispatch.yml`):
@@ -51,6 +51,7 @@ Jules automation operates as an autonomous orchestration layer (`@google/jules-f
 
 - `AUTONOMOUS_MAINTENANCE_ENABLED`: Global repository variable. Write-capable Fleet jobs require this to be exactly `"true"` in addition to the Fleet-specific switch.
 - `JULES_FLEET_ENABLED`: Repository variable. Default is fail-closed: must be explicitly set to `"true"` to enable Fleet execution. If unset or any other value, all Fleet workflows exit immediately without consuming secrets or compute.
+- `JULES_FLEET_SCHEDULED_ANALYZE_ENABLED`: Separate high-cost Analyze switch. Default is `false`; only an explicit `"true"` permits the 6-hour scheduled all-goals Analyze that creates one analyzer session per goal. Manual single-goal canaries do not require this schedule switch.
 - `JULES_FLEET_AUTO_MERGE_ENABLED`: Repository variable. Must remain `false`. `fleet-merge.yml` is permanently read-only and fails closed if this variable becomes `true`; Mergify is the sole automated merge authority.
 
 ## Live Canary Verification
