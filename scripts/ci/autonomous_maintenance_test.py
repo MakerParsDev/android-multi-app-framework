@@ -148,7 +148,7 @@ class AutonomousMaintenanceContractTest(unittest.TestCase):
         )
         self.assertEqual(
             manifest["codecov/codecov-action"]["sha"],
-            "0fb7174895f61a3b6b78fc075e0cd60383518dac",
+            "303a32d7a59b442fa8d48b6a1cc6825c09c847a5",
         )
 
         codecov_yml = ROOT / "codecov.yml"
