@@ -100,8 +100,11 @@ Configured in `.mergify.yml` using the latest official schema:
   - Dependabot **dev-only** groups with patch/minor updates, or **production-only** groups where every update is a patch, excluding sensitive coordinates and protected control-plane files. Mixed development/production groups fail closed because Mergify list conditions otherwise use "any" semantics. GitHub Actions updates remain manual because `.github/**` is part of the trust boundary.
   - Jules Fleet PRs verified by correlated same-repository session provenance, a closing `fleet` issue, `risk:low`, and `fleet-merge-ready`.
   - Circuit breaker label `-label = automerge:disabled`.
+- **`merge_queue`**:
+  - `max_parallel_checks: 2` caps speculative CI fan-out so the queue cannot multiply the full Android/CodeQL pipeline without bound.
 - **`queue_rules`**:
-  - `name: default`, `merge_method: squash`, `batch_size: 1`.
+  - `name: default`, `merge_method: squash`, `batch_size: 3`, `batch_max_wait_time: 30 seconds`.
+  - Up to three ready PRs are validated as one batch. A partial batch starts after at most 30 seconds, and Mergify automatically splits a failing batch to isolate the offending PR.
 
 ---
 
@@ -131,7 +134,7 @@ The `security.yml` workflow runs four security checks:
 | Dependency Review | `dependency-review` | Hard (GitHub native action, fail-on-severity: high) | Yes |
 | Semgrep SAST | `semgrep` | **Advisory** (`continue-on-error: true`) | No |
 
-**Transitive security floors:** `config/supply-chain-policy.json` owns reviewed version overrides for vulnerable build/plugin and project transitive dependencies. The hard Supply-chain Policy gate verifies each coordinate in `settings.gradle.kts` and requires the same floor in both the root plugin/buildscript classpath and every project configuration in `build.gradle.kts`. Current policy aligns the Bouncy Castle family at 1.86, Wire runtime/JVM at 6.4.7, Logback Core/Classic at 1.5.34, and retains reviewed floors for jose4j, JDOM, Commons Lang, HttpClient, and Guava. These control-plane files remain Class C protected paths and are never autonomous-merge candidates.
+**Transitive security floors:** `config/supply-chain-policy.json` owns reviewed version overrides for vulnerable build/plugin and project transitive dependencies. The hard Supply-chain Policy gate verifies each coordinate in `settings.gradle.kts` and requires the same floor in both the root plugin/buildscript classpath and every project configuration in `build.gradle.kts`. Current policy aligns the Bouncy Castle family at 1.86, Wire runtime/JVM at 7.0.3, Logback Core/Classic at 1.5.34, jose4j at 0.9.7, and Guava at 33.7.1-jre, while retaining reviewed floors for JDOM, Commons Lang, and HttpClient. These control-plane files remain Class C protected paths and are never autonomous-merge candidates.
 
 **Decision: actionlint is advisory.**
 - The `workflow-audit` job runs `actionlint` with `continue-on-error: true`, so it cannot block the Workflow Audit check.

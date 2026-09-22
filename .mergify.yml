@@ -3,10 +3,14 @@
 # Manual/high-risk, major dependencies, and protected paths are never auto-merged.
 # Positive authorization: PRs MUST have label 'automerge:enabled' to be eligible for auto-merge.
 
+merge_queue:
+  max_parallel_checks: 2
+
 queue_rules:
   - name: default
     merge_method: squash
-    batch_size: 1
+    batch_size: 3
+    batch_max_wait_time: 30 seconds
     queue_conditions:
       - base = main
       - -draft

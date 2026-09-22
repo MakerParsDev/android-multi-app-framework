@@ -63,8 +63,25 @@ class AutonomousMaintenanceContractTest(unittest.TestCase):
         self.assertIn("label = automerge:enabled", mergify_str)
 
         # Verify CodeQL check in queue merge_conditions
+        merge_queue = data.get("merge_queue", {})
+        self.assertEqual(
+            merge_queue.get("max_parallel_checks"),
+            2,
+            "Speculative queue fan-out must remain capped at two batches",
+        )
+
         queue_rules = data.get("queue_rules", [])
         self.assertGreaterEqual(len(queue_rules), 1)
+        self.assertEqual(
+            queue_rules[0].get("batch_size"),
+            3,
+            "Mergify queue should batch up to three ready PRs per speculative CI run",
+        )
+        self.assertEqual(
+            queue_rules[0].get("batch_max_wait_time"),
+            "30 seconds",
+            "Partial batches must start promptly instead of waiting for a full batch",
+        )
         merge_conditions = queue_rules[0].get("merge_conditions", [])
         self.assertIn(
             "check-success = Analyze Java and Kotlin",
