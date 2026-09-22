@@ -1,0 +1,144 @@
+version: 1
+canonical_owner: platform-engineering/autonomy
+
+philosophies:
+  - MAXIMUM_SAFE_AUTONOMY
+  - MINIMUM_HUMAN_MAINTENANCE
+  - MINIMUM_DUPLICATED_POLICY
+  - FAIL_CLOSED
+  - SELF_HEAL_WHERE_POSSIBLE
+
+merge_authority:
+  engine: mergify
+  direct_merge_to_main_allowed: false
+  native_automerge_allowed: false
+  fleet_automerge_allowed: false
+
+protected_dependencies:
+  gradle_patterns:
+    - "com.android.*"
+    - "org.jetbrains.kotlin.*"
+    - "com.google.devtools.ksp"
+    - "com.google.dagger.*"
+    - "androidx.room.*"
+    - "androidx.credentials.*"
+    - "com.google.gms.*"
+    - "com.google.firebase.*"
+    - "com.google.crypto.tink.*"
+    - "com.github.triplet.play"
+    - "com.android.billingclient.*"
+    - "io.netty:*"
+    - "org.bouncycastle:*"
+    - "com.google.guava:guava"
+    - "org.jdom:jdom2"
+    - "org.bitbucket.b_c:jose4j"
+    - "org.apache.commons:commons-lang3"
+    - "ch.qos.logback:*"
+    - "org.apache.httpcomponents:httpclient"
+    - "com.squareup.wire:*"
+    - "gradle-wrapper"
+
+  npm_patterns:
+    - "wrangler"
+    - "@cloudflare/*"
+    - "firebase-admin"
+    - "firebase-functions"
+    - "firebase-tools"
+    - "jose"
+    - "jsonwebtoken"
+
+compatibility_families:
+  android_toolchain:
+    members:
+      - agp
+      - kotlin
+      - ksp
+      - compose
+      - codeql
+    canary_required: true
+
+  firebase_runtime:
+    members:
+      - firebase-tools
+      - firebase-admin
+      - firebase-functions
+      - stream-json
+      - ts-deepmerge
+    canary_required: true
+
+  cloudflare_workers:
+    members:
+      - wrangler
+      - "@cloudflare/workers-types"
+
+active_canaries_and_exceptions:
+  - id: kotlin-codeql
+    type: toolchain
+    advisory: GHSA-r937-wjx7-w2jp
+    cve: CVE-2026-53914
+    tracking_issue: "#183"
+    owner: platform-engineering/ci
+    configured_version: "2.4.0"
+    target_candidate_version: "2.4.20"
+    codeql_bundle_version: "2.27.0"
+    codeql_supported_max_exclusive: "2.4.20"
+    review_expires_on: "2026-10-01"
+    rationale: "Live CodeQL bundle 2.27.0 rejects Kotlin 2.4.20+. Re-test required when CodeQL is updated."
+
+  - id: firebase-stream-json
+    type: side-project-npm
+    project: side-projects/firebase/rules-tests
+    advisory: GHSA-528h-pc64-c93x
+    cve: CVE-2026-71429
+    tracking_issue: "#183"
+    owner: oaslananka
+    current_package: firebase-tools
+    vulnerable_transitive: stream-json
+    review_expires_on: "2026-10-01"
+    rationale: "Upstream firebase-tools relies on stream-json ^1.7.3. Forcing stream-json 3.x breaks CLI module resolution."
+
+  - id: firebase-ts-deepmerge
+    type: side-project-npm
+    project: side-projects/firebase/functions
+    advisory: GHSA-87mf-gv2c-c62c
+    cve: CVE-2026-12644
+    tracking_issue: "#183"
+    owner: oaslananka
+    current_package: firebase-functions-test
+    vulnerable_transitive: ts-deepmerge
+    review_expires_on: "2026-10-01"
+    rationale: "Forcing ts-deepmerge 2.x breaks CloudEvent generation CJS default export."
+
+dependabot_grouping:
+  actions:
+    group_name: actions-patch-minor
+    update_types: [patch, minor]
+  gradle:
+    dev_group: gradle-dev-patch-minor
+    prod_group: gradle-prod-patch
+  npm:
+    directories:
+      - /side-projects/admin-notifications
+      - /side-projects/cloudflare/workers/admin-api
+      - /side-projects/cloudflare/workers/content-api
+      - /side-projects/cloudflare/workers/ssv-callback
+      - /side-projects/firebase/functions
+      - /side-projects/firebase/rules-tests
+    dev_group: npm-dev-patch-minor
+    prod_group: npm-prod-patch
+
+jules_fleet_dispatch:
+  max_active_sessions_per_key: 1
+  max_active_sessions_per_repo: 3
+  max_rolling_sessions_24h: 20
+  session_ttl_minutes: 60
+  global_kill_switch: false
+  repo_kill_switch: false
+  scheduler_kill_switch: false
+  auto_merge_enabled: false
+
+post_merge_recovery:
+  mode: OBSERVE
+  direct_revert_main_allowed: false
+  bypass_mergify_allowed: false
+  auto_create_draft_revert: true

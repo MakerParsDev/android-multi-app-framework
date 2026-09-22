@@ -2,6 +2,7 @@
   "dependency_verification": {
     "decision": "deferred",
     "next_review_on": "2026-10-01",
+    "automated_reevaluation_trigger": "python3 -m maintenance canary dependency-verification",
     "reason": "Full Gradle verification metadata across 17 application variants is deferred until repository and plugin artifact churn is measured; stable catalog enforcement, resolved prerelease rejection, Socket reporting, pinned wrapper checksums, and scheduled dependency audits remain blocking controls."
   },
   "gradle_wrapper": {
