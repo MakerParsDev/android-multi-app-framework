@@ -247,6 +247,8 @@ jobs:
     timeout-minutes: 30
     needs: analyze-impact
     if: needs.analyze-impact.outputs.has_code == 'true'
+    env:
+      FIREBASE_CONFIGS_ZIP_BASE64: ${{ secrets.FIREBASE_CONFIGS_ZIP_BASE64 }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -263,7 +265,6 @@ jobs:
       - name: Materialize Firebase configs
         if: env.FIREBASE_CONFIGS_ZIP_BASE64 != ''
         env:
-          FIREBASE_CONFIGS_ZIP_BASE64: ${{ secrets.FIREBASE_CONFIGS_ZIP_BASE64 }}
           FLAVORS_JSON: ${{ needs.analyze-impact.outputs.flavors_json }}
         run: |
           FLAVORS_CSV="$(echo "$FLAVORS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d' | paste -sd,)"
@@ -272,8 +273,24 @@ jobs:
             --mode warn \
             --allow-existing || true
 
+      - name: Generate secret-free Firebase placeholders
+        if: env.FIREBASE_CONFIGS_ZIP_BASE64 == '' && needs.analyze-impact.outputs.flavors_json != '[]'
+        env:
+          FLAVORS_JSON: ${{ needs.analyze-impact.outputs.flavors_json }}
+        run: |
+          FLAVORS_CSV="$(echo "$FLAVORS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d' | paste -sd,)"
+          python3 scripts/ci/generate_ci_google_services.py --flavors "$FLAVORS_CSV"
+
       - name: Run version validation and unit tests
         run: ./gradlew :app:validateFlavorVersions test --stacktrace --no-daemon --max-workers=2
+
+      - name: Remove secret-free Firebase placeholders
+        if: always() && env.FIREBASE_CONFIGS_ZIP_BASE64 == '' && needs.analyze-impact.outputs.flavors_json != '[]'
+        env:
+          FLAVORS_JSON: ${{ needs.analyze-impact.outputs.flavors_json }}
+        run: |
+          FLAVORS_CSV="$(echo "$FLAVORS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d' | paste -sd,)"
+          python3 scripts/ci/generate_ci_google_services.py --clean --flavors "$FLAVORS_CSV"
 
   android-lint:
     name: Android Lint
@@ -281,6 +298,8 @@ jobs:
     timeout-minutes: 35
     needs: analyze-impact
     if: needs.analyze-impact.outputs.has_code == 'true' && needs.analyze-impact.outputs.flavors_json != '[]'
+    env:
+      FIREBASE_CONFIGS_ZIP_BASE64: ${{ secrets.FIREBASE_CONFIGS_ZIP_BASE64 }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -297,7 +316,6 @@ jobs:
       - name: Materialize Firebase configs for lint
         if: env.FIREBASE_CONFIGS_ZIP_BASE64 != ''
         env:
-          FIREBASE_CONFIGS_ZIP_BASE64: ${{ secrets.FIREBASE_CONFIGS_ZIP_BASE64 }}
           FLAVORS_JSON: ${{ needs.analyze-impact.outputs.flavors_json }}
         run: |
           FLAVORS_CSV="$(echo "$FLAVORS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d' | paste -sd,)"
@@ -305,6 +323,14 @@ jobs:
             --flavors "$FLAVORS_CSV" \
             --mode warn \
             --allow-existing || true
+
+      - name: Generate secret-free Firebase placeholders for lint
+        if: env.FIREBASE_CONFIGS_ZIP_BASE64 == ''
+        env:
+          FLAVORS_JSON: ${{ needs.analyze-impact.outputs.flavors_json }}
+        run: |
+          FLAVORS_CSV="$(echo "$FLAVORS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d' | paste -sd,)"
+          python3 scripts/ci/generate_ci_google_services.py --flavors "$FLAVORS_CSV"
 
       - name: Run lint for affected flavors
         env:
@@ -324,6 +350,14 @@ jobs:
             echo "Running lint tasks: ${TASKS[*]}"
             ./gradlew "${TASKS[@]}" --stacktrace --no-daemon --max-workers=2
           fi
+
+      - name: Remove secret-free Firebase placeholders after lint
+        if: always() && env.FIREBASE_CONFIGS_ZIP_BASE64 == ''
+        env:
+          FLAVORS_JSON: ${{ needs.analyze-impact.outputs.flavors_json }}
+        run: |
+          FLAVORS_CSV="$(echo "$FLAVORS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d' | paste -sd,)"
+          python3 scripts/ci/generate_ci_google_services.py --clean --flavors "$FLAVORS_CSV"
 
       - name: Collect lint reports
         if: always()
@@ -350,6 +384,8 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    env:
+      FIREBASE_CONFIGS_ZIP_BASE64: ${{ secrets.FIREBASE_CONFIGS_ZIP_BASE64 }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -366,7 +402,6 @@ jobs:
       - name: Materialize Firebase configs
         if: env.FIREBASE_CONFIGS_ZIP_BASE64 != ''
         env:
-          FIREBASE_CONFIGS_ZIP_BASE64: ${{ secrets.FIREBASE_CONFIGS_ZIP_BASE64 }}
           FLAVORS_JSON: ${{ needs.analyze-impact.outputs.flavors_json }}
         run: |
           FLAVORS_CSV="$(echo "$FLAVORS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d' | paste -sd,)"
@@ -374,6 +409,14 @@ jobs:
             --flavors "$FLAVORS_CSV" \
             --mode warn \
             --allow-existing || true
+
+      - name: Generate secret-free Firebase placeholders
+        if: env.FIREBASE_CONFIGS_ZIP_BASE64 == '' && needs.analyze-impact.outputs.flavors_json != '[]'
+        env:
+          FLAVORS_JSON: ${{ needs.analyze-impact.outputs.flavors_json }}
+        run: |
+          FLAVORS_CSV="$(echo "$FLAVORS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d' | paste -sd,)"
+          python3 scripts/ci/generate_ci_google_services.py --flavors "$FLAVORS_CSV"
 
       - name: Run unit tests
         run: ./gradlew test --stacktrace --no-daemon --max-workers=2
@@ -389,6 +432,14 @@ jobs:
           python3 scripts/ci/validate_critical_coverage.py \
             --report build/reports/kover/xml/coverage.xml \
             --config config/critical-coverage.json
+
+      - name: Remove secret-free Firebase placeholders after coverage
+        if: always() && env.FIREBASE_CONFIGS_ZIP_BASE64 == '' && needs.analyze-impact.outputs.flavors_json != '[]'
+        env:
+          FLAVORS_JSON: ${{ needs.analyze-impact.outputs.flavors_json }}
+        run: |
+          FLAVORS_CSV="$(echo "$FLAVORS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d' | paste -sd,)"
+          python3 scripts/ci/generate_ci_google_services.py --clean --flavors "$FLAVORS_CSV"
 
       - name: Generate Kover HTML report
         if: always()
