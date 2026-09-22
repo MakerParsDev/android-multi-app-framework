@@ -36,8 +36,8 @@ buildscript {
             force("ch.qos.logback:logback-core:1.5.34")
             force("ch.qos.logback:logback-classic:1.5.34")
             force("org.apache.httpcomponents:httpclient:4.5.14")
-            force("com.squareup.wire:wire-runtime:6.4.7")
-            force("com.squareup.wire:wire-runtime-jvm:6.4.7")
+            force("com.squareup.wire:wire-runtime:7.0.3")
+            force("com.squareup.wire:wire-runtime-jvm:7.0.3")
         }
     }
 }
