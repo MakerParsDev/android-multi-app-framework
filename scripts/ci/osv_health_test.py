@@ -99,6 +99,33 @@ class OsvHealthTest(unittest.TestCase):
         summary = osv_health.summarize_osv_data(report_for([vector_only]))
         self.assertEqual(summary["state"], "ATTENTION_REQUIRED")
 
+    def test_cvss4_fallback_does_not_override_authoritative_medium(self):
+        vulnerability = {
+            "id": "GHSA-medium-with-v4",
+            "database_specific": {"severity": "MODERATE"},
+            "severity": [
+                {
+                    "type": "CVSS_V3",
+                    "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+                },
+                {
+                    "type": "CVSS_V4",
+                    "score": (
+                        "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/"
+                        "VC:N/VI:N/VA:L/SC:N/SI:N/SA:N/E:P"
+                    ),
+                },
+            ],
+        }
+        self.assertEqual(
+            osv_health.vulnerability_severity(vulnerability),
+            "medium",
+        )
+        summary = osv_health.summarize_osv_data(report_for([vulnerability]))
+        self.assertEqual(summary["state"], "DEGRADED")
+        self.assertEqual(summary["counts"]["medium"], 1)
+        self.assertEqual(summary["counts"]["high"], 0)
+
     def test_alias_group_is_counted_once_at_highest_severity(self):
         data = report_for(
             [

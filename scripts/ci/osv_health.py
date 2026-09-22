@@ -157,18 +157,17 @@ def _severity_from_score_entry(entry: dict[str, Any]) -> str | None:
 
     if stripped.startswith("CVSS:4.0/") or score_type == "CVSS_V4":
         # CVSS v4 base scoring uses a substantially different macro-vector
-        # algorithm. Reimplementing it partially would create a worse failure
-        # mode than refusing to under-classify it. Our maintenance policy treats
-        # HIGH and CRITICAL identically (both ATTENTION_REQUIRED), so vector-only
-        # CVSS v4 evidence is conservatively escalated to HIGH unless OSV also
-        # supplies an authoritative textual or numeric severity.
-        return "high"
+        # algorithm. Do not invent a score here. vulnerability_severity() tracks
+        # the presence of an unscored v4 vector and escalates it to HIGH only
+        # when no authoritative textual, numeric, v2, or v3 severity exists.
+        return None
 
     return None
 
 
 def vulnerability_severity(vulnerability: dict[str, Any]) -> str:
     candidates: list[str] = []
+    has_unscored_cvss4 = False
 
     database_specific = vulnerability.get("database_specific")
     if isinstance(database_specific, dict):
@@ -187,13 +186,30 @@ def vulnerability_severity(vulnerability: dict[str, Any]) -> str:
         for entry in severity_entries:
             if not isinstance(entry, dict):
                 continue
+
+            raw_score = entry.get("score")
+            score_type = str(entry.get("type") or "").strip().upper()
+            if (
+                score_type == "CVSS_V4"
+                or (
+                    isinstance(raw_score, str)
+                    and raw_score.strip().startswith("CVSS:4.0/")
+                )
+            ):
+                has_unscored_cvss4 = True
+
             severity = _severity_from_score_entry(entry)
             if severity:
                 candidates.append(severity)
 
-    if not candidates:
-        return "unknown"
-    return max(candidates, key=lambda value: SEVERITY_ORDER[value])
+    if candidates:
+        return max(candidates, key=lambda value: SEVERITY_ORDER[value])
+    if has_unscored_cvss4:
+        # Fail closed for vector-only CVSS v4 records. If OSV also provides an
+        # authoritative textual/numeric/v2/v3 severity, that evidence above
+        # wins instead of this conservative fallback.
+        return "high"
+    return "unknown"
 
 
 def _group_severity(
