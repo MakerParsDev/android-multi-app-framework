@@ -14,39 +14,64 @@ def load_yaml(path: Path) -> dict:
     return value
 
 
-def test_dependabot_is_one_monthly_android_maintenance_group() -> None:
+def test_dependabot_matches_autonomous_update_boundaries() -> None:
     config = load_yaml(ROOT / ".github/dependabot.yml")
     assert config.get("version") == 2
-    groups = config.get("multi-ecosystem-groups")
-    assert isinstance(groups, dict)
-    maintenance = groups.get("android-maintenance")
-    assert isinstance(maintenance, dict)
-    assert maintenance.get("schedule") == {"interval": "monthly"}
 
     updates = config.get("updates")
     assert isinstance(updates, list)
-    assert [item.get("package-ecosystem") for item in updates] == [
-        "github-actions",
-        "gradle",
-    ]
+    expected = {
+        ("github-actions", "/"),
+        ("gradle", "/"),
+        ("pip", "/scripts/ci"),
+        ("npm", "/side-projects/admin-notifications"),
+        ("npm", "/side-projects/cloudflare/workers/admin-api"),
+        ("npm", "/side-projects/cloudflare/workers/content-api"),
+        ("npm", "/side-projects/cloudflare/workers/ssv-callback"),
+        ("npm", "/side-projects/firebase/functions"),
+        ("npm", "/side-projects/firebase/rules-tests"),
+    }
+    actual = {
+        (item.get("package-ecosystem"), item.get("directory"))
+        for item in updates
+    }
+    assert expected == actual
+
     for item in updates:
-        assert item.get("directory") == "/"
-        assert item.get("patterns") == ["*"]
-        assert item.get("multi-ecosystem-group") == "android-maintenance"
-        assert item.get("open-pull-requests-limit") == 1
-        cooldown = item.get("cooldown")
-        assert isinstance(cooldown, dict)
-        assert cooldown.get("default-days") == 30
-    gradle = updates[1]
-    assert gradle["cooldown"].get("semver-major-days") == 60
+        assert item.get("schedule") == {"interval": "weekly", "day": "sunday"}
+        assert item.get("rebase-strategy") != "disabled"
+
+    gradle = next(
+        item for item in updates if item.get("package-ecosystem") == "gradle"
+    )
+    dev = gradle["groups"]["gradle-dev-patch-minor"]
+    prod = gradle["groups"]["gradle-prod-patch"]
+    assert dev["dependency-type"] == "development"
+    assert set(dev["update-types"]) == {"patch", "minor"}
+    assert prod["dependency-type"] == "production"
+    assert prod["update-types"] == ["patch"]
+
+    for item in updates:
+        if item.get("package-ecosystem") != "npm":
+            continue
+        groups = item["groups"]
+        assert groups["npm-dev-patch-minor"]["dependency-type"] == "development"
+        assert set(groups["npm-dev-patch-minor"]["update-types"]) == {
+            "patch",
+            "minor",
+        }
+        assert groups["npm-prod-patch"]["dependency-type"] == "production"
+        assert groups["npm-prod-patch"]["update-types"] == ["patch"]
 
 
-def test_ci_uses_impact_analysis_for_flavor_selection() -> None:
+def test_ci_uses_impact_analysis_for_flavor_and_side_project_selection() -> None:
     workflow = load_yaml(ROOT / ".github/workflows/ci-pr.yml")
     jobs = workflow["jobs"]
     analyze = jobs["analyze-impact"]
     assert "has_code" in analyze["outputs"]
+    assert "has_side_project_changes" in analyze["outputs"]
     assert "flavors_json" in analyze["outputs"]
+
     static = jobs["static-analysis"]
     needs = static["needs"]
     if isinstance(needs, str):
@@ -55,7 +80,7 @@ def test_ci_uses_impact_analysis_for_flavor_selection() -> None:
     assert "max-parallel" not in static.get("strategy", {})
 
 
-def test_dependabot_prs_skip_heavy_android_jobs() -> None:
+def test_android_quality_jobs_are_impact_gated() -> None:
     workflow = load_yaml(ROOT / ".github/workflows/ci-pr.yml")
     jobs = workflow["jobs"]
     for job_name in (
@@ -65,24 +90,51 @@ def test_dependabot_prs_skip_heavy_android_jobs() -> None:
         "kover-coverage",
     ):
         job = jobs[job_name]
-        assert "analyze-impact" in job["needs"], (
+        needs = job["needs"]
+        if isinstance(needs, str):
+            needs = [needs]
+        assert "analyze-impact" in needs, (
             f"{job_name} should depend on analyze-impact"
         )
+
+
+def test_side_project_quality_is_blocking_when_side_projects_change() -> None:
+    workflow = load_yaml(ROOT / ".github/workflows/ci-pr.yml")
+    jobs = workflow["jobs"]
+    side = jobs["side-projects"]
+    assert side["needs"] == "analyze-impact"
+    assert (
+        side["if"]
+        == "needs.analyze-impact.outputs.has_side_project_changes == 'true'"
+    )
+    assert "continue-on-error" not in side
+
+    aggregate = jobs["aggregate-gate"]
+    assert "side-projects" in aggregate["needs"]
+    step = next(
+        item
+        for item in aggregate["steps"]
+        if item.get("name") == "Check required jobs"
+    )
+    assert step["env"]["SIDE_PROJECT_RESULT"] == "${{ needs.side-projects.result }}"
+    assert "side-projects:$SIDE_PROJECT_RESULT" in step["run"]
 
 
 def test_ci_load_tests_run_after_security_gate() -> None:
     workflow = load_yaml(ROOT / ".github/workflows/ci-pr.yml")
     aggregate = workflow["jobs"]["aggregate-gate"]
     assert "security-gate" in aggregate["needs"]
+    assert "side-projects" in aggregate["needs"]
     assert "static-analysis" in aggregate["needs"]
     assert "validate-and-test" in aggregate["needs"]
 
 
 def main() -> int:
     tests = [
-        test_dependabot_is_one_monthly_android_maintenance_group,
-        test_ci_uses_impact_analysis_for_flavor_selection,
-        test_dependabot_prs_skip_heavy_android_jobs,
+        test_dependabot_matches_autonomous_update_boundaries,
+        test_ci_uses_impact_analysis_for_flavor_and_side_project_selection,
+        test_android_quality_jobs_are_impact_gated,
+        test_side_project_quality_is_blocking_when_side_projects_change,
         test_ci_load_tests_run_after_security_gate,
     ]
     for test in tests:
