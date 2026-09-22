@@ -7,7 +7,6 @@ updates:
       interval: weekly
       day: sunday
     open-pull-requests-limit: 3
-    rebase-strategy: disabled
     groups:
       actions-patch-minor:
         patterns:
@@ -22,7 +21,6 @@ updates:
       interval: weekly
       day: sunday
     open-pull-requests-limit: 3
-    rebase-strategy: disabled
     groups:
       gradle-dev-patch-minor:
         dependency-type: development
@@ -32,32 +30,57 @@ updates:
           - patch
           - minor
         exclude-patterns:
+          # Toolchain, auth/crypto, build-runtime and root forced dependencies
+          # must remain isolated because Mergify treats them as manual/protected.
           - 'com.android.*'
           - 'org.jetbrains.kotlin.*'
           - 'com.google.devtools.ksp'
           - 'com.google.dagger.*'
           - 'androidx.room.*'
+          - 'androidx.credentials.*'
           - 'com.google.gms.*'
           - 'com.google.firebase.*'
+          - 'com.google.crypto.tink.*'
           - 'com.github.triplet.play'
           - 'com.android.billingclient.*'
-      gradle-prod-patch-minor:
+          - 'io.netty:*'
+          - 'org.bouncycastle:*'
+          - 'com.google.guava:guava'
+          - 'org.jdom:jdom2'
+          - 'org.bitbucket.b_c:jose4j'
+          - 'org.apache.commons:commons-lang3'
+          - 'ch.qos.logback:*'
+          - 'org.apache.httpcomponents:httpclient'
+          - 'com.squareup.wire:*'
+          - 'gradle-wrapper'
+      gradle-prod-patch:
         dependency-type: production
         patterns:
           - '*'
         update-types:
           - patch
-          - minor
         exclude-patterns:
           - 'com.android.*'
           - 'org.jetbrains.kotlin.*'
           - 'com.google.devtools.ksp'
           - 'com.google.dagger.*'
           - 'androidx.room.*'
+          - 'androidx.credentials.*'
           - 'com.google.gms.*'
           - 'com.google.firebase.*'
+          - 'com.google.crypto.tink.*'
           - 'com.github.triplet.play'
           - 'com.android.billingclient.*'
+          - 'io.netty:*'
+          - 'org.bouncycastle:*'
+          - 'com.google.guava:guava'
+          - 'org.jdom:jdom2'
+          - 'org.bitbucket.b_c:jose4j'
+          - 'org.apache.commons:commons-lang3'
+          - 'ch.qos.logback:*'
+          - 'org.apache.httpcomponents:httpclient'
+          - 'com.squareup.wire:*'
+          - 'gradle-wrapper'
 
   - package-ecosystem: pip
     directory: /scripts/ci
@@ -65,7 +88,6 @@ updates:
       interval: weekly
       day: sunday
     open-pull-requests-limit: 3
-    rebase-strategy: disabled
     groups:
       pip-patch-minor:
         patterns:
@@ -79,87 +101,231 @@ updates:
     schedule:
       interval: weekly
       day: sunday
-    open-pull-requests-limit: 2
-    rebase-strategy: disabled
+    open-pull-requests-limit: 3
     groups:
-      npm-patch-minor:
+      npm-dev-patch-minor:
+        dependency-type: development
         patterns:
           - '*'
         update-types:
           - patch
           - minor
+        exclude-patterns:
+          - 'wrangler'
+          - '@cloudflare/*'
+          - 'firebase-admin'
+          - 'firebase-functions'
+          - 'firebase-functions-test'
+          - 'firebase-tools'
+          - 'jose'
+          - 'jsonwebtoken'
+      npm-prod-patch:
+        dependency-type: production
+        patterns:
+          - '*'
+        update-types:
+          - patch
+        exclude-patterns:
+          - 'wrangler'
+          - '@cloudflare/*'
+          - 'firebase-admin'
+          - 'firebase-functions'
+          - 'firebase-functions-test'
+          - 'firebase-tools'
+          - 'jose'
+          - 'jsonwebtoken'
 
   - package-ecosystem: npm
     directory: /side-projects/cloudflare/workers/admin-api
     schedule:
       interval: weekly
       day: sunday
-    open-pull-requests-limit: 2
-    rebase-strategy: disabled
+    open-pull-requests-limit: 3
     groups:
-      npm-patch-minor:
+      npm-dev-patch-minor:
+        dependency-type: development
         patterns:
           - '*'
         update-types:
           - patch
           - minor
+        exclude-patterns:
+          - 'wrangler'
+          - '@cloudflare/*'
+          - 'firebase-admin'
+          - 'firebase-functions'
+          - 'firebase-functions-test'
+          - 'firebase-tools'
+          - 'jose'
+          - 'jsonwebtoken'
+      npm-prod-patch:
+        dependency-type: production
+        patterns:
+          - '*'
+        update-types:
+          - patch
+        exclude-patterns:
+          - 'wrangler'
+          - '@cloudflare/*'
+          - 'firebase-admin'
+          - 'firebase-functions'
+          - 'firebase-functions-test'
+          - 'firebase-tools'
+          - 'jose'
+          - 'jsonwebtoken'
 
   - package-ecosystem: npm
     directory: /side-projects/cloudflare/workers/content-api
     schedule:
       interval: weekly
       day: sunday
-    open-pull-requests-limit: 2
-    rebase-strategy: disabled
+    open-pull-requests-limit: 3
     groups:
-      npm-patch-minor:
+      npm-dev-patch-minor:
+        dependency-type: development
         patterns:
           - '*'
         update-types:
           - patch
           - minor
+        exclude-patterns:
+          - 'wrangler'
+          - '@cloudflare/*'
+          - 'firebase-admin'
+          - 'firebase-functions'
+          - 'firebase-functions-test'
+          - 'firebase-tools'
+          - 'jose'
+          - 'jsonwebtoken'
+      npm-prod-patch:
+        dependency-type: production
+        patterns:
+          - '*'
+        update-types:
+          - patch
+        exclude-patterns:
+          - 'wrangler'
+          - '@cloudflare/*'
+          - 'firebase-admin'
+          - 'firebase-functions'
+          - 'firebase-functions-test'
+          - 'firebase-tools'
+          - 'jose'
+          - 'jsonwebtoken'
 
   - package-ecosystem: npm
     directory: /side-projects/cloudflare/workers/ssv-callback
     schedule:
       interval: weekly
       day: sunday
-    open-pull-requests-limit: 2
-    rebase-strategy: disabled
+    open-pull-requests-limit: 3
     groups:
-      npm-patch-minor:
+      npm-dev-patch-minor:
+        dependency-type: development
         patterns:
           - '*'
         update-types:
           - patch
           - minor
+        exclude-patterns:
+          - 'wrangler'
+          - '@cloudflare/*'
+          - 'firebase-admin'
+          - 'firebase-functions'
+          - 'firebase-functions-test'
+          - 'firebase-tools'
+          - 'jose'
+          - 'jsonwebtoken'
+      npm-prod-patch:
+        dependency-type: production
+        patterns:
+          - '*'
+        update-types:
+          - patch
+        exclude-patterns:
+          - 'wrangler'
+          - '@cloudflare/*'
+          - 'firebase-admin'
+          - 'firebase-functions'
+          - 'firebase-functions-test'
+          - 'firebase-tools'
+          - 'jose'
+          - 'jsonwebtoken'
 
   - package-ecosystem: npm
     directory: /side-projects/firebase/functions
     schedule:
       interval: weekly
       day: sunday
-    open-pull-requests-limit: 2
-    rebase-strategy: disabled
+    open-pull-requests-limit: 3
     groups:
-      npm-patch-minor:
+      npm-dev-patch-minor:
+        dependency-type: development
         patterns:
           - '*'
         update-types:
           - patch
           - minor
+        exclude-patterns:
+          - 'wrangler'
+          - '@cloudflare/*'
+          - 'firebase-admin'
+          - 'firebase-functions'
+          - 'firebase-functions-test'
+          - 'firebase-tools'
+          - 'jose'
+          - 'jsonwebtoken'
+      npm-prod-patch:
+        dependency-type: production
+        patterns:
+          - '*'
+        update-types:
+          - patch
+        exclude-patterns:
+          - 'wrangler'
+          - '@cloudflare/*'
+          - 'firebase-admin'
+          - 'firebase-functions'
+          - 'firebase-functions-test'
+          - 'firebase-tools'
+          - 'jose'
+          - 'jsonwebtoken'
 
   - package-ecosystem: npm
     directory: /side-projects/firebase/rules-tests
     schedule:
       interval: weekly
       day: sunday
-    open-pull-requests-limit: 2
-    rebase-strategy: disabled
+    open-pull-requests-limit: 3
     groups:
-      npm-patch-minor:
+      npm-dev-patch-minor:
+        dependency-type: development
         patterns:
           - '*'
         update-types:
           - patch
           - minor
+        exclude-patterns:
+          - 'wrangler'
+          - '@cloudflare/*'
+          - 'firebase-admin'
+          - 'firebase-functions'
+          - 'firebase-functions-test'
+          - 'firebase-tools'
+          - 'jose'
+          - 'jsonwebtoken'
+      npm-prod-patch:
+        dependency-type: production
+        patterns:
+          - '*'
+        update-types:
+          - patch
+        exclude-patterns:
+          - 'wrangler'
+          - '@cloudflare/*'
+          - 'firebase-admin'
+          - 'firebase-functions'
+          - 'firebase-functions-test'
+          - 'firebase-tools'
+          - 'jose'
+          - 'jsonwebtoken'
