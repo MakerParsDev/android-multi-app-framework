@@ -46,6 +46,7 @@ def test_ci_gate_has_required_jobs() -> None:
     for name in (
         "security-gate",
         "analyze-impact",
+        "side-projects",
         "static-analysis",
         "validate-and-test",
         "kover-coverage",
@@ -71,6 +72,30 @@ def test_ci_quality_jobs_depend_on_impact_analysis() -> None:
         if isinstance(needs, str):
             needs = [needs]
         assert "analyze-impact" in needs
+
+
+def test_side_project_changes_are_a_hard_pr_gate() -> None:
+    workflow = load(".github/workflows/ci-pr.yml")
+    jobs = workflow["jobs"]
+    analyze = jobs["analyze-impact"]
+    assert "has_side_project_changes" in analyze["outputs"]
+
+    side_projects = jobs["side-projects"]
+    assert side_projects["needs"] == "analyze-impact"
+    assert (
+        side_projects["if"]
+        == "needs.analyze-impact.outputs.has_side_project_changes == 'true'"
+    )
+    assert "continue-on-error" not in side_projects
+
+    aggregate = jobs["aggregate-gate"]
+    assert "side-projects" in aggregate["needs"]
+    check_step = named_step(aggregate, "Check required jobs")
+    assert (
+        check_step["env"]["SIDE_PROJECT_RESULT"]
+        == "${{ needs.side-projects.result }}"
+    )
+    assert "side-projects:$SIDE_PROJECT_RESULT" in check_step["run"]
 
 
 def test_ci_enforces_and_uploads_kover_reports() -> None:

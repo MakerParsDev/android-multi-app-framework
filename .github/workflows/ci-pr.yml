@@ -71,6 +71,7 @@ jobs:
     timeout-minutes: 10
     outputs:
       has_code: ${{ steps.detect.outputs.has_code }}
+      has_side_project_changes: ${{ steps.detect.outputs.has_side_project_changes }}
       flavors_json: ${{ steps.detect.outputs.flavors_json }}
       all_flavors_json: ${{ steps.detect.outputs.all_flavors_json }}
     steps:
@@ -97,6 +98,18 @@ jobs:
 
           echo "Changed files:"
           echo "$CHANGED_FILES"
+
+          HAS_SIDE_PROJECT_CHANGES="false"
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            case "$file" in
+              side-projects/*)
+                HAS_SIDE_PROJECT_CHANGES="true"
+                break
+                ;;
+            esac
+          done <<< "$CHANGED_FILES"
+          echo "has_side_project_changes=$HAS_SIDE_PROJECT_CHANGES" >> "$GITHUB_OUTPUT"
 
           HAS_CODE="false"
           while IFS= read -r file; do
@@ -174,8 +187,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: analyze-impact
-    if: needs.analyze-impact.outputs.has_code == 'true'
-    continue-on-error: true
+    if: needs.analyze-impact.outputs.has_side_project_changes == 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -456,6 +468,7 @@ jobs:
       - name: Check required jobs
         env:
           SECURITY_GATE_RESULT: ${{ needs.security-gate.result }}
+          SIDE_PROJECT_RESULT: ${{ needs.side-projects.result }}
           STATIC_ANALYSIS_RESULT: ${{ needs.static-analysis.result }}
           VALIDATE_TEST_RESULT: ${{ needs.validate-and-test.result }}
           ANDROID_LINT_RESULT: ${{ needs.android-lint.result }}
@@ -464,7 +477,7 @@ jobs:
         run: |
           set -euo pipefail
           failed=0
-          for item in             "security-gate:$SECURITY_GATE_RESULT"             "static-analysis:$STATIC_ANALYSIS_RESULT"             "validate-and-test:$VALIDATE_TEST_RESULT"             "android-lint:$ANDROID_LINT_RESULT"             "kover-coverage:$KOVER_COVERAGE_RESULT"             "security-required:$SECURITY_REQUIRED_RESULT"; do
+          for item in             "security-gate:$SECURITY_GATE_RESULT"             "side-projects:$SIDE_PROJECT_RESULT"             "static-analysis:$STATIC_ANALYSIS_RESULT"             "validate-and-test:$VALIDATE_TEST_RESULT"             "android-lint:$ANDROID_LINT_RESULT"             "kover-coverage:$KOVER_COVERAGE_RESULT"             "security-required:$SECURITY_REQUIRED_RESULT"; do
             job="${item%%:*}"
             result="${item#*:}"
             if [ "$result" != "success" ] && [ "$result" != "skipped" ]; then

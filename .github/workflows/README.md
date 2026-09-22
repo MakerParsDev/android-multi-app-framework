@@ -6,7 +6,7 @@ and must not be re-enabled by copying or renaming them.
 
 | Workflow | Trigger | Purpose | Expensive path |
 |---|---|---|---|
-| CI | PR, `main` push | policy, secrets, quality, 17-flavor lint/assemble | skipped for Dependabot |
+| CI | PR, `main` push | policy, secrets, Android quality, and blocking side-project quality for affected npm workspaces | Android-heavy jobs are impact-gated; side-project changes always run the blocking side-project gate |
 | Security | PR, `main` push, weekly, manual | actionlint, zizmor, Gitleaks, dependency review | dependency review only on PR |
 | Dependency Submission | dependency/build changes on `main`, manual | submit resolved Gradle dependency graph | trusted `main` only |
 | Dependency Audit | weekly, manual | fetch the GitHub-generated SPDX SBOM and scan it with checksum-pinned OSV-Scanner v2.6.0, then run catalog/runtime/supply-chain audits | read-only; OSV findings are preserved as reports while critical/high policy decisions are surfaced by Maintenance Health |
@@ -31,11 +31,7 @@ Each secret-free app build generates a marked, non-production
 `google-services.json` from committed public catalogs and removes it after the
 job. Production Firebase credentials are never exposed to pull-request jobs.
 
-Dependabot version updates are consolidated into one monthly Android maintenance
-pull request covering GitHub Actions and Gradle. Dependabot pull requests run the
-workflow/security gates, the required CodeQL job, and a lightweight Gradle smoke
-check, while still skipping the full Android quality/app-build matrix to avoid
-runner congestion.
+Dependabot runs weekly across GitHub Actions, Gradle, pip, and all npm side-project workspaces. Low-risk development patch/minor updates and production patches are grouped separately; sensitive/protected dependencies are isolated. Pull requests always run workflow/security and required CodeQL checks. Side-project changes additionally run `scripts/ci/run_side_project_quality.sh --install` as a blocking `CI Required` dependency, while Android-heavy jobs remain impact-gated to avoid unrelated runner load.
 
 All active workflows must use immutable action SHAs approved in
 `config/pinned-github-actions.json`, workflow-level `permissions: contents: read`,
