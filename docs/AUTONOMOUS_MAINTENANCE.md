@@ -131,7 +131,7 @@ The `security.yml` workflow runs four security checks:
 | Dependency Review | `dependency-review` | Hard (GitHub native action, fail-on-severity: high) | Yes |
 | Semgrep SAST | `semgrep` | **Advisory** (`continue-on-error: true`) | No |
 
-**Transitive security floors:** `config/supply-chain-policy.json` owns reviewed version overrides for vulnerable build/plugin transitive dependencies. The hard Supply-chain Policy gate verifies that each policy coordinate is forced to the exact reviewed version in `settings.gradle.kts`. Current floors align Bouncy Castle to 1.86, Wire runtime to 6.4.7, and Logback Core to 1.5.34. These files remain Class C protected paths and are never autonomous-merge candidates.
+**Transitive security floors:** `config/supply-chain-policy.json` owns reviewed version overrides for vulnerable build/plugin and project transitive dependencies. The hard Supply-chain Policy gate verifies each coordinate in `settings.gradle.kts` and requires the same floor in both the root plugin/buildscript classpath and every project configuration in `build.gradle.kts`. Current policy aligns the Bouncy Castle family at 1.86, Wire runtime/JVM at 6.4.7, Logback Core/Classic at 1.5.34, and retains reviewed floors for jose4j, JDOM, Commons Lang, HttpClient, and Guava. These control-plane files remain Class C protected paths and are never autonomous-merge candidates.
 
 **Decision: actionlint is advisory.**
 - The `workflow-audit` job runs `actionlint` with `continue-on-error: true`, so it cannot block the Workflow Audit check.
