@@ -42,6 +42,44 @@ def _severity_from_numeric_score(score: float) -> str:
     return "unknown"
 
 
+def _cvss2_score(vector: str) -> float | None:
+    """Calculate a CVSS v2 base score from a standard vector."""
+    if vector.startswith("CVSS:2.0/"):
+        vector = vector.removeprefix("CVSS:2.0/")
+    values = {}
+    for item in vector.split("/"):
+        if ":" not in item:
+            continue
+        key, value = item.split(":", 1)
+        values[key] = value
+
+    required = {"AV", "AC", "Au", "C", "I", "A"}
+    if not required.issubset(values):
+        return None
+
+    av = {"L": 0.395, "A": 0.646, "N": 1.0}
+    ac = {"H": 0.35, "M": 0.61, "L": 0.71}
+    au = {"M": 0.45, "S": 0.56, "N": 0.704}
+    cia = {"N": 0.0, "P": 0.275, "C": 0.660}
+    try:
+        impact = 10.41 * (
+            1
+            - (1 - cia[values["C"]])
+            * (1 - cia[values["I"]])
+            * (1 - cia[values["A"]])
+        )
+        exploitability = (
+            20 * av[values["AV"]] * ac[values["AC"]] * au[values["Au"]]
+        )
+    except KeyError:
+        return None
+
+    if impact <= 0:
+        return 0.0
+    base = ((0.6 * impact) + (0.4 * exploitability) - 1.5) * 1.176
+    return round(base + 1e-10, 1)
+
+
 def _cvss3_score(vector: str) -> float | None:
     """Calculate a CVSS v3.0/v3.1 base score from a standard vector."""
     if not vector.startswith(("CVSS:3.0/", "CVSS:3.1/")):
@@ -95,6 +133,40 @@ def _cvss3_score(vector: str) -> float | None:
     return int((base * 10.0) + 0.999999) / 10.0
 
 
+def _severity_from_score_entry(entry: dict[str, Any]) -> str | None:
+    """Normalize numeric and CVSS score entries without under-classifying risk."""
+    raw_score = entry.get("score")
+    score_type = str(entry.get("type") or "").strip().upper()
+
+    if isinstance(raw_score, (int, float)):
+        return _severity_from_numeric_score(float(raw_score))
+    if not isinstance(raw_score, str):
+        return None
+
+    stripped = raw_score.strip()
+    if re.fullmatch(r"[0-9]+(?:\.[0-9]+)?", stripped):
+        return _severity_from_numeric_score(float(stripped))
+
+    if stripped.startswith(("CVSS:3.0/", "CVSS:3.1/")):
+        numeric = _cvss3_score(stripped)
+        return _severity_from_numeric_score(numeric) if numeric is not None else None
+
+    if stripped.startswith("CVSS:2.0/") or score_type == "CVSS_V2":
+        numeric = _cvss2_score(stripped)
+        return _severity_from_numeric_score(numeric) if numeric is not None else None
+
+    if stripped.startswith("CVSS:4.0/") or score_type == "CVSS_V4":
+        # CVSS v4 base scoring uses a substantially different macro-vector
+        # algorithm. Reimplementing it partially would create a worse failure
+        # mode than refusing to under-classify it. Our maintenance policy treats
+        # HIGH and CRITICAL identically (both ATTENTION_REQUIRED), so vector-only
+        # CVSS v4 evidence is conservatively escalated to HIGH unless OSV also
+        # supplies an authoritative textual or numeric severity.
+        return "high"
+
+    return None
+
+
 def vulnerability_severity(vulnerability: dict[str, Any]) -> str:
     candidates: list[str] = []
 
@@ -115,18 +187,9 @@ def vulnerability_severity(vulnerability: dict[str, Any]) -> str:
         for entry in severity_entries:
             if not isinstance(entry, dict):
                 continue
-            raw_score = entry.get("score")
-            numeric: float | None = None
-            if isinstance(raw_score, (int, float)):
-                numeric = float(raw_score)
-            elif isinstance(raw_score, str):
-                stripped = raw_score.strip()
-                if re.fullmatch(r"[0-9]+(?:\.[0-9]+)?", stripped):
-                    numeric = float(stripped)
-                else:
-                    numeric = _cvss3_score(stripped)
-            if numeric is not None:
-                candidates.append(_severity_from_numeric_score(numeric))
+            severity = _severity_from_score_entry(entry)
+            if severity:
+                candidates.append(severity)
 
     if not candidates:
         return "unknown"

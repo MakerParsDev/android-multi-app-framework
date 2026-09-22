@@ -20,12 +20,13 @@ def vuln(
     *,
     database_severity: str | None = None,
     score: str | float | None = None,
+    score_type: str = "CVSS_V3",
 ) -> dict:
     value = {"id": vuln_id}
     if database_severity:
         value["database_specific"] = {"severity": database_severity}
     if score is not None:
-        value["severity"] = [{"type": "CVSS_V3", "score": score}]
+        value["severity"] = [{"type": score_type, "score": score}]
     return value
 
 
@@ -76,6 +77,27 @@ class OsvHealthTest(unittest.TestCase):
         )
         self.assertEqual(osv_health.vulnerability_severity(critical), "critical")
         self.assertEqual(osv_health.vulnerability_severity(high), "high")
+
+    def test_cvss2_vector_is_scored(self):
+        high = vuln(
+            "OSV-v2-high",
+            score="AV:N/AC:L/Au:N/C:C/I:N/A:N",
+            score_type="CVSS_V2",
+        )
+        self.assertEqual(osv_health.vulnerability_severity(high), "high")
+
+    def test_cvss4_vector_fails_closed_to_blocking_severity(self):
+        vector_only = vuln(
+            "OSV-v4-vector",
+            score=(
+                "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/"
+                "VC:H/VI:H/VA:H/SC:H/SI:H/SA:H"
+            ),
+            score_type="CVSS_V4",
+        )
+        self.assertEqual(osv_health.vulnerability_severity(vector_only), "high")
+        summary = osv_health.summarize_osv_data(report_for([vector_only]))
+        self.assertEqual(summary["state"], "ATTENTION_REQUIRED")
 
     def test_alias_group_is_counted_once_at_highest_severity(self):
         data = report_for(
