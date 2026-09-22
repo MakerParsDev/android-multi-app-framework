@@ -211,8 +211,8 @@ Wait for the workflow to finish, then verify that no open pull request retains `
 
 - **Workflow:** `.github/workflows/maintenance-health.yml` runs daily at 06:00 UTC.
 - **Script:** `scripts/ci/maintenance_health_controller.py`.
-- **Read-only health check:** Always runs with `contents: read` so disabling maintenance does not disable observability.
-- **Dashboard Issue:** Creation/update of the single consolidated `"Autonomous Maintenance Dashboard"` issue occurs only when `AUTONOMOUS_MAINTENANCE_ENABLED=true`.
+- **Read-only health check:** Always runs with `contents: read` plus `security-events: read` so it can inspect Dependabot security alerts without write authority; disabling maintenance does not disable observability.
+- **Dashboard Issue:** Creation/update of the single consolidated `"Autonomous Maintenance Dashboard"` issue occurs only when `AUTONOMOUS_MAINTENANCE_ENABLED=true`. The sync job uses `always()` so the dashboard is still updated when the health-check job reports `ATTENTION_REQUIRED` or `UNKNOWN`; the workflow can remain red while preserving the diagnostic state.
 
 ---
 

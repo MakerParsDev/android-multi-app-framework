@@ -19,6 +19,7 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
+      security-events: read
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -40,12 +41,13 @@ jobs:
   dashboard-sync:
     name: Sync Maintenance Dashboard
     needs: health-check
-    if: ${{ vars.AUTONOMOUS_MAINTENANCE_ENABLED == 'true' }}
+    if: ${{ always() && vars.AUTONOMOUS_MAINTENANCE_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
       issues: write
+      security-events: read
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

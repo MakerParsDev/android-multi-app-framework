@@ -105,4 +105,4 @@ The repository uses **Mergify** as the single authoritative merge engine and `.g
 
 | Workflow | Trigger | Purpose | Risk Control |
 |---|---|---|---|
-| `maintenance-health.yml` | Scheduled (daily 06:00 UTC), manual (`workflow_dispatch`) | Always evaluates health read-only; optionally updates the consolidated Dashboard issue | Health job is `contents: read`; the separate issue-write job runs only when `AUTONOMOUS_MAINTENANCE_ENABLED == 'true'` |
+| `maintenance-health.yml` | Scheduled (daily 06:00 UTC), manual (`workflow_dispatch`) | Always evaluates health, including live Dependabot alerts; optionally updates the consolidated Dashboard issue | Health job is read-only (`contents: read`, `security-events: read`); the issue-write job runs only when `AUTONOMOUS_MAINTENANCE_ENABLED == 'true'` and uses `always()` so red/degraded health still reaches the dashboard |
