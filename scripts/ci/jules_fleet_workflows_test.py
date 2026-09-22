@@ -198,10 +198,21 @@ class TestJulesFleetWorkflowsContract(unittest.TestCase):
             content = f.read()
         parsed = yaml.safe_load(content)
         jobs = parsed["jobs"]
-        self.assertEqual(jobs["health-check"]["permissions"], {"contents": "read"})
+        self.assertEqual(
+            jobs["health-check"]["permissions"],
+            {"contents": "read", "security-events": "read"},
+        )
         sync = jobs["dashboard-sync"]
+        self.assertIn("always()", sync["if"])
         self.assertIn("vars.AUTONOMOUS_MAINTENANCE_ENABLED == 'true'", sync["if"])
-        self.assertEqual(sync["permissions"], {"contents": "read", "issues": "write"})
+        self.assertEqual(
+            sync["permissions"],
+            {
+                "contents": "read",
+                "issues": "write",
+                "security-events": "read",
+            },
+        )
         self.assertIn("--check", content)
         self.assertIn("--sync-issue", content)
 
