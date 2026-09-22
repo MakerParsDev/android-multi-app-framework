@@ -20,24 +20,24 @@
     "version": "v8.0.1"
   },
   "actions/setup-java": {
-    "sha": "03ad4de0992f5dab5e18fcb136590ce7c4a0ac95",
-    "version": "v5.6.0"
+    "sha": "de7274f081f381c8f8158605e0321c36c376e2e6",
+    "version": "v6.0.1"
   },
   "actions/setup-node": {
     "sha": "820762786026740c76f36085b0efc47a31fe5020",
     "version": "v7.0.0"
   },
   "actions/setup-python": {
-    "sha": "e797f83bcb11b83ae66e0230d6156d7c80228e7c",
-    "version": "v6.0.0"
+    "sha": "5fda3b95a4ea91299a34e894583c3862153e4b97",
+    "version": "v7.0.0"
   },
   "actions/upload-artifact": {
     "sha": "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
     "version": "v7.0.1"
   },
   "codecov/codecov-action": {
-    "sha": "0fb7174895f61a3b6b78fc075e0cd60383518dac",
-    "version": "v5.5.5"
+    "sha": "303a32d7a59b442fa8d48b6a1cc6825c09c847a5",
+    "version": "v7.1.1"
   },
   "github/codeql-action": {
     "sha": "1c5b675653bb5c22dbe9b12b556ec555138e09fd",
