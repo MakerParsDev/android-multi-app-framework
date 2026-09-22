@@ -43,6 +43,8 @@ Broad `*:*` exceptions are forbidden. Expired exceptions fail the quality gate.
 
 The report inventories version keys, library aliases, plugin aliases, version sources, unused version keys, catalog prereleases, and transitive prerelease exceptions. The normal quality artifact collector includes these files automatically.
 
+The scheduled Dependency Audit and daily Maintenance Health also use GitHub's asynchronous dependency-graph SBOM API to materialize `build/reports/dependencies/repository.spdx.json`, then scan that SPDX document with checksum-pinned OSV-Scanner v2.6.0 into `build/reports/dependencies/osv-results.json`. The SBOM path deliberately replaces the former unsupported `--lockfile build.gradle.kts` invocation. Critical/high OSV findings block health (`ATTENTION_REQUIRED`); medium/low findings degrade health without pretending the repository is clean.
+
 Quality runs also execute Gradle with `--warning-mode all` and preserve the complete output at:
 
 - `build/reports/dependencies/gradle-quality.log`
@@ -60,7 +62,7 @@ The repository uses **GitHub Actions** and **Dependabot** for automated dependen
 - High-risk dependencies (Gradle, Kotlin, AGP, KSP, Hilt, Room, Firebase plugins, Play Billing) are isolated and never grouped;
 - **Mergify** governs all dependency pull request queues. Only Class A low-risk dev patch/minor updates are eligible for auto-merging after passing all required quality and security gates;
 - Major updates and sensitive toolchains require explicit human review and approval;
-- Continuous monitoring and drift detection are managed by `.github/workflows/maintenance-health.yml`.
+- Continuous monitoring and drift detection are managed by `.github/workflows/maintenance-health.yml`, using the repository dependency graph (GitHub SPDX SBOM) plus OSV rather than a privileged Dependabot Alerts API token.
 
 ### Autonomous merge rollout canary
 

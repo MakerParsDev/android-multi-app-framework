@@ -1,0 +1,360 @@
+#!/usr/bin/env python3
+"""Summarize OSV-Scanner JSON into the repository maintenance health model."""
+
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+import re
+from typing import Any
+
+SEVERITY_ORDER = {"unknown": 0, "low": 1, "medium": 2, "high": 3, "critical": 4}
+
+
+class OsvReportError(ValueError):
+    pass
+
+
+def _normalize_severity(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip().lower()
+    aliases = {
+        "moderate": "medium",
+        "medium": "medium",
+        "low": "low",
+        "high": "high",
+        "critical": "critical",
+    }
+    return aliases.get(normalized)
+
+
+def _severity_from_numeric_score(score: float) -> str:
+    if score >= 9.0:
+        return "critical"
+    if score >= 7.0:
+        return "high"
+    if score >= 4.0:
+        return "medium"
+    if score > 0:
+        return "low"
+    return "unknown"
+
+
+def _cvss2_score(vector: str) -> float | None:
+    """Calculate a CVSS v2 base score from a standard vector."""
+    if vector.startswith("CVSS:2.0/"):
+        vector = vector.removeprefix("CVSS:2.0/")
+    values = {}
+    for item in vector.split("/"):
+        if ":" not in item:
+            continue
+        key, value = item.split(":", 1)
+        values[key] = value
+
+    required = {"AV", "AC", "Au", "C", "I", "A"}
+    if not required.issubset(values):
+        return None
+
+    av = {"L": 0.395, "A": 0.646, "N": 1.0}
+    ac = {"H": 0.35, "M": 0.61, "L": 0.71}
+    au = {"M": 0.45, "S": 0.56, "N": 0.704}
+    cia = {"N": 0.0, "P": 0.275, "C": 0.660}
+    try:
+        impact = 10.41 * (
+            1
+            - (1 - cia[values["C"]])
+            * (1 - cia[values["I"]])
+            * (1 - cia[values["A"]])
+        )
+        exploitability = (
+            20 * av[values["AV"]] * ac[values["AC"]] * au[values["Au"]]
+        )
+    except KeyError:
+        return None
+
+    if impact <= 0:
+        return 0.0
+    base = ((0.6 * impact) + (0.4 * exploitability) - 1.5) * 1.176
+    return round(base + 1e-10, 1)
+
+
+def _cvss3_score(vector: str) -> float | None:
+    """Calculate a CVSS v3.0/v3.1 base score from a standard vector."""
+    if not vector.startswith(("CVSS:3.0/", "CVSS:3.1/")):
+        return None
+
+    values = {}
+    for item in vector.split("/")[1:]:
+        if ":" not in item:
+            continue
+        key, value = item.split(":", 1)
+        values[key] = value
+
+    required = {"AV", "AC", "PR", "UI", "S", "C", "I", "A"}
+    if not required.issubset(values):
+        return None
+
+    av = {"N": 0.85, "A": 0.62, "L": 0.55, "P": 0.2}
+    ac = {"L": 0.77, "H": 0.44}
+    ui = {"N": 0.85, "R": 0.62}
+    cia = {"H": 0.56, "L": 0.22, "N": 0.0}
+    pr_u = {"N": 0.85, "L": 0.62, "H": 0.27}
+    pr_c = {"N": 0.85, "L": 0.68, "H": 0.5}
+
+    try:
+        scope_changed = values["S"] == "C"
+        pr = (pr_c if scope_changed else pr_u)[values["PR"]]
+        exploitability = (
+            8.22 * av[values["AV"]] * ac[values["AC"]] * pr * ui[values["UI"]]
+        )
+        impact_base = 1 - (
+            (1 - cia[values["C"]])
+            * (1 - cia[values["I"]])
+            * (1 - cia[values["A"]])
+        )
+    except KeyError:
+        return None
+
+    if scope_changed:
+        impact = 7.52 * (impact_base - 0.029) - 3.25 * ((impact_base - 0.02) ** 15)
+    else:
+        impact = 6.42 * impact_base
+
+    if impact <= 0:
+        return 0.0
+    base = (
+        min(1.08 * (impact + exploitability), 10.0)
+        if scope_changed
+        else min(impact + exploitability, 10.0)
+    )
+    # CVSS requires round-up to one decimal, not normal round-to-nearest.
+    return int((base * 10.0) + 0.999999) / 10.0
+
+
+def _severity_from_score_entry(entry: dict[str, Any]) -> str | None:
+    """Normalize numeric and CVSS score entries without under-classifying risk."""
+    raw_score = entry.get("score")
+    score_type = str(entry.get("type") or "").strip().upper()
+
+    if isinstance(raw_score, (int, float)):
+        return _severity_from_numeric_score(float(raw_score))
+    if not isinstance(raw_score, str):
+        return None
+
+    stripped = raw_score.strip()
+    if re.fullmatch(r"[0-9]+(?:\.[0-9]+)?", stripped):
+        return _severity_from_numeric_score(float(stripped))
+
+    if stripped.startswith(("CVSS:3.0/", "CVSS:3.1/")):
+        numeric = _cvss3_score(stripped)
+        return _severity_from_numeric_score(numeric) if numeric is not None else None
+
+    if stripped.startswith("CVSS:2.0/") or score_type == "CVSS_V2":
+        numeric = _cvss2_score(stripped)
+        return _severity_from_numeric_score(numeric) if numeric is not None else None
+
+    if stripped.startswith("CVSS:4.0/") or score_type == "CVSS_V4":
+        # CVSS v4 base scoring uses a substantially different macro-vector
+        # algorithm. Do not invent a score here. vulnerability_severity() tracks
+        # the presence of an unscored v4 vector and escalates it to HIGH only
+        # when no authoritative textual, numeric, v2, or v3 severity exists.
+        return None
+
+    return None
+
+
+def vulnerability_severity(vulnerability: dict[str, Any]) -> str:
+    candidates: list[str] = []
+    has_unscored_cvss4 = False
+
+    database_specific = vulnerability.get("database_specific")
+    if isinstance(database_specific, dict):
+        normalized = _normalize_severity(database_specific.get("severity"))
+        if normalized:
+            candidates.append(normalized)
+
+    ecosystem_specific = vulnerability.get("ecosystem_specific")
+    if isinstance(ecosystem_specific, dict):
+        normalized = _normalize_severity(ecosystem_specific.get("severity"))
+        if normalized:
+            candidates.append(normalized)
+
+    severity_entries = vulnerability.get("severity")
+    if isinstance(severity_entries, list):
+        for entry in severity_entries:
+            if not isinstance(entry, dict):
+                continue
+
+            raw_score = entry.get("score")
+            score_type = str(entry.get("type") or "").strip().upper()
+            if (
+                score_type == "CVSS_V4"
+                or (
+                    isinstance(raw_score, str)
+                    and raw_score.strip().startswith("CVSS:4.0/")
+                )
+            ):
+                has_unscored_cvss4 = True
+
+            severity = _severity_from_score_entry(entry)
+            if severity:
+                candidates.append(severity)
+
+    if candidates:
+        return max(candidates, key=lambda value: SEVERITY_ORDER[value])
+    if has_unscored_cvss4:
+        # Fail closed for vector-only CVSS v4 records. If OSV also provides an
+        # authoritative textual/numeric/v2/v3 severity, that evidence above
+        # wins instead of this conservative fallback.
+        return "high"
+    return "unknown"
+
+
+def _group_severity(
+    vulnerabilities_by_id: dict[str, dict[str, Any]],
+    ids: list[str],
+) -> str:
+    severities = [
+        vulnerability_severity(vulnerabilities_by_id[vuln_id])
+        for vuln_id in ids
+        if vuln_id in vulnerabilities_by_id
+    ]
+    if not severities:
+        return "unknown"
+    return max(severities, key=lambda value: SEVERITY_ORDER[value])
+
+
+def summarize_osv_data(data: object) -> dict[str, Any]:
+    if not isinstance(data, dict):
+        raise OsvReportError("OSV report root must be an object")
+    results = data.get("results")
+    if not isinstance(results, list):
+        raise OsvReportError("OSV report must contain a results array")
+
+    counts = {name: 0 for name in ("critical", "high", "medium", "low", "unknown")}
+    affected_packages: set[tuple[str, str, str]] = set()
+    group_keys: set[tuple[str, str, str, tuple[str, ...]]] = set()
+
+    for result in results:
+        if not isinstance(result, dict):
+            raise OsvReportError("OSV result entries must be objects")
+        packages = result.get("packages", [])
+        if not isinstance(packages, list):
+            raise OsvReportError("OSV result packages must be an array")
+
+        for package_entry in packages:
+            if not isinstance(package_entry, dict):
+                continue
+            package = package_entry.get("package")
+            if not isinstance(package, dict):
+                continue
+            name = str(package.get("name") or "unknown")
+            version = str(package.get("version") or "unknown")
+            ecosystem = str(package.get("ecosystem") or "unknown")
+
+            vulnerabilities = package_entry.get("vulnerabilities", [])
+            if not isinstance(vulnerabilities, list):
+                raise OsvReportError("OSV vulnerabilities must be an array")
+            vuln_by_id = {
+                str(vuln.get("id")): vuln
+                for vuln in vulnerabilities
+                if isinstance(vuln, dict) and vuln.get("id")
+            }
+            if not vuln_by_id:
+                continue
+
+            affected_packages.add((ecosystem, name, version))
+            groups = package_entry.get("groups")
+            if isinstance(groups, list) and groups:
+                covered: set[str] = set()
+                for group in groups:
+                    if not isinstance(group, dict):
+                        continue
+                    ids = sorted(
+                        {
+                            str(vuln_id)
+                            for vuln_id in group.get("ids", [])
+                            if str(vuln_id) in vuln_by_id
+                        }
+                    )
+                    if not ids:
+                        continue
+                    covered.update(ids)
+                    key = (ecosystem, name, version, tuple(ids))
+                    if key in group_keys:
+                        continue
+                    group_keys.add(key)
+                    counts[_group_severity(vuln_by_id, ids)] += 1
+
+                for vuln_id in sorted(set(vuln_by_id) - covered):
+                    key = (ecosystem, name, version, (vuln_id,))
+                    if key not in group_keys:
+                        group_keys.add(key)
+                        counts[vulnerability_severity(vuln_by_id[vuln_id])] += 1
+            else:
+                for vuln_id, vuln in vuln_by_id.items():
+                    key = (ecosystem, name, version, (vuln_id,))
+                    if key not in group_keys:
+                        group_keys.add(key)
+                        counts[vulnerability_severity(vuln)] += 1
+
+    total = sum(counts.values())
+    if counts["critical"] or counts["high"]:
+        state = "ATTENTION_REQUIRED"
+    elif total:
+        state = "DEGRADED"
+    else:
+        state = "HEALTHY"
+
+    return {
+        "state": state,
+        "total": total,
+        "affected_packages": len(affected_packages),
+        "counts": counts,
+    }
+
+
+def summarize_osv_report(path: Path) -> tuple[str, str]:
+    if not path.is_file():
+        return "UNKNOWN", f"OSV report missing: {path}"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        summary = summarize_osv_data(data)
+    except (OSError, json.JSONDecodeError, OsvReportError, ValueError) as error:
+        return "UNKNOWN", f"OSV report invalid: {error}"
+
+    counts = summary["counts"]
+    if summary["state"] == "HEALTHY":
+        return "HEALTHY", "No known vulnerabilities found in the GitHub SPDX SBOM"
+
+    message = (
+        f"{summary['total']} vulnerability group(s) across "
+        f"{summary['affected_packages']} affected package(s): "
+        f"{counts['critical']} critical, {counts['high']} high, "
+        f"{counts['medium']} medium, {counts['low']} low, "
+        f"{counts['unknown']} unknown"
+    )
+    return str(summary["state"]), message
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--input",
+        type=Path,
+        default=Path("build/reports/dependencies/osv-results.json"),
+    )
+    return parser.parse_args()
+
+
+def main() -> int:
+    args = parse_args()
+    state, message = summarize_osv_report(args.input)
+    print(f"{state}: {message}")
+    return 1 if state == "UNKNOWN" else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -21,7 +21,6 @@ import os
 from pathlib import Path
 import subprocess  # nosec B404
 import sys
-from typing import Any
 
 from bootstrap_autonomous_repository_settings import (
     RULESET_NAME,
@@ -29,6 +28,7 @@ from bootstrap_autonomous_repository_settings import (
     ruleset_drift,
     run_gh_api,
 )
+from osv_health import summarize_osv_report
 
 if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     try:
@@ -156,47 +156,17 @@ def check_dependabot_coverage() -> tuple[bool, str]:
     )
 
 
-def check_dependabot_alerts(repo: str | None) -> tuple[str, str]:
-    """Summarize live open Dependabot alerts without hiding critical backlog."""
-    if not repo:
-        return "UNKNOWN", "Repository could not be resolved for Dependabot alert check"
-
-    result = run_gh_api(
-        "GET",
-        f"repos/{repo}/dependabot/alerts?state=open&per_page=100",
-        paginate=True,
+def check_repository_vulnerabilities() -> tuple[str, str]:
+    """Read the tokenless GitHub-SBOM + OSV-Scanner health report."""
+    configured = os.environ.get("OSV_REPORT_PATH")
+    report_path = (
+        Path(configured)
+        if configured
+        else ROOT / "build/reports/dependencies/osv-results.json"
     )
-    if not result.ok or not isinstance(result.data, list):
-        return "UNKNOWN", result.stderr or "Unable to list Dependabot alerts"
-
-    alerts: list[dict[str, Any]] = []
-    for page in result.data:
-        if not isinstance(page, list):
-            return "UNKNOWN", "Dependabot alert pagination returned an invalid page shape"
-        alerts.extend(item for item in page if isinstance(item, dict))
-
-    counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
-    for item in alerts:
-        if not isinstance(item, dict):
-            continue
-        advisory = item.get("security_advisory")
-        if not isinstance(advisory, dict):
-            continue
-        severity = str(advisory.get("severity") or "").lower()
-        if severity in counts:
-            counts[severity] += 1
-
-    total = sum(counts.values())
-    summary = (
-        f"{total} open alert(s): "
-        f"{counts['critical']} critical, {counts['high']} high, "
-        f"{counts['medium']} medium, {counts['low']} low"
-    )
-    if counts["critical"] or counts["high"]:
-        return "ATTENTION_REQUIRED", summary
-    if counts["medium"] or counts["low"]:
-        return "DEGRADED", summary
-    return "HEALTHY", "No open Dependabot security alerts"
+    if not report_path.is_absolute():
+        report_path = ROOT / report_path
+    return summarize_osv_report(report_path)
 
 
 def resolve_repository(explicit_repo: str | None = None) -> str | None:
@@ -271,7 +241,7 @@ def generate_dashboard_markdown(repo: str | None = None) -> tuple[str, str]:
     codeql_ok, codeql_msg = check_codeql_kotlin_compatibility()
     mergify_ok, mergify_msg = check_mergify_configuration()
     dependabot_ok, dependabot_msg = check_dependabot_coverage()
-    dependabot_alert_state, dependabot_alert_msg = check_dependabot_alerts(resolved_repo)
+    vulnerability_state, vulnerability_msg = check_repository_vulnerabilities()
     ruleset_state, ruleset_msg = check_github_ruleset_state(resolved_repo)
     automerge_ok, automerge_msg = check_automerge_control()
     expirations = check_expirations()
@@ -279,16 +249,16 @@ def generate_dashboard_markdown(repo: str | None = None) -> tuple[str, str]:
     critical_checks = [actions_ok, codeql_ok, mergify_ok, dependabot_ok, automerge_ok]
     if not all(critical_checks):
         overall_status = "ATTENTION_REQUIRED"
-    elif ruleset_state == "UNKNOWN" or dependabot_alert_state == "UNKNOWN":
+    elif ruleset_state == "UNKNOWN" or vulnerability_state == "UNKNOWN":
         overall_status = "UNKNOWN"
     elif (
         ruleset_state == "ATTENTION_REQUIRED"
-        or dependabot_alert_state == "ATTENTION_REQUIRED"
+        or vulnerability_state == "ATTENTION_REQUIRED"
     ):
         overall_status = "ATTENTION_REQUIRED"
     elif ruleset_state == "BOOTSTRAP_PENDING":
         overall_status = "BOOTSTRAP_PENDING"
-    elif expirations or dependabot_alert_state == "DEGRADED":
+    elif expirations or vulnerability_state == "DEGRADED":
         overall_status = "DEGRADED"
     else:
         overall_status = "HEALTHY"
@@ -299,12 +269,12 @@ def generate_dashboard_markdown(repo: str | None = None) -> tuple[str, str]:
         "ATTENTION_REQUIRED": "❌",
         "UNKNOWN": "❓",
     }.get(ruleset_state, "⚠️")
-    dependabot_alert_icon = {
+    vulnerability_icon = {
         "HEALTHY": "✅",
         "DEGRADED": "⚠️",
         "ATTENTION_REQUIRED": "❌",
         "UNKNOWN": "❓",
-    }.get(dependabot_alert_state, "⚠️")
+    }.get(vulnerability_state, "⚠️")
 
     lines = [
         "# Autonomous Maintenance Dashboard",
@@ -316,7 +286,7 @@ def generate_dashboard_markdown(repo: str | None = None) -> tuple[str, str]:
         "",
         f"- **Mergify Control Plane:** {'✅' if mergify_ok else '❌'} {mergify_msg}",
         f"- **Dependabot Automation:** {'✅' if dependabot_ok else '❌'} {dependabot_msg}",
-        f"- **Dependabot Security Alerts:** {dependabot_alert_icon} {dependabot_alert_msg}",
+        f"- **Repository Vulnerability Scan (GitHub SPDX SBOM + OSV):** {vulnerability_icon} {vulnerability_msg}",
         f"- **Toolchain & CodeQL Ceiling:** {'✅' if codeql_ok else '❌'} {codeql_msg}",
         f"- **Pinned GitHub Actions:** {'✅' if actions_ok else '❌'} {actions_msg}",
         f"- **GitHub Ruleset:** {ruleset_icon} {ruleset_msg}",

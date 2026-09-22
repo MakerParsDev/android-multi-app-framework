@@ -91,71 +91,45 @@ class MaintenanceHealthControllerTest(unittest.TestCase):
         self.assertIn("firebase-rules-tests", findings[0])
         self.assertIn("GHSA-example-test", findings[0])
 
-    @patch("maintenance_health_controller.run_gh_api")
-    def test_dependabot_alerts_critical_or_high_require_attention(
-        self, api: MagicMock
+    @patch("maintenance_health_controller.summarize_osv_report")
+    def test_repository_vulnerability_health_reads_osv_report(
+        self, summarize: MagicMock
     ):
-        api.return_value = self.api_result(
-            [[
-                {"security_advisory": {"severity": "critical"}},
-                {"security_advisory": {"severity": "high"}},
-                {"security_advisory": {"severity": "medium"}},
-            ]]
-        )
-        state, message = health.check_dependabot_alerts("o/r")
-        api.assert_called_once_with(
-            "GET",
-            "repos/o/r/dependabot/alerts?state=open&per_page=100",
-            paginate=True,
-        )
-        self.assertEqual(state, "ATTENTION_REQUIRED")
-        self.assertIn("1 critical", message)
-        self.assertIn("1 high", message)
-
-    @patch("maintenance_health_controller.run_gh_api")
-    def test_dependabot_alerts_medium_or_low_are_degraded(self, api: MagicMock):
-        api.return_value = self.api_result(
-            [[
-                {"security_advisory": {"severity": "medium"}},
-                {"security_advisory": {"severity": "low"}},
-            ]]
-        )
-        state, message = health.check_dependabot_alerts("o/r")
+        summarize.return_value = ("DEGRADED", "2 medium")
+        with patch.dict(
+            os.environ,
+            {"OSV_REPORT_PATH": "build/reports/dependencies/custom-osv.json"},
+            clear=False,
+        ):
+            state, message = health.check_repository_vulnerabilities()
         self.assertEqual(state, "DEGRADED")
-        self.assertIn("2 open alert", message)
-
-    @patch("maintenance_health_controller.run_gh_api")
-    def test_dependabot_alerts_later_page_severe_alert_requires_attention(
-        self, api: MagicMock
-    ):
-        api.return_value = self.api_result(
-            [
-                [{"security_advisory": {"severity": "low"}}] * 100,
-                [{"security_advisory": {"severity": "critical"}}],
-            ]
+        self.assertEqual(message, "2 medium")
+        summarize.assert_called_once()
+        report_path = summarize.call_args.args[0]
+        self.assertTrue(
+            str(report_path).replace("\\", "/").endswith(
+                "build/reports/dependencies/custom-osv.json"
+            )
         )
-        state, message = health.check_dependabot_alerts("o/r")
-        self.assertEqual(state, "ATTENTION_REQUIRED")
-        self.assertIn("1 critical", message)
-        self.assertIn("100 low", message)
 
-    @patch("maintenance_health_controller.run_gh_api")
-    def test_dependabot_alerts_invalid_page_shape_is_unknown(self, api: MagicMock):
-        api.return_value = self.api_result([[{"security_advisory": {"severity": "low"}}], {"bad": "shape"}])
-        state, message = health.check_dependabot_alerts("o/r")
-        self.assertEqual(state, "UNKNOWN")
-        self.assertIn("invalid page shape", message)
-
-    @patch("maintenance_health_controller.run_gh_api")
-    def test_dependabot_alerts_api_error_is_unknown(self, api: MagicMock):
-        api.return_value = self.api_result(None, 1, "HTTP 403")
-        state, message = health.check_dependabot_alerts("o/r")
-        self.assertEqual(state, "UNKNOWN")
-        self.assertIn("403", message)
+    @patch("maintenance_health_controller.summarize_osv_report")
+    def test_repository_vulnerability_health_defaults_to_standard_report(
+        self, summarize: MagicMock
+    ):
+        summarize.return_value = ("HEALTHY", "clean")
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("OSV_REPORT_PATH", None)
+            state, message = health.check_repository_vulnerabilities()
+        self.assertEqual((state, message), ("HEALTHY", "clean"))
+        report_path = summarize.call_args.args[0]
+        self.assertEqual(
+            report_path,
+            health.ROOT / "build/reports/dependencies/osv-results.json",
+        )
 
     @patch("maintenance_health_controller.check_expirations", return_value=[])
     @patch(
-        "maintenance_health_controller.check_dependabot_alerts",
+        "maintenance_health_controller.check_repository_vulnerabilities",
         return_value=("HEALTHY", "ok"),
     )
     @patch("maintenance_health_controller.check_automerge_control", return_value=(False, "broken"))
@@ -170,7 +144,7 @@ class MaintenanceHealthControllerTest(unittest.TestCase):
 
     @patch("maintenance_health_controller.check_expirations", return_value=[])
     @patch(
-        "maintenance_health_controller.check_dependabot_alerts",
+        "maintenance_health_controller.check_repository_vulnerabilities",
         return_value=("HEALTHY", "ok"),
     )
     @patch("maintenance_health_controller.check_automerge_control", return_value=(True, "ok"))
@@ -185,7 +159,7 @@ class MaintenanceHealthControllerTest(unittest.TestCase):
 
     @patch("maintenance_health_controller.check_expirations", return_value=[])
     @patch(
-        "maintenance_health_controller.check_dependabot_alerts",
+        "maintenance_health_controller.check_repository_vulnerabilities",
         return_value=("HEALTHY", "ok"),
     )
     @patch("maintenance_health_controller.check_automerge_control", return_value=(True, "ok"))
@@ -203,7 +177,7 @@ class MaintenanceHealthControllerTest(unittest.TestCase):
 
     @patch("maintenance_health_controller.check_expirations", return_value=[])
     @patch(
-        "maintenance_health_controller.check_dependabot_alerts",
+        "maintenance_health_controller.check_repository_vulnerabilities",
         return_value=("ATTENTION_REQUIRED", "1 critical"),
     )
     @patch("maintenance_health_controller.check_automerge_control", return_value=(True, "ok"))
@@ -212,14 +186,17 @@ class MaintenanceHealthControllerTest(unittest.TestCase):
     @patch("maintenance_health_controller.check_mergify_configuration", return_value=(True, "ok"))
     @patch("maintenance_health_controller.check_codeql_kotlin_compatibility", return_value=(True, "ok"))
     @patch("maintenance_health_controller.check_pinned_actions", return_value=(True, "ok"))
-    def test_critical_dependabot_alerts_require_attention(self, *_mocks):
+    def test_critical_repository_vulnerability_requires_attention(self, *_mocks):
         text, state = health.generate_dashboard_markdown("o/r")
         self.assertEqual(state, "ATTENTION_REQUIRED")
-        self.assertIn("Dependabot Security Alerts:** ❌ 1 critical", text)
+        self.assertIn(
+            "Repository Vulnerability Scan (GitHub SPDX SBOM + OSV):** ❌ 1 critical",
+            text,
+        )
 
     @patch("maintenance_health_controller.check_expirations", return_value=["expired"])
     @patch(
-        "maintenance_health_controller.check_dependabot_alerts",
+        "maintenance_health_controller.check_repository_vulnerabilities",
         return_value=("HEALTHY", "ok"),
     )
     @patch("maintenance_health_controller.check_automerge_control", return_value=(True, "ok"))

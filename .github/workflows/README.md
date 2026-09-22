@@ -9,6 +9,7 @@ and must not be re-enabled by copying or renaming them.
 | CI | PR, `main` push | policy, secrets, quality, 17-flavor lint/assemble | skipped for Dependabot |
 | Security | PR, `main` push, weekly, manual | actionlint, zizmor, Gitleaks, dependency review | dependency review only on PR |
 | Dependency Submission | dependency/build changes on `main`, manual | submit resolved Gradle dependency graph | trusted `main` only |
+| Dependency Audit | weekly, manual | fetch the GitHub-generated SPDX SBOM and scan it with checksum-pinned OSV-Scanner v2.6.0, then run catalog/runtime/supply-chain audits | read-only; OSV findings are preserved as reports while critical/high policy decisions are surfaced by Maintenance Health |
 | CodeQL | PR, `main`, weekly, manual | Java/Kotlin manual-build analysis | one representative flavor; required for Dependabot too |
 | Device Smoke | nightly, manual | two instrumentation smoke tests on a Gradle Managed Device | one flavor, one ATD |
 | Baseline Profiles | weekly, manual | generate variant-scoped profiles for all 17 flavors and update one automation PR | full-speed managed-device matrix |
@@ -105,4 +106,4 @@ The repository uses **Mergify** as the single authoritative merge engine and `.g
 
 | Workflow | Trigger | Purpose | Risk Control |
 |---|---|---|---|
-| `maintenance-health.yml` | Scheduled (daily 06:00 UTC), manual (`workflow_dispatch`) | Always evaluates health, including live Dependabot alerts; optionally updates the consolidated Dashboard issue | Health job is read-only (`contents: read`, `security-events: read`); the issue-write job runs only when `AUTONOMOUS_MAINTENANCE_ENABLED == 'true'` and uses `always()` so red/degraded health still reaches the dashboard |
+| `maintenance-health.yml` | Scheduled (daily 06:00 UTC), manual (`workflow_dispatch`) | Fetches GitHub's asynchronous SPDX SBOM, scans it with checksum-pinned OSV-Scanner v2.6.0, evaluates the rest of the control plane, and optionally updates the consolidated Dashboard issue | No PAT or `security-events` permission is required. The health job is `contents: read`; scan artifacts are passed to the issue-write job, which runs only when `AUTONOMOUS_MAINTENANCE_ENABLED == 'true'` and uses `always()` so degraded/blocked/unknown health still reaches the dashboard. |
