@@ -19,18 +19,24 @@ def numeric_version(value: str) -> tuple[int, ...]:
 
 
 class CodeqlKotlinCompatibilityTest(unittest.TestCase):
-    def test_kotlin_compiler_stays_below_stable_codeql_ceiling(self) -> None:
+    def test_kotlin_compiler_stays_within_stable_codeql_ceiling(self) -> None:
         self.assertTrue(CODEQL_POLICY.is_file(), "config/codeql-compatibility-policy.json must exist")
         policy = json.loads(CODEQL_POLICY.read_text(encoding="utf-8"))
-        max_exclusive_str = policy["kotlin"]["supported_max_exclusive"]
-        max_exclusive = numeric_version(max_exclusive_str)
+        self.assertEqual(policy.get("schema_version"), 2)
+        max_inclusive_str = policy["kotlin"]["supported_max_inclusive"]
+        max_inclusive = numeric_version(max_inclusive_str)
 
         catalog = tomllib.loads(VERSION_CATALOG.read_text(encoding="utf-8"))
         kotlin_version = catalog["versions"]["kotlin"]
-        self.assertLess(
+        self.assertLessEqual(
             numeric_version(kotlin_version),
-            max_exclusive,
-            f"CodeQL bundle {policy.get('codeql_bundle_version')} supports Kotlin versions below {max_exclusive_str}",
+            max_inclusive,
+            f"CodeQL bundle {policy.get('codeql_bundle_version')} supports Kotlin versions through {max_inclusive_str} inclusive",
+        )
+        self.assertEqual(
+            policy["kotlin"]["current_configured_version"],
+            kotlin_version,
+            "CodeQL compatibility policy must track the configured Kotlin version exactly",
         )
 
     def test_workflow_does_not_claim_an_ineffective_interceptor_bypass(self) -> None:

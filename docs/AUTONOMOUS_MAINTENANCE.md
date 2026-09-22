@@ -165,7 +165,7 @@ The `security.yml` workflow runs four security checks:
 ## 10. CodeQL & Kotlin Compatibility Ceiling
 
 - **Ceiling Policy:** Recorded in `config/codeql-compatibility-policy.json`.
-- **Enforcement:** `scripts/ci/codeql_kotlin_compatibility_test.py` validates that `gradle/libs.versions.toml` Kotlin compiler stays below the CodeQL ceiling (currently `< 2.4.10` for CodeQL bundle 2.26.1).
+- **Enforcement:** `scripts/ci/codeql_kotlin_compatibility_test.py` validates that `gradle/libs.versions.toml` stays at or below the documented ceiling. The current live Actions runtime uses CodeQL bundle 2.27.0 and the policy allows Kotlin through `2.4.20` inclusive; the configured Kotlin compiler is `2.4.20`. Any future ceiling increase requires both current GitHub documentation and a successful repository CodeQL canary.
 - **Dependabot:** The required `Analyze Java and Kotlin` job also runs for Dependabot pull requests. GitHub code scanning supports result upload for `pull_request`-triggered Dependabot analysis, so the required CodeQL context cannot be skipped on PRs intended for autonomous merge.
 
 ---
