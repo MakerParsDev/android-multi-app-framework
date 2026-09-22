@@ -16,11 +16,11 @@
     "predeploy": "npm run verify"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260721.1",
+    "@cloudflare/workers-types": "^5.20260922.1",
     "eslint": "^10.11.0",
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.70.0",
-    "wrangler": "^4.112.0"
+    "wrangler": "^4.136.2"
   },
   "overrides": {
     "brace-expansion": "^5.0.9",
