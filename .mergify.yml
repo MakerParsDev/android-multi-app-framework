@@ -57,13 +57,15 @@ merge_protections_settings:
                 # Dev-only groups may contain patch/minor updates, but no
                 # production dependency may piggy-back on the list match.
                 - and:
-                    - dependabot-dependency-type = development
-                    - dependabot-dependency-type != production
+                    # Mergify exposes the raw Dependabot commit metadata
+                    # (for example: direct:development), not just "development".
+                    - dependabot-dependency-type ~= :development$
+                    - -dependabot-dependency-type ~= :production$
                 # Production groups are eligible only when every update is a
                 # patch and no development dependency is mixed into the group.
                 - and:
-                    - dependabot-dependency-type = production
-                    - dependabot-dependency-type != development
+                    - dependabot-dependency-type ~= :production$
+                    - -dependabot-dependency-type ~= :development$
                     - dependabot-update-type = version-update:semver-patch
                     - dependabot-update-type != version-update:semver-minor
             - -label = automerge:disabled

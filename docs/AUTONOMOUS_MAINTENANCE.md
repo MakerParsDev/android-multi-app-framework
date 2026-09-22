@@ -71,7 +71,7 @@ To eliminate race conditions and split-brain states:
     - `/side-projects/firebase/functions`
     - `/side-projects/firebase/rules-tests`
 - **Rebase Strategy:** The configuration intentionally does **not** set `rebase-strategy: disabled`, so GitHub's default automatic Dependabot rebasing remains active. Long-lived update PRs refresh after `main` changes instead of becoming manual conflict debt, while Mergify still serializes the actual merge queue.
-- **Grouping:** Development dependencies are grouped for patch/minor updates; production dependencies are grouped only for patch updates. Production minors and semver-majors remain standalone/manual. This mirrors Mergify's dev-vs-production conditions and prevents mixed groups from becoming permanently ineligible.
+- **Grouping:** Development dependencies are grouped for patch/minor updates; production dependencies are grouped only for patch updates. Production minors and semver-majors remain standalone/manual. Mergify evaluates the raw Dependabot commit metadata (for example `direct:development` and `direct:production`), so the policy matches the `:development` / `:production` suffixes rather than shortened labels. This prevents valid grouped updates from being silently ineligible while mixed groups still fail closed.
 - **Sensitive/Protected Dependencies Isolated:** Dependabot group exclusions mirror the Mergify trust boundary. Android/Kotlin toolchains, auth/crypto, Billing, Firebase/Cloudflare deploy tooling, Gradle wrapper, and transitive dependencies pinned from protected root build files are excluded from groups. This prevents one sensitive/root-build update from making an entire safe patch batch permanently manual.
 
 ---
