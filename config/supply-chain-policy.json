@@ -27,13 +27,13 @@
     },
     {
       "coordinate": "com.squareup.wire:wire-runtime",
-      "version": "6.4.7",
-      "reason": "Security floor above Wire 6.4.5, which fixed CVE-2026-63126 / GHSA-9rm7-3qhh-h2mc; 6.4.7 is the latest stable 6.4.x patch."
+      "version": "7.0.3",
+      "reason": "Reviewed Wire 7 stable floor above the 6.4.5 security fix; 7.0.1 avoids pulling Kotlin 2.4 via KotlinPoet and 7.0.3 validates generated package option values before code emission."
     },
     {
       "coordinate": "com.squareup.wire:wire-runtime-jvm",
-      "version": "6.4.7",
-      "reason": "Keep the JVM Wire runtime aligned with the multiplatform runtime security override."
+      "version": "7.0.3",
+      "reason": "Keep the JVM Wire runtime aligned with the reviewed Wire 7 multiplatform runtime floor."
     },
     {
       "coordinate": "ch.qos.logback:logback-core",
