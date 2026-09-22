@@ -39,6 +39,36 @@
       "coordinate": "ch.qos.logback:logback-core",
       "version": "1.5.34",
       "reason": "Security floor that fixes CVE-2026-10532 / GHSA-jhq6-gfmj-v8fx and includes the prior CVE-2026-9828 remediation."
+    },
+    {
+      "coordinate": "ch.qos.logback:logback-classic",
+      "version": "1.5.34",
+      "reason": "Keep Logback Classic aligned with the secured Core version so ktlint tooling does not run with a mixed Logback family."
+    },
+    {
+      "coordinate": "org.bitbucket.b_c:jose4j",
+      "version": "0.9.6",
+      "reason": "Security floor for the compressed JWE denial-of-service advisory affecting jose4j versions below 0.9.6."
+    },
+    {
+      "coordinate": "org.jdom:jdom2",
+      "version": "2.0.6.1",
+      "reason": "Security floor for the JDOM XML external entity advisory affecting versions below 2.0.6.1."
+    },
+    {
+      "coordinate": "org.apache.commons:commons-lang3",
+      "version": "3.18.0",
+      "reason": "Security floor for the Commons Lang uncontrolled-recursion advisory affecting versions below 3.18.0."
+    },
+    {
+      "coordinate": "org.apache.httpcomponents:httpclient",
+      "version": "4.5.14",
+      "reason": "Security floor above the Apache HttpClient cross-site scripting advisory fixed in 4.5.13."
+    },
+    {
+      "coordinate": "com.google.guava:guava",
+      "version": "33.6.0-jre",
+      "reason": "Retain the repository's reviewed Guava floor above historical temporary-directory and information-disclosure advisories."
     }
   ],
   "schema_version": 1

@@ -90,6 +90,15 @@ def supply_fixture(root: Path):
         " } } }\n",
         encoding="utf-8",
     )
+    (root / "build.gradle.kts").write_text(
+        'buildscript { configurations.classpath { resolutionStrategy { '
+        'force("org.example:secure-lib:1.2.3")'
+        " } } }\n"
+        'allprojects { configurations.configureEach { resolutionStrategy { '
+        'force("org.example:secure-lib:1.2.3")'
+        " } } }\n",
+        encoding="utf-8",
+    )
     return {
         "schema_version": 1,
         "gradle_wrapper": {
@@ -180,6 +189,24 @@ class SecurityGatePolicyTest(unittest.TestCase):
                 any(
                     "org.example:secure-lib must be forced to policy version 1.2.3"
                     in error
+                    for error in errors
+                )
+            )
+
+    def test_transitive_security_override_missing_project_scope_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            policy = supply_fixture(root)
+            (root / "build.gradle.kts").write_text(
+                'buildscript { configurations.classpath { resolutionStrategy { '
+                'force("org.example:secure-lib:1.2.3")'
+                " } } }\n",
+                encoding="utf-8",
+            )
+            errors = validate_supply(root, policy, date(2026, 7, 12))
+            self.assertTrue(
+                any(
+                    "root plugin classpath and all project configurations" in error
                     for error in errors
                 )
             )

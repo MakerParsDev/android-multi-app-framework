@@ -3,6 +3,29 @@ import io.gitlab.arturbosch.detekt.Detekt
 import org.jetbrains.kotlin.gradle.dsl.KotlinBaseExtension
 import org.gradle.api.artifacts.VersionCatalogsExtension
 
+// Security floors for the root plugin/buildscript classpath.
+// settings.gradle.kts buildscript resolution does not govern the plugin classpath
+// created by this project's plugins {} block, so vulnerable plugin transitives
+// must be constrained here as well.
+buildscript {
+    configurations.classpath {
+        resolutionStrategy {
+            force("org.bouncycastle:bcprov-jdk18on:1.86")
+            force("org.bouncycastle:bcpkix-jdk18on:1.86")
+            force("org.bouncycastle:bcutil-jdk18on:1.86")
+            force("com.google.guava:guava:33.6.0-jre")
+            force("org.jdom:jdom2:2.0.6.1")
+            force("org.bitbucket.b_c:jose4j:0.9.6")
+            force("org.apache.commons:commons-lang3:3.18.0")
+            force("ch.qos.logback:logback-core:1.5.34")
+            force("ch.qos.logback:logback-classic:1.5.34")
+            force("org.apache.httpcomponents:httpclient:4.5.14")
+            force("com.squareup.wire:wire-runtime:6.4.7")
+            force("com.squareup.wire:wire-runtime-jvm:6.4.7")
+        }
+    }
+}
+
 // Top-level build file where you can add configuration options common to all subprojects/modules.
 plugins {
     alias(libs.plugins.android.application) apply false
@@ -21,6 +44,28 @@ plugins {
     alias(libs.plugins.ktlint) apply false
     alias(libs.plugins.kover)
 
+}
+
+// Apply the same reviewed security floors to every project configuration.
+// This covers application/test/tooling dependencies (for example Benchmark,
+// Robolectric, and ktlint) that are outside the root plugin classpath.
+allprojects {
+    configurations.configureEach {
+        resolutionStrategy {
+            force("org.bouncycastle:bcprov-jdk18on:1.86")
+            force("org.bouncycastle:bcpkix-jdk18on:1.86")
+            force("org.bouncycastle:bcutil-jdk18on:1.86")
+            force("com.google.guava:guava:33.6.0-jre")
+            force("org.jdom:jdom2:2.0.6.1")
+            force("org.bitbucket.b_c:jose4j:0.9.6")
+            force("org.apache.commons:commons-lang3:3.18.0")
+            force("ch.qos.logback:logback-core:1.5.34")
+            force("ch.qos.logback:logback-classic:1.5.34")
+            force("org.apache.httpcomponents:httpclient:4.5.14")
+            force("com.squareup.wire:wire-runtime:6.4.7")
+            force("com.squareup.wire:wire-runtime-jvm:6.4.7")
+        }
+    }
 }
 
 // Test JVM paralelliğini de sınırla

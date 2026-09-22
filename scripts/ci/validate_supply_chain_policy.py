@@ -123,10 +123,17 @@ def validate_transitive_security_overrides(root: Path, overrides: Any) -> List[s
         return ["transitive_security_overrides must be a non-empty list"]
 
     settings_path = root / "settings.gradle.kts"
+    build_path = root / "build.gradle.kts"
+    missing: List[str] = []
     if not settings_path.is_file():
-        return [f"Missing Gradle settings file: {settings_path}"]
+        missing.append(f"Missing Gradle settings file: {settings_path}")
+    if not build_path.is_file():
+        missing.append(f"Missing root Gradle build file: {build_path}")
+    if missing:
+        return missing
 
     settings_text = settings_path.read_text(encoding="utf-8")
+    build_text = build_path.read_text(encoding="utf-8")
     errors: List[str] = []
     seen: set[str] = set()
 
@@ -158,6 +165,11 @@ def validate_transitive_security_overrides(root: Path, overrides: Any) -> List[s
         if expected not in settings_text:
             errors.append(
                 f"{coordinate} must be forced to policy version {version} in settings.gradle.kts"
+            )
+        if build_text.count(expected) < 2:
+            errors.append(
+                f"{coordinate} must be forced to policy version {version} in both "
+                "the root plugin classpath and all project configurations in build.gradle.kts"
             )
 
     return errors
