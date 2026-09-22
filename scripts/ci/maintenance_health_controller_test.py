@@ -56,7 +56,46 @@ class MaintenanceHealthControllerTest(unittest.TestCase):
         state, _ = health.check_github_ruleset_state("o/r")
         self.assertEqual(state, "HEALTHY")
 
+    @patch("maintenance_health_controller.run_gh_api")
+    def test_dependabot_alerts_critical_or_high_require_attention(
+        self, api: MagicMock
+    ):
+        api.return_value = self.api_result(
+            [
+                {"security_advisory": {"severity": "critical"}},
+                {"security_advisory": {"severity": "high"}},
+                {"security_advisory": {"severity": "medium"}},
+            ]
+        )
+        state, message = health.check_dependabot_alerts("o/r")
+        self.assertEqual(state, "ATTENTION_REQUIRED")
+        self.assertIn("1 critical", message)
+        self.assertIn("1 high", message)
+
+    @patch("maintenance_health_controller.run_gh_api")
+    def test_dependabot_alerts_medium_or_low_are_degraded(self, api: MagicMock):
+        api.return_value = self.api_result(
+            [
+                {"security_advisory": {"severity": "medium"}},
+                {"security_advisory": {"severity": "low"}},
+            ]
+        )
+        state, message = health.check_dependabot_alerts("o/r")
+        self.assertEqual(state, "DEGRADED")
+        self.assertIn("2 open alert", message)
+
+    @patch("maintenance_health_controller.run_gh_api")
+    def test_dependabot_alerts_api_error_is_unknown(self, api: MagicMock):
+        api.return_value = self.api_result(None, 1, "HTTP 403")
+        state, message = health.check_dependabot_alerts("o/r")
+        self.assertEqual(state, "UNKNOWN")
+        self.assertIn("403", message)
+
     @patch("maintenance_health_controller.check_expirations", return_value=[])
+    @patch(
+        "maintenance_health_controller.check_dependabot_alerts",
+        return_value=("HEALTHY", "ok"),
+    )
     @patch("maintenance_health_controller.check_automerge_control", return_value=(False, "broken"))
     @patch("maintenance_health_controller.check_github_ruleset_state", return_value=("BOOTSTRAP_PENDING", "pending"))
     @patch("maintenance_health_controller.check_dependabot_coverage", return_value=(True, "ok"))
@@ -68,6 +107,10 @@ class MaintenanceHealthControllerTest(unittest.TestCase):
         self.assertEqual(state, "ATTENTION_REQUIRED")
 
     @patch("maintenance_health_controller.check_expirations", return_value=[])
+    @patch(
+        "maintenance_health_controller.check_dependabot_alerts",
+        return_value=("HEALTHY", "ok"),
+    )
     @patch("maintenance_health_controller.check_automerge_control", return_value=(True, "ok"))
     @patch("maintenance_health_controller.check_github_ruleset_state", return_value=("UNKNOWN", "unavailable"))
     @patch("maintenance_health_controller.check_dependabot_coverage", return_value=(True, "ok"))
@@ -79,6 +122,10 @@ class MaintenanceHealthControllerTest(unittest.TestCase):
         self.assertEqual(state, "UNKNOWN")
 
     @patch("maintenance_health_controller.check_expirations", return_value=[])
+    @patch(
+        "maintenance_health_controller.check_dependabot_alerts",
+        return_value=("HEALTHY", "ok"),
+    )
     @patch("maintenance_health_controller.check_automerge_control", return_value=(True, "ok"))
     @patch("maintenance_health_controller.check_github_ruleset_state", return_value=("HEALTHY", "ok"))
     @patch("maintenance_health_controller.check_dependabot_coverage", return_value=(True, "ok"))
@@ -92,7 +139,27 @@ class MaintenanceHealthControllerTest(unittest.TestCase):
         self.assertIn("Mergify is the sole merge authority", text)
         self.assertNotIn("Jules Fleet Merge Status:** Dry-run only", text)
 
+    @patch("maintenance_health_controller.check_expirations", return_value=[])
+    @patch(
+        "maintenance_health_controller.check_dependabot_alerts",
+        return_value=("ATTENTION_REQUIRED", "1 critical"),
+    )
+    @patch("maintenance_health_controller.check_automerge_control", return_value=(True, "ok"))
+    @patch("maintenance_health_controller.check_github_ruleset_state", return_value=("HEALTHY", "ok"))
+    @patch("maintenance_health_controller.check_dependabot_coverage", return_value=(True, "ok"))
+    @patch("maintenance_health_controller.check_mergify_configuration", return_value=(True, "ok"))
+    @patch("maintenance_health_controller.check_codeql_kotlin_compatibility", return_value=(True, "ok"))
+    @patch("maintenance_health_controller.check_pinned_actions", return_value=(True, "ok"))
+    def test_critical_dependabot_alerts_require_attention(self, *_mocks):
+        text, state = health.generate_dashboard_markdown("o/r")
+        self.assertEqual(state, "ATTENTION_REQUIRED")
+        self.assertIn("Dependabot Security Alerts:** ❌ 1 critical", text)
+
     @patch("maintenance_health_controller.check_expirations", return_value=["expired"])
+    @patch(
+        "maintenance_health_controller.check_dependabot_alerts",
+        return_value=("HEALTHY", "ok"),
+    )
     @patch("maintenance_health_controller.check_automerge_control", return_value=(True, "ok"))
     @patch("maintenance_health_controller.check_github_ruleset_state", return_value=("HEALTHY", "ok"))
     @patch("maintenance_health_controller.check_dependabot_coverage", return_value=(True, "ok"))
