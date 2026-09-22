@@ -91,6 +91,54 @@ class MaintenanceHealthControllerTest(unittest.TestCase):
         self.assertIn("firebase-rules-tests", findings[0])
         self.assertIn("GHSA-example-test", findings[0])
 
+    def test_active_security_exceptions_include_tracking_issue(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+
+            audit_policy = root / "side-projects/audit-policy.json"
+            audit_policy.parent.mkdir(parents=True)
+            audit_policy.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "exceptions": [
+                            {
+                                "project": "firebase-rules-tests",
+                                "advisory": "GHSA-stream-json",
+                                "trackingIssue": "#183",
+                                "expiresOn": "2026-10-01",
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            codeql_policy = root / "config/codeql-compatibility-policy.json"
+            codeql_policy.parent.mkdir(parents=True)
+            codeql_policy.write_text(
+                json.dumps(
+                    {
+                        "kotlin": {
+                            "blocked_security_upgrade": {
+                                "advisory": "GHSA-kotlin",
+                                "tracking_issue": "#183",
+                                "expires_on": "2026-10-01",
+                            }
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            with patch.object(health, "ROOT", root):
+                active = health.list_active_security_exceptions()
+
+        self.assertEqual(len(active), 2)
+        self.assertTrue(all("#183" in item for item in active))
+        self.assertTrue(any("firebase-rules-tests" in item for item in active))
+        self.assertTrue(any("Kotlin/CodeQL" in item for item in active))
+
     @patch("maintenance_health_controller.summarize_osv_report")
     def test_repository_vulnerability_health_reads_osv_report(
         self, summarize: MagicMock
