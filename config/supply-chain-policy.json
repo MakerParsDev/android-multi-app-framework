@@ -37,13 +37,13 @@
     },
     {
       "coordinate": "ch.qos.logback:logback-core",
-      "version": "1.5.34",
-      "reason": "Security floor that fixes CVE-2026-10532 / GHSA-jhq6-gfmj-v8fx and includes the prior CVE-2026-9828 remediation."
+      "version": "1.6.3",
+      "reason": "Security floor retaining the prior Logback fixes and adding the CVE-2026-19880 path-traversal remediation in 1.6.3."
     },
     {
       "coordinate": "ch.qos.logback:logback-classic",
-      "version": "1.5.34",
-      "reason": "Keep Logback Classic aligned with the secured Core version so ktlint tooling does not run with a mixed Logback family."
+      "version": "1.6.3",
+      "reason": "Keep Logback Classic aligned with the secured Core 1.6.3 family so build and lint tooling do not run with mixed Logback versions."
     },
     {
       "coordinate": "org.bitbucket.b_c:jose4j",
