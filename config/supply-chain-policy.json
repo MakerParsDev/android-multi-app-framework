@@ -1,9 +1,8 @@
 {
   "dependency_verification": {
     "decision": "deferred",
-    "next_review_on": "2026-10-01",
-    "automated_reevaluation_trigger": "python3 -m maintenance canary dependency-verification",
-    "reason": "Full Gradle verification metadata across 17 application variants is deferred until repository and plugin artifact churn is measured; stable catalog enforcement, resolved prerelease rejection, Socket reporting, pinned wrapper checksums, and scheduled dependency audits remain blocking controls."
+    "next_review_on": "2027-01-31",
+    "reason": "D1 decision: Full Gradle verification metadata across 17 application variants remains deferred; compensating controls (catalog enforcement, prerelease rejection, Socket reporting, wrapper checksums, scheduled audits) are active and blocking; automated reevaluation trigger referenced in prior policy does not exist (maintenance/canary.py only knows kotlin-codeql and firebase-stream-json)."
   },
   "gradle_wrapper": {
     "distribution_sha256": "bafc141b619ad6350fd975fc903156dd5c151998cc8b058e8c1044ab5f7b031f",

@@ -108,7 +108,7 @@ def supply_fixture(root: Path):
         },
         "dependency_verification": {
             "decision": "deferred",
-            "next_review_on": "2026-10-01",
+            "next_review_on": "2027-01-31",
             "reason": "Dependency verification remains deferred while artifact churn is measured under blocking catalog, wrapper, and scheduled audit controls.",
         },
         "transitive_security_overrides": [
