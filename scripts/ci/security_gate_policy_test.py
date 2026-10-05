@@ -176,6 +176,41 @@ class SecurityGatePolicyTest(unittest.TestCase):
                 )
             )
 
+    def test_wrapper_distribution_checksum_valid(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            policy = supply_fixture(root)
+            self.assertEqual([], validate_supply(root, policy, date(2026, 7, 12)))
+
+    def test_wrapper_distribution_checksum_missing_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            policy = supply_fixture(root)
+            (root / "gradle/wrapper/gradle-wrapper.properties").write_text(
+                "distributionUrl=https\\://services.gradle.org/distributions/gradle-9.6.1-bin.zip\n"
+                "validateDistributionUrl=true\n",
+                encoding="utf-8",
+            )
+            errors = validate_supply(root, policy, date(2026, 7, 12))
+            self.assertTrue(
+                any("distributionSha256Sum is missing" in error for error in errors)
+            )
+
+    def test_wrapper_distribution_checksum_mismatch_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            policy = supply_fixture(root)
+            (root / "gradle/wrapper/gradle-wrapper.properties").write_text(
+                "distributionUrl=https\\://services.gradle.org/distributions/gradle-9.6.1-bin.zip\n"
+                "distributionSha256Sum=b" * 64 + "\n"
+                "validateDistributionUrl=true\n",
+                encoding="utf-8",
+            )
+            errors = validate_supply(root, policy, date(2026, 7, 12))
+            self.assertTrue(
+                any("distributionSha256Sum does not match" in error for error in errors)
+            )
+
     def test_transitive_security_override_drift_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
