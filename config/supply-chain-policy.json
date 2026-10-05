@@ -5,7 +5,7 @@
     "reason": "D1 decision: Full Gradle verification metadata across 17 application variants remains deferred; compensating controls (catalog enforcement, prerelease rejection, Socket reporting, wrapper checksums, scheduled audits) are active and blocking; automated reevaluation trigger referenced in prior policy does not exist (maintenance/canary.py only knows kotlin-codeql and firebase-stream-json)."
   },
   "gradle_wrapper": {
-    "distribution_sha256": "bafc141b619ad6350fd975fc903156dd5c151998cc8b058e8c1044ab5f7b031f",
+    "distribution_sha256": "9c0f7faeeb306cb14e4279a3e084ca6b596894089a0638e68a07c945a32c9e14",
     "jar_sha256": "76805e32c009c0cf0dd5d206bddc9fb22ea42e84db904b764f3047de095493f3",
     "version": "9.6.1"
   },
