@@ -22,6 +22,8 @@ buildscript {
             force("org.apache.httpcomponents:httpclient:4.5.14")
             force("com.squareup.wire:wire-runtime:7.0.3")
             force("com.squareup.wire:wire-runtime-jvm:7.0.3")
+            // Force secure version for freemarker (GHSA-27j2-h3m2-8237)
+            force("org.freemarker:freemarker:2.3.35")
         }
     }
 }
@@ -64,6 +66,8 @@ allprojects {
             force("org.apache.httpcomponents:httpclient:4.5.14")
             force("com.squareup.wire:wire-runtime:7.0.3")
             force("com.squareup.wire:wire-runtime-jvm:7.0.3")
+            // Force secure version for freemarker (GHSA-27j2-h3m2-8237)
+            force("org.freemarker:freemarker:2.3.35")
         }
     }
 }
