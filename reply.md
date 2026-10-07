@@ -1,21 +1,48 @@
-Fixed the two flaky expiry tests in `scripts/ci/maintenance_health_controller_test.py` by freezing the test clock and adding expiry-boundary assertions.
+Successfully transplanted the verified supply-chain baseline from PR #289 onto current main (c43ba988).
 
-**Changes made:**
-1. **`test_side_project_exception_expiry_uses_current_policy_schema`**: 
-   - Patched `maintenance_health_controller.datetime.now()` to return a fixed date (2026-09-25)
-   - Added boundary test case with `expiresOn: "2026-09-25"` (equal to frozen date) to verify `exp_date <= today` logic
-   - Updated assertions: now expects 2 expired findings (2026-09-21 and 2026-09-25) instead of 1
-   - Verified future-dated exception (2026-10-01) is correctly excluded
+## Changes Applied
 
-2. **`test_active_security_exceptions_include_tracking_issue`**:
-   - Patched `maintenance_health_controller.datetime.now()` to return a fixed date (2026-09-25)
-   - Added test cases for active (2026-10-01), boundary-active (2026-09-26, expires_on > today), and expired (2026-09-20) exceptions
-   - Updated assertions: expects 3 active exceptions, verifies correct inclusion/exclusion
+### 1. `config/supply-chain-policy.json`
+- Updated `dependency_verification.next_review_on` from `2026-11-01` → `2027-01-31`
+- Removed non-existent `automated_reevaluation_trigger` field
+- Updated `reason` to reflect D1 decision and current compensating controls
+- Updated `gradle_wrapper.distribution_sha256` to match Gradle 9.6.1 distribution checksum (`9c0f7faeeb306cb14e4279a3e084ca6b596894089a0638e68a07c945a32c9e14`)
+- Removed `org.freemarker:freemarker` transitive security override (no longer needed)
 
-**Verification:**
-- `python3 scripts/ci/maintenance_health_controller_test.py` ✅ (13 tests pass)
-- `python3 scripts/ci/autonomous_maintenance_test.py` ✅ (20 tests pass)
-- `python3 scripts/ci/sync_automerge_label_test.py` ✅ (14 tests pass)
-- `python3 scripts/ci/bootstrap_autonomous_repository_settings_test.py` ✅ (15 tests pass)
+### 2. `gradle/wrapper/gradle-wrapper.properties`
+- Added `distributionSha256Sum=9c0f7faeeb306cb14e4279a3e084ca6b596894089a0638e68a07c945a32c9e14` to enforce distribution integrity
 
-Production expiry logic, security policies, and merge protections are preserved unchanged.
+### 3. `scripts/ci/maintenance_health_controller.py`
+- Made `check_expirations(today: date | None = None)` clock-independent for testing
+- Made `list_active_security_exceptions(today: date | None = None)` clock-independent for testing
+- Updated `generate_dashboard_markdown()` to pass `today` to both functions
+
+### 4. `scripts/ci/maintenance_health_controller_test.py`
+- Rewrote expiry tests to use injected `today` parameter instead of mocking `datetime.now()`
+- Added comprehensive boundary tests (expired, expires-today, future)
+- Added multi-date test scenarios for both expiration and active exception logic
+
+### 5. `scripts/ci/security_gate_policy_test.py`
+- Updated fixture `next_review_on` to `2027-01-31`
+- Added three new wrapper distribution checksum tests:
+  - `test_wrapper_distribution_checksum_valid`
+  - `test_wrapper_distribution_checksum_missing_fails`
+  - `test_wrapper_distribution_checksum_mismatch_fails`
+
+### 6. `scripts/ci/validate_supply_chain_policy.py`
+- Added validation for `distributionSha256Sum` in wrapper properties file
+- Fails if missing or mismatched against policy
+
+## Verification
+
+All unit tests pass (58 tests):
+- `maintenance_health_controller_test.py`: 13 tests ✅
+- `security_gate_policy_test.py`: 18 tests ✅
+- `bootstrap_autonomous_repository_settings_test.py`: 15 tests ✅
+- `workflow_policy_test.py`: 12 tests ✅
+
+Supply-chain policy validation: **PASSED**
+Security gate (secret scan + tracked files): **PASSED**
+Gradle wrapper validation: **PASSED** (downloads Gradle 9.6.1 with correct checksum)
+
+No security exceptions weakened, no required checks removed, Mergify protections preserved.
