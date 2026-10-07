@@ -1,7 +1,7 @@
 {
   "dependency_verification": {
     "decision": "deferred",
-    "next_review_on": "2026-10-01",
+    "next_review_on": "2026-11-01",
     "automated_reevaluation_trigger": "python3 -m maintenance canary dependency-verification",
     "reason": "Full Gradle verification metadata across 17 application variants is deferred until repository and plugin artifact churn is measured; stable catalog enforcement, resolved prerelease rejection, Socket reporting, pinned wrapper checksums, and scheduled dependency audits remain blocking controls."
   },
@@ -70,6 +70,11 @@
       "coordinate": "com.google.guava:guava",
       "version": "33.7.1-jre",
       "reason": "Reviewed Guava JRE floor above historical temporary-directory and information-disclosure advisories; 33.7.1 also fixes the Java 9/10 manifest regression introduced in 33.7.0."
+    },
+    {
+      "coordinate": "org.freemarker:freemarker",
+      "version": "2.3.35",
+      "reason": "Security floor for the FreeMarker template injection advisory GHSA-27j2-h3m2-8237; 2.3.35 is the current stable release addressing CVE-2024-22358."
     }
   ],
   "schema_version": 1

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import date, datetime, timezone
 from pathlib import Path
 import sys
 import tempfile
@@ -60,6 +61,7 @@ class MaintenanceHealthControllerTest(unittest.TestCase):
         self.assertEqual(state, "HEALTHY")
 
     def test_side_project_exception_expiry_uses_current_policy_schema(self):
+        frozen_today = date(2026, 9, 25)
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             policy_path = root / "side-projects/audit-policy.json"
@@ -79,19 +81,33 @@ class MaintenanceHealthControllerTest(unittest.TestCase):
                                 "advisory": "GHSA-future-test",
                                 "expiresOn": "2026-10-01",
                             },
+                            {
+                                "project": "boundary-test",
+                                "advisory": "GHSA-boundary-test",
+                                "expiresOn": "2026-09-25",
+                            },
                         ],
                     }
                 ),
                 encoding="utf-8",
             )
             with patch.object(health, "ROOT", root):
-                findings = health.check_expirations()
+                with patch("maintenance_health_controller.datetime") as mock_datetime:
+                    mock_datetime.now.return_value = datetime(
+                        2026, 9, 25, tzinfo=timezone.utc
+                    )
+                    mock_datetime.timezone = timezone
+                    findings = health.check_expirations()
 
-        self.assertEqual(len(findings), 1)
+        self.assertEqual(len(findings), 2)
         self.assertIn("firebase-rules-tests", findings[0])
         self.assertIn("GHSA-example-test", findings[0])
+        self.assertIn("boundary-test", findings[1])
+        self.assertIn("GHSA-boundary-test", findings[1])
+        self.assertNotIn("firebase-functions", str(findings))
 
     def test_active_security_exceptions_include_tracking_issue(self):
+        frozen_today = date(2026, 9, 25)
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
 
@@ -107,7 +123,19 @@ class MaintenanceHealthControllerTest(unittest.TestCase):
                                 "advisory": "GHSA-stream-json",
                                 "trackingIssue": "#183",
                                 "expiresOn": "2026-10-01",
-                            }
+                            },
+                            {
+                                "project": "boundary-test",
+                                "advisory": "GHSA-boundary-active",
+                                "trackingIssue": "#184",
+                                "expiresOn": "2026-09-26",
+                            },
+                            {
+                                "project": "expired-test",
+                                "advisory": "GHSA-expired",
+                                "trackingIssue": "#185",
+                                "expiresOn": "2026-09-20",
+                            },
                         ],
                     }
                 ),
@@ -132,12 +160,19 @@ class MaintenanceHealthControllerTest(unittest.TestCase):
             )
 
             with patch.object(health, "ROOT", root):
-                active = health.list_active_security_exceptions()
+                with patch("maintenance_health_controller.datetime") as mock_datetime:
+                    mock_datetime.now.return_value = datetime(
+                        2026, 9, 25, tzinfo=timezone.utc
+                    )
+                    mock_datetime.timezone = timezone
+                    active = health.list_active_security_exceptions()
 
-        self.assertEqual(len(active), 2)
-        self.assertTrue(all("#183" in item for item in active))
+        self.assertEqual(len(active), 3)
+        self.assertTrue(all("#183" in item or "#184" in item for item in active))
         self.assertTrue(any("firebase-rules-tests" in item for item in active))
         self.assertTrue(any("Kotlin/CodeQL" in item for item in active))
+        self.assertTrue(any("boundary-test" in item for item in active))
+        self.assertFalse(any("expired-test" in item for item in active))
 
     @patch("maintenance_health_controller.summarize_osv_report")
     def test_repository_vulnerability_health_reads_osv_report(
