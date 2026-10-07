@@ -1,14 +1,14 @@
 {
   "dependency_verification": {
     "decision": "deferred",
-    "next_review_on": "2026-10-01",
+    "next_review_on": "2027-04-01",
     "automated_reevaluation_trigger": "python3 -m maintenance canary dependency-verification",
     "reason": "Full Gradle verification metadata across 17 application variants is deferred until repository and plugin artifact churn is measured; stable catalog enforcement, resolved prerelease rejection, Socket reporting, pinned wrapper checksums, and scheduled dependency audits remain blocking controls."
   },
   "gradle_wrapper": {
-    "distribution_sha256": "bafc141b619ad6350fd975fc903156dd5c151998cc8b058e8c1044ab5f7b031f",
-    "jar_sha256": "76805e32c009c0cf0dd5d206bddc9fb22ea42e84db904b764f3047de095493f3",
-    "version": "9.6.1"
+    "distribution_sha256": "bafd5ce9cfaea0fbccfdc8439a1ac42fbd4cd9c89dc9a988228d8a2639a58e6c",
+    "jar_sha256": "238e777fcddd7e34f9708186085def2abd6e08e658505b38718d79d74c21abd5",
+    "version": "9.8.0"
   },
   "transitive_security_overrides": [
     {
