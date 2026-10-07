@@ -81,6 +81,12 @@ def validate_wrapper_files(root: Path, wrapper: Dict[str, Any]) -> List[str]:
             errors.append(f"Gradle distribution URL must end with {expected_suffix}")
         if properties.get("validateDistributionUrl") != "true":
             errors.append("Gradle validateDistributionUrl must remain true")
+        dist_sha = properties.get("distributionSha256Sum")
+        expected_dist_sha = wrapper.get("distribution_sha256")
+        if not isinstance(dist_sha, str) or not dist_sha:
+            errors.append("Gradle wrapper distributionSha256Sum is missing")
+        elif dist_sha != expected_dist_sha:
+            errors.append("Gradle wrapper distributionSha256Sum does not match supply-chain policy")
     if not jar_path.is_file():
         errors.append(f"Missing Gradle wrapper JAR: {jar_path}")
     elif sha256_file(jar_path) != wrapper.get("jar_sha256"):

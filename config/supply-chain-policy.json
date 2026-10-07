@@ -1,12 +1,11 @@
 {
   "dependency_verification": {
     "decision": "deferred",
-    "next_review_on": "2026-11-01",
-    "automated_reevaluation_trigger": "python3 -m maintenance canary dependency-verification",
-    "reason": "Full Gradle verification metadata across 17 application variants is deferred until repository and plugin artifact churn is measured; stable catalog enforcement, resolved prerelease rejection, Socket reporting, pinned wrapper checksums, and scheduled dependency audits remain blocking controls."
+    "next_review_on": "2027-01-31",
+    "reason": "D1 decision: Full Gradle verification metadata across 17 application variants remains deferred; compensating controls (catalog enforcement, prerelease rejection, Socket reporting, wrapper checksums, scheduled audits) are active and blocking; automated reevaluation trigger referenced in prior policy does not exist (maintenance/canary.py only knows kotlin-codeql and firebase-stream-json)."
   },
   "gradle_wrapper": {
-    "distribution_sha256": "bafc141b619ad6350fd975fc903156dd5c151998cc8b058e8c1044ab5f7b031f",
+    "distribution_sha256": "9c0f7faeeb306cb14e4279a3e084ca6b596894089a0638e68a07c945a32c9e14",
     "jar_sha256": "76805e32c009c0cf0dd5d206bddc9fb22ea42e84db904b764f3047de095493f3",
     "version": "9.6.1"
   },
@@ -70,11 +69,6 @@
       "coordinate": "com.google.guava:guava",
       "version": "33.7.1-jre",
       "reason": "Reviewed Guava JRE floor above historical temporary-directory and information-disclosure advisories; 33.7.1 also fixes the Java 9/10 manifest regression introduced in 33.7.0."
-    },
-    {
-      "coordinate": "org.freemarker:freemarker",
-      "version": "2.3.35",
-      "reason": "Security floor for the FreeMarker template injection advisory GHSA-27j2-h3m2-8237; 2.3.35 is the current stable release addressing CVE-2024-22358."
     }
   ],
   "schema_version": 1

@@ -79,9 +79,10 @@ def check_codeql_kotlin_compatibility() -> tuple[bool, str]:
         return False, f"CodeQL compatibility check error: {err}"
 
 
-def check_expirations() -> list[str]:
+def check_expirations(today: date | None = None) -> list[str]:
     findings: list[str] = []
-    today = datetime.now(timezone.utc).date()
+    if today is None:
+        today = datetime.now(timezone.utc).date()
 
     # 1. Side-project npm audit policy
     audit_policy = ROOT / "side-projects/audit-policy.json"
@@ -129,10 +130,11 @@ def check_expirations() -> list[str]:
     return findings
 
 
-def list_active_security_exceptions() -> list[str]:
+def list_active_security_exceptions(today: date | None = None) -> list[str]:
     """Return non-expired, explicitly owned security exceptions for the dashboard."""
     findings: list[str] = []
-    today = datetime.now(timezone.utc).date()
+    if today is None:
+        today = datetime.now(timezone.utc).date()
 
     audit_policy = ROOT / "side-projects/audit-policy.json"
     if audit_policy.is_file():
@@ -284,6 +286,7 @@ def check_automerge_control() -> tuple[bool, str]:
 def generate_dashboard_markdown(repo: str | None = None) -> tuple[str, str]:
     """Build dashboard markdown and return it with the computed state."""
     now_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    today = datetime.now(timezone.utc).date()
     resolved_repo = resolve_repository(repo)
     actions_ok, actions_msg = check_pinned_actions()
     codeql_ok, codeql_msg = check_codeql_kotlin_compatibility()
@@ -292,8 +295,8 @@ def generate_dashboard_markdown(repo: str | None = None) -> tuple[str, str]:
     vulnerability_state, vulnerability_msg = check_repository_vulnerabilities()
     ruleset_state, ruleset_msg = check_github_ruleset_state(resolved_repo)
     automerge_ok, automerge_msg = check_automerge_control()
-    expirations = check_expirations()
-    active_exceptions = list_active_security_exceptions()
+    expirations = check_expirations(today)
+    active_exceptions = list_active_security_exceptions(today)
 
     critical_checks = [actions_ok, codeql_ok, mergify_ok, dependabot_ok, automerge_ok]
     if not all(critical_checks):
