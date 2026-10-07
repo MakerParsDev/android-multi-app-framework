@@ -202,7 +202,7 @@ class SecurityGatePolicyTest(unittest.TestCase):
             policy = supply_fixture(root)
             (root / "gradle/wrapper/gradle-wrapper.properties").write_text(
                 "distributionUrl=https\\://services.gradle.org/distributions/gradle-9.6.1-bin.zip\n"
-                "distributionSha256Sum=b" * 64 + "\n"
+                f"distributionSha256Sum={'b' * 64}\n"
                 "validateDistributionUrl=true\n",
                 encoding="utf-8",
             )

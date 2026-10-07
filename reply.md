@@ -35,11 +35,11 @@ Successfully transplanted the verified supply-chain baseline from PR #289 onto c
 
 ## Verification
 
-All unit tests pass (46 tests):
+All unit tests pass (58 tests):
 - `maintenance_health_controller_test.py`: 13 tests ✅
 - `security_gate_policy_test.py`: 18 tests ✅
 - `bootstrap_autonomous_repository_settings_test.py`: 15 tests ✅
-- `workflow_policy_test.py`: 13 tests ✅
+- `workflow_policy_test.py`: 12 tests ✅
 
 Supply-chain policy validation: **PASSED**
 Security gate (secret scan + tracked files): **PASSED**
