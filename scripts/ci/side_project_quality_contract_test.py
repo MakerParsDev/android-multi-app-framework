@@ -92,7 +92,9 @@ class SideProjectQualityContractTest(unittest.TestCase):
     def test_audit_policy_is_blocking_owned_and_expiring(self) -> None:
         policy = json.loads(AUDIT_POLICY.read_text(encoding="utf-8"))
         self.assertEqual("zero-vulnerabilities", policy["productionPolicy"])
-        self.assertGreater(len(policy["exceptions"]), 0)
+        # Zero exceptions is the safest valid policy state. Validate ownership
+        # and expiry for every exception only when one is explicitly present.
+        self.assertIsInstance(policy["exceptions"], list)
         for entry in policy["exceptions"]:
             self.assertEqual("development", entry["scope"])
             self.assertIn(entry["severity"], {"low", "moderate", "high"})
