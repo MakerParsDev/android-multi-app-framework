@@ -148,6 +148,15 @@ jobs:
           python3 scripts/ci/bootstrap_autonomous_repository_settings_test.py
           python3 scripts/ci/maintenance_health_controller_test.py
 
+      - name: Test PR impact and release safety contracts
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/compute_pr_impact_test.py
+          python3 scripts/ci/validate_legacy_release_request_test.py
+          python3 scripts/ci/professional_ci_workflows_test.py
+          python3 scripts/ci/ci_load_policy_test.py
+          python3 -m unittest discover -s scripts/ci -p side_project_quality_contract_test.py -v
+
       - name: Validate Android toolchain config
         run: python3 scripts/ci/validate_android_toolchain_config.py
 
