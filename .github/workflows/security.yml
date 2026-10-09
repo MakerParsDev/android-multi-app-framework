@@ -148,6 +148,7 @@ jobs:
           python3 scripts/ci/bootstrap_autonomous_repository_settings_test.py
           python3 scripts/ci/maintenance_health_controller_test.py
           python3 scripts/ci/wait_for_dependency_submission_test.py
+          python3 scripts/ci/repository_vulnerability_scan_test.py
           python3 scripts/ci/codeql_kotlin_compatibility_test.py
 
       - name: Test PR impact and release safety contracts
