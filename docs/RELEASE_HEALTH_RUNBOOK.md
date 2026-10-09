@@ -51,7 +51,7 @@ Release baslamadan once:
 2. `config/runtime-health-snapshot.example.json` dosyasini kopyalayin.
 3. Dosyadaki butun kimlik alanlarini release ile degistirin.
 4. Ilgili checkpoint icin sekiz metrigin tamamini gercek verilerle doldurun.
-5. Snapshot'i Azure Secure Files altinda `release-health-snapshot.json` adiyla yukleyin veya farkli adi pipeline parametresinde belirtin.
+5. Snapshot'i yalniz yetkili operasyonel depolamada tutun; secret, hesap tanimlayicisi veya hassas olay verisi repository'ye commit edilmez. Mevcut repository'de otomatik release-health toplama/yayinlama workflow'u yoktur.
 
 Yerel degerlendirme:
 
@@ -63,7 +63,13 @@ python3 scripts/ci/evaluate_release_health.py \
   --fail-on hotfix
 ```
 
-Azure'da `azure-pipelines/release-health.yml` pipeline'ini `24`, `48` veya `72` checkpoint parametresiyle queue edin. JSON ve Markdown karar raporlari `release-health-<checkpoint>h` artifact'i olarak yayimlanir.
+`--expected-checkpoint` degerini planlanan kontrol saatine (24, 48 veya 72) ayarlayin.
+Evaluator JSON ve Markdown raporlarini varsayilan olarak
+`build/reports/release-health/decision.json` ve `decision.md` dosyalarina yazar.
+`--output-dir` ile bu yolu degistirebilirsiniz. Sonucu release kaydina
+yetkili erisimle ilistirin; GitHub Actions'in otomatik bir checkpoint/publish
+workflow'u calistirdigini varsaymayin. `incomplete` karari exit code 2,
+`--fail-on` esigi asimi exit code 1 uretir.
 
 ## Metrik tanimlari
 
