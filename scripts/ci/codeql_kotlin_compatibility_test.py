@@ -51,6 +51,22 @@ class CodeqlKotlinCompatibilityTest(unittest.TestCase):
         self.assertEqual(policy["codeql_bundle_version"], "2.27.1")
         self.assertEqual(policy["kotlin"]["checked_on"], "2026-10-09")
 
+    def test_buildsrc_does_not_reintroduce_vulnerable_kotlin_plugin(self) -> None:
+        # A KGP upgrade in libs.versions.toml is insufficient: the versioned
+        # Gradle kotlin-dsl buildSrc plugin can bring KGP 2.3.21 transitively.
+        catalog = tomllib.loads(VERSION_CATALOG.read_text(encoding="utf-8"))
+        kotlin_version = catalog["versions"]["kotlin"]
+        buildsrc = (ROOT / "buildSrc/build.gradle.kts").read_text(encoding="utf-8")
+        self.assertNotIn(chr(96) + "kotlin-dsl" + chr(96), buildsrc)
+        self.assertNotIn('id("org.gradle.kotlin.kotlin-dsl")', buildsrc)
+        self.assertIn(f'kotlin("jvm") version "{kotlin_version}"', buildsrc)
+        self.assertIn("implementation(gradleApi())", buildsrc)
+        self.assertGreaterEqual(numeric_version(kotlin_version), (2, 4, 20))
+
+    def test_required_workflow_audit_runs_kotlin_version_guards(self) -> None:
+        workflow = (ROOT / ".github/workflows/security.yml").read_text(encoding="utf-8")
+        self.assertIn("python3 scripts/ci/codeql_kotlin_compatibility_test.py", workflow)
+
     def test_workflow_does_not_claim_an_ineffective_interceptor_bypass(self) -> None:
         workflow = CODEQL_WORKFLOW.read_text(encoding="utf-8")
         self.assertNotIn("disableKotlinInterceptor", workflow)
