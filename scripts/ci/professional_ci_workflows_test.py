@@ -498,6 +498,29 @@ def test_workflow_audit_executes_regression_contracts() -> None:
         assert filename in command, filename
 
 
+
+def test_legacy_release_bootstrap_is_pinned_and_hash_verified() -> None:
+    release = load(".github/workflows/release.yml")
+    build = release["jobs"]["build-release"]
+    publish = release["jobs"]["publish-play"]
+
+    install = named_step(build, "Install verified Doppler CLI")["run"]
+    assert "scripts/ci/install_doppler_cli.sh" in install
+    assert "sudo apt-get" not in install and "curl " not in install
+    for job, title in (
+        (build, "Auto-bump Play version codes"),
+        (publish, "Verify Play Console access"),
+    ):
+        step = named_step(job, title)["run"]
+        assert "--require-hashes" in step
+        assert "scripts/ci/requirements-play-publisher.lock" in step
+        assert "pip install --quiet" not in step
+
+    assert "scripts/ci/install_doppler_cli.sh" in named_step(
+        release["jobs"]["security-gate"], "Install verified Doppler CLI"
+    )["run"]
+
+
 def main() -> int:
     tests = [value for key, value in globals().items() if key.startswith("test_") and callable(value)]
     for test in tests:
