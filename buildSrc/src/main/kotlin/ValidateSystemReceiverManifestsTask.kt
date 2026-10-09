@@ -35,8 +35,8 @@ abstract class ValidateSystemReceiverManifestsTask @Inject constructor(
     fun validate() {
         val report = reportFile.get().asFile
         report.parentFile.mkdirs()
-        execOperations.exec {
-            commandLine(
+        execOperations.exec { spec ->
+            spec.commandLine(
                 pythonExecutable.get(),
                 validatorScript.get().asFile.absolutePath,
                 "--zikirmatik-manifest",
