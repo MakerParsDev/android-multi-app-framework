@@ -39,13 +39,17 @@ class CodeqlKotlinCompatibilityTest(unittest.TestCase):
             "CodeQL compatibility policy must track the configured Kotlin version exactly",
         )
 
-        blocker = policy["kotlin"]["blocked_security_upgrade"]
-        self.assertEqual(blocker["advisory"], "GHSA-r937-wjx7-w2jp")
-        self.assertEqual(blocker["tracking_issue"], "#183")
-        self.assertEqual(blocker["minimum_fixed_version"], "2.4.20-Beta1")
-        self.assertTrue(blocker["reason"].strip())
-        self.assertTrue(blocker["upgrade_plan"].strip())
-        self.assertRegex(blocker["expires_on"], r"^\d{4}-\d{2}-\d{2}$")
+        self.assertGreaterEqual(
+            numeric_version(kotlin_version),
+            numeric_version("2.4.20"),
+            "GHSA-r937-wjx7-w2jp is fixed only by Kotlin 2.4.20+ stable",
+        )
+        self.assertNotIn(
+            "blocked_security_upgrade", policy["kotlin"],
+            "A fixed advisory must not remain an active exception",
+        )
+        self.assertEqual(policy["codeql_bundle_version"], "2.27.1")
+        self.assertEqual(policy["kotlin"]["checked_on"], "2026-10-09")
 
     def test_workflow_does_not_claim_an_ineffective_interceptor_bypass(self) -> None:
         workflow = CODEQL_WORKFLOW.read_text(encoding="utf-8")

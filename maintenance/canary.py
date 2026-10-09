@@ -23,38 +23,46 @@ class CanaryResult:
             "artifact": self.artifact
         }
 
-def run_kotlin_codeql_canary(candidate_version: str = "2.4.20", codeql_bundle_version: str = "2.27.0") -> CanaryResult:
-    """Tests candidate Kotlin version against CodeQL compatibility ceiling."""
-    # Check CodeQL ceiling constraint defined in policy/docs
-    # Live CodeQL 2.27.0 extractor rejects versions >= 2.4.20
-    max_supported_exclusive = "2.4.20"
+def run_kotlin_codeql_canary(
+    candidate_version: str = "2.4.20", codeql_bundle_version: str = "2.27.1"
+) -> CanaryResult:
+    """Preflight Kotlin extractor version eligibility; NOT an executed CodeQL canary."""
+    from pathlib import Path
 
-    # Simulate extraction test logic
-    if candidate_version >= max_supported_exclusive:
-        return CanaryResult(
-            canary_id="kotlin-codeql",
-            success=False,
-            candidate_version=candidate_version,
-            details=f"CodeQL bundle {codeql_bundle_version} extractor rejects Kotlin {candidate_version} (supported < {max_supported_exclusive}).",
-            artifact={
-                "codeql_bundle_version": codeql_bundle_version,
-                "supported_max_exclusive": max_supported_exclusive,
-                "tested_candidate": candidate_version,
-                "status": "REJECTED_BY_CODEQL_EXTRACTOR"
-            }
-        )
-    else:
-        return CanaryResult(
-            canary_id="kotlin-codeql",
-            success=True,
-            candidate_version=candidate_version,
-            details=f"Kotlin {candidate_version} is compatible with CodeQL bundle {codeql_bundle_version}.",
-            artifact={
-                "codeql_bundle_version": codeql_bundle_version,
-                "tested_candidate": candidate_version,
-                "status": "PASSED"
-            }
-        )
+    def version(value: str) -> tuple[int, ...]:
+        return tuple(int(component) for component in value.split("."))
+
+    policy_path = Path(__file__).resolve().parents[1] / "config/codeql-compatibility-policy.json"
+    policy = json.loads(policy_path.read_text(encoding="utf-8"))
+    supported_max = (
+        policy["kotlin"]["supported_max_exclusive"]
+        if version(codeql_bundle_version) >= version(policy["codeql_bundle_version"])
+        else "2.4.20"  # Legacy 2.27.0 extractor boundary observed in September 2026.
+    )
+    supported = (
+        version(codeql_bundle_version) >= version("2.27.0")
+        and version(candidate_version) < version(supported_max)
+    )
+    # Prior versions of this function returned synthetic PASSED/REJECTED_BY_CODEQL_EXTRACTOR
+    # without executing CodeQL. Preserve a static eligibility result, but NEVER claim
+    # that extractor execution has occurred.
+    status = "VERSION_ELIGIBLE_LIVE_CODEQL_REQUIRED" if supported else "VERSION_POLICY_BLOCKED"
+    return CanaryResult(
+        canary_id="kotlin-codeql",
+        success=supported,
+        candidate_version=candidate_version,
+        details=(
+            f"CodeQL {codeql_bundle_version} and Kotlin {candidate_version}: "
+            f"{status}. An exact-source live CodeQL workflow must verify compilation/extraction."
+        ),
+        artifact={
+            "codeql_bundle_version": codeql_bundle_version,
+            "supported_max_exclusive": supported_max,
+            "tested_candidate": candidate_version,
+            "status": status,
+            "executed_codeql_extractor": False,
+        },
+    )
 
 def run_firebase_stream_json_canary(candidate_stream_json_version: str = "3.5.0") -> CanaryResult:
     """Tests if stream-json 3.x can be safely forced into firebase-tools without module breaking."""
