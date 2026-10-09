@@ -1,7 +1,7 @@
 # CI/CD operating model
 
-As of 2026-07-23, this repository uses GitHub Actions as the authoritative CI/CD and
-release automation surface. Azure Pipelines have been fully removed.
+As of 2026-10-09, GitHub Actions is the authoritative CI/CD and
+release automation surface. Azure Pipelines are not present in this repository.
 
 ## Authoritative automation surface
 
@@ -19,8 +19,11 @@ release automation surface. Azure Pipelines have been fully removed.
 | `dependency-audit.yml` | Weekly schedule | OSV-Scanner, Gradle dependency audit, dependency graph submission |
 | `connected-tests.yml` | Manual | Instrumentation tests on KVM emulators |
 | `performance.yml` | Weekly schedule, manual | Macrobenchmark baseline profile generation |
-| `side-projects.yml` | PR, manual | Node.js quality for Firebase/Cloudflare side projects |
-| `release.yml` | Manual (workflow_dispatch) | Signed release build + Play Console publish with environment protection |
+| `side-projects.yml` | Manual | Node.js quality for Firebase/Cloudflare side projects; PR blocking side-project validation is inside `ci-pr.yml` |
+| `release.yml` | Manual | Legacy signed release/publish dispatcher, with mandatory exact-source main CI + CodeQL verification before publication |
+| `release-attested.yml` | Manual | Build and attest a signed release artifact in the protected production environment |
+| `play-internal.yml` | Manual | Attested AAB delivery to Play internal track |
+| `maintenance-health.yml` | Daily schedule, manual | Dependency/OSV health and maintenance dashboard |
 
 ## Local verification baseline
 
@@ -33,7 +36,7 @@ scripts/ci/local-full-verification.sh --target-flavors all
 
 The Android phase delegates to the blocking Gradle `qualityCheck` gate. It runs strict ktlint, Detekt defaults plus project-specific correctness rules, `validateFlavorVersions`, every application debug flavor unit-test/lint task, every Android library debug unit-test/lint task, and the Kover `quality` coverage variant. The gate validates the exact discovered task matrix before execution (17 app flavors and all Android library modules) and fails if a required task disappears or tests are disabled. CI and local runs collect root, app, core, and feature reports/test results into `build/quality-reports`.
 
-Kover `0.9.8` is required for Android Gradle Plugin 9 variant and test-task support. The `quality` variant aggregates all 17 app debug flavors and every Android library `debug` variant without compiling release variants. Repository-wide line coverage is ratcheted at 8%, based on the first meaningful AGP 9 aggregate report (8.20%). `validateCriticalCoverage` additionally blocks missing, zero-measurement, or under-threshold class/package targets from `config/critical-coverage.json`. The runtime matrix and JVM/device boundary are documented in `docs/CRITICAL_TEST_COVERAGE.md`.
+Kover `0.9.9` is configured for Android Gradle Plugin 9 variant and test-task support. The `quality` variant aggregates all 17 app debug flavors and every Android library `debug` variant without compiling release variants. Repository-wide line coverage is ratcheted at 8%, based on the first meaningful AGP 9 aggregate report (8.20%). `validateCriticalCoverage` additionally blocks missing, zero-measurement, or under-threshold class/package targets from `config/critical-coverage.json`. The runtime matrix and JVM/device boundary are documented in `docs/CRITICAL_TEST_COVERAGE.md`.
 
 Android Lint baseline debt is separately ratcheted by `validateLintBaselines`. The committed budget, deterministic `docs/LINT_BASELINE_INVENTORY.md`, and branch-to-`origin/main` comparison block total, per-file, and per-lint-ID growth. Empty placeholder baseline files are forbidden.
 
@@ -78,4 +81,4 @@ Operational ownership and incident response are documented in `docs/SECRET_OWNER
 
 ## Autonomous maintenance & Mergify merge engine
 
-As of 2026-09-21, **Mergify** is the sole authoritative merge engine for this repository. Mergify Merge Protections enforce that all required status checks (`CI Required`, `Repository Security`, `Security Gate`, `SonarCloud Code Analysis`) pass before pull requests enter the merge queue. Automated merging is restricted to Class A low-risk updates (Dependabot dev patch/minor updates and Jules Fleet low-risk remediations). Semver-major updates, toolchain jumps, and changes to protected infrastructure require manual approval. Continuous monitoring is provided by `.github/workflows/maintenance-health.yml` and documented in [`docs/AUTONOMOUS_MAINTENANCE.md`](file:///C:/Users/Admin/Desktop/MOBILE_REPOS/android-multi-app-framework/docs/AUTONOMOUS_MAINTENANCE.md).
+As of 2026-09-21, **Mergify** is the sole authoritative merge engine for this repository. Mergify Merge Protections and the GitHub branch ruleset enforce the active required checks, including `CI Required`, `Security Required`, `Analyze Java and Kotlin`, `Dependency Review`, `Secret Scan`, `Workflow Audit` and `SonarCloud Code Analysis`, before integration. Automated merging is restricted to Class A low-risk updates (Dependabot dev patch/minor updates and Jules Fleet low-risk remediations). Semver-major updates, toolchain jumps, and changes to protected infrastructure require manual approval. Continuous monitoring is provided by `.github/workflows/maintenance-health.yml` and documented in [`docs/AUTONOMOUS_MAINTENANCE.md`](AUTONOMOUS_MAINTENANCE.md).
