@@ -211,16 +211,12 @@ jobs:
         if: inputs.do_quality
         run: bash scripts/ci/run_side_project_quality.sh --install
 
-      - name: Install Doppler CLI
+      - name: Install verified Doppler CLI
         run: |
-          if ! command -v doppler >/dev/null 2>&1; then
-            curl -fsSL https://packages.doppler.com/public/cli/gpg.DE2A7741A397C129.key \
-              | sudo gpg --dearmor -o /usr/share/keyrings/doppler-archive-keyring.gpg
-            echo 'deb [signed-by=/usr/share/keyrings/doppler-archive-keyring.gpg] https://packages.doppler.com/public/cli/deb/debian any-version main' \
-              | sudo tee /etc/apt/sources.list.d/doppler-cli.list >/dev/null
-            sudo apt-get update -y >/dev/null
-            sudo apt-get install -y doppler >/dev/null
-          fi
+          set -euo pipefail
+          assignments="$(bash scripts/ci/install_doppler_cli.sh "$RUNNER_TEMP/doppler-bin")"
+          eval "$assignments"
+          printf '%s\n' "$(dirname "$DOPPLER_BIN")" >> "$GITHUB_PATH"
 
       - name: Setup Android SDK
         run: bash scripts/ci/setup-android-sdk.sh
@@ -277,7 +273,9 @@ jobs:
           echo "PLAY_SERVICE_ACCOUNT_JSON=/tmp/service-account.json" >> "$GITHUB_ENV"
           echo "::add-mask::$(cat /tmp/service-account.json | head -c 20)"
           python3 scripts/ci/verify_play_service_account_project.py --expected-project-id makerpars-oaslananka-mobil
-          python3 -m pip install --quiet google-api-python-client google-auth
+          python3 -m pip install --disable-pip-version-check \
+            --require-hashes \
+            --requirement scripts/ci/requirements-play-publisher.lock
           python3 scripts/ci/fetch_play_version_codes.py \
             --flavors "$RESOLVED_FLAVORS_CSV" \
             --tracks all \
@@ -373,7 +371,9 @@ jobs:
           PLAY_SERVICE_ACCOUNT_JSON: /tmp/service-account.json
           RESOLVED_FLAVORS_CSV: ${{ needs.resolve-flavors.outputs.flavors_csv }}
         run: |
-          python3 -m pip install --quiet google-api-python-client google-auth
+          python3 -m pip install --disable-pip-version-check \
+            --require-hashes \
+            --requirement scripts/ci/requirements-play-publisher.lock
           python3 scripts/ci/verify_play_console_access.py \
             --flavors "$RESOLVED_FLAVORS_CSV"
 
