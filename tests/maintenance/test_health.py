@@ -8,9 +8,10 @@ class TestAutonomyHealth(unittest.TestCase):
         reporter = HealthReporter(policy)
         report = reporter.generate_report()
         self.assertEqual(report["metrics"]["policy_version"], 1)
-        self.assertEqual(report["metrics"]["active_exceptions_count"], 3)
+        self.assertEqual(report["metrics"]["active_exceptions_count"], 2)
         self.assertIn("# Autonomous Maintenance Observability Report", report["markdown"])
-        self.assertIn("kotlin-codeql", report["markdown"])
+        self.assertNotIn("kotlin-codeql", report["markdown"])
+        self.assertIn("firebase-stream-json", report["markdown"])
 
 if __name__ == "__main__":
     unittest.main()
