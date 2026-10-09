@@ -80,107 +80,13 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
-        with:
-          distribution: temurin
-          java-version: ${{ env.JAVA_VERSION }}
-
-      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
-
       - name: Detect changed flavors
         id: detect
         env:
           BASE_REF: ${{ github.base_ref }}
         run: |
           set -euo pipefail
-
-          CHANGED_FILES="$(git diff --name-only "origin/$BASE_REF"...HEAD 2>/dev/null || git ls-files)"
-
-          echo "Changed files:"
-          echo "$CHANGED_FILES"
-
-          HAS_SIDE_PROJECT_CHANGES="false"
-          while IFS= read -r file; do
-            [ -z "$file" ] && continue
-            case "$file" in
-              side-projects/*)
-                HAS_SIDE_PROJECT_CHANGES="true"
-                break
-                ;;
-            esac
-          done <<< "$CHANGED_FILES"
-          echo "has_side_project_changes=$HAS_SIDE_PROJECT_CHANGES" >> "$GITHUB_OUTPUT"
-
-          HAS_CODE="false"
-          while IFS= read -r file; do
-            [ -z "$file" ] && continue
-            case "$file" in
-              *.kt|*.kts|*.java|*.xml|*.gradle|*.properties|*.ts|*.mjs|package.json|package-lock.json|*"/src/"*|buildSrc/*|gradle/*|side-projects/*|scripts/ci/*|scripts/azure/*)
-                HAS_CODE="true"
-                break
-                ;;
-            esac
-          done <<< "$CHANGED_FILES"
-
-          if [ "$HAS_CODE" != "true" ]; then
-            echo "has_code=false" >> "$GITHUB_OUTPUT"
-            echo "flavors_json=[]" >> "$GITHUB_OUTPUT"
-            echo "all_flavors_json=[]" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          ALL_FLAVORS_JSON="$(./gradlew -q printFlavors | tr -d '\r')"
-          if [ -z "$ALL_FLAVORS_JSON" ] || [ "$ALL_FLAVORS_JSON" = "[]" ]; then
-            echo "printFlavors returned empty list."
-            exit 1
-          fi
-
-          echo "all_flavors_json=$ALL_FLAVORS_JSON" >> "$GITHUB_OUTPUT"
-
-          mapfile -t ALL_FLAVORS < <(
-            echo "$ALL_FLAVORS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d'
-          )
-
-          COMMON_CHANGED="false"
-          while IFS= read -r file; do
-            [ -z "$file" ] && continue
-            case "$file" in
-              buildSrc/*|core/*|feature/*|gradle/*|app/build.gradle.kts|app/src/main/*|build.gradle.kts|settings.gradle.kts|gradle.properties)
-                COMMON_CHANGED="true"
-                break
-                ;;
-            esac
-          done <<< "$CHANGED_FILES"
-
-          SELECTED=()
-          if [ "$COMMON_CHANGED" = "true" ]; then
-            SELECTED=("${ALL_FLAVORS[@]}")
-          else
-            for flavour in "${ALL_FLAVORS[@]}"; do
-              if grep -q "^app/src/${flavour}/" <<< "$CHANGED_FILES"; then
-                SELECTED+=("$flavour")
-              fi
-            done
-          fi
-
-          if [ "${#SELECTED[@]}" -eq 0 ]; then
-            echo "has_code=false" >> "$GITHUB_OUTPUT"
-            echo "flavors_json=[]" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          SELECTED_JSON="["
-          first=true
-          for item in "${SELECTED[@]}"; do
-            [ -z "$item" ] && continue
-            if [ "$first" = false ]; then SELECTED_JSON+=","; fi
-            SELECTED_JSON+="\"$item\""
-            first=false
-          done
-          SELECTED_JSON+="]"
-
-          echo "has_code=true" >> "$GITHUB_OUTPUT"
-          echo "flavors_json=$SELECTED_JSON" >> "$GITHUB_OUTPUT"
+          python3 scripts/ci/compute_pr_impact.py --base-ref "$BASE_REF"
 
   side-projects:
     name: Side-project Quality
@@ -461,25 +367,47 @@ jobs:
       - name: Check required jobs
         env:
           SECURITY_GATE_RESULT: ${{ needs.security-gate.result }}
+          ANALYZE_IMPACT_RESULT: ${{ needs.analyze-impact.result }}
+          HAS_CODE: ${{ needs.analyze-impact.outputs.has_code }}
+          HAS_SIDE_PROJECT_CHANGES: ${{ needs.analyze-impact.outputs.has_side_project_changes }}
           SIDE_PROJECT_RESULT: ${{ needs.side-projects.result }}
           STATIC_ANALYSIS_RESULT: ${{ needs.static-analysis.result }}
           VALIDATE_TEST_RESULT: ${{ needs.validate-and-test.result }}
           ANDROID_LINT_RESULT: ${{ needs.android-lint.result }}
           KOVER_COVERAGE_RESULT: ${{ needs.kover-coverage.result }}
+          REPOSITORY_SECURITY_RESULT: ${{ needs.repository-security.result }}
           SECURITY_REQUIRED_RESULT: ${{ needs.security-required.result }}
         run: |
           set -euo pipefail
-          failed=0
-          for item in             "security-gate:$SECURITY_GATE_RESULT"             "side-projects:$SIDE_PROJECT_RESULT"             "static-analysis:$STATIC_ANALYSIS_RESULT"             "validate-and-test:$VALIDATE_TEST_RESULT"             "android-lint:$ANDROID_LINT_RESULT"             "kover-coverage:$KOVER_COVERAGE_RESULT"             "security-required:$SECURITY_REQUIRED_RESULT"; do
-            job="${item%%:*}"
-            result="${item#*:}"
-            if [ "$result" != "success" ] && [ "$result" != "skipped" ]; then
-              echo "::error::Required job '$job' failed with result: $result"
-              failed=1
+
+          for result in "$SECURITY_GATE_RESULT" "$ANALYZE_IMPACT_RESULT"                         "$REPOSITORY_SECURITY_RESULT" "$SECURITY_REQUIRED_RESULT"; do
+            if [ "$result" != "success" ]; then
+              echo "::error::A mandatory security/impact gate did not succeed: $result"
+              exit 1
             fi
           done
-          if [ "$failed" -eq 1 ]; then
-            echo "::error::One or more required quality gates failed"
-            exit 1
-          fi
-          echo "All required quality gates passed"
+
+          for selection in "$HAS_CODE" "$HAS_SIDE_PROJECT_CHANGES"; do
+            if [ "$selection" != "true" ] && [ "$selection" != "false" ]; then
+              echo "::error::Missing or invalid impact classification: $selection"
+              exit 1
+            fi
+          done
+
+          check_result() {
+            local actual="$1" selected="$2"
+            if [ "$selected" = "true" ] && [ "$actual" != "success" ]; then
+              echo "::error::Affected job must pass; got: $actual"
+              return 1
+            fi
+            if [ "$selected" = "false" ] && [ "$actual" != "skipped" ]; then
+              echo "::error::Unaffected job must be skipped; got: $actual"
+              return 1
+            fi
+          }
+          check_result "$SIDE_PROJECT_RESULT" "$HAS_SIDE_PROJECT_CHANGES"
+          check_result "$STATIC_ANALYSIS_RESULT" "$HAS_CODE"
+          check_result "$VALIDATE_TEST_RESULT" "$HAS_CODE"
+          check_result "$ANDROID_LINT_RESULT" "$HAS_CODE"
+          check_result "$KOVER_COVERAGE_RESULT" "$HAS_CODE"
+          echo "All required checks passed for the classified PR impact"

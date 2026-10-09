@@ -166,7 +166,7 @@ def test_side_project_quality_is_blocking_when_side_projects_change() -> None:
         if item.get("name") == "Check required jobs"
     )
     assert step["env"]["SIDE_PROJECT_RESULT"] == "${{ needs.side-projects.result }}"
-    assert "side-projects:$SIDE_PROJECT_RESULT" in step["run"]
+    assert 'check_result "$SIDE_PROJECT_RESULT" "$HAS_SIDE_PROJECT_CHANGES"' in step["run"]
 
 
 def test_ci_load_tests_run_after_security_gate() -> None:

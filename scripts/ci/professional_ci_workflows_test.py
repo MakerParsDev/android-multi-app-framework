@@ -95,7 +95,7 @@ def test_side_project_changes_are_a_hard_pr_gate() -> None:
         check_step["env"]["SIDE_PROJECT_RESULT"]
         == "${{ needs.side-projects.result }}"
     )
-    assert "side-projects:$SIDE_PROJECT_RESULT" in check_step["run"]
+    assert 'check_result "$SIDE_PROJECT_RESULT" "$HAS_SIDE_PROJECT_CHANGES"' in check_step["run"]
 
 
 def test_ci_enforces_and_uploads_kover_reports() -> None:
@@ -425,10 +425,11 @@ def test_ci_aggregate_gate_enforces_all_required_jobs() -> None:
         "kover-coverage",
     }
     command = named_step(job, "Check required jobs")["run"]
-    assert "security-gate" in command
-    assert "static-analysis" in command
-    assert "validate-and-test" in command
-    assert "kover-coverage" in command
+    assert "SECURITY_GATE_RESULT" in command
+    assert "ANALYZE_IMPACT_RESULT" in command
+    assert 'check_result "$STATIC_ANALYSIS_RESULT" "$HAS_CODE"' in command
+    assert 'check_result "$VALIDATE_TEST_RESULT" "$HAS_CODE"' in command
+    assert 'check_result "$KOVER_COVERAGE_RESULT" "$HAS_CODE"' in command
 
 
 def test_deprecated_internal_track_workflow_is_removed() -> None:
