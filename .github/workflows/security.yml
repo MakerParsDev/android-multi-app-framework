@@ -147,6 +147,7 @@ jobs:
           python3 scripts/ci/sync_automerge_label_test.py
           python3 scripts/ci/bootstrap_autonomous_repository_settings_test.py
           python3 scripts/ci/maintenance_health_controller_test.py
+          python3 scripts/ci/codeql_kotlin_compatibility_test.py
 
       - name: Validate Android toolchain config
         run: python3 scripts/ci/validate_android_toolchain_config.py

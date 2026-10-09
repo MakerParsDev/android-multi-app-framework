@@ -63,6 +63,10 @@ class CodeqlKotlinCompatibilityTest(unittest.TestCase):
         self.assertIn("implementation(gradleApi())", buildsrc)
         self.assertGreaterEqual(numeric_version(kotlin_version), (2, 4, 20))
 
+    def test_required_workflow_audit_runs_kotlin_version_guards(self) -> None:
+        workflow = (ROOT / ".github/workflows/security.yml").read_text(encoding="utf-8")
+        self.assertIn("python3 scripts/ci/codeql_kotlin_compatibility_test.py", workflow)
+
     def test_workflow_does_not_claim_an_ineffective_interceptor_bypass(self) -> None:
         workflow = CODEQL_WORKFLOW.read_text(encoding="utf-8")
         self.assertNotIn("disableKotlinInterceptor", workflow)
