@@ -483,25 +483,23 @@ def test_play_internal_builds_attests_and_publishes_one_exact_aab() -> None:
     assert upload["if"] == "always()"
 
 
+def test_workflow_audit_executes_regression_contracts() -> None:
+    workflow = load(".github/workflows/security.yml")
+    steps = workflow["jobs"]["workflow-audit"]["steps"]
+    step = named_step({"steps": steps}, "Test PR impact and release safety contracts")
+    command = step["run"]
+    for filename in (
+        "compute_pr_impact_test.py",
+        "validate_legacy_release_request_test.py",
+        "professional_ci_workflows_test.py",
+        "ci_load_policy_test.py",
+        "side_project_quality_contract_test.py",
+    ):
+        assert filename in command, filename
+
+
 def main() -> int:
-    tests = [
-        test_ci_gate_has_required_jobs,
-        test_ci_security_gate_uses_full_history_checkout,
-        test_ci_quality_jobs_depend_on_impact_analysis,
-        test_ci_enforces_and_uploads_kover_reports,
-        test_ci_generates_secret_free_firebase_configs_for_tests,
-        test_security_runs_dependency_review_only_for_pull_requests,
-        test_dependency_submission_is_trusted_and_job_scoped,
-        test_codeql_uses_manual_kotlin_build_and_cleans_placeholder,
-        test_baseline_profiles_workflow_is_full_speed_and_safe,
-        test_physical_performance_is_manual_and_serial,
-        test_managed_device_is_pinned_and_scheduled,
-        test_ci_smoke_build_disables_remote_firebase_startup,
-        test_performance_startup_skips_prompts_and_remote_services,
-        test_release_is_manual_protected_and_attested,
-        test_ci_aggregate_gate_enforces_all_required_jobs,
-        test_play_internal_builds_attests_and_publishes_one_exact_aab,
-    ]
+    tests = [value for key, value in globals().items() if key.startswith("test_") and callable(value)]
     for test in tests:
         test()
         print(f"PASS {test.__name__}")
