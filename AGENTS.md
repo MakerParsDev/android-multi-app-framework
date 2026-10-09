@@ -29,5 +29,6 @@ This document defines the permanent operating invariants, policy boundaries, and
    - Preserve line endings and git permissions.
 
 7. **Autonomous Maintenance Architecture**:
-   - GitHub Issue #245 defines the unified autonomous maintenance architecture control plane.
-   - Machine-owned policies, canary testing, security tracking (#183), and dispatch session safety are governed via repository-owned scripts and `config/autonomy-policy.yaml`.
+   - The authoritative autonomous maintenance control plane is defined by repository-owned instructions, workflows, and config/autonomy-policy.yaml.
+   - Canary checks, security exceptions and dispatch session safety are governed by repository-owned scripts and policy, not deleted issues.
+   - Issue #164 is the live Autonomous Maintenance Dashboard; current advisories must be verified through the latest SBOM/OSV scan.

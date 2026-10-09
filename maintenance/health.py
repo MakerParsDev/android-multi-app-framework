@@ -34,6 +34,8 @@ class HealthReporter:
         markdown_report += f"**Post-Merge Recovery**: Mode={recovery_cfg.get('mode')}\n\n"
 
         markdown_report += "## Active Exceptions\n"
+        if not canaries:
+            markdown_report += "None recorded. Verify live advisory scans independently.\n"
         for c in canaries:
             markdown_report += f"- **{c.get('id')}**: {c.get('advisory')} (expires {c.get('review_expires_on')})\n"
 
