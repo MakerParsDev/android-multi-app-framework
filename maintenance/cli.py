@@ -23,7 +23,7 @@ def main() -> int:
     parser_canary.add_argument("canary_id", help="Canary ID to run (e.g. kotlin-codeql, firebase-stream-json)")
 
     # security-issue-sync
-    subparsers.add_parser("security-issue-sync", help="Sync machine-owned security tracking Issue #183 state")
+    subparsers.add_parser("security-issue-sync", help="Render current security exception policy state without GitHub issue mutation")
 
     # health
     subparsers.add_parser("health", help="Render autonomy observability metrics and health report")
@@ -64,7 +64,7 @@ def main() -> int:
         policy = AutonomyPolicy.load()
         state = evaluate_security_issue_state(policy)
         body = render_security_issue_body(policy)
-        print(f"Issue #183 State Evaluation: Open={state['should_be_open']} ({state['active_blocker_count']} active blockers)")
+        print(f"Security exceptions need review={state['should_be_open']} ({state['active_blocker_count']} active blockers)")
         print("\n--- Rendered Issue Body Preview ---\n")
         print(body[:300] + "...\n")
         return 0

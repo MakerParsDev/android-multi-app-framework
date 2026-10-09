@@ -71,30 +71,7 @@ compatibility_families:
       - wrangler
       - "@cloudflare/workers-types"
 
-active_canaries_and_exceptions:
-  - id: firebase-stream-json
-    type: side-project-npm
-    project: side-projects/firebase/rules-tests
-    advisory: GHSA-528h-pc64-c93x
-    cve: CVE-2026-71429
-    tracking_issue: "#183"
-    owner: oaslananka
-    current_package: firebase-tools
-    vulnerable_transitive: stream-json
-    review_expires_on: "2026-10-01"
-    rationale: "Upstream firebase-tools relies on stream-json ^1.7.3. Forcing stream-json 3.x breaks CLI module resolution."
-
-  - id: firebase-ts-deepmerge
-    type: side-project-npm
-    project: side-projects/firebase/functions
-    advisory: GHSA-87mf-gv2c-c62c
-    cve: CVE-2026-12644
-    tracking_issue: "#183"
-    owner: oaslananka
-    current_package: firebase-functions-test
-    vulnerable_transitive: ts-deepmerge
-    review_expires_on: "2026-10-01"
-    rationale: "Forcing ts-deepmerge 2.x breaks CloudEvent generation CJS default export."
+active_canaries_and_exceptions: []
 
 dependabot_grouping:
   actions:
