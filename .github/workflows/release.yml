@@ -296,6 +296,7 @@ jobs:
           FLAVORS_JSON: ${{ needs.resolve-flavors.outputs.flavors_json }}
           DO_INTERNAL_TEST: ${{ inputs.do_internal_test }}
           DO_PUBLISH: ${{ inputs.do_publish }}
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
           KEYSTORE_FILE: /tmp/release.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
@@ -316,7 +317,7 @@ jobs:
             fi
           done
           echo "Running Gradle tasks: ${TASKS[*]}"
-          ./gradlew "${TASKS[@]}" --stacktrace --no-daemon --max-workers=2
+          scripts/doppler-run.sh -- ./gradlew "${TASKS[@]}" --stacktrace --no-daemon --max-workers=2
 
       - name: Upload build outputs
         if: always()
@@ -349,6 +350,13 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
 
       - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      - name: Install verified Doppler CLI
+        run: |
+          set -euo pipefail
+          assignments="$(bash scripts/ci/install_doppler_cli.sh "$RUNNER_TEMP/doppler-bin")"
+          eval "$assignments"
+          printf '%s\n' "$(dirname "$DOPPLER_BIN")" >> "$GITHUB_PATH"
 
       - name: Download build outputs
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -393,6 +401,7 @@ jobs:
           FLAVORS_JSON: ${{ needs.resolve-flavors.outputs.flavors_json }}
           DO_PUBLISH: ${{ inputs.do_publish }}
           UPDATE_PLAY_LISTING: ${{ inputs.update_play_listing }}
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
         run: |
           set -euo pipefail
           mapfile -t FLAVORS < <(
@@ -400,16 +409,22 @@ jobs:
           )
           TRACK="internal"
           if [ "$DO_PUBLISH" = "true" ]; then TRACK="production"; fi
-          TASKS=()
           for flavor in "${FLAVORS[@]}"; do
             [ -z "$flavor" ] && continue
             cap="$(tr '[:lower:]' '[:upper:]' <<< "${flavor:0:1}")${flavor:1}"
-            if [ "$UPDATE_PLAY_LISTING" = "true" ]; then TASKS+=("publish${cap}ReleaseListing"); fi
-            TASKS+=("publish${cap}ReleaseBundle")
+            bundle_dir="$GITHUB_WORKSPACE/app/build/outputs/bundle/${flavor}Release"
+            [[ -d "$bundle_dir" ]] || { echo "::error::Missing signed AAB directory for $flavor"; exit 1; }
+            mapfile -t aabs < <(find "$bundle_dir" -maxdepth 1 -type f -name '*.aab' -print)
+            [[ ${#aabs[@]} -eq 1 ]] || {
+              echo "::error::Expected exactly one signed AAB for $flavor, found ${#aabs[@]}"
+              exit 1
+            }
+            echo "Publishing prebuilt signed AAB for flavor=$flavor track=$TRACK"
+            if [ "$UPDATE_PLAY_LISTING" = "true" ]; then
+              scripts/doppler-run.sh -- ./gradlew "publish${cap}ReleaseListing" -PPLAY_TRACK="$TRACK" --no-daemon --max-workers=2
+            fi
+            scripts/doppler-run.sh -- ./gradlew "publish${cap}ReleaseBundle" --artifact-dir "$bundle_dir" -PPLAY_TRACK="$TRACK" --stacktrace --no-daemon --max-workers=2
           done
-          echo "Publishing tasks: ${TASKS[*]}"
-          ./gradlew "${TASKS[@]}" -PPLAY_TRACK="$TRACK" --stacktrace --no-daemon --max-workers=2
-
       - name: Cleanup secrets
         if: always()
         run: rm -f /tmp/release.jks /tmp/service-account.json || true
