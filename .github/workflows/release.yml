@@ -243,10 +243,13 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
+          set -euo pipefail
+          umask 077
           echo "::add-mask::${KEYSTORE_PASSWORD}"
           echo "::add-mask::${KEY_PASSWORD}"
           echo "$KEYSTORE_BASE64" | base64 -d > /tmp/release.jks
-          echo "KEYSTORE_FILE=/tmp/release.jks" >> "$GITHUB_ENV"
+          export KEYSTORE_FILE=/tmp/release.jks
+          echo "KEYSTORE_FILE=$KEYSTORE_FILE" >> "$GITHUB_ENV"
           bash scripts/ci/verify_release_signing_config.sh
 
       - name: Run quality checks
@@ -269,9 +272,12 @@ jobs:
           PLAY_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
           RESOLVED_FLAVORS_CSV: ${{ needs.resolve-flavors.outputs.flavors_csv }}
         run: |
+          set -euo pipefail
+          umask 077
           echo "$PLAY_SERVICE_ACCOUNT_JSON_BASE64" | tr -d '\r\n\t ' | base64 -d > /tmp/service-account.json
-          echo "PLAY_SERVICE_ACCOUNT_JSON=/tmp/service-account.json" >> "$GITHUB_ENV"
-          echo "::add-mask::$(cat /tmp/service-account.json | head -c 20)"
+          export PLAY_SERVICE_ACCOUNT_JSON=/tmp/service-account.json
+          echo "PLAY_SERVICE_ACCOUNT_JSON=$PLAY_SERVICE_ACCOUNT_JSON" >> "$GITHUB_ENV"
+          echo "::add-mask::$(head -c 20 /tmp/service-account.json)"
           python3 scripts/ci/verify_play_service_account_project.py --expected-project-id makerpars-oaslananka-mobil
           python3 -m pip install --disable-pip-version-check \
             --require-hashes \
@@ -290,7 +296,7 @@ jobs:
           FLAVORS_JSON: ${{ needs.resolve-flavors.outputs.flavors_json }}
           DO_INTERNAL_TEST: ${{ inputs.do_internal_test }}
           DO_PUBLISH: ${{ inputs.do_publish }}
-          KEYSTORE_FILE: ${{ env.KEYSTORE_FILE }}
+          KEYSTORE_FILE: /tmp/release.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
@@ -362,7 +368,7 @@ jobs:
           echo "::add-mask::${KEY_PASSWORD}"
           echo "$KEYSTORE_BASE64" | base64 -d > /tmp/release.jks
           echo "$PLAY_SERVICE_ACCOUNT_JSON_BASE64" | tr -d '\r\n\t ' | base64 -d > /tmp/service-account.json
-          echo "::add-mask::$(cat /tmp/service-account.json | head -c 20)"
+          echo "::add-mask::$(head -c 20 /tmp/service-account.json)"
           echo "KEYSTORE_FILE=/tmp/release.jks" >> "$GITHUB_ENV"
           echo "PLAY_SERVICE_ACCOUNT_JSON=/tmp/service-account.json" >> "$GITHUB_ENV"
 
