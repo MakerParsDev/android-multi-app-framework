@@ -111,6 +111,25 @@ def test_release_credentials_are_visible_within_step_and_next_step() -> None:
     assert build["env"]["KEYSTORE_FILE"] == "/tmp/release.jks"
 
 
+def test_release_build_and_publish_use_doppler_and_exact_signed_artifacts() -> None:
+    workflow = yaml.safe_load((ROOT / ".github/workflows/release.yml").read_text())
+    build = workflow["jobs"]["build-release"]
+    publish = workflow["jobs"]["publish-play"]
+    build_aabs = next(x for x in build["steps"] if x.get("name") == "Build AABs")
+    publish_step = next(x for x in publish["steps"] if x.get("name") == "Publish to Play")
+    assert "DOPPLER_TOKEN" in build_aabs["env"]
+    assert "scripts/doppler-run.sh -- ./gradlew" in build_aabs["run"]
+    assert "DOPPLER_TOKEN" in publish_step["env"]
+    assert "scripts/doppler-run.sh -- ./gradlew" in publish_step["run"]
+    assert "--artifact-dir" in publish_step["run"]
+    assert "find" in publish_step["run"] and "*.aab" in publish_step["run"]
+    assert "exactly one signed AAB" in publish_step["run"]
+    assert publish["environment"] == "production"
+    assert "Install verified Doppler CLI" in [
+        step.get("name") for step in publish["steps"]
+    ]
+
+
 def main() -> int:
     for name, test in list(globals().items()):
         if name.startswith("test_") and callable(test):
