@@ -88,6 +88,29 @@ def test_workflow_contract_executes_before_credentials() -> None:
     assert set(REQUIRED_WORKFLOWS) == {"ci-main.yml", "codeql.yml"}
 
 
+def test_release_credentials_are_visible_within_step_and_next_step() -> None:
+    workflow = yaml.safe_load((ROOT / ".github/workflows/release.yml").read_text())
+    steps = workflow["jobs"]["build-release"]["steps"]
+    decode = next(x for x in steps if x.get("name") == "Decode keystore")
+    signing = decode["run"]
+    assert signing.index("export KEYSTORE_FILE=/tmp/release.jks") < signing.index(
+        "bash scripts/ci/verify_release_signing_config.sh"
+    )
+    assert "KEYSTORE_FILE=$KEYSTORE_FILE" in signing
+    assert "set -euo pipefail" in signing and "umask 077" in signing
+
+    bump = next(x for x in steps if x.get("name") == "Auto-bump Play version codes")
+    script = bump["run"]
+    assert script.index("export PLAY_SERVICE_ACCOUNT_JSON=/tmp/service-account.json") < (
+        script.index("python3 scripts/ci/verify_play_service_account_project.py")
+    )
+    assert "PLAY_SERVICE_ACCOUNT_JSON=$PLAY_SERVICE_ACCOUNT_JSON" in script
+    assert "set -euo pipefail" in script and "umask 077" in script
+
+    build = next(x for x in steps if x.get("name") == "Build AABs")
+    assert build["env"]["KEYSTORE_FILE"] == "/tmp/release.jks"
+
+
 def main() -> int:
     for name, test in list(globals().items()):
         if name.startswith("test_") and callable(test):
