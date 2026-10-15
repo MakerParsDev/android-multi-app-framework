@@ -170,6 +170,11 @@ function mockFetch({ certsKeys = [], firestore = {} } = {}) {
         ? firestore.runAggregationQuery(urlStr, init)
         : new Response(JSON.stringify([{ result: { aggregateFields: { deviceCount: { integerValue: "0" } } } }]), { status: 200 });
     }
+    if (urlStr.startsWith(DOCUMENTS_BASE + "/devices?") && method === "GET") {
+      return firestore.listDevices
+        ? firestore.listDevices(urlStr, init)
+        : new Response(JSON.stringify({ documents: [] }), { status: 200 });
+    }
     if (urlStr.startsWith(`${DOCUMENTS_BASE}/coverage_reports?`) && method === "GET") {
       return firestore.listCoverage
         ? firestore.listCoverage(urlStr, init)
@@ -1025,6 +1030,86 @@ test("Flavor Hub fallback uses indexed Firestore counts without reading device d
   assert.deepEqual((await responseJson(second)).coverage, body.coverage);
   assert.equal(calls.filter((entry) => entry.url === `${DOCUMENTS_BASE}:runAggregationQuery`).length, 4,
     "cache should prevent repeat count calls");
+});
+
+test("Analytics overview uses indexed counts and no device document reads", async () => {
+  const signer = await createSigner();
+  const token = await signer.sign();
+  const queries = [];
+  const { calls } = mockFetch({
+    certsKeys: [signer.jwk],
+    firestore: {
+      runAggregationQuery: (_url, init) => {
+        const query = JSON.parse(init.body).structuredAggregationQuery.structuredQuery;
+        queries.push(query);
+        const active = Boolean(query.where?.fieldFilter);
+        return new Response(JSON.stringify([
+          { result: { aggregateFields: { deviceCount: { integerValue: active ? "7596" : "35508" } } } },
+        ]), { status: 200 });
+      },
+    },
+  });
+  const makeRequest = () => jsonRequest("https://admin-api.parsfilo.com/adminGetAnalyticsSummary", {
+    token,
+    body: { mode: "overview", packages: ["com.parsfilo.unique-analytics-overview"] },
+  });
+
+  const first = await adminWorker.fetch(makeRequest(), baseEnv());
+  assert.equal(first.status, 200);
+  const data = await responseJson(first);
+  assert.equal(data.mode, "overview");
+  assert.equal(data.totalDevices, 35508);
+  assert.equal(data.activeDevices30d, 7596);
+  assert.equal(typeof data.loadedAt, "string");
+  assert.equal(Object.hasOwn(data, "runtimeHealthByPackage"), false, "detailed metrics must not be fabricated");
+  assert.equal(queries.length, 2);
+  assert.equal(queries.filter((q) => !q.where).length, 1);
+  assert.equal(queries.filter((q) => q.where?.fieldFilter?.field?.fieldPath === "updatedAt").length, 1);
+  assert.equal(calls.filter((call) => call.url.startsWith(DOCUMENTS_BASE + "/devices?")).length, 0);
+
+  const again = await adminWorker.fetch(makeRequest(), baseEnv());
+  assert.equal(again.status, 200);
+  assert.deepEqual(await responseJson(again), data);
+  assert.equal(queries.length, 2, "identical overviews must share a cache entry");
+});
+
+test("full Analytics mode still returns detailed data and legacy requests default to full", async () => {
+  const signer = await createSigner();
+  const token = await signer.sign();
+  const { calls } = mockFetch({
+    certsKeys: [signer.jwk],
+    firestore: {
+      listDevices: () => new Response(JSON.stringify({
+        documents: [{
+          name: DOCUMENTS_BASE + "/devices/fake-doc-1",
+          fields: {
+            packageName: { stringValue: "com.parsfilo.unique-analytics-full" },
+            updatedAt: { timestampValue: new Date().toISOString() },
+            notificationsEnabled: { booleanValue: true },
+          },
+        }],
+      }), { status: 200 }),
+      runAggregationQuery: () => new Response(JSON.stringify([
+        { result: { aggregateFields: { deviceCount: { integerValue: "1" } } } },
+      ]), { status: 200 }),
+    },
+  });
+  const makeRequest = (mode) => jsonRequest("https://admin-api.parsfilo.com/adminGetAnalyticsSummary", {
+    token,
+    body: { mode, packages: ["com.parsfilo.unique-analytics-full"] },
+  });
+  assert.equal((await responseJson(await adminWorker.fetch(makeRequest("overview"), baseEnv()))).mode, "overview");
+  const full = await adminWorker.fetch(makeRequest("full"), baseEnv());
+  assert.equal(full.status, 200);
+  const result = await responseJson(full);
+  assert.equal(result.totalDevices, 1);
+  assert.equal(result.activeDevices30d, 1);
+  assert.ok(Array.isArray(result.runtimeHealthByPackage));
+  assert.equal(calls.filter((call) => call.url.startsWith(DOCUMENTS_BASE + "/devices?")).length, 1);
+
+  const legacy = await adminWorker.fetch(makeRequest(undefined), baseEnv());
+  assert.equal(legacy.status, 200);
+  assert.ok(Array.isArray((await responseJson(legacy)).runtimeHealthByPackage));
 });
 
 // Keep this last: the quota circuit breaker intentionally persists within an isolate.

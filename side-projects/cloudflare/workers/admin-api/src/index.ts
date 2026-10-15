@@ -944,37 +944,31 @@ async function listCollectionDocuments(
 
 // Counting index matches avoids downloading a potentially large devices collection.
 // The packageName + updatedAt composite index exists and is READY in production.
-async function countDevicesByPackage(env: Env, packageName: string, since?: Date): Promise<number> {
+async function countDevicesByPackage(env: Env, packageName: string | null, since?: Date): Promise<number> {
   guardFirestoreReads();
   const accessToken = await getGoogleAccessToken(env);
   if (!accessToken) throw new Error("Firestore credential unavailable for device count");
 
-  const packageFilter = {
+  const packageFilter = packageName ? {
     fieldFilter: {
       field: { fieldPath: "packageName" },
       op: "EQUAL",
       value: { stringValue: packageName },
     },
-  };
+  } : undefined;
+  const dateFilter = since ? {
+    fieldFilter: {
+      field: { fieldPath: "updatedAt" },
+      op: "GREATER_THAN_OR_EQUAL",
+      value: { timestampValue: since.toISOString() },
+    },
+  } : undefined;
+  const where = packageFilter && dateFilter
+    ? { compositeFilter: { op: "AND", filters: [packageFilter, dateFilter] } }
+    : packageFilter ?? dateFilter;
   const structuredQuery = {
     from: [{ collectionId: "devices" }],
-    where: since
-      ? {
-          compositeFilter: {
-            op: "AND",
-            filters: [
-              packageFilter,
-              {
-                fieldFilter: {
-                  field: { fieldPath: "updatedAt" },
-                  op: "GREATER_THAN_OR_EQUAL",
-                  value: { timestampValue: since.toISOString() },
-                },
-              },
-            ],
-          },
-        }
-      : packageFilter,
+    ...(where ? { where } : {}),
   };
 
   const projectId = env.FIREBASE_PROJECT_ID.trim();
@@ -2278,7 +2272,27 @@ async function handleAdminGetAnalyticsSummary(request: Request, env: Env): Promi
 
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   const packages = parsePackages(body.packages);
-  return cachedAdminSummary(`analytics:${packages.join("|")}`, ANALYTICS_SUMMARY_TTL_MS, async () => {
+  // Full diagnostics depend on every device's registration and runtime fields.
+  // For interactive page loads, an explicitly requested overview avoids the
+  // potentially 35k+ document scan while returning exact indexed counts.
+  const overviewMode = body.mode === "overview";
+  return cachedAdminSummary(
+    `analytics:${overviewMode ? "overview" : "full"}:${packages.join("|")}`,
+    ANALYTICS_SUMMARY_TTL_MS,
+    async () => {
+    if (overviewMode) {
+      const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const [totalDevices, activeDevices30d] = await Promise.all([
+        countDevicesByPackage(env, null),
+        countDevicesByPackage(env, null, cutoff),
+      ]);
+      return jsonResponse({
+        mode: "overview",
+        totalDevices,
+        activeDevices30d,
+        loadedAt: new Date().toISOString(),
+      });
+    }
 
   const devicesDocs = await listCollectionDocuments(env, "devices", 1000);
   const devices = devicesDocs.map((doc) => parseFirestoreDocument(doc));
