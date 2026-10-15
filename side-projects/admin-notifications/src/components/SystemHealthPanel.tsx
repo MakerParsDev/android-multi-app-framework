@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { appBuildId, appBuildTime, localTimeZone, sortedApps } from "../helpers";
+import { appBuildId, appBuildTime, isServiceGitDrift, localTimeZone, sortedApps } from "../helpers";
 import { functionsBaseUrl } from "../firebase";
 
 type HealthStatus = "unknown" | "checking" | "healthy" | "unhealthy";
@@ -84,8 +84,14 @@ export default function SystemHealthPanel() {
           const responseBody = await res.json().catch(() => null) as Record<string, unknown> | null;
           const gitSha = typeof responseBody?.gitSha === "string" ? responseBody.gitSha : null;
           const builtAt = typeof responseBody?.builtAt === "string" ? responseBody.builtAt : null;
-          const expectedGitSha = import.meta.env.VITE_APP_GIT_SHA?.trim();
-          const drift = Boolean(expectedGitSha && gitSha && gitSha !== expectedGitSha);
+          const expectedGitSha = service.name === "Admin API Worker" || service.name === "Admin API"
+            ? import.meta.env.VITE_ADMIN_API_GIT_SHA?.trim()
+            : service.name === "Content API"
+              ? import.meta.env.VITE_CONTENT_API_GIT_SHA?.trim()
+              : service.name === "SSV Callback"
+                ? import.meta.env.VITE_SSV_CALLBACK_GIT_SHA?.trim()
+                : undefined;
+          const drift = isServiceGitDrift(gitSha, expectedGitSha);
           const isOk = (res.ok || res.status === 401) && !drift;
           const trace = gitSha ? ` · ${gitSha.slice(0, 12)}` : " · SHA missing";
           return {

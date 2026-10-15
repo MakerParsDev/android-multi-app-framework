@@ -45,6 +45,20 @@ export function formatTry(value?: number): string {
   return `₺${value.toFixed(4)}`;
 }
 
+/** Counts are not zero when coverage could not be fetched. */
+export function formatDeviceCount(value?: number): string {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0
+    ? value.toLocaleString()
+    : "—";
+}
+
+/** Only compare a service with its OWN explicitly configured release SHA. */
+export function isServiceGitDrift(actualSha: string | null, expectedServiceSha?: string): boolean {
+  const actual = actualSha?.trim();
+  const expected = expectedServiceSha?.trim();
+  return Boolean(actual && expected && actual !== expected);
+}
+
 export function scheduleLabel(record: ScheduledEventRecord): string {
   if (record.date) return `Once: ${record.date} @ ${record.localDeliveryTime}`;
   if (record.recurrence) return `${record.recurrence} @ ${record.localDeliveryTime}`;
