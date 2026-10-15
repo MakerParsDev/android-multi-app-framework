@@ -1112,6 +1112,71 @@ test("full Analytics mode still returns detailed data and legacy requests defaul
   assert.ok(Array.isArray((await responseJson(legacy)).runtimeHealthByPackage));
 });
 
+test("deviceCoverageReport uses indexed counts, preserves arbitrary day window and missing/stale packages", async () => {
+  const signer = await createSigner();
+  const token = await signer.sign();
+  const byPackage = new Map([
+    ["com.parsfilo.alpha", { active: 8, total: 15 }],
+    ["com.parsfilo.stale", { active: 0, total: 5 }],
+    ["com.parsfilo.missing", { active: 0, total: 0 }],
+  ]);
+  const queries = [];
+  const { calls } = mockFetch({
+    certsKeys: [signer.jwk],
+    firestore: {
+      runAggregationQuery: (_url, init) => {
+        const query = JSON.parse(init.body).structuredAggregationQuery.structuredQuery;
+        queries.push(query);
+        const filter = query.where;
+        const active = Boolean(filter?.compositeFilter);
+        const packageName = active
+          ? filter.compositeFilter.filters[0].fieldFilter.value.stringValue
+          : filter.fieldFilter.value.stringValue;
+        const entry = byPackage.get(packageName);
+        assert.ok(entry);
+        return new Response(JSON.stringify([{
+          result: { aggregateFields: { deviceCount: { integerValue: String(active ? entry.active : entry.total) } } },
+        }]), { status: 200 });
+      },
+    },
+  });
+  const request = jsonRequest("https://admin-api.parsfilo.com/deviceCoverageReport", {
+    token,
+    body: { days: 14, packages: [...byPackage.keys()] },
+  });
+  const response = await adminWorker.fetch(request, baseEnv());
+  assert.equal(response.status, 200);
+  const body = await responseJson(response);
+  assert.equal(body.days, 14);
+  assert.equal(typeof body.generatedAt, "string");
+  assert.deepEqual(body.byPackage, [...byPackage].map(([packageName, counts]) => ({
+    packageName, activeDeviceCount: counts.active, totalDeviceCount: counts.total,
+  })));
+  assert.deepEqual(body.missingPackages, ["com.parsfilo.missing"]);
+  assert.deepEqual(body.stalePackages, ["com.parsfilo.stale"]);
+  assert.equal(queries.length, 6, "two aggregation queries per package");
+  assert.equal(queries.filter((query) => Boolean(query.where.compositeFilter)).length, 3);
+  for (const query of queries.filter((q) => q.where.compositeFilter)) {
+    const activeFilter = query.where.compositeFilter.filters[1].fieldFilter;
+    assert.equal(activeFilter.field.fieldPath, "updatedAt");
+    assert.equal(activeFilter.op, "GREATER_THAN_OR_EQUAL");
+    const delta = Date.now() - Date.parse(activeFilter.value.timestampValue);
+    assert.ok(delta >= 13.9 * 86400000 && delta <= 14.1 * 86400000);
+  }
+  assert.equal(calls.filter((call) => call.url === DOCUMENTS_BASE + ":runQuery").length, 0);
+  assert.equal(calls.filter((call) => call.url.startsWith(DOCUMENTS_BASE + "/devices?")).length, 0);
+});
+
+test("deviceCoverageReport denies unauthenticated calls before any Firestore query", async () => {
+  const { calls } = mockFetch();
+  const response = await adminWorker.fetch(
+    jsonRequest("https://admin-api.parsfilo.com/deviceCoverageReport", { body: { days: 14 } }),
+    baseEnv(),
+  );
+  assert.equal(response.status, 401);
+  assert.equal(calls.filter((call) => call.url.includes("firestore.googleapis.com")).length, 0);
+});
+
 // Keep this last: the quota circuit breaker intentionally persists within an isolate.
 test("router returns a retryable 503 and avoids another Firestore read after quota exhaustion", async () => {
   const signer = await createSigner();
