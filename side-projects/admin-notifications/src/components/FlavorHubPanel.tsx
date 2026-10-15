@@ -3,6 +3,7 @@ import { functionsBaseUrl } from "../firebase";
 import {
   fetchAdminFunctionJson,
   formatDateTime,
+  formatDeviceCount,
   isFlavorHubSummary,
   parseFlavorVersions,
   sortedApps,
@@ -88,15 +89,20 @@ export default function FlavorHubPanel() {
               </p>
             )}
             {error && <p className="inline-error" role="alert">{error}</p>}
+            {!state && !loading && (
+              <p className="muted" role="status">
+                Device counts unavailable until coverage data loads; a missing value is not zero.
+              </p>
+            )}
 
             <div className="flavor-grid" role="list" aria-label="Flavor inventory">
               {sortedApps.map((app) => {
                 const versionInfo = flavorVersions[app.flavor] ?? {};
                 const coverage = state?.coverage[app.package];
-                const activeDevices = coverage?.active ?? 0;
-                const totalDevices = coverage?.total ?? 0;
-                const coverageRate = totalDevices > 0
-                  ? `${((activeDevices / totalDevices) * 100).toFixed(1)}%`
+                const activeDevices = coverage?.active;
+                const totalDevices = coverage?.total;
+                const coverageRate = typeof totalDevices === "number" && totalDevices > 0
+                  ? `${(((activeDevices ?? 0) / totalDevices) * 100).toFixed(1)}%`
                   : "-";
                 return (
                   <article key={app.package} className="flavor-card glass-card" role="listitem">
@@ -116,10 +122,10 @@ export default function FlavorHubPanel() {
                       <dt>Version code</dt>
                       <dd>{versionInfo.versionCode ?? "-"}</dd>
                       <dt>Active devices (30d)</dt>
-                      <dd>{activeDevices}</dd>
+                      <dd>{formatDeviceCount(activeDevices)}</dd>
                       <dt>Total devices</dt>
-                      <dd>{totalDevices}</dd>
-                      <dt>Push coverage</dt>
+                      <dd>{formatDeviceCount(totalDevices)}</dd>
+                      <dt>Active share (30d)</dt>
                       <dd>{coverageRate}</dd>
                       <dt>AdMob App ID</dt>
                       <dd><code>{app.admob_app_id}</code></dd>
