@@ -967,9 +967,6 @@ test("adminListRecentDevices: returns an empty array when there are no devices",
   assert.deepEqual(await responseJson(response), { devices: [] });
 });
 
-  assert.deepEqual(await responseJson(response), { devices: [] });
-});
-
 // Keep this last: the quota circuit breaker intentionally persists within an isolate.
 test("router returns a retryable 503 and avoids another Firestore read after quota exhaustion", async () => {
   const signer = await createSigner();
