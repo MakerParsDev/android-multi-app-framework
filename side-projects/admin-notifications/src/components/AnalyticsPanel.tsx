@@ -10,10 +10,48 @@ import type { AnalyticsSummary } from "../types";
 
 const firebaseProjectId = import.meta.env.VITE_FIREBASE_PROJECT_ID ?? "makerpars-oaslananka-mobil";
 
+type AnalyticsOverview = {
+  mode: "overview";
+  totalDevices: number;
+  activeDevices30d: number;
+  loadedAt: string;
+};
+
+function isAnalyticsOverview(value: unknown): value is AnalyticsOverview {
+  if (!value || typeof value !== "object") return false;
+  const record = value as Record<string, unknown>;
+  return record.mode === "overview" &&
+    typeof record.totalDevices === "number" && Number.isSafeInteger(record.totalDevices) &&
+    record.totalDevices >= 0 &&
+    typeof record.activeDevices30d === "number" && Number.isSafeInteger(record.activeDevices30d) &&
+    record.activeDevices30d >= 0 &&
+    typeof record.loadedAt === "string";
+}
+
 export default function AnalyticsPanel() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
+  const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
+
+  async function loadDetailedAnalytics() {
+    setLoading(true);
+    setError("");
+    try {
+      const payload = await fetchAdminFunctionJson<AnalyticsSummary>({
+        endpoint: `${functionsBaseUrl}/adminGetAnalyticsSummary`,
+        body: { packages: sortedApps.map((app) => app.package), mode: "full" },
+      });
+      if (!isAnalyticsSummary(payload) || !("registrationHealthByPackage" in payload)) {
+        throw new Error("Detailed analytics response is invalid.");
+      }
+      setSummary(payload);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Failed to load detailed analytics.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -22,17 +60,17 @@ export default function AnalyticsPanel() {
       setLoading(true);
       setError("");
       try {
-        const payload = await fetchAdminFunctionJson<AnalyticsSummary>({
+        const payload = await fetchAdminFunctionJson<AnalyticsOverview>({
           endpoint: `${functionsBaseUrl}/adminGetAnalyticsSummary`,
-          body: { packages: sortedApps.map((app) => app.package) },
+          body: { packages: sortedApps.map((app) => app.package), mode: "overview" },
         });
 
-        if (!isAnalyticsSummary(payload)) {
-          throw new Error("Analytics summary response is invalid.");
+        if (!isAnalyticsOverview(payload)) {
+          throw new Error("Analytics overview response is invalid.");
         }
 
         if (!cancelled) {
-          setSummary(payload);
+          setOverview(payload);
         }
       } catch (loadError) {
         console.error(loadError);
@@ -66,7 +104,7 @@ export default function AnalyticsPanel() {
             <div className="device-preview-header">
               <strong>Push registration summary</strong>
               <span className="muted">
-                {loading ? "Loading…" : summary ? `loaded ${formatDateTime(new Date(summary.loadedAt))}` : "not loaded"}
+                {loading ? "Loading…" : summary ? `loaded ${formatDateTime(new Date(summary.loadedAt))}` : overview ? `updated ${formatDateTime(new Date(overview.loadedAt))}` : "not loaded"}
               </span>
             </div>
 
@@ -75,6 +113,34 @@ export default function AnalyticsPanel() {
             </p>
 
             {error && <p className="inline-error" role="alert">{error}</p>}
+
+            {overview && !summary && (
+              <>
+                <div className="health-grid analytics-metric-grid" aria-label="Indexed device overview">
+                  <div className="health-card glass-card">
+                    <div className="health-card-label">Total devices</div>
+                    <div className="health-card-value">{overview.totalDevices.toLocaleString()}</div>
+                  </div>
+                  <div className="health-card glass-card">
+                    <div className="health-card-label">Active 30d</div>
+                    <div className="health-card-value">{overview.activeDevices30d.toLocaleString()}</div>
+                  </div>
+                </div>
+                <p className="muted">
+                  This overview uses inexpensive indexed counts. Token health, notifications enabled,
+                  consent and ad funnel metrics require a complete device scan and are not included here.
+                  No unavailable metric is reported as zero.
+                </p>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={loading}
+                  onClick={() => { void loadDetailedAnalytics(); }}
+                >
+                  {loading ? "Loading detailed diagnostics…" : `Load detailed diagnostics (up to ${overview.totalDevices.toLocaleString()} device reads)`}
+                </button>
+              </>
+            )}
 
             {summary && !error && (
               <>
