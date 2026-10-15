@@ -923,7 +923,7 @@ async function listCollectionDocuments(
     });
 
     noteFirestoreReadFailure(response.status);
-  if (!response.ok) {
+    if (!response.ok) {
       const text = await response.text();
       console.error("[admin-api] list docs failed", collectionId, response.status, text);
       break;
@@ -940,6 +940,73 @@ async function listCollectionDocuments(
   } while (pageToken);
 
   return docs;
+}
+
+// Counting index matches avoids downloading a potentially large devices collection.
+// The packageName + updatedAt composite index exists and is READY in production.
+async function countDevicesByPackage(env: Env, packageName: string, since?: Date): Promise<number> {
+  guardFirestoreReads();
+  const accessToken = await getGoogleAccessToken(env);
+  if (!accessToken) throw new Error("Firestore credential unavailable for device count");
+
+  const packageFilter = {
+    fieldFilter: {
+      field: { fieldPath: "packageName" },
+      op: "EQUAL",
+      value: { stringValue: packageName },
+    },
+  };
+  const structuredQuery = {
+    from: [{ collectionId: "devices" }],
+    where: since
+      ? {
+          compositeFilter: {
+            op: "AND",
+            filters: [
+              packageFilter,
+              {
+                fieldFilter: {
+                  field: { fieldPath: "updatedAt" },
+                  op: "GREATER_THAN_OR_EQUAL",
+                  value: { timestampValue: since.toISOString() },
+                },
+              },
+            ],
+          },
+        }
+      : packageFilter,
+  };
+
+  const projectId = env.FIREBASE_PROJECT_ID.trim();
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runAggregationQuery`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${accessToken}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      structuredAggregationQuery: {
+        structuredQuery,
+        aggregations: [{ count: {}, alias: "deviceCount" }],
+      },
+    }),
+  });
+  noteFirestoreReadFailure(response.status);
+  if (!response.ok) {
+    console.error("[admin-api] device count aggregation failed", response.status);
+    throw new Error("Firestore device count aggregation failed");
+  }
+
+  const payload = (await response.json()) as Array<{
+    result?: { aggregateFields?: { deviceCount?: { integerValue?: string } } };
+  }>;
+  const countValue = payload.find((item) => item.result)?.result?.aggregateFields?.deviceCount?.integerValue;
+  const count = Number(countValue);
+  if (countValue === undefined || !Number.isSafeInteger(count) || count < 0) {
+    throw new Error("Firestore device count aggregation response invalid");
+  }
+  return count;
 }
 
 async function queryDevicesByPackage(env: Env, packageName: string): Promise<DeviceRecord[]> {
@@ -2047,15 +2114,23 @@ async function handleAdminGetFlavorHubSummary(request: Request, env: Env): Promi
     });
   }
 
-  const coverageFromDevices = await Promise.all(
-    packages.map(async (packageName) => {
-      const devices = await queryDevicesByPackage(env, packageName);
-      const active = devices.filter(
-        (item) => item.updatedAtMs >= Date.now() - 30 * 24 * 60 * 60 * 1000,
-      ).length;
-      return [packageName, { active, total: devices.length }] as const;
-    }),
-  );
+  // The snapshot fallback only needs counts. Indexed aggregation keeps the
+  // exact 30-day window without reading any device payload or FCM token.
+  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const coverageFromDevices: Array<readonly [string, { active: number; total: number }]> = [];
+  // Avoid launching 34 simultaneous queries on a cold Worker after quota reset.
+  const batchSize = 3;
+  for (let offset = 0; offset < packages.length; offset += batchSize) {
+    const chunk = packages.slice(offset, offset + batchSize);
+    const counts = await Promise.all(chunk.map(async (packageName) => {
+      const [total, active] = await Promise.all([
+        countDevicesByPackage(env, packageName),
+        countDevicesByPackage(env, packageName, cutoff),
+      ]);
+      return [packageName, { active, total }] as const;
+    }));
+    coverageFromDevices.push(...counts);
+  }
   return jsonResponse({
     loadedAt: new Date().toISOString(),
     source: "devices",
