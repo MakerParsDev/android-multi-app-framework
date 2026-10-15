@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   fetchAdminFunctionJson,
+  formatDeviceCount,
+  isServiceGitDrift,
   normalizePackages,
   parseEvent,
   parseTargetTimezonesInput,
@@ -9,6 +11,24 @@ import {
 } from "../src/helpers";
 
 describe("admin API contracts", () => {
+  it("does not render missing coverage as a real zero", () => {
+    expect(formatDeviceCount(undefined)).toBe("—");
+    expect(formatDeviceCount(NaN)).toBe("—");
+    expect(formatDeviceCount(-1)).toBe("—");
+    expect(formatDeviceCount(0)).toBe("0");
+    expect(formatDeviceCount(125)).toBe("125");
+  });
+
+  it("only compares the health SHA to the explicitly configured service SHA", () => {
+    const pagesSha = "b95c72006bde0e0c781f0b8c38ec74b62f950ebd";
+    const workerSha = "72eab1b3c74c002254c2904c92ce45926cb4e403";
+    expect(isServiceGitDrift(workerSha)).toBe(false);
+    expect(isServiceGitDrift(workerSha, "")).toBe(false);
+    expect(isServiceGitDrift(workerSha, workerSha)).toBe(false);
+    expect(isServiceGitDrift(workerSha, pagesSha)).toBe(true);
+    expect(isServiceGitDrift(null, pagesSha)).toBe(false);
+  });
+
   it("normalizes package and timezone inputs deterministically", () => {
     expect(normalizePackages(["com.b", "com.a", "com.b"])).toEqual(["com.a", "com.b"]);
     expect(normalizePackages(["com.a", "*"])).toEqual(["*"]);
