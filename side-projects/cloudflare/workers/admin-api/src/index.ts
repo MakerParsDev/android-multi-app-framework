@@ -1,3 +1,4 @@
+import { createSummaryResponseCache } from "./summaryResponseCache.js";
 import {
   AppCheckJwksUnavailableError,
   AppCheckVerificationError,
@@ -387,6 +388,33 @@ const ALL_TIMEZONES = [
 const rateMap = new Map<string, { count: number; windowStart: number }>();
 const cachedGoogleTokens = new Map<string, CachedToken>();
 
+// Isolate-local cache: only derived, authorized admin summary JSON is retained.
+// No raw Firestore documents, FCM tokens, or bearer credentials are cached.
+const cachedAdminSummary = createSummaryResponseCache({ maxEntries: 8 });
+const ANALYTICS_SUMMARY_TTL_MS = 10 * 60_000;
+const REVENUE_SUMMARY_TTL_MS = 5 * 60_000;
+const FLAVOR_SUMMARY_TTL_MS = 5 * 60_000;
+
+// When the free Firestore read quota is exhausted, do not create another
+// expensive query storm or misreport unavailable data as zero.
+const FIRESTORE_READ_COOLDOWN_MS = 5 * 60_000;
+let firestoreReadBlockedUntil = 0;
+class FirestoreReadQuotaExceededError extends Error {
+  constructor() {
+    super("Firestore read quota exhausted");
+    this.name = "FirestoreReadQuotaExceededError";
+  }
+}
+function guardFirestoreReads(): void {
+  if (Date.now() < firestoreReadBlockedUntil) throw new FirestoreReadQuotaExceededError();
+}
+function noteFirestoreReadFailure(status: number): void {
+  if (status === 429) {
+    firestoreReadBlockedUntil = Date.now() + FIRESTORE_READ_COOLDOWN_MS;
+    throw new FirestoreReadQuotaExceededError();
+  }
+}
+
 function jsonResponse(
   payload: unknown,
   status = 200,
@@ -759,6 +787,7 @@ function parseMillis(value: unknown): number | null {
 }
 
 async function getFirestoreDoc(env: Env, collectionPath: string): Promise<FirestoreDocument | null> {
+  guardFirestoreReads();
   const accessToken = await getGoogleAccessToken(env);
   if (!accessToken) return null;
 
@@ -766,6 +795,7 @@ async function getFirestoreDoc(env: Env, collectionPath: string): Promise<Firest
     method: "GET",
     headers: { authorization: `Bearer ${accessToken}` },
   });
+  noteFirestoreReadFailure(response.status);
   if (response.status === 404) return null;
   if (!response.ok) {
     const text = await response.text();
@@ -839,6 +869,7 @@ function parseCoverageDays(raw: unknown): number {
 }
 
 async function runFirestoreQuery(env: Env, structuredQuery: unknown): Promise<FirestoreDocument[]> {
+  guardFirestoreReads();
   const accessToken = await getGoogleAccessToken(env);
   if (!accessToken) return [];
 
@@ -852,6 +883,7 @@ async function runFirestoreQuery(env: Env, structuredQuery: unknown): Promise<Fi
     },
     body: JSON.stringify({ structuredQuery }),
   });
+  noteFirestoreReadFailure(response.status);
   if (!response.ok) {
     const text = await response.text();
     console.error("[admin-api] runQuery failed", response.status, text);
@@ -869,6 +901,7 @@ async function listCollectionDocuments(
   collectionId: string,
   pageSize = 500,
 ): Promise<FirestoreDocument[]> {
+  guardFirestoreReads();
   const accessToken = await getGoogleAccessToken(env);
   if (!accessToken) return [];
 
@@ -889,7 +922,8 @@ async function listCollectionDocuments(
       headers: { authorization: `Bearer ${accessToken}` },
     });
 
-    if (!response.ok) {
+    noteFirestoreReadFailure(response.status);
+  if (!response.ok) {
       const text = await response.text();
       console.error("[admin-api] list docs failed", collectionId, response.status, text);
       break;
@@ -1996,6 +2030,7 @@ async function handleAdminGetFlavorHubSummary(request: Request, env: Env): Promi
 
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   const packages = parsePackages(body.packages);
+  return cachedAdminSummary(`flavor:${packages.join("|")}`, FLAVOR_SUMMARY_TTL_MS, async () => {
 
   const latestCoverage = await loadLatestCoverageSnapshotFromFirestore(env);
   if (latestCoverage) {
@@ -2025,6 +2060,7 @@ async function handleAdminGetFlavorHubSummary(request: Request, env: Env): Promi
     loadedAt: new Date().toISOString(),
     source: "devices",
     coverage: Object.fromEntries(coverageFromDevices),
+  });
   });
 }
 
@@ -2167,6 +2203,7 @@ async function handleAdminGetAnalyticsSummary(request: Request, env: Env): Promi
 
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   const packages = parsePackages(body.packages);
+  return cachedAdminSummary(`analytics:${packages.join("|")}`, ANALYTICS_SUMMARY_TTL_MS, async () => {
 
   const devicesDocs = await listCollectionDocuments(env, "devices", 1000);
   const devices = devicesDocs.map((doc) => parseFirestoreDocument(doc));
@@ -2495,6 +2532,7 @@ async function handleAdminGetAnalyticsSummary(request: Request, env: Env): Promi
     stalePackages,
     recentCoverageReports,
     loadedAt: new Date().toISOString(),
+  });
   });
 }
 
@@ -3321,6 +3359,7 @@ async function handleAdminGetRevenueSummary(request: Request, env: Env): Promise
 
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   const catalog = parseAdHealthCatalog(body);
+  return cachedAdminSummary(`revenue:${JSON.stringify(catalog)}`, REVENUE_SUMMARY_TTL_MS, async () => {
   const purchaseDocs = await listCollectionDocuments(env, "purchase_verifications", 1000);
   const verifiedRecords = purchaseDocs
     .map((doc) => parseFirestoreDocument(doc))
@@ -3429,6 +3468,7 @@ async function handleAdminGetRevenueSummary(request: Request, env: Env): Promise
       issues: sourceFreshnessIssues,
     },
     loadedAt: new Date().toISOString(),
+  });
   });
 }
 
@@ -4185,8 +4225,16 @@ export default {
         response = jsonResponse({ error: "Not found" }, 404);
       }
     } catch (error) {
-      console.error("[admin-api] unhandled error", error);
-      response = jsonResponse({ error: "Internal server error" }, 500);
+      if (error instanceof FirestoreReadQuotaExceededError) {
+        response = jsonResponse(
+          { error: "Firestore read quota exhausted. Try again later." },
+          503,
+          { "retry-after": String(FIRESTORE_READ_COOLDOWN_MS / 1000) },
+        );
+      } else {
+        console.error("[admin-api] unhandled error", error);
+        response = jsonResponse({ error: "Internal server error" }, 500);
+      }
     }
 
     const headers = new Headers(response.headers);

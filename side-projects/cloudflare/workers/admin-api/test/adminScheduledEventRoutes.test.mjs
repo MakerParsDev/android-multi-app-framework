@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, test, mock } from "node:test";
 import { webcrypto, generateKeyPairSync } from "node:crypto";
 
-import {
+import adminWorker, {
   handleAdminListScheduledEvents,
   handleAdminSaveScheduledEvent,
   handleAdminDeleteScheduledEvent,
@@ -965,4 +965,32 @@ test("adminListRecentDevices: returns an empty array when there are no devices",
 
   assert.equal(response.status, 200);
   assert.deepEqual(await responseJson(response), { devices: [] });
+});
+
+  assert.deepEqual(await responseJson(response), { devices: [] });
+});
+
+// Keep this last: the quota circuit breaker intentionally persists within an isolate.
+test("router returns a retryable 503 and avoids another Firestore read after quota exhaustion", async () => {
+  const signer = await createSigner();
+  const token = await signer.sign();
+  const { calls } = mockFetch({
+    certsKeys: [signer.jwk],
+    firestore: {
+      list: () => new Response(JSON.stringify({ error: { status: "RESOURCE_EXHAUSTED" } }), { status: 429 }),
+    },
+  });
+  const request = () => jsonRequest(
+    "https://admin-api.parsfilo.com/adminListScheduledEvents",
+    { token },
+  );
+  const first = await adminWorker.fetch(request(), baseEnv());
+  assert.equal(first.status, 503);
+  assert.equal(first.headers.get("retry-after"), "300");
+  assert.match((await responseJson(first)).error, /quota exhausted/i);
+  const countReads = () => calls.filter((call) => call.url.startsWith(`${DOCUMENTS_BASE}/scheduled_events?`)).length;
+  assert.equal(countReads(), 1);
+  const second = await adminWorker.fetch(request(), baseEnv());
+  assert.equal(second.status, 503);
+  assert.equal(countReads(), 1, "the quota cooldown must suppress repeat reads");
 });
