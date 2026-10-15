@@ -83,3 +83,20 @@ test("admins can read device documents", async () => {
   const snapshot = await assertSucceeds(getDoc(doc(firestore, "devices", DEVICE_ID)));
   assert.equal(snapshot.exists(), true);
 });
+
+for (const [label, adminData] of [
+  ["disabled admin", { role: "admin", enabled: false }],
+  ["wrong role", { role: "viewer", enabled: true }],
+  ["legacy admin without role or enabled", { email: "admin@example.test" }],
+]) {
+  test(`${label} cannot read devices or change scheduled events`, async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "admins", "admin-user"), adminData);
+    });
+    const firestore = testEnv.authenticatedContext("admin-user").firestore();
+    await assertFails(getDoc(doc(firestore, "devices", DEVICE_ID)));
+    await assertFails(setDoc(doc(firestore, "scheduled_events", "blocked-event"), {
+      title: "must not be written",
+    }));
+  });
+}
