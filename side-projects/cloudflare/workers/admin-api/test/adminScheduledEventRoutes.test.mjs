@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, test, mock } from "node:test";
 import { webcrypto, generateKeyPairSync } from "node:crypto";
 
-import {
+import adminWorker, {
   handleAdminListScheduledEvents,
   handleAdminSaveScheduledEvent,
   handleAdminDeleteScheduledEvent,
@@ -164,6 +164,16 @@ function mockFetch({ certsKeys = [], firestore = {} } = {}) {
         status: 200,
         headers: { "content-type": "application/json" },
       });
+    }
+    if (urlStr === `${DOCUMENTS_BASE}:runAggregationQuery`) {
+      return firestore.runAggregationQuery
+        ? firestore.runAggregationQuery(urlStr, init)
+        : new Response(JSON.stringify([{ result: { aggregateFields: { deviceCount: { integerValue: "0" } } } }]), { status: 200 });
+    }
+    if (urlStr.startsWith(`${DOCUMENTS_BASE}/coverage_reports?`) && method === "GET") {
+      return firestore.listCoverage
+        ? firestore.listCoverage(urlStr, init)
+        : new Response(JSON.stringify({ documents: [] }), { status: 200 });
     }
     if (urlStr === `${DOCUMENTS_BASE}:runQuery`) {
       return firestore.runQuery
@@ -965,4 +975,79 @@ test("adminListRecentDevices: returns an empty array when there are no devices",
 
   assert.equal(response.status, 200);
   assert.deepEqual(await responseJson(response), { devices: [] });
+});
+
+test("Flavor Hub fallback uses indexed Firestore counts without reading device documents", async () => {
+  const signer = await createSigner();
+  const token = await signer.sign();
+  const queryBodies = [];
+  const { calls } = mockFetch({
+    certsKeys: [signer.jwk],
+    firestore: {
+      runAggregationQuery: (_url, init) => {
+        const body = JSON.parse(init.body).structuredAggregationQuery;
+        queryBodies.push(body);
+        const filters = body.structuredQuery.where;
+        const isActive = Boolean(filters.compositeFilter);
+        const pkg = isActive
+          ? filters.compositeFilter.filters[0].fieldFilter.value.stringValue
+          : filters.fieldFilter.value.stringValue;
+        const value = pkg.endsWith(".testone") ? (isActive ? 30 : 50) : (isActive ? 8 : 10);
+        return new Response(JSON.stringify([
+          { result: { aggregateFields: { deviceCount: { integerValue: String(value) } } } },
+        ]), { status: 200 });
+      },
+    },
+  });
+  const request = () => jsonRequest("https://admin-api.parsfilo.com/adminGetFlavorHubSummary", {
+    token,
+    body: { packages: ["com.parsfilo.testone", "com.parsfilo.testtwo"] },
+  });
+  const first = await adminWorker.fetch(request(), baseEnv());
+  assert.equal(first.status, 200);
+  const body = await responseJson(first);
+  assert.equal(body.source, "devices");
+  assert.deepEqual(body.coverage, {
+    "com.parsfilo.testone": { active: 30, total: 50 },
+    "com.parsfilo.testtwo": { active: 8, total: 10 },
+  });
+  assert.equal(queryBodies.length, 4, "two indexed counts per package");
+  const activeQuery = queryBodies.find((entry) => Boolean(entry.structuredQuery.where.compositeFilter));
+  assert.equal(activeQuery.aggregations[0].alias, "deviceCount");
+  assert.equal(activeQuery.structuredQuery.where.compositeFilter.filters[1].fieldFilter.field.fieldPath, "updatedAt");
+  assert.equal(activeQuery.structuredQuery.where.compositeFilter.filters[1].fieldFilter.op, "GREATER_THAN_OR_EQUAL");
+  assert.ok(activeQuery.structuredQuery.where.compositeFilter.filters[1].fieldFilter.value.timestampValue);
+
+  assert.equal(calls.filter((entry) => entry.url === `${DOCUMENTS_BASE}:runQuery`).length, 0);
+  assert.equal(calls.filter((entry) => entry.url === `${DOCUMENTS_BASE}:runAggregationQuery`).length, 4);
+  const second = await adminWorker.fetch(request(), baseEnv());
+  assert.equal(second.status, 200);
+  assert.deepEqual((await responseJson(second)).coverage, body.coverage);
+  assert.equal(calls.filter((entry) => entry.url === `${DOCUMENTS_BASE}:runAggregationQuery`).length, 4,
+    "cache should prevent repeat count calls");
+});
+
+// Keep this last: the quota circuit breaker intentionally persists within an isolate.
+test("router returns a retryable 503 and avoids another Firestore read after quota exhaustion", async () => {
+  const signer = await createSigner();
+  const token = await signer.sign();
+  const { calls } = mockFetch({
+    certsKeys: [signer.jwk],
+    firestore: {
+      list: () => new Response(JSON.stringify({ error: { status: "RESOURCE_EXHAUSTED" } }), { status: 429 }),
+    },
+  });
+  const request = () => jsonRequest(
+    "https://admin-api.parsfilo.com/adminListScheduledEvents",
+    { token },
+  );
+  const first = await adminWorker.fetch(request(), baseEnv());
+  assert.equal(first.status, 503);
+  assert.equal(first.headers.get("retry-after"), "300");
+  assert.match((await responseJson(first)).error, /quota exhausted/i);
+  const countReads = () => calls.filter((call) => call.url.startsWith(`${DOCUMENTS_BASE}/scheduled_events?`)).length;
+  assert.equal(countReads(), 1);
+  const second = await adminWorker.fetch(request(), baseEnv());
+  assert.equal(second.status, 503);
+  assert.equal(countReads(), 1, "the quota cooldown must suppress repeat reads");
 });
