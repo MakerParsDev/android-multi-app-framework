@@ -1047,14 +1047,23 @@ async function handleDeviceCoverageReport(request: Request, env: Env): Promise<R
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   const days = parseCoverageDays(body.days);
   const packages = parsePackages(body.packages);
-  const cutoffMs = Date.now() - days * 24 * 60 * 60 * 1000;
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
+  // This report only needs device counts. Use indexed aggregations rather
+  // than reading every FCM token / device document for every package.
+  // Bound the number of simultaneous requests to avoid a 34-query burst.
   const byPackage: DeviceCoverageItem[] = [];
-  for (const packageName of packages) {
-    const devices = await queryDevicesByPackage(env, packageName);
-    const totalDeviceCount = devices.length;
-    const activeDeviceCount = devices.filter((device) => device.updatedAtMs >= cutoffMs).length;
-    byPackage.push({ packageName, activeDeviceCount, totalDeviceCount });
+  const batchSize = 3;
+  for (let offset = 0; offset < packages.length; offset += batchSize) {
+    const chunk = packages.slice(offset, offset + batchSize);
+    const items = await Promise.all(chunk.map(async (packageName) => {
+      const [totalDeviceCount, activeDeviceCount] = await Promise.all([
+        countDevicesByPackage(env, packageName),
+        countDevicesByPackage(env, packageName, cutoff),
+      ]);
+      return { packageName, activeDeviceCount, totalDeviceCount };
+    }));
+    byPackage.push(...items);
   }
 
   const missingPackages = byPackage
