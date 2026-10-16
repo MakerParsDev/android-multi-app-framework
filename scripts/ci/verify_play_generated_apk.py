@@ -172,6 +172,22 @@ def download_play_signed_apk(package: str, version_code: int, destination: Path,
         session.close()
 
 
+def read_play_version_code(properties_file: Path, flavor: str) -> int:
+    """Read the exact versionCode produced by the signed release build."""
+    target = f"{flavor}.versionCode"
+    matches = []
+    for line in properties_file.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, value = stripped.split("=", 1)
+        if key.strip() == target:
+            matches.append(value.strip())
+    if len(matches) != 1 or not matches[0].isdigit() or int(matches[0]) < 1:
+        raise ValueError("missing/duplicate/invalid published flavor versionCode")
+    return int(matches[0])
+
+
 def apk_sha256(apk_file: Path) -> str:
     digest = hashlib.sha256()
     with apk_file.open("rb") as f:
@@ -183,7 +199,10 @@ def apk_sha256(apk_file: Path) -> str:
 def main(argv: list[str] | None = None) -> int:
     cli = argparse.ArgumentParser(description=__doc__)
     cli.add_argument("--flavor", required=True, help="Known Android app flavor")
-    cli.add_argument("--version-code", type=int, help="Play versionCode (required for API mode)")
+    version = cli.add_mutually_exclusive_group()
+    version.add_argument("--version-code", type=int, help="Exact Play versionCode")
+    version.add_argument("--versions-file", type=Path,
+                         help="Build-time app-versions.properties for the exact signed AAB")
     cli.add_argument("--apk", type=Path, help="Read-only offline APK audit; skips Play API")
     cli.add_argument("--aapt2", help="Path to Android build-tools aapt2")
     args = cli.parse_args(argv)
@@ -195,26 +214,29 @@ def main(argv: list[str] | None = None) -> int:
         if args.flavor not in expected:
             raise ValueError("flavor has no expected Firebase configuration")
         aapt2 = find_aapt2(args.aapt2)
+        version_code = args.version_code
+        if args.versions_file:
+            version_code = read_play_version_code(args.versions_file, args.flavor)
         if args.apk:
             if not args.apk.is_file():
                 raise ValueError("APK file does not exist")
             result = audit_apk(args.apk, aapt2, expected[args.flavor])
             digest = apk_sha256(args.apk)
         else:
-            if not args.version_code or args.version_code < 1:
-                raise ValueError("positive --version-code is required for Play API mode")
+            if not version_code or version_code < 1:
+                raise ValueError("positive --version-code or --versions-file required for Play API mode")
             credential = (os.environ.get("PLAY_SERVICE_ACCOUNT_JSON")
                           or try_read_from_dotenv(ROOT))
             account = load_service_account_value(credential)
             with tempfile.TemporaryDirectory(prefix="play-apk-audit-") as temp:
                 apk_file = Path(temp) / "play-signed.apk"
                 download_play_signed_apk(catalog[args.flavor].package_name,
-                                         args.version_code, apk_file, account)
+                                         version_code, apk_file, account)
                 result = audit_apk(apk_file, aapt2, expected[args.flavor])
                 digest = apk_sha256(apk_file)
         # Do not print raw API-key / auth-token / Firebase secret values.
         print(json.dumps({"status": "PASS", "flavor": args.flavor,
-                          "versionCode": args.version_code,
+                          "versionCode": version_code,
                           "apkSha256": digest, "firebaseResources": result},
                          sort_keys=True))
         return 0
