@@ -137,6 +137,7 @@ fun BannerAd(
                             adUnitId = adUnitId,
                             errorCode = error.code,
                             errorMessage = error.message,
+                            errorDomain = error.domain,
                             route = route,
                             backoffAttempt = null,
                         )

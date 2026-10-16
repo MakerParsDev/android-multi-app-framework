@@ -114,6 +114,7 @@ class RewardedAdManager @Inject constructor(
                         adUnitId = adUnitId,
                         errorCode = adError.code,
                         errorMessage = adError.message,
+                        errorDomain = adError.domain,
                         route = currentRoute,
                         backoffAttempt = loadBackoffState.failureStreak,
                     )
