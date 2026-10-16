@@ -2,6 +2,7 @@ package com.parsfilo.contentapp.feature.ads
 
 import android.os.Bundle
 import com.google.android.gms.ads.AdValue
+import com.google.android.gms.ads.MobileAds
 import com.google.common.truth.Truth.assertThat
 import com.parsfilo.contentapp.core.datastore.PreferencesDataSource
 import com.parsfilo.contentapp.core.firebase.AnalyticsEventName
@@ -68,6 +69,7 @@ class AdRevenueLoggerTest {
             adUnitId = "interstitial-unit",
             errorCode = 3,
             errorMessage = "no fill",
+            errorDomain = MobileAds.ERROR_DOMAIN,
         )
 
         coVerify(timeout = 1_000L) {
@@ -139,6 +141,41 @@ class AdRevenueLoggerTest {
                     assertThat(bundle.getLong(AnalyticsParamKey.ERROR_CODE)).isEqualTo(3L)
                     assertThat(bundle.getString(AnalyticsParamKey.ERROR_MESSAGE))
                         .isEqualTo("no fill")
+                },
+            )
+        }
+    }
+
+    @Test
+    fun noFillAndTechnicalFailuresHaveDistinctReportableCategories() {
+        assertThat(classifyAdLoadFailure(3, MobileAds.ERROR_DOMAIN)).isEqualTo("no_fill")
+        assertThat(classifyAdLoadFailure(9, MobileAds.ERROR_DOMAIN)).isEqualTo("mediation_no_fill")
+        assertThat(classifyAdLoadFailure(2, MobileAds.ERROR_DOMAIN)).isEqualTo("network")
+        assertThat(classifyAdLoadFailure(1, MobileAds.ERROR_DOMAIN)).isEqualTo("invalid_request")
+        assertThat(classifyAdLoadFailure(0, MobileAds.ERROR_DOMAIN)).isEqualTo("internal")
+        assertThat(classifyAdLoadFailure(8, MobileAds.ERROR_DOMAIN)).isEqualTo("configuration")
+        assertThat(classifyAdLoadFailure(123, MobileAds.ERROR_DOMAIN)).isEqualTo("other")
+        assertThat(classifyAdLoadFailure(3, "another.mediation.domain")).isEqualTo("other_domain")
+        assertThat(classifyAdLoadFailure(3, null)).isEqualTo("other_domain")
+    }
+
+    @Test
+    fun ga4ReceivesBothNumericErrorCodeAndSafeStringCategory() {
+        logger.logFailedToLoad(
+            adFormat = AdFormat.INTERSTITIAL,
+            placement = AdPlacement.INTERSTITIAL_NAV_BREAK,
+            adUnitId = "test-interstitial",
+            errorCode = 3,
+            errorMessage = "No fill",
+            errorDomain = MobileAds.ERROR_DOMAIN,
+        )
+        verify {
+            appAnalytics.logEvent(
+                AnalyticsEventName.AD_FAILED_TO_LOAD,
+                withArg { bundle ->
+                    requireNotNull(bundle)
+                    assertThat(bundle.getLong(AnalyticsParamKey.ERROR_CODE)).isEqualTo(3L)
+                    assertThat(bundle.getString(AnalyticsParamKey.AD_ERROR_CATEGORY)).isEqualTo("no_fill")
                 },
             )
         }
