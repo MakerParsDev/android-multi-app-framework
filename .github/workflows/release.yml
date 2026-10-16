@@ -340,7 +340,11 @@ jobs:
     timeout-minutes: 30
     needs: [build-release, resolve-flavors]
     if: inputs.do_internal_test || inputs.do_publish
-    environment: production
+    # Only an exact, single, resolved production flavor without listing changes
+    # uses the main-only automated deployment environment. All other requests
+    # keep the existing manually reviewed production environment.
+    environment:
+      name: ${{ inputs.do_publish && !inputs.update_play_listing && needs.resolve-flavors.outputs.flavors_csv == inputs.target_flavors && needs.resolve-flavors.outputs.flavors_csv != '' && !contains(needs.resolve-flavors.outputs.flavors_csv, ',') && 'play-production-auto' || 'production' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
