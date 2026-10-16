@@ -852,6 +852,16 @@ fun SettingsScreen(
                                         color = colorScheme.onSurfaceVariant,
                                     )
                                     Spacer(modifier = Modifier.height(dimens.space4))
+                                    // Keep applied/pending status visible even on emulators,
+                                    // which UMP automatically accepts as test devices.
+                                    if (debugGeography != UmpDebugGeography.NONE && !adManager.hasRegisteredUmpTestDeviceHash) {
+                                        Text(
+                                            text = stringResource(R.string.settings_ads_debug_geo_test_device_missing),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = colorScheme.onSurfaceVariant,
+                                        )
+                                        Spacer(modifier = Modifier.height(dimens.space4))
+                                    }
                                     Text(
                                         text =
                                             stringResource(

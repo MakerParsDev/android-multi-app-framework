@@ -73,6 +73,7 @@
     <string name="settings_ads_debug_last_result_not_required">Formular war nicht erforderlich</string>
     <string name="settings_ads_debug_last_result_error">Fehler: %1$s</string>
     <string name="settings_ads_debug_geo_effective_none">Debug-Geografie ist deaktiviert. Die normale Geografieerkennung wird verwendet.</string>
+    <string name="settings_ads_debug_geo_test_device_missing">Kein UMP-Testgeräte-Hash konfiguriert. Die Debug-Region wird auf physischen Geräten möglicherweise ignoriert.</string>
     <string name="settings_ads_debug_geo_effective_applied">Die ausgewählte Geografie wurde auf die UMP-Anfrage angewendet: %1$s</string>
     <string name="settings_ads_debug_geo_effective_pending">Die ausgewählte Geografie wurde noch nicht auf eine UMP-Anfrage angewendet: %1$s. Tippen Sie auf „Consent-Formular anzeigen“ oder aktualisieren Sie die Einwilligung.</string>
     <string name="settings_ads_debug_open_inspector">Ad Inspector öffnen</string>
