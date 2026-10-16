@@ -10,8 +10,7 @@ automatically treated as UMP test devices by supported SDK versions.
    Google UMP SDK prompt mentioning `addTestDeviceHashedId(...)`.
 3. On a private workstation, pass **only this hashed test-device ID**, not the
    raw Android identifier, to the debug build as a Gradle project property:
-   `ORG_GRADLE_PROJECT_UMP_TEST_DEVICE_HASH=<private 32-hex hash>`
-   `./gradlew :app:assembleIsmiazamduasiDebug`
+   `ORG_GRADLE_PROJECT_UMP_TEST_DEVICE_HASH=YOUR_32_CHAR_HEX_HASH ./gradlew :app:assembleIsmiazamduasiDebug`
    Do not store it in committed files, issue comments, CI logs or release
    artifacts. Leave the environment property unset for standard builds.
 4. Install only on your controlled test device. In Settings > Ads Debug,

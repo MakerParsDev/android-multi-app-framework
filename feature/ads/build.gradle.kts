@@ -6,7 +6,12 @@ plugins {
 }
 
 // Supplied only for local, explicit debug device testing. Never commit a device hash.
-val umpTestDeviceHash = providers.gradleProperty("UMP_TEST_DEVICE_HASH").orNull.orEmpty().trim()
+val umpTestDeviceHash =
+    providers
+        .gradleProperty("UMP_TEST_DEVICE_HASH")
+        .orNull
+        .orEmpty()
+        .trim()
 require(umpTestDeviceHash.isEmpty() || Regex("[A-Fa-f0-9]{32}").matches(umpTestDeviceHash)) {
     "UMP_TEST_DEVICE_HASH must be a 32-character hexadecimal debug device hash."
 }
