@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
-UPLOAD_SHA = "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
-DEPENDENCY_REVIEW_SHA = "a1d282b36b6f3519aa1f3fc636f609c47dddb294"
-GRADLE_ACTIONS_SHA = "9c971963bec38e04b3d30dcc455b5382be2fdbfb"
-CODEQL_SHA = "1c5b675653bb5c22dbe9b12b556ec555138e09fd"
-ATTEST_SHA = "1e69f48acb82d1966a394da916b4c1698aa569d6"
-SETUP_NODE_SHA = "820762786026740c76f36085b0efc47a31fe5020"
-SETUP_PYTHON_SHA = "5fda3b95a4ea91299a34e894583c3862153e4b97"
+PINS = json.loads((ROOT / "config/pinned-github-actions.json").read_text(encoding="utf-8"))
+UPLOAD_SHA = PINS["actions/upload-artifact"]["sha"]
+DEPENDENCY_REVIEW_SHA = PINS["actions/dependency-review-action"]["sha"]
+GRADLE_ACTIONS_SHA = PINS["gradle/actions"]["sha"]
+CODEQL_SHA = PINS["github/codeql-action"]["sha"]
+ATTEST_SHA = PINS["actions/attest"]["sha"]
+SETUP_NODE_SHA = PINS["actions/setup-node"]["sha"]
+SETUP_PYTHON_SHA = PINS["actions/setup-python"]["sha"]
 
 
 def load(path: str) -> dict:
@@ -491,6 +493,7 @@ def test_workflow_audit_executes_regression_contracts() -> None:
     for filename in (
         "compute_pr_impact_test.py",
         "validate_legacy_release_request_test.py",
+        "verify_play_generated_apk_test.py",
         "professional_ci_workflows_test.py",
         "ci_load_policy_test.py",
         "side_project_quality_contract_test.py",

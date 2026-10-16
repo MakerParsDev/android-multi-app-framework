@@ -1,7 +1,9 @@
 package com.parsfilo.contentapp.feature.ads
 
 import android.os.Bundle
+import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdValue
+import com.google.android.gms.ads.MobileAds
 import com.google.android.gms.ads.ResponseInfo
 import com.parsfilo.contentapp.core.datastore.AdRuntimeTelemetryEvent
 import com.parsfilo.contentapp.core.datastore.PreferencesDataSource
@@ -38,6 +40,22 @@ data class AdShowDiagnosticContext(
     val timeSinceLastLoadStartMs: Long? = null,
     val backoffNextAllowedAtMs: Long? = null,
 )
+
+/** Small bounded Analytics category; never infer no-fill for another SDK domain. */
+internal fun classifyAdLoadFailure(errorCode: Int, errorDomain: String?): String {
+    if (errorDomain != MobileAds.ERROR_DOMAIN) return "other_domain"
+    return when (errorCode) {
+        AdRequest.ERROR_CODE_NO_FILL -> "no_fill"
+        AdRequest.ERROR_CODE_MEDIATION_NO_FILL -> "mediation_no_fill"
+        AdRequest.ERROR_CODE_NETWORK_ERROR -> "network"
+        AdRequest.ERROR_CODE_INVALID_REQUEST,
+        AdRequest.ERROR_CODE_INVALID_AD_STRING,
+        AdRequest.ERROR_CODE_REQUEST_ID_MISMATCH -> "invalid_request"
+        AdRequest.ERROR_CODE_APP_ID_MISSING -> "configuration"
+        AdRequest.ERROR_CODE_INTERNAL_ERROR -> "internal"
+        else -> "other"
+    }
+}
 
 @Singleton
 class AdRevenueLogger @Inject constructor(
@@ -299,6 +317,7 @@ class AdRevenueLogger @Inject constructor(
         adUnitId: String,
         errorCode: Int,
         errorMessage: String?,
+        errorDomain: String? = null,
         route: String? = null,
         backoffAttempt: Int? = null,
     ) {
@@ -306,6 +325,7 @@ class AdRevenueLogger @Inject constructor(
             AnalyticsEventName.AD_FAILED_TO_LOAD,
             adEventBundle(adFormat, placement, adUnitId, route).apply {
                 putLong(AnalyticsParamKey.ERROR_CODE, errorCode.toLong())
+                putString(AnalyticsParamKey.AD_ERROR_CATEGORY, classifyAdLoadFailure(errorCode, errorDomain))
                 if (!errorMessage.isNullOrBlank()) putString(AnalyticsParamKey.ERROR_MESSAGE, errorMessage)
                 if (backoffAttempt != null) putLong(AnalyticsParamKey.BACKOFF_ATTEMPT, backoffAttempt.toLong())
             },

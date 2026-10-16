@@ -97,12 +97,12 @@ class AdminBackendSmokeTest(unittest.TestCase):
         self.server.server_close()
         self.thread.join(timeout=5)
 
-    def run_smoke(self) -> SimpleNamespace:
+    def run_smoke(self, *, expected_git_sha: str | None = EXPECTED_SHA) -> SimpleNamespace:
         origin = f"http://127.0.0.1:{self.server.server_port}"
         args = SimpleNamespace(
             purchase_url=f"{origin}/verifyPurchase",
             push_url=f"{origin}/registerDevice",
-            expected_git_sha=EXPECTED_SHA,
+            expected_git_sha=expected_git_sha,
             allow_http_localhost=True,
             timeout=2.0,
         )
@@ -155,6 +155,16 @@ class AdminBackendSmokeTest(unittest.TestCase):
         self.assertNotEqual(0, result.returncode)
         self.assertIn("git SHA", result.stderr)
 
+    def test_accepts_healthy_independently_deployed_backend_without_sha_pin(self) -> None:
+        ContractHandler.health_payload["gitSha"] = "a" * 40
+
+        result = self.run_smoke(expected_git_sha=None)
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("HEALTH_GIT_SHA=" + "a" * 40, result.stdout)
+        self.assertIn("PURCHASE_UNAUTHENTICATED_HTTP=401", result.stdout)
+        self.assertIn("REGISTER_INVALID_APPCHECK_HTTP=401", result.stdout)
+
     def test_rejects_unprotected_purchase_endpoint(self) -> None:
         ContractHandler.purchase_status = 200
 
@@ -182,7 +192,7 @@ class ReleaseIntegrationContractTest(unittest.TestCase):
         self.assertLess(
             release_workflow.index(smoke_call), release_workflow.index("./gradlew")
         )
-        self.assertIn("EXPECTED_ADMIN_BACKEND_GIT_SHA", release_workflow)
+        self.assertNotIn("EXPECTED_ADMIN_BACKEND_GIT_SHA", release_workflow)
         doppler_install = "Install verified Doppler CLI"
         self.assertIn(doppler_install, release_workflow)
         self.assertLess(release_workflow.index(doppler_install), release_workflow.index(smoke_call))
@@ -190,10 +200,8 @@ class ReleaseIntegrationContractTest(unittest.TestCase):
         self.assertIn("scripts/doppler-run.sh -- bash -c", release_workflow)
         self.assertIn('--purchase-url "$PURCHASE_VERIFICATION_URL"', release_workflow)
         self.assertIn('--push-url "$PUSH_REGISTRATION_URL"', release_workflow)
-        self.assertIn(
-            '--expected-git-sha "$EXPECTED_ADMIN_BACKEND_GIT_SHA"',
-            release_workflow,
-        )
+        # Android release SHA must not be pinned to independently deployed Admin API.
+        self.assertNotIn("--expected-git-sha", release_workflow)
         self.assertNotIn("secrets.PURCHASE_VERIFICATION_URL", release_workflow)
         self.assertNotIn("secrets.PUSH_REGISTRATION_URL", release_workflow)
 

@@ -124,10 +124,62 @@ def test_release_build_and_publish_use_doppler_and_exact_signed_artifacts() -> N
     assert "--artifact-dir" in publish_step["run"]
     assert "find" in publish_step["run"] and "*.aab" in publish_step["run"]
     assert "exactly one signed AAB" in publish_step["run"]
-    assert publish["environment"] == "production"
+    assert publish["environment"]["name"].endswith("'production' }}")
     assert "Install verified Doppler CLI" in [
         step.get("name") for step in publish["steps"]
     ]
+
+
+def test_automatic_production_environment_only_for_canonical_single_flavor() -> None:
+    workflow = yaml.safe_load((ROOT / ".github/workflows/release.yml").read_text())
+    release = workflow["jobs"]["publish-play"]
+    env = release["environment"]
+    assert isinstance(env, dict) and isinstance(env.get("name"), str)
+    selection = env["name"]
+    assert selection.startswith("${{") and selection.endswith("}}")
+    # All of these conjuncts must hold before approval-free publishing.
+    assert "inputs.do_publish &&" in selection
+    assert "!inputs.update_play_listing" in selection
+    assert (
+        "needs.resolve-flavors.outputs.flavors_csv == inputs.target_flavors"
+        in selection
+    )
+    assert "needs.resolve-flavors.outputs.flavors_csv != ''" in selection
+    assert "!contains(needs.resolve-flavors.outputs.flavors_csv, ',')" in selection
+    assert "'play-production-auto' || 'production'" in selection
+    assert release["needs"] == ["build-release", "resolve-flavors"]
+    assert release["if"] == "inputs.do_internal_test || inputs.do_publish"
+    # Other high-privilege or nonproduction-release flows retain approval.
+    for file in ("play-internal.yml", "release-attested.yml"):
+        sibling = yaml.safe_load((ROOT / ".github/workflows" / file).read_text())
+        jobs = sibling["jobs"].values()
+        assert any(job.get("environment") == "production" for job in jobs), file
+
+
+def test_play_postpublish_audit_uses_exact_build_metadata_and_does_not_retry_release() -> None:
+    workflow = yaml.safe_load((ROOT / ".github/workflows/release.yml").read_text())
+    build_steps = workflow["jobs"]["build-release"]["steps"]
+    publish_steps = workflow["jobs"]["publish-play"]["steps"]
+    upload = next(x for x in build_steps
+                  if x.get("name") == "Upload release version metadata")
+    download = next(x for x in publish_steps
+                    if x.get("name") == "Download release version metadata")
+    publish_index = next(i for i, s in enumerate(publish_steps)
+                         if s.get("name") == "Publish to Play")
+    audit_index = next(i for i, s in enumerate(publish_steps)
+                       if s.get("name") == "Audit Play-generated APK after successful production upload")
+    audit = publish_steps[audit_index]
+    assert upload["with"]["name"] == download["with"]["name"] == "play-release-version-metadata"
+    assert upload["with"]["path"] == "app-versions.properties"
+    assert audit_index > publish_index
+    assert audit["continue-on-error"] is True
+    assert "inputs.do_publish" in audit["if"]
+    assert "!contains(needs.resolve-flavors.outputs.flavors_csv, ',')" in audit["if"]
+    assert "verify_play_generated_apk.py" in audit["run"]
+    assert "--versions-file" in audit["run"]
+    assert "--flavor" in audit["run"]
+    assert "re-dispatch" in audit["run"]
+    assert audit["env"]["PLAY_SERVICE_ACCOUNT_JSON"] == "/tmp/service-account.json"
 
 
 def main() -> int:

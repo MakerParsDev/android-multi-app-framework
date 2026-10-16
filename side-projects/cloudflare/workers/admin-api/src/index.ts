@@ -1,3 +1,4 @@
+import { createSummaryResponseCache } from "./summaryResponseCache.js";
 import {
   AppCheckJwksUnavailableError,
   AppCheckVerificationError,
@@ -387,6 +388,33 @@ const ALL_TIMEZONES = [
 const rateMap = new Map<string, { count: number; windowStart: number }>();
 const cachedGoogleTokens = new Map<string, CachedToken>();
 
+// Isolate-local cache: only derived, authorized admin summary JSON is retained.
+// No raw Firestore documents, FCM tokens, or bearer credentials are cached.
+const cachedAdminSummary = createSummaryResponseCache({ maxEntries: 8 });
+const ANALYTICS_SUMMARY_TTL_MS = 10 * 60_000;
+const REVENUE_SUMMARY_TTL_MS = 5 * 60_000;
+const FLAVOR_SUMMARY_TTL_MS = 5 * 60_000;
+
+// When the free Firestore read quota is exhausted, do not create another
+// expensive query storm or misreport unavailable data as zero.
+const FIRESTORE_READ_COOLDOWN_MS = 5 * 60_000;
+let firestoreReadBlockedUntil = 0;
+class FirestoreReadQuotaExceededError extends Error {
+  constructor() {
+    super("Firestore read quota exhausted");
+    this.name = "FirestoreReadQuotaExceededError";
+  }
+}
+function guardFirestoreReads(): void {
+  if (Date.now() < firestoreReadBlockedUntil) throw new FirestoreReadQuotaExceededError();
+}
+function noteFirestoreReadFailure(status: number): void {
+  if (status === 429) {
+    firestoreReadBlockedUntil = Date.now() + FIRESTORE_READ_COOLDOWN_MS;
+    throw new FirestoreReadQuotaExceededError();
+  }
+}
+
 function jsonResponse(
   payload: unknown,
   status = 200,
@@ -759,6 +787,7 @@ function parseMillis(value: unknown): number | null {
 }
 
 async function getFirestoreDoc(env: Env, collectionPath: string): Promise<FirestoreDocument | null> {
+  guardFirestoreReads();
   const accessToken = await getGoogleAccessToken(env);
   if (!accessToken) return null;
 
@@ -766,6 +795,7 @@ async function getFirestoreDoc(env: Env, collectionPath: string): Promise<Firest
     method: "GET",
     headers: { authorization: `Bearer ${accessToken}` },
   });
+  noteFirestoreReadFailure(response.status);
   if (response.status === 404) return null;
   if (!response.ok) {
     const text = await response.text();
@@ -839,6 +869,7 @@ function parseCoverageDays(raw: unknown): number {
 }
 
 async function runFirestoreQuery(env: Env, structuredQuery: unknown): Promise<FirestoreDocument[]> {
+  guardFirestoreReads();
   const accessToken = await getGoogleAccessToken(env);
   if (!accessToken) return [];
 
@@ -852,6 +883,7 @@ async function runFirestoreQuery(env: Env, structuredQuery: unknown): Promise<Fi
     },
     body: JSON.stringify({ structuredQuery }),
   });
+  noteFirestoreReadFailure(response.status);
   if (!response.ok) {
     const text = await response.text();
     console.error("[admin-api] runQuery failed", response.status, text);
@@ -869,6 +901,7 @@ async function listCollectionDocuments(
   collectionId: string,
   pageSize = 500,
 ): Promise<FirestoreDocument[]> {
+  guardFirestoreReads();
   const accessToken = await getGoogleAccessToken(env);
   if (!accessToken) return [];
 
@@ -889,6 +922,7 @@ async function listCollectionDocuments(
       headers: { authorization: `Bearer ${accessToken}` },
     });
 
+    noteFirestoreReadFailure(response.status);
     if (!response.ok) {
       const text = await response.text();
       console.error("[admin-api] list docs failed", collectionId, response.status, text);
@@ -906,6 +940,67 @@ async function listCollectionDocuments(
   } while (pageToken);
 
   return docs;
+}
+
+// Counting index matches avoids downloading a potentially large devices collection.
+// The packageName + updatedAt composite index exists and is READY in production.
+async function countDevicesByPackage(env: Env, packageName: string | null, since?: Date): Promise<number> {
+  guardFirestoreReads();
+  const accessToken = await getGoogleAccessToken(env);
+  if (!accessToken) throw new Error("Firestore credential unavailable for device count");
+
+  const packageFilter = packageName ? {
+    fieldFilter: {
+      field: { fieldPath: "packageName" },
+      op: "EQUAL",
+      value: { stringValue: packageName },
+    },
+  } : undefined;
+  const dateFilter = since ? {
+    fieldFilter: {
+      field: { fieldPath: "updatedAt" },
+      op: "GREATER_THAN_OR_EQUAL",
+      value: { timestampValue: since.toISOString() },
+    },
+  } : undefined;
+  const where = packageFilter && dateFilter
+    ? { compositeFilter: { op: "AND", filters: [packageFilter, dateFilter] } }
+    : packageFilter ?? dateFilter;
+  const structuredQuery = {
+    from: [{ collectionId: "devices" }],
+    ...(where ? { where } : {}),
+  };
+
+  const projectId = env.FIREBASE_PROJECT_ID.trim();
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runAggregationQuery`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${accessToken}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      structuredAggregationQuery: {
+        structuredQuery,
+        aggregations: [{ count: {}, alias: "deviceCount" }],
+      },
+    }),
+  });
+  noteFirestoreReadFailure(response.status);
+  if (!response.ok) {
+    console.error("[admin-api] device count aggregation failed", response.status);
+    throw new Error("Firestore device count aggregation failed");
+  }
+
+  const payload = (await response.json()) as Array<{
+    result?: { aggregateFields?: { deviceCount?: { integerValue?: string } } };
+  }>;
+  const countValue = payload.find((item) => item.result)?.result?.aggregateFields?.deviceCount?.integerValue;
+  const count = Number(countValue);
+  if (countValue === undefined || !Number.isSafeInteger(count) || count < 0) {
+    throw new Error("Firestore device count aggregation response invalid");
+  }
+  return count;
 }
 
 async function queryDevicesByPackage(env: Env, packageName: string): Promise<DeviceRecord[]> {
@@ -952,14 +1047,23 @@ async function handleDeviceCoverageReport(request: Request, env: Env): Promise<R
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   const days = parseCoverageDays(body.days);
   const packages = parsePackages(body.packages);
-  const cutoffMs = Date.now() - days * 24 * 60 * 60 * 1000;
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
+  // This report only needs device counts. Use indexed aggregations rather
+  // than reading every FCM token / device document for every package.
+  // Bound the number of simultaneous requests to avoid a 34-query burst.
   const byPackage: DeviceCoverageItem[] = [];
-  for (const packageName of packages) {
-    const devices = await queryDevicesByPackage(env, packageName);
-    const totalDeviceCount = devices.length;
-    const activeDeviceCount = devices.filter((device) => device.updatedAtMs >= cutoffMs).length;
-    byPackage.push({ packageName, activeDeviceCount, totalDeviceCount });
+  const batchSize = 3;
+  for (let offset = 0; offset < packages.length; offset += batchSize) {
+    const chunk = packages.slice(offset, offset + batchSize);
+    const items = await Promise.all(chunk.map(async (packageName) => {
+      const [totalDeviceCount, activeDeviceCount] = await Promise.all([
+        countDevicesByPackage(env, packageName),
+        countDevicesByPackage(env, packageName, cutoff),
+      ]);
+      return { packageName, activeDeviceCount, totalDeviceCount };
+    }));
+    byPackage.push(...items);
   }
 
   const missingPackages = byPackage
@@ -1996,6 +2100,7 @@ async function handleAdminGetFlavorHubSummary(request: Request, env: Env): Promi
 
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   const packages = parsePackages(body.packages);
+  return cachedAdminSummary(`flavor:${packages.join("|")}`, FLAVOR_SUMMARY_TTL_MS, async () => {
 
   const latestCoverage = await loadLatestCoverageSnapshotFromFirestore(env);
   if (latestCoverage) {
@@ -2012,19 +2117,28 @@ async function handleAdminGetFlavorHubSummary(request: Request, env: Env): Promi
     });
   }
 
-  const coverageFromDevices = await Promise.all(
-    packages.map(async (packageName) => {
-      const devices = await queryDevicesByPackage(env, packageName);
-      const active = devices.filter(
-        (item) => item.updatedAtMs >= Date.now() - 30 * 24 * 60 * 60 * 1000,
-      ).length;
-      return [packageName, { active, total: devices.length }] as const;
-    }),
-  );
+  // The snapshot fallback only needs counts. Indexed aggregation keeps the
+  // exact 30-day window without reading any device payload or FCM token.
+  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const coverageFromDevices: Array<readonly [string, { active: number; total: number }]> = [];
+  // Avoid launching 34 simultaneous queries on a cold Worker after quota reset.
+  const batchSize = 3;
+  for (let offset = 0; offset < packages.length; offset += batchSize) {
+    const chunk = packages.slice(offset, offset + batchSize);
+    const counts = await Promise.all(chunk.map(async (packageName) => {
+      const [total, active] = await Promise.all([
+        countDevicesByPackage(env, packageName),
+        countDevicesByPackage(env, packageName, cutoff),
+      ]);
+      return [packageName, { active, total }] as const;
+    }));
+    coverageFromDevices.push(...counts);
+  }
   return jsonResponse({
     loadedAt: new Date().toISOString(),
     source: "devices",
     coverage: Object.fromEntries(coverageFromDevices),
+  });
   });
 }
 
@@ -2167,6 +2281,27 @@ async function handleAdminGetAnalyticsSummary(request: Request, env: Env): Promi
 
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   const packages = parsePackages(body.packages);
+  // Full diagnostics depend on every device's registration and runtime fields.
+  // For interactive page loads, an explicitly requested overview avoids the
+  // potentially 35k+ document scan while returning exact indexed counts.
+  const overviewMode = body.mode === "overview";
+  return cachedAdminSummary(
+    `analytics:${overviewMode ? "overview" : "full"}:${packages.join("|")}`,
+    ANALYTICS_SUMMARY_TTL_MS,
+    async () => {
+    if (overviewMode) {
+      const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const [totalDevices, activeDevices30d] = await Promise.all([
+        countDevicesByPackage(env, null),
+        countDevicesByPackage(env, null, cutoff),
+      ]);
+      return jsonResponse({
+        mode: "overview",
+        totalDevices,
+        activeDevices30d,
+        loadedAt: new Date().toISOString(),
+      });
+    }
 
   const devicesDocs = await listCollectionDocuments(env, "devices", 1000);
   const devices = devicesDocs.map((doc) => parseFirestoreDocument(doc));
@@ -2495,6 +2630,7 @@ async function handleAdminGetAnalyticsSummary(request: Request, env: Env): Promi
     stalePackages,
     recentCoverageReports,
     loadedAt: new Date().toISOString(),
+  });
   });
 }
 
@@ -3321,6 +3457,7 @@ async function handleAdminGetRevenueSummary(request: Request, env: Env): Promise
 
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   const catalog = parseAdHealthCatalog(body);
+  return cachedAdminSummary(`revenue:${JSON.stringify(catalog)}`, REVENUE_SUMMARY_TTL_MS, async () => {
   const purchaseDocs = await listCollectionDocuments(env, "purchase_verifications", 1000);
   const verifiedRecords = purchaseDocs
     .map((doc) => parseFirestoreDocument(doc))
@@ -3429,6 +3566,7 @@ async function handleAdminGetRevenueSummary(request: Request, env: Env): Promise
       issues: sourceFreshnessIssues,
     },
     loadedAt: new Date().toISOString(),
+  });
   });
 }
 
@@ -4185,8 +4323,16 @@ export default {
         response = jsonResponse({ error: "Not found" }, 404);
       }
     } catch (error) {
-      console.error("[admin-api] unhandled error", error);
-      response = jsonResponse({ error: "Internal server error" }, 500);
+      if (error instanceof FirestoreReadQuotaExceededError) {
+        response = jsonResponse(
+          { error: "Firestore read quota exhausted. Try again later." },
+          503,
+          { "retry-after": String(FIRESTORE_READ_COOLDOWN_MS / 1000) },
+        );
+      } else {
+        console.error("[admin-api] unhandled error", error);
+        response = jsonResponse({ error: "Internal server error" }, 500);
+      }
     }
 
     const headers = new Headers(response.headers);
