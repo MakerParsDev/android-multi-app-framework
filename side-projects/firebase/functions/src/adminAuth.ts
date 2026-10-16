@@ -42,8 +42,10 @@ export async function resolveAdminAccess(uid: string, email?: string): Promise<A
     const adminRef = admin.firestore().collection("admins").doc(uid);
     const adminDoc = await adminRef.get();
     if (adminDoc.exists) {
+        const adminData = adminDoc.data();
+        // An explicit disabled/non-admin document is a denial, even for an allowlisted email.
         return {
-            authorized: true,
+            authorized: adminData?.enabled === true && adminData?.role === "admin",
             source: "firestore",
             uid,
             email,
