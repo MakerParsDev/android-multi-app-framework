@@ -48,4 +48,6 @@ dependencies {
     ksp(libs.hilt.compiler)
 
     implementation(libs.firebase.messaging)
+
+    testImplementation(libs.junit)
 }

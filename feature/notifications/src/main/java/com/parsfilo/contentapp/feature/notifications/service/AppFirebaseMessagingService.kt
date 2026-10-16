@@ -16,14 +16,10 @@ import com.parsfilo.contentapp.core.database.model.NotificationEntity
 import com.parsfilo.contentapp.core.datastore.PreferencesDataSource
 import com.parsfilo.contentapp.core.firebase.AppAnalytics
 import com.parsfilo.contentapp.core.firebase.logPushReceived
-import com.parsfilo.contentapp.core.firebase.push.PushRegistrationManager
+import com.parsfilo.contentapp.core.firebase.push.PushRegistrationSyncWorker
 import com.parsfilo.contentapp.feature.notifications.R
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -37,13 +33,7 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
     lateinit var analytics: AppAnalytics
 
     @Inject
-    lateinit var pushRegistrationManager: PushRegistrationManager
-
-    @Inject
     lateinit var preferencesDataSource: PreferencesDataSource
-
-    private val job = SupervisorJob()
-    private val scope = CoroutineScope(Dispatchers.IO + job)
 
     companion object {
         private const val CHANNEL_ID = "app_notifications"
@@ -78,24 +68,31 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         // Analytics: push_received
         analytics.logPushReceived(type)
 
-        scope.launch {
-            val rowId = persistNotification(entity)
-            if (shouldShowSystemNotification()) {
-                Timber.d(
-                    "FCM will show system notification externalId=%s rowId=%s",
-                    notificationId,
-                    rowId,
-                )
-                showNotification(
-                    title = title,
-                    body = body,
-                    id = notificationId.hashCode(),
-                    notificationRowId = rowId,
-                    notificationExternalId = notificationId,
-                )
-            } else {
-                Timber.d("Skipping system notification (permission/settings disabled).")
+        // FirebaseMessagingService may be destroyed as soon as this callback returns.
+        // Finish the short local database/notification work on its background callback
+        // thread; a detached coroutine would be cancelled in onDestroy() before saving.
+        try {
+            awaitFirebaseMessageProcessing {
+                val rowId = persistNotification(entity)
+                if (shouldShowSystemNotification()) {
+                    Timber.d(
+                        "FCM will show system notification externalId=%s rowId=%s",
+                        notificationId,
+                        rowId,
+                    )
+                    showNotification(
+                        title = title,
+                        body = body,
+                        id = notificationId.hashCode(),
+                        notificationRowId = rowId,
+                        notificationExternalId = notificationId,
+                    )
+                } else {
+                    Timber.d("Skipping system notification (permission/settings disabled).")
+                }
             }
+        } catch (exception: Exception) {
+            Timber.w("FCM local notification processing failed: %s", exception::class.simpleName)
         }
     }
 
@@ -199,17 +196,14 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         Timber.d("FCM token refreshed length=%d", token.length)
-        scope.launch {
-            pushRegistrationManager.syncRegistration(
-                reason = "token_refresh",
-                tokenOverride = token
-            )
-        }
+        // Persist the retry with WorkManager: the FCM service can be destroyed
+        // immediately after this callback, cancelling an in-memory coroutine.
+        // The worker securely fetches the current token; never store it in work data.
+        PushRegistrationSyncWorker.scheduleImmediate(applicationContext, reason = "token_refresh")
     }
 
     override fun onDestroy() {
         Timber.d("AppFirebaseMessagingService destroyed")
-        job.cancel()
         super.onDestroy()
     }
 }
