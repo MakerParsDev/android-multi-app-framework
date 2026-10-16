@@ -124,10 +124,36 @@ def test_release_build_and_publish_use_doppler_and_exact_signed_artifacts() -> N
     assert "--artifact-dir" in publish_step["run"]
     assert "find" in publish_step["run"] and "*.aab" in publish_step["run"]
     assert "exactly one signed AAB" in publish_step["run"]
-    assert publish["environment"] == "production"
+    assert publish["environment"]["name"].endswith("'production' }}")
     assert "Install verified Doppler CLI" in [
         step.get("name") for step in publish["steps"]
     ]
+
+
+def test_automatic_production_environment_only_for_canonical_single_flavor() -> None:
+    workflow = yaml.safe_load((ROOT / ".github/workflows/release.yml").read_text())
+    release = workflow["jobs"]["publish-play"]
+    env = release["environment"]
+    assert isinstance(env, dict) and isinstance(env.get("name"), str)
+    selection = env["name"]
+    assert selection.startswith("${{") and selection.endswith("}}")
+    # All of these conjuncts must hold before approval-free publishing.
+    assert "inputs.do_publish &&" in selection
+    assert "!inputs.update_play_listing" in selection
+    assert (
+        "needs.resolve-flavors.outputs.flavors_csv == inputs.target_flavors"
+        in selection
+    )
+    assert "needs.resolve-flavors.outputs.flavors_csv != ''" in selection
+    assert "!contains(needs.resolve-flavors.outputs.flavors_csv, ',')" in selection
+    assert "'play-production-auto' || 'production'" in selection
+    assert release["needs"] == ["build-release", "resolve-flavors"]
+    assert release["if"] == "inputs.do_internal_test || inputs.do_publish"
+    # Other high-privilege or nonproduction-release flows retain approval.
+    for file in ("play-internal.yml", "release-attested.yml"):
+        sibling = yaml.safe_load((ROOT / ".github/workflows" / file).read_text())
+        jobs = sibling["jobs"].values()
+        assert any(job.get("environment") == "production" for job in jobs), file
 
 
 def main() -> int:
