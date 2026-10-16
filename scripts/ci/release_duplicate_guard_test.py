@@ -41,6 +41,19 @@ def test_distinct_tracks_and_commits_are_not_duplicates() -> None:
         ) is None
 
 
+def test_overlapping_flavors_and_all_are_duplicate_publications() -> None:
+    for earlier_flavors, requested in (
+        ("all", ("amenerrasulu",)),
+        ("amenerrasulu", ("all",)),
+        ("amenerrasulu", ("amenerrasulu", "yasinsuresi")),
+        ("amenerrasulu,yasinsuresi", ("yasinsuresi",)),
+    ):
+        assert prior_successful_publication(
+            [run(11, flavors=earlier_flavors)], current_id=12,
+            sha=SHA, track="production", flavors=requested,
+        ) == 11
+
+
 def test_failed_or_active_run_does_not_imply_publication() -> None:
     for prior in (run(11, conclusion="failure"), run(11, status="in_progress",
                   conclusion=None), run(12)):

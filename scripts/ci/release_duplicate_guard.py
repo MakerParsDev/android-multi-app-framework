@@ -48,7 +48,11 @@ def prior_successful_publication(
         title = RUN_TITLE.fullmatch(run.get("display_title") or "")
         if title is None or title["track"] != track or title["sha"] != sha:
             continue
-        if normalize_flavors(title["flavors"]) == flavors:
+        released_flavors = normalize_flavors(title["flavors"])
+        # Publishing "all" includes each individual flavor. A multi-flavor
+        # publication must also not republish any previously released flavor.
+        if ("all" in released_flavors or "all" in flavors
+                or not set(released_flavors).isdisjoint(flavors)):
             return int(run["id"])
     return None
 
