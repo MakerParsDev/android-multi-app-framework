@@ -149,6 +149,30 @@ class AnalyticsPayloadPolicyTest {
     }
 
     @Test
+    fun consentErrorsRetainLowCardinalityCategoryButNeverForwardRawText() {
+        val firebaseAnalytics = mockk<FirebaseAnalytics>(relaxed = true)
+        val forwarded = mutableListOf<Bundle>()
+        every { firebaseAnalytics.logEvent(any(), any<Bundle>()) } answers {
+            forwarded += secondArg<Bundle>()
+        }
+        val appAnalytics = AppAnalytics(firebaseAnalytics)
+
+        appAnalytics.logConsentError(
+            trigger = "cold_start",
+            message = "email person@example.com failed token=secret",
+            ageGateResult = "adult",
+            errorCategory = "cold_start_form_network",
+        )
+
+        val payload = forwarded.single()
+        assertThat(payload.getString(AnalyticsParamKey.UMP_ERROR_CATEGORY))
+            .isEqualTo("cold_start_form_network")
+        assertThat(payload.getString(AnalyticsParamKey.CONSENT_TRIGGER))
+            .isEqualTo("cold_start")
+        assertThat(payload.containsKey(AnalyticsParamKey.ERROR_MESSAGE)).isFalse()
+    }
+
+    @Test
     fun userIdRequiresOpaqueAnonymousPrefix() {
         val firebaseAnalytics = mockk<FirebaseAnalytics>(relaxed = true)
         val appAnalytics = AppAnalytics(firebaseAnalytics)

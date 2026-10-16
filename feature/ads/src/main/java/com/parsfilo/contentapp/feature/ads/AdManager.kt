@@ -146,6 +146,7 @@ class AdManager @Inject constructor(
                             reportConsentFailure(
                                 operation = "cold_start_form",
                                 message = loadAndShowError.message,
+                                errorCode = loadAndShowError.errorCode,
                             )
                             val resolvedStatus =
                                 if (consentInformation.canRequestAds()) {
@@ -174,6 +175,7 @@ class AdManager @Inject constructor(
                                     trigger = "cold_start",
                                     message = loadAndShowError.message ?: "Unknown consent error",
                                     ageGateResult = ageGateStatus.analyticsValue(),
+                                    errorCategory = classifyUmpConsentError("cold_start_form", loadAndShowError.errorCode),
                                 )
                             }
                             if (consentInformation.canRequestAds()) {
@@ -196,6 +198,7 @@ class AdManager @Inject constructor(
                     reportConsentFailure(
                         operation = "cold_start_info_update",
                         message = requestConsentError.message,
+                        errorCode = requestConsentError.errorCode,
                     )
                     val resolvedStatus =
                         if (consentInformation.canRequestAds()) {
@@ -218,6 +221,7 @@ class AdManager @Inject constructor(
                             trigger = "cold_start",
                             message = requestConsentError.message ?: "Consent info update failed",
                             ageGateResult = ageGateStatus.analyticsValue(),
+                            errorCategory = classifyUmpConsentError("cold_start_info_update", requestConsentError.errorCode),
                         )
                     }
                     updatePrivacyOptionsState(consentInformation)
@@ -318,6 +322,7 @@ class AdManager @Inject constructor(
                     reportConsentFailure(
                         operation = "runtime_refresh",
                         message = requestConsentError.message,
+                        errorCode = requestConsentError.errorCode,
                     )
                     updatePrivacyOptionsState(consentInformation)
                     val canRequestAds = consentInformation.canRequestAds()
@@ -342,6 +347,7 @@ class AdManager @Inject constructor(
                             trigger = "runtime",
                             message = requestConsentError.message ?: "Consent refresh failed",
                             ageGateResult = ageGateStatus.analyticsValue(),
+                            errorCategory = classifyUmpConsentError("runtime_refresh", requestConsentError.errorCode),
                         )
                     }
                     applyConsentRuntimeState(
@@ -386,6 +392,7 @@ class AdManager @Inject constructor(
                 reportConsentFailure(
                     operation = "privacy_options_form",
                     message = formError.message,
+                    errorCode = formError.errorCode,
                 )
                 refreshConsent(activity) {
                     onCompleted(false)
@@ -426,6 +433,7 @@ class AdManager @Inject constructor(
                                 trigger = "debug_menu",
                                 message = formError.message ?: "Debug consent form error",
                                 ageGateResult = ageGateStatus.analyticsValue(),
+                                errorCategory = classifyUmpConsentError("debug_menu_form", formError.errorCode),
                             )
                             ConsentFunnelDebugDashboard.onConsentOutcome(
                                 granted = consentInformation.canRequestAds(),
@@ -460,6 +468,7 @@ class AdManager @Inject constructor(
                         trigger = "debug_menu",
                         message = requestError.message ?: "Debug consent request update error",
                         ageGateResult = ageGateStatus.analyticsValue(),
+                        errorCategory = classifyUmpConsentError("debug_menu_info_update", requestError.errorCode),
                     )
                     ConsentFunnelDebugDashboard.onConsentOutcome(
                         granted = consentInformation.canRequestAds(),
@@ -774,7 +783,7 @@ class AdManager @Inject constructor(
             }
     }
 
-    private fun reportConsentFailure(operation: String, message: String?) {
+    private fun reportConsentFailure(operation: String, message: String?, errorCode: Int) {
         runtimeObservability.recordFailure(
             RuntimeFailure(
                 signal = RuntimeSignal.UMP_CONSENT,
@@ -782,6 +791,7 @@ class AdManager @Inject constructor(
                 message = message ?: "UMP consent operation failed",
                 attributes = mapOf(
                     "operation" to operation,
+                    "error_category" to classifyUmpConsentError(operation, errorCode),
                     "can_request_ads" to _canRequestAds.value.toString(),
                 ),
             ),

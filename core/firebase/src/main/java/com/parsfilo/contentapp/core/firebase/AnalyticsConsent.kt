@@ -52,7 +52,12 @@ fun AppAnalytics.logConsentNotRequired(trigger: String, ageGateResult: String) {
     )
 }
 
-fun AppAnalytics.logConsentError(trigger: String, message: String, ageGateResult: String) {
+fun AppAnalytics.logConsentError(
+    trigger: String,
+    message: String,
+    ageGateResult: String,
+    errorCategory: String = "other_other",
+) {
     setUserProperty(AnalyticsUserPropertyKey.CONSENT_STATUS, "error")
     setDefaultEventParameter(AnalyticsParamKey.CONSENT_STATE, "error")
     logEvent(
@@ -60,6 +65,7 @@ fun AppAnalytics.logConsentError(trigger: String, message: String, ageGateResult
         Bundle().apply {
             putString(AnalyticsParamKey.CONSENT_STATUS, "error")
             putString(AnalyticsParamKey.CONSENT_TRIGGER, trigger)
+            putString(AnalyticsParamKey.UMP_ERROR_CATEGORY, errorCategory)
             putString(AnalyticsParamKey.ERROR_MESSAGE, message)
             putString(AnalyticsParamKey.AGE_GATE_RESULT, ageGateResult)
         },
