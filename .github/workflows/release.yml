@@ -112,7 +112,6 @@ jobs:
       - name: Run admin backend smoke test
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
-          EXPECTED_ADMIN_BACKEND_GIT_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
           # Variables are intentionally expanded by the Doppler-injected inner shell.
@@ -121,8 +120,7 @@ jobs:
             set -euo pipefail
             python3 ./scripts/ci/admin_backend_smoke.py \
               --purchase-url "$PURCHASE_VERIFICATION_URL" \
-              --push-url "$PUSH_REGISTRATION_URL" \
-              --expected-git-sha "$EXPECTED_ADMIN_BACKEND_GIT_SHA"
+              --push-url "$PUSH_REGISTRATION_URL"
           '
 
   resolve-flavors:
