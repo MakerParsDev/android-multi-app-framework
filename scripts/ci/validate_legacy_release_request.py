@@ -10,6 +10,8 @@ import sys
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from release_duplicate_guard import verify_no_successful_duplicate
+
 REPO_PATTERN = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 SHA_PATTERN = re.compile(r"^[a-f0-9]{40}$")
 REQUIRED_WORKFLOWS = ("ci-main.yml", "codeql.yml")
@@ -87,6 +89,7 @@ def main() -> int:
         publishing = validate_release_inputs(os.environ)
         if publishing:
             verify_release_source(os.environ)
+            verify_no_successful_duplicate(os.environ)
         else:
             print("PASS: build-only request; publication checks do not apply")
         return 0
