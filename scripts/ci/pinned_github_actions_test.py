@@ -87,12 +87,12 @@ def test_performance_automation_actions_are_approved() -> None:
         (ROOT / "config/pinned-github-actions.json").read_text(encoding="utf-8")
     )
     assert manifest["actions/download-artifact"] == {
-        "sha": "3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c",
-        "version": "v8.0.1",
+        "sha": "9000827ccba6bdab643e8b6fd33ac0654aef8333",
+        "version": "v8.0.2",
     }
     assert manifest["actions/create-github-app-token"] == {
-        "sha": "bcd2ba49218906704ab6c1aa796996da409d3eb1",
-        "version": "v3.2.0",
+        "sha": "64ab729a6294000f5aa4a4bc0b73d1f32bc45510",
+        "version": "v3.3.0",
     }
 
 
