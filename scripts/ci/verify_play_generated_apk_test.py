@@ -4,7 +4,8 @@
 from __future__ import annotations
 
 from verify_play_generated_apk import (
-    choose_universal, parse_resources, validate_firebase_resources,
+    choose_universal, parse_resources, signed_apk_media_url,
+    validate_firebase_resources,
 )
 
 EXPECTED = {
@@ -87,6 +88,11 @@ def test_requires_exactly_one_universal_apk():
                     {"generatedApks": [{"generatedUniversalApk": {"downloadId": "a"}},
                                        {"generatedUniversalApk": {"downloadId": "b"}}]}):
         raises(lambda: choose_universal(invalid))
+
+
+def test_signed_apk_download_requests_media_contents():
+    uri = signed_apk_media_url("https://androidpublisher.googleapis.com/example", "a/b+c=")
+    assert uri.endswith("/downloads/a%2Fb%2Bc%3D:download?alt=media")
 
 
 def test_validated_resources_never_echo_api_key():

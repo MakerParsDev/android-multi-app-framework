@@ -125,6 +125,11 @@ def choose_universal(metadata: dict) -> str:
     return ids[0]
 
 
+def signed_apk_media_url(base: str, download_id: str) -> str:
+    # Google returns an empty 204-style response without alt=media.
+    return f"{base}/downloads/{quote(download_id, safe='')}:download?alt=media"
+
+
 def download_play_signed_apk(package: str, version_code: int, destination: Path,
                              service_account: dict) -> None:
     """Use GET-only Google Play API operations, with no stateful edits."""
@@ -142,7 +147,7 @@ def download_play_signed_apk(package: str, version_code: int, destination: Path,
         response.raise_for_status()
         download_id = choose_universal(response.json())
         response = session.get(
-            f"{base}/downloads/{quote(download_id, safe='')}:download",
+            signed_apk_media_url(base, download_id),
             timeout=180, stream=True,
         )
         response.raise_for_status()
