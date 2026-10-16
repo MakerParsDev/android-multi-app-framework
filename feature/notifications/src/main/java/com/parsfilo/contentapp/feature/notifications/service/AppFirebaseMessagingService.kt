@@ -39,6 +39,8 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         private const val CHANNEL_ID = "app_notifications"
     }
 
+    // Firebase callbacks must not crash if Room, preferences or OS notification APIs throw.
+    @Suppress("TooGenericExceptionCaught")
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         Timber.d(
             "FCM message received id=%s from=%s hasNotification=%s dataKeys=%s",

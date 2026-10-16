@@ -2,8 +2,8 @@ package com.parsfilo.contentapp.feature.notifications.service
 
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
-import org.junit.Assert.assertTrue
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class FirebaseMessageProcessingTest {
