@@ -16,7 +16,7 @@ DATA = {
     "google_app_id": EXPECTED["appId"],
     "project_id": EXPECTED["projectId"],
     "gcm_defaultSenderId": "123456789",
-    "google_api_key": "AIza" + "X" * 36,
+    "google_api_key": "AIza" + "X" * 35,
     "google_storage_bucket": "sample.appspot.com",
     "firebase_database_url": "https://example.invalid",
     "admob_app_id": "ca-app-pub-fake",
@@ -57,6 +57,26 @@ def test_reject_firebase_locale_override_even_if_same_value():
         'resource 0x7f180000 string/google_app_id\n  (tr) "legacy"\n',
     )
     raises(lambda: validate_firebase_resources(parse_resources(lines), EXPECTED))
+
+
+def test_reject_localized_resource_reference_and_unsupported_default():
+    lines = sample().replace(
+        'resource 0x7f180000 string/google_app_id\n',
+        'resource 0x7f180000 string/google_app_id\n'
+        '  (tr) @string/legacy_app_id\n',
+    )
+    raises(lambda: validate_firebase_resources(parse_resources(lines), EXPECTED))
+    records = parse_resources(sample())
+    records["google_storage_bucket"] = [("", None)]
+    raises(lambda: validate_firebase_resources(records, EXPECTED))
+
+
+def test_reject_malformed_api_key_characters_and_length():
+    for invalid in ("AIza" + " " * 35, "AIza" + "A" * 34,
+                    "AIza" + "A" * 36, "AIza" + "A" * 34 + "!"):
+        records = parse_resources(sample())
+        records["google_api_key"] = [("", invalid)]
+        raises(lambda: validate_firebase_resources(records, EXPECTED))
 
 
 def test_reject_mismatched_default_project_and_app_id():

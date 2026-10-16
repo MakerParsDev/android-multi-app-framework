@@ -33,13 +33,15 @@ FIREBASE_FIELDS = (
 )
 MANDATORY = frozenset(("google_app_id", "project_id", "gcm_defaultSenderId", "google_api_key"))
 RESOURCE_LINE = re.compile(r"^\s*resource 0x[0-9a-fA-F]+ string/([A-Za-z0-9_]+)(?:\s|$)")
-VALUE_LINE = re.compile(r'^\s*\(([^)]*)\)\s+"([^"]*)"')
+CONFIG_VALUE_LINE = re.compile(r"^\s*\(([^)]*)\)\s+(.+)$")
+QUOTED_STRING = re.compile(r'^"([^"]*)"$')
+API_KEY_PATTERN = re.compile(r"AIza[A-Za-z0-9_-]{35}\Z")
 MAX_APK_BYTES = 150 * 1024 * 1024
 
 
-def parse_resources(output: str) -> dict[str, list[tuple[str, str]]]:
-    """Extract locale and value from aapt2's resource table; never emit secrets."""
-    records: dict[str, list[tuple[str, str]]] = {}
+def parse_resources(output: str) -> dict[str, list[tuple[str, str | None]]]:
+    """Track each resource configuration, even non-string references (fail closed)."""
+    records: dict[str, list[tuple[str, str | None]]] = {}
     current: str | None = None
     for line in output.splitlines():
         if line.lstrip().startswith("resource "):
@@ -49,13 +51,17 @@ def parse_resources(output: str) -> dict[str, list[tuple[str, str]]]:
                 records.setdefault(current, [])
             continue
         if current:
-            value = VALUE_LINE.match(line)
-            if value:
-                records[current].append((value.group(1), value.group(2)))
+            configuration = CONFIG_VALUE_LINE.match(line)
+            if configuration:
+                value = QUOTED_STRING.fullmatch(configuration.group(2))
+                records[current].append((
+                    configuration.group(1),
+                    value.group(1) if value else None,
+                ))
     return records
 
 
-def validate_firebase_resources(records: dict[str, list[tuple[str, str]]],
+def validate_firebase_resources(records: dict[str, list[tuple[str, str | None]]],
                                 expected: dict) -> dict[str, str]:
     """Reject any localized override, ambiguous default, or wrong Firebase app."""
     app_id = expected["appId"]
@@ -77,9 +83,11 @@ def validate_firebase_resources(records: dict[str, list[tuple[str, str]]],
         if len(values) != 1:
             raise ValueError(f"localized or duplicated Firebase resource: {field}")
         actual = default[0]
+        if actual is None:
+            raise ValueError(f"unsupported Firebase resource value: {field}")
         if field in expected_values and actual != expected_values[field]:
             raise ValueError(f"Firebase resource does not match project configuration: {field}")
-        if field == "google_api_key" and (not actual.startswith("AIza") or len(actual) < 30):
+        if field == "google_api_key" and not API_KEY_PATTERN.fullmatch(actual):
             raise ValueError("Firebase Android API-key resource is missing/invalid")
         result[field] = "verified"
     return result
