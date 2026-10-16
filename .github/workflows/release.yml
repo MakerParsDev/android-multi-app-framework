@@ -1,4 +1,6 @@
 name: Release
+# Stable run identity for audit and duplicate-publication prevention.
+run-name: "Release: ${{ inputs.target_flavors }} | ${{ inputs.do_publish && 'production' || inputs.do_internal_test && 'internal' || 'build' }} | ${{ github.sha }}"
 
 on:
   workflow_dispatch:
@@ -81,6 +83,8 @@ jobs:
           RELEASE_DO_PUBLISH: ${{ inputs.do_publish }}
           RELEASE_UPDATE_PLAY_LISTING: ${{ inputs.update_play_listing }}
           RELEASE_BUILD_TYPE: ${{ inputs.build_type }}
+          RELEASE_TARGET_FLAVORS: ${{ inputs.target_flavors }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
         run: python3 scripts/ci/validate_legacy_release_request.py
 
       - name: Run security gate
