@@ -156,6 +156,32 @@ def test_automatic_production_environment_only_for_canonical_single_flavor() -> 
         assert any(job.get("environment") == "production" for job in jobs), file
 
 
+def test_play_postpublish_audit_uses_exact_build_metadata_and_does_not_retry_release() -> None:
+    workflow = yaml.safe_load((ROOT / ".github/workflows/release.yml").read_text())
+    build_steps = workflow["jobs"]["build-release"]["steps"]
+    publish_steps = workflow["jobs"]["publish-play"]["steps"]
+    upload = next(x for x in build_steps
+                  if x.get("name") == "Upload release version metadata")
+    download = next(x for x in publish_steps
+                    if x.get("name") == "Download release version metadata")
+    publish_index = next(i for i, s in enumerate(publish_steps)
+                         if s.get("name") == "Publish to Play")
+    audit_index = next(i for i, s in enumerate(publish_steps)
+                       if s.get("name") == "Audit Play-generated APK after successful production upload")
+    audit = publish_steps[audit_index]
+    assert upload["with"]["name"] == download["with"]["name"] == "play-release-version-metadata"
+    assert upload["with"]["path"] == "app-versions.properties"
+    assert audit_index > publish_index
+    assert audit["continue-on-error"] is True
+    assert "inputs.do_publish" in audit["if"]
+    assert "!contains(needs.resolve-flavors.outputs.flavors_csv, ',')" in audit["if"]
+    assert "verify_play_generated_apk.py" in audit["run"]
+    assert "--versions-file" in audit["run"]
+    assert "--flavor" in audit["run"]
+    assert "re-dispatch" in audit["run"]
+    assert audit["env"]["PLAY_SERVICE_ACCOUNT_JSON"] == "/tmp/service-account.json"
+
+
 def main() -> int:
     for name, test in list(globals().items()):
         if name.startswith("test_") and callable(test):

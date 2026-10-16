@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from verify_play_generated_apk import (
-    choose_universal, parse_resources, signed_apk_media_url,
+    choose_universal, parse_resources, read_play_version_code, signed_apk_media_url,
     validate_firebase_resources,
 )
 
@@ -108,6 +108,21 @@ def test_requires_exactly_one_universal_apk():
                     {"generatedApks": [{"generatedUniversalApk": {"downloadId": "a"}},
                                        {"generatedUniversalApk": {"downloadId": "b"}}]}):
         raises(lambda: choose_universal(invalid))
+
+
+def test_resolve_exact_build_time_version_code():
+    from pathlib import Path
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmp:
+        file = Path(tmp) / "app-versions.properties"
+        file.write_text("amenerrasulu.versionCode=56\nother.versionCode=99\n")
+        assert read_play_version_code(file, "amenerrasulu") == 56
+        raises(lambda: read_play_version_code(file, "missing"))
+        file.write_text("amenerrasulu.versionCode=56\namenerrasulu.versionCode=56\n")
+        raises(lambda: read_play_version_code(file, "amenerrasulu"))
+        file.write_text("amenerrasulu.versionCode=-2\n")
+        raises(lambda: read_play_version_code(file, "amenerrasulu"))
 
 
 def test_signed_apk_download_requests_media_contents():
