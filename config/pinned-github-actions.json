@@ -8,32 +8,32 @@
     "version": "v7.0.1"
   },
   "actions/create-github-app-token": {
-    "sha": "bcd2ba49218906704ab6c1aa796996da409d3eb1",
-    "version": "v3.2.0"
+    "sha": "64ab729a6294000f5aa4a4bc0b73d1f32bc45510",
+    "version": "v3.3.0"
   },
   "actions/dependency-review-action": {
     "sha": "a1d282b36b6f3519aa1f3fc636f609c47dddb294",
     "version": "v5.0.0"
   },
   "actions/download-artifact": {
-    "sha": "3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c",
-    "version": "v8.0.1"
+    "sha": "9000827ccba6bdab643e8b6fd33ac0654aef8333",
+    "version": "v8.0.2"
   },
   "actions/setup-java": {
     "sha": "de7274f081f381c8f8158605e0321c36c376e2e6",
     "version": "v6.0.1"
   },
   "actions/setup-node": {
-    "sha": "820762786026740c76f36085b0efc47a31fe5020",
-    "version": "v7.0.0"
+    "sha": "949feb2413d6458794dcd2491c4babbbce0c15c1",
+    "version": "v7.1.0"
   },
   "actions/setup-python": {
     "sha": "5fda3b95a4ea91299a34e894583c3862153e4b97",
     "version": "v7.0.0"
   },
   "actions/upload-artifact": {
-    "sha": "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
-    "version": "v7.0.1"
+    "sha": "cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+    "version": "v7.0.2"
   },
   "codecov/codecov-action": {
     "sha": "303a32d7a59b442fa8d48b6a1cc6825c09c847a5",
@@ -44,11 +44,11 @@
     "version": "v5.5.0"
   },
   "github/codeql-action": {
-    "sha": "1c5b675653bb5c22dbe9b12b556ec555138e09fd",
-    "version": "v4.38.1"
+    "sha": "24c54180a607b1449ed407dd24f251e4e9147c8d",
+    "version": "v4.38.3"
   },
   "gradle/actions": {
-    "sha": "9c971963bec38e04b3d30dcc455b5382be2fdbfb",
-    "version": "v6.3.0"
+    "sha": "3f5f9adaf7d9fecd50b5935e54106014257a94e6",
+    "version": "v6.4.0"
   }
 }
