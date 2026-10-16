@@ -39,6 +39,10 @@
     "sha": "303a32d7a59b442fa8d48b6a1cc6825c09c847a5",
     "version": "v7.1.1"
   },
+  "CodSpeedHQ/action": {
+    "sha": "821a40cd6c80e3cfe387caf55668287addd808da",
+    "version": "v5.5.0"
+  },
   "github/codeql-action": {
     "sha": "1c5b675653bb5c22dbe9b12b556ec555138e09fd",
     "version": "v4.38.1"
