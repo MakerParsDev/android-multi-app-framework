@@ -491,6 +491,7 @@ def test_workflow_audit_executes_regression_contracts() -> None:
     for filename in (
         "compute_pr_impact_test.py",
         "validate_legacy_release_request_test.py",
+        "verify_play_generated_apk_test.py",
         "professional_ci_workflows_test.py",
         "ci_load_policy_test.py",
         "side_project_quality_contract_test.py",
