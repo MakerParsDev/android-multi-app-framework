@@ -189,6 +189,7 @@ class NativeAdManager @Inject constructor(
                             adUnitId = adUnitId,
                             errorCode = error.code,
                             errorMessage = error.message,
+                            errorDomain = error.domain,
                             route = null,
                             backoffAttempt = loadBackoffState.failureStreak,
                         )
