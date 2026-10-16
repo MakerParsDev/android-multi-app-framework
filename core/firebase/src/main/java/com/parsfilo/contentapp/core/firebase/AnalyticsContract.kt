@@ -161,6 +161,7 @@ object AnalyticsParamKey {
     const val PRELOAD_REASON = "preload_reason"
     const val CONSENT_STATUS = "consent_status"
     const val CONSENT_TRIGGER = "consent_trigger"
+    const val UMP_ERROR_CATEGORY = "ump_error_category"
     const val UMP_FORM_SHOWN = "ump_form_shown"
     const val UMP_RESULT = "ump_result"
     const val REQUEST_GEO = "request_geo"
