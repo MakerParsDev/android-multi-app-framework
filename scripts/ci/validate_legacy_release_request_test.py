@@ -20,6 +20,8 @@ BASE = {
     "RELEASE_DO_QUALITY": "true",
     "RELEASE_DO_INTERNAL_TEST": "false",
     "RELEASE_DO_PUBLISH": "false",
+    "RELEASE_PRODUCTION_ROLLOUT_PERCENT": "0",
+    "RELEASE_TARGET_FLAVORS": "amenerrasulu",
     "RELEASE_UPDATE_PLAY_LISTING": "false",
     "RELEASE_BUILD_TYPE": "Release",
     "GITHUB_REF": "refs/heads/main",
@@ -50,13 +52,40 @@ def test_production_and_internal_publish_need_quality() -> None:
             {"RELEASE_BUILD_TYPE": "Debug"},
             {"GITHUB_REF": "refs/heads/feature/unsafe"},
         ):
-            assert rejected(**{flag: "true", **change}), (flag, change)
+            selected = {"RELEASE_PRODUCTION_ROLLOUT_PERCENT": "5"} if flag == "RELEASE_DO_PUBLISH" else {}
+            assert rejected(**{flag: "true", **selected, **change}), (flag, change)
 
 
 def test_reject_ambiguous_track_and_listing_without_publish() -> None:
     assert rejected(RELEASE_DO_INTERNAL_TEST="true", RELEASE_DO_PUBLISH="true")
     assert rejected(RELEASE_UPDATE_PLAY_LISTING="true")
     assert rejected(RELEASE_DO_PUBLISH="true", RELEASE_DO_QUALITY="invalid")
+
+
+def test_production_requires_explicit_five_percent_canary() -> None:
+    assert rejected(RELEASE_DO_PUBLISH="true")
+    for fraction in ("", "0", "1", "10", "25", "100", "05", "5.0", "-5"):
+        assert rejected(
+            RELEASE_DO_PUBLISH="true",
+            RELEASE_PRODUCTION_ROLLOUT_PERCENT=fraction,
+        ), fraction
+    for target in ("all", "amenerrasulu,another", "", "amenerrasulu,"):
+        assert rejected(
+            RELEASE_DO_PUBLISH="true",
+            RELEASE_PRODUCTION_ROLLOUT_PERCENT="5",
+            RELEASE_TARGET_FLAVORS=target,
+        ), target
+    assert rejected(RELEASE_DO_PUBLISH="true",
+                    RELEASE_PRODUCTION_ROLLOUT_PERCENT="5",
+                    RELEASE_UPDATE_PLAY_LISTING="true")
+    assert rejected(RELEASE_PRODUCTION_ROLLOUT_PERCENT="5")
+    assert rejected(RELEASE_DO_INTERNAL_TEST="true",
+                    RELEASE_PRODUCTION_ROLLOUT_PERCENT="5")
+    assert validate_release_inputs({
+        **BASE,
+        "RELEASE_DO_PUBLISH": "true",
+        "RELEASE_PRODUCTION_ROLLOUT_PERCENT": "5",
+    })
 
 
 def test_success_requires_exact_main_push_commit() -> None:
@@ -124,36 +153,32 @@ def test_release_build_and_publish_use_doppler_and_exact_signed_artifacts() -> N
     assert "--artifact-dir" in publish_step["run"]
     assert "find" in publish_step["run"] and "*.aab" in publish_step["run"]
     assert "exactly one signed AAB" in publish_step["run"]
-    assert publish["environment"]["name"].endswith("'production' }}")
+    assert publish["environment"] == "production"
     assert "Install verified Doppler CLI" in [
         step.get("name") for step in publish["steps"]
     ]
 
 
-def test_automatic_production_environment_only_for_canonical_single_flavor() -> None:
+def test_production_publish_requires_manual_protected_environment() -> None:
     workflow = yaml.safe_load((ROOT / ".github/workflows/release.yml").read_text())
     release = workflow["jobs"]["publish-play"]
-    env = release["environment"]
-    assert isinstance(env, dict) and isinstance(env.get("name"), str)
-    selection = env["name"]
-    assert selection.startswith("${{") and selection.endswith("}}")
-    # All of these conjuncts must hold before approval-free publishing.
-    assert "inputs.do_publish &&" in selection
-    assert "!inputs.update_play_listing" in selection
-    assert (
-        "needs.resolve-flavors.outputs.flavors_csv == inputs.target_flavors"
-        in selection
-    )
-    assert "needs.resolve-flavors.outputs.flavors_csv != ''" in selection
-    assert "!contains(needs.resolve-flavors.outputs.flavors_csv, ',')" in selection
-    assert "'play-production-auto' || 'production'" in selection
+    assert release["environment"] == "production"
     assert release["needs"] == ["build-release", "resolve-flavors"]
     assert release["if"] == "inputs.do_internal_test || inputs.do_publish"
-    # Other high-privilege or nonproduction-release flows retain approval.
+    publish = next(x for x in release["steps"] if x.get("name") == "Publish to Play")
+    assert "PRODUCTION_ROLLOUT_PERCENT" in publish["env"]
+    assert "ROLLOUT_FLAGS=(-PPLAY_ROLLOUT_PERCENT=" in publish["run"]
+    assert '"${ROLLOUT_FLAGS[@]}"' in publish["run"]
+    security = next(x for x in workflow["jobs"]["security-gate"]["steps"]
+                    if x.get("name") == "Validate release publication prerequisites")
+    assert security["env"]["RELEASE_PRODUCTION_ROLLOUT_PERCENT"] == (
+        "${{ inputs.production_rollout_percent }}"
+    )
     for file in ("play-internal.yml", "release-attested.yml"):
         sibling = yaml.safe_load((ROOT / ".github/workflows" / file).read_text())
         jobs = sibling["jobs"].values()
         assert any(job.get("environment") == "production" for job in jobs), file
+
 
 
 def test_play_postpublish_audit_uses_exact_build_metadata_and_does_not_retry_release() -> None:
