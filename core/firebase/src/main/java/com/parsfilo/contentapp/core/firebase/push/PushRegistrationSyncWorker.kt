@@ -6,8 +6,8 @@ import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
@@ -69,11 +69,22 @@ class PushRegistrationSyncWorker(
             reason: String,
         ) {
             Timber.d("Scheduling immediate PushRegistrationSyncWorker reason=%s", reason)
+            WorkManager.getInstance(context).enqueueUniqueWork(
+                IMMEDIATE_WORK_NAME,
+                ExistingWorkPolicy.REPLACE,
+                buildImmediateWorkRequest(reason),
+            )
+        }
+
+        // This retry does not require expedited execution. On Android 11 and earlier,
+        // expedited CoroutineWorkers need a foreground notification; without one
+        // WorkManager fails before doWork() starts.
+        internal fun buildImmediateWorkRequest(reason: String): OneTimeWorkRequest {
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
 
-            val request = OneTimeWorkRequestBuilder<PushRegistrationSyncWorker>()
+            return OneTimeWorkRequestBuilder<PushRegistrationSyncWorker>()
                 .setConstraints(constraints)
                 .setInputData(
                     workDataOf(
@@ -81,14 +92,7 @@ class PushRegistrationSyncWorker(
                         KEY_IS_IMMEDIATE to true,
                     ),
                 )
-                .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
                 .build()
-
-            WorkManager.getInstance(context).enqueueUniqueWork(
-                IMMEDIATE_WORK_NAME,
-                ExistingWorkPolicy.REPLACE,
-                request,
-            )
         }
 
         fun schedule(context: Context) {
