@@ -73,6 +73,7 @@
     <string name="settings_ads_debug_last_result_not_required">form not required</string>
     <string name="settings_ads_debug_last_result_error">error: %1$s</string>
     <string name="settings_ads_debug_geo_effective_none">Debug geography is disabled. Normal geography detection will be used.</string>
+    <string name="settings_ads_debug_geo_test_device_missing">UMP test device hash is not configured. Debug geography may be ignored on physical devices.</string>
     <string name="settings_ads_debug_geo_effective_applied">Selected geography has been applied to the UMP request: %1$s</string>
     <string name="settings_ads_debug_geo_effective_pending">Selected geography has not been applied to a UMP request yet: %1$s. Tap Show Consent Form or refresh consent.</string>
     <string name="settings_ads_debug_open_inspector">Open Ad Inspector</string>

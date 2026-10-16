@@ -5,6 +5,12 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// Supplied only for local, explicit debug device testing. Never commit a device hash.
+val umpTestDeviceHash = providers.gradleProperty("UMP_TEST_DEVICE_HASH").orNull.orEmpty().trim()
+require(umpTestDeviceHash.isEmpty() || Regex("[A-Fa-f0-9]{32}").matches(umpTestDeviceHash)) {
+    "UMP_TEST_DEVICE_HASH must be a 32-character hexadecimal debug device hash."
+}
+
 android {
     namespace = "com.parsfilo.contentapp.feature.ads"
     compileSdk = requiredToolchainInt("toolchain.android.compileSdk")
@@ -29,6 +35,16 @@ android {
         adMobField("ADMOB_REWARDED_ID", "ADMOB_REWARDED_ID")
         adMobField("ADMOB_REWARDED_INTERSTITIAL_ID", "ADMOB_REWARDED_INTERSTITIAL_ID")
         adMobField("ADMOB_APP_OPEN_ID", "ADMOB_APP_OPEN_ID")
+    }
+
+    buildTypes {
+        getByName("debug") {
+            buildConfigField("String", "UMP_TEST_DEVICE_HASH", "\"$umpTestDeviceHash\"")
+        }
+        getByName("release") {
+            // Never carry device identifiers into production APKs/AABs.
+            buildConfigField("String", "UMP_TEST_DEVICE_HASH", "\"\"")
+        }
     }
 
     buildFeatures {

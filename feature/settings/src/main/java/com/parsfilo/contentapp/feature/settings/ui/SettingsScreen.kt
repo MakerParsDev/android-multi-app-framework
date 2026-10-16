@@ -834,6 +834,11 @@ fun SettingsScreen(
                                                     R.string.settings_ads_debug_geo_effective_none,
                                                 )
 
+                                            !adManager.hasRegisteredUmpTestDeviceHash ->
+                                                stringResource(
+                                                    R.string.settings_ads_debug_geo_test_device_missing,
+                                                )
+
                                             lastRequestDebugGeography == debugGeography ->
                                                 stringResource(
                                                     R.string.settings_ads_debug_geo_effective_applied,

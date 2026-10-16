@@ -73,6 +73,7 @@
     <string name="settings_ads_debug_last_result_not_required">form gerekli değildi</string>
     <string name="settings_ads_debug_last_result_error">hata: %1$s</string>
     <string name="settings_ads_debug_geo_effective_none">Debug geography devre dışı. Normal coğrafya tespiti kullanılacak.</string>
+    <string name="settings_ads_debug_geo_test_device_missing">UMP test cihazı kimliği ayarlanmamış. Fiziksel cihazda seçilen debug bölgesi dikkate alınmayabilir.</string>
     <string name="settings_ads_debug_geo_effective_applied">Seçilen geography UMP isteğine uygulanmış: %1$s</string>
     <string name="settings_ads_debug_geo_effective_pending">Seçilen geography henüz UMP isteğine uygulanmadı: %1$s. Gerekliyse Rıza Formunu Göster veya consent yenile.</string>
     <string name="settings_ads_debug_open_inspector">Ad Inspector Aç</string>

@@ -116,6 +116,8 @@ class AdManager @Inject constructor(
 
     private val _debugGeography = MutableStateFlow(UmpDebugGeography.NONE)
     val debugGeography: StateFlow<UmpDebugGeography> = _debugGeography.asStateFlow()
+    val hasRegisteredUmpTestDeviceHash: Boolean
+        get() = registeredUmpTestDeviceHash(isDebugBuild(), BuildConfig.UMP_TEST_DEVICE_HASH) != null
     private val _lastRequestDebugGeography = MutableStateFlow(UmpDebugGeography.NONE)
     val lastRequestDebugGeography: StateFlow<UmpDebugGeography> = _lastRequestDebugGeography.asStateFlow()
     private val _lastConsentDebugResult = MutableStateFlow<UmpConsentDebugResult>(UmpConsentDebugResult.Idle)
@@ -685,10 +687,12 @@ class AdManager @Inject constructor(
         _lastRequestDebugGeography.value = effectiveDebugGeography
 
         if (effectiveDebugGeography != UmpDebugGeography.NONE) {
-            val debugSettings = ConsentDebugSettings.Builder(context)
-                .setDebugGeography(effectiveDebugGeography.umpValue)
-                .build()
-            builder.setConsentDebugSettings(debugSettings)
+            val debugSettingsBuilder =
+                ConsentDebugSettings.Builder(context)
+                    .setDebugGeography(effectiveDebugGeography.umpValue)
+            registeredUmpTestDeviceHash(isDebugBuild(), BuildConfig.UMP_TEST_DEVICE_HASH)
+                ?.let(debugSettingsBuilder::addTestDeviceHashedId)
+            builder.setConsentDebugSettings(debugSettingsBuilder.build())
         }
 
         return builder.build()
