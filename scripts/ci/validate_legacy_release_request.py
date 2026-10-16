@@ -31,6 +31,19 @@ def validate_release_inputs(env: dict[str, str]) -> bool:
     production = boolean(env, "RELEASE_DO_PUBLISH")
     update_listing = boolean(env, "RELEASE_UPDATE_PLAY_LISTING")
     publishing = internal or production
+    fraction = env.get("RELEASE_PRODUCTION_ROLLOUT_PERCENT", "0")
+
+    # Fail closed: an omitted/ambiguous percentage must not publish to everyone.
+    if production:
+        if fraction != "5":
+            raise ValueError("production requires explicit 5% staged rollout selection")
+        target = env.get("RELEASE_TARGET_FLAVORS", "")
+        if not re.fullmatch(r"[a-z][A-Za-z0-9]{1,48}", target) or target == "all":
+            raise ValueError("production staged rollout requires one canonical flavor")
+        if update_listing:
+            raise ValueError("listing changes must be reviewed separately")
+    elif fraction != "0":
+        raise ValueError("rollout percent must be 0 for build-only or internal release")
 
     if internal and production:
         raise ValueError("internal and production publication cannot be selected together")

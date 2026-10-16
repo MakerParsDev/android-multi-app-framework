@@ -555,6 +555,15 @@ play {
 
     // Default to internal; pipelines can still override with -PPLAY_TRACK=production/beta/etc.
     track.set(releaseTrackValue)
+    if (releaseTrackValue == "production") {
+        // Production cannot silently default to 100%. Only a reviewed 5%
+        // staged rollout is supported by the legacy release workflow.
+        require(providers.gradleProperty("PLAY_ROLLOUT_PERCENT").orNull == "5") {
+            "Production requires -PPLAY_ROLLOUT_PERCENT=5 and protected environment approval."
+        }
+        userFraction.set(0.05)
+        releaseStatus.set(com.github.triplet.gradle.androidpublisher.ReleaseStatus.IN_PROGRESS)
+    }
     defaultToAppBundles.set(true)
 }
 

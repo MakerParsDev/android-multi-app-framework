@@ -42,6 +42,14 @@ on:
         required: true
         default: false
         type: boolean
+      production_rollout_percent:
+        description: 'Production only: explicit 5% canary; 0 disables production'
+        required: true
+        default: '0'
+        type: choice
+        options:
+          - '0'
+          - '5'
 
 concurrency:
   group: release
@@ -81,6 +89,7 @@ jobs:
           RELEASE_DO_QUALITY: ${{ inputs.do_quality }}
           RELEASE_DO_INTERNAL_TEST: ${{ inputs.do_internal_test }}
           RELEASE_DO_PUBLISH: ${{ inputs.do_publish }}
+          RELEASE_PRODUCTION_ROLLOUT_PERCENT: ${{ inputs.production_rollout_percent }}
           RELEASE_UPDATE_PLAY_LISTING: ${{ inputs.update_play_listing }}
           RELEASE_BUILD_TYPE: ${{ inputs.build_type }}
           RELEASE_TARGET_FLAVORS: ${{ inputs.target_flavors }}
@@ -349,11 +358,9 @@ jobs:
     timeout-minutes: 30
     needs: [build-release, resolve-flavors]
     if: inputs.do_internal_test || inputs.do_publish
-    # Only an exact, single, resolved production flavor without listing changes
-    # uses the main-only automated deployment environment. All other requests
-    # keep the existing manually reviewed production environment.
-    environment:
-      name: ${{ inputs.do_publish && !inputs.update_play_listing && needs.resolve-flavors.outputs.flavors_csv == inputs.target_flavors && needs.resolve-flavors.outputs.flavors_csv != '' && !contains(needs.resolve-flavors.outputs.flavors_csv, ',') && 'play-production-auto' || 'production' }}
+    # Never select the approval-free environment for production.
+    # A human must review every staged rollout through the protected environment.
+    environment: production
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -422,6 +429,7 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           FLAVORS_JSON: ${{ needs.resolve-flavors.outputs.flavors_json }}
           DO_PUBLISH: ${{ inputs.do_publish }}
+          PRODUCTION_ROLLOUT_PERCENT: ${{ inputs.production_rollout_percent }}
           UPDATE_PLAY_LISTING: ${{ inputs.update_play_listing }}
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
         run: |
@@ -430,7 +438,15 @@ jobs:
             echo "$FLAVORS_JSON" | tr -d '[]"' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d'
           )
           TRACK="internal"
-          if [ "$DO_PUBLISH" = "true" ]; then TRACK="production"; fi
+          ROLLOUT_FLAGS=()
+          if [ "$DO_PUBLISH" = "true" ]; then
+            [[ "$PRODUCTION_ROLLOUT_PERCENT" == "5" ]] || {
+              echo "::error::Production requires an explicitly reviewed 5% staged rollout"
+              exit 1
+            }
+            TRACK="production"
+            ROLLOUT_FLAGS=(-PPLAY_ROLLOUT_PERCENT="$PRODUCTION_ROLLOUT_PERCENT")
+          fi
           for flavor in "${FLAVORS[@]}"; do
             [ -z "$flavor" ] && continue
             cap="$(tr '[:lower:]' '[:upper:]' <<< "${flavor:0:1}")${flavor:1}"
@@ -443,9 +459,9 @@ jobs:
             }
             echo "Publishing prebuilt signed AAB for flavor=$flavor track=$TRACK"
             if [ "$UPDATE_PLAY_LISTING" = "true" ]; then
-              scripts/doppler-run.sh -- ./gradlew "publish${cap}ReleaseListing" -PPLAY_TRACK="$TRACK" --no-daemon --max-workers=2
+              scripts/doppler-run.sh -- ./gradlew "publish${cap}ReleaseListing" -PPLAY_TRACK="$TRACK" "${ROLLOUT_FLAGS[@]}" --no-daemon --max-workers=2
             fi
-            scripts/doppler-run.sh -- ./gradlew "publish${cap}ReleaseBundle" --artifact-dir "$bundle_dir" -PPLAY_TRACK="$TRACK" --stacktrace --no-daemon --max-workers=2
+            scripts/doppler-run.sh -- ./gradlew "publish${cap}ReleaseBundle" --artifact-dir "$bundle_dir" -PPLAY_TRACK="$TRACK" "${ROLLOUT_FLAGS[@]}" --stacktrace --no-daemon --max-workers=2
           done
       - name: Install Android SDK for Play APK post-publish audit
         if: inputs.do_publish && !contains(needs.resolve-flavors.outputs.flavors_csv, ',')
