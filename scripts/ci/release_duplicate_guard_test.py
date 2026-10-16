@@ -93,7 +93,9 @@ def test_workflow_contract_and_no_permissions_expansion() -> None:
     assert workflow["jobs"]["security-gate"]["permissions"] == {
         "contents": "read", "actions": "read",
     }
-    assert workflow["jobs"]["publish-play"]["environment"] == "production"
+    publication_env = workflow["jobs"]["publish-play"]["environment"]
+    assert isinstance(publication_env, dict)
+    assert "'play-production-auto' || 'production'" in publication_env["name"]
     assert workflow["concurrency"]["cancel-in-progress"] is False
 
 
