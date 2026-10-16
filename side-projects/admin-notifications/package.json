@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "engines": {
-    "node": ">=20.19.0 <21 || >=22.12.0"
+    "node": ">=24.12.0"
   },
   "scripts": {
     "dev": "vite",
@@ -18,7 +18,7 @@
     "deploy": "node ../../scripts/ci/deploy_verified_side_project.mjs admin-notifications"
   },
   "dependencies": {
-    "firebase": "^12.19.0",
+    "firebase": "^13.0.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },
