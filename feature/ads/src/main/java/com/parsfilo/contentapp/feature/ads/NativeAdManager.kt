@@ -36,6 +36,7 @@ class NativeAdManager @Inject constructor(
     private val adRevenueLogger: AdRevenueLogger,
     private val adGateChecker: AdGateChecker,
     private val adsPolicyProvider: AdsPolicyProvider,
+    private val adPreloadRequestBudget: AdPreloadRequestBudget,
 ) {
     private val nativeAds = mutableListOf<PooledNativeAd>()
     private val gateScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -116,6 +117,14 @@ class NativeAdManager @Inject constructor(
                 return
             }
             count.coerceIn(1, (poolMax - nativeAds.size).coerceAtLeast(1))
+        }
+
+        if (policy.demandAwarePreloadEnabled && !adPreloadRequestBudget.tryReserve(targetCount)) {
+            Timber.d("Native optional load deferred: shared request budget exhausted")
+            adRevenueLogger.logSuppressed(
+                AdFormat.NATIVE, placement, adUnitId, "request_budget",
+            )
+            return
         }
 
         currentAdUnitId = adUnitId
@@ -282,9 +291,15 @@ class NativeAdManager @Inject constructor(
         }
 
         val currentSize = synchronized(nativeAds) { nativeAds.size }
-        if (currentSize <= 0 && currentAdUnitId.isNotEmpty() && !isLoading) {
+        if (!policy.demandAwarePreloadEnabled &&
+            currentSize <= 0 &&
+            currentAdUnitId.isNotEmpty() &&
+            !isLoading
+        ) {
+            // Control cohort preserves existing behavior.
             loadAds(currentLoadContext ?: appContext, currentAdUnitId, placement, 1)
         }
+        // Treatment cohort waits for the next actual slot demand.
 
         if (pooled != null) {
             Timber.d(

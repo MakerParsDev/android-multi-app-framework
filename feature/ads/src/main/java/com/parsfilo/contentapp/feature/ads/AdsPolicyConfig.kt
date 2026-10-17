@@ -40,6 +40,8 @@ data class AdsPolicyConfig(
     val nativePoolMax: Int,
     val nativeTtlMs: Long,
     val nativeExactPlacementOnly: Boolean,
+    // False preserves legacy behavior until an approved controlled experiment.
+    val demandAwarePreloadEnabled: Boolean = false,
 ) {
     fun interstitialFrequencyCapForPackage(packageName: String): Long =
         if (packageName in interstitialRelaxedPackages) {

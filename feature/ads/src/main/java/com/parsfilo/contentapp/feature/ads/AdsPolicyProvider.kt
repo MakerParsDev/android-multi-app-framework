@@ -133,6 +133,9 @@ class AdsPolicyProvider @Inject constructor(
                     remoteConfigManager.getBooleanOrNull(KEY_REWARDED_INTERSTITIAL_ENABLED)
                         ?: DEFAULT_REWARDED_INTERSTITIAL_ENABLED
                 )
+        val demandAwarePreloadEnabled =
+            remoteConfigManager.getBooleanOrNull(KEY_DEMAND_AWARE_PRELOAD_ENABLED)
+                ?: DEFAULT_DEMAND_AWARE_PRELOAD_ENABLED
         val nativeBannerFallbackEnabled =
             remoteConfigManager.getBooleanOrNull(KEY_NATIVE_BANNER_FALLBACK_ENABLED)
                 ?: DEFAULT_NATIVE_BANNER_FALLBACK_ENABLED
@@ -283,6 +286,7 @@ class AdsPolicyProvider @Inject constructor(
             nativePoolMax = nativePoolMax,
             nativeTtlMs = nativeTtlMs,
             nativeExactPlacementOnly = nativeExactPlacementOnly,
+            demandAwarePreloadEnabled = demandAwarePreloadEnabled,
         )
     }
 
@@ -375,6 +379,7 @@ class AdsPolicyProvider @Inject constructor(
         const val KEY_NATIVE_POOL_MAX = "ads_native_pool_max"
         const val KEY_NATIVE_TTL_MS = "ads_native_ttl_ms"
         const val KEY_NATIVE_EXACT_PLACEMENT_ONLY = "ads_native_exact_placement_only"
+        const val KEY_DEMAND_AWARE_PRELOAD_ENABLED = "ads_demand_aware_preload_enabled"
         const val KEY_NATIVE_BANNER_FALLBACK_ENABLED = "ads_native_banner_fallback_enabled"
         const val KEY_NATIVE_BANNER_FALLBACK_PACKAGES_CSV =
             "ads_native_banner_fallback_packages_csv"
@@ -422,6 +427,7 @@ class AdsPolicyProvider @Inject constructor(
         const val DEFAULT_NATIVE_POOL_MAX = 2
         const val DEFAULT_NATIVE_TTL_MS = 1_800_000L
         const val DEFAULT_NATIVE_EXACT_PLACEMENT_ONLY = false
+        const val DEFAULT_DEMAND_AWARE_PRELOAD_ENABLED = false
         const val DEFAULT_NATIVE_BANNER_FALLBACK_ENABLED = false
         const val DEFAULT_NATIVE_BANNER_FALLBACK_PACKAGES =
             "com.parsfilo.namazsurelerivedualarsesli,com.parsfilo.mucizedualar,com.parsfilo.yasinsuresi"
@@ -464,6 +470,7 @@ class AdsPolicyProvider @Inject constructor(
             KEY_NATIVE_POOL_MAX to DEFAULT_NATIVE_POOL_MAX.toLong(),
             KEY_NATIVE_TTL_MS to DEFAULT_NATIVE_TTL_MS,
             KEY_NATIVE_EXACT_PLACEMENT_ONLY to DEFAULT_NATIVE_EXACT_PLACEMENT_ONLY,
+            KEY_DEMAND_AWARE_PRELOAD_ENABLED to DEFAULT_DEMAND_AWARE_PRELOAD_ENABLED,
             KEY_NATIVE_BANNER_FALLBACK_ENABLED to DEFAULT_NATIVE_BANNER_FALLBACK_ENABLED,
             KEY_NATIVE_BANNER_FALLBACK_PACKAGES_CSV to DEFAULT_NATIVE_BANNER_FALLBACK_PACKAGES,
             KEY_REPORT_FRESHNESS_MAX_HOURS to DEFAULT_REPORT_FRESHNESS_MAX_HOURS.toLong(),
