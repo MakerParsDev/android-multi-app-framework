@@ -174,6 +174,7 @@ fun AppNavHost(
                         NativeFeedAdSlot(
                             nativeAd = nativeAd,
                             nativePlacement = AdPlacement.NATIVE_FEED_HOME,
+                            nativeAdUnitId = adUnitIds.native,
                             bannerAdUnitId = adUnitIds.banner,
                             bannerPlacement = AdPlacement.BANNER_HOME,
                             route = AppRoute.PrayerTimesHome.route,
@@ -225,6 +226,7 @@ fun AppNavHost(
                         NativeFeedAdSlot(
                             nativeAd = nativeAd,
                             nativePlacement = AdPlacement.NATIVE_FEED_HOME,
+                            nativeAdUnitId = adUnitIds.native,
                             bannerAdUnitId = adUnitIds.banner,
                             bannerPlacement = AdPlacement.BANNER_QIBLA,
                             route = AppRoute.Qibla.route,
@@ -290,6 +292,7 @@ fun AppNavHost(
                         NativeFeedAdSlot(
                             nativeAd = nativeAd,
                             nativePlacement = AdPlacement.NATIVE_FEED_ZIKIR,
+                            nativeAdUnitId = adUnitIds.native,
                             bannerAdUnitId = adUnitIds.banner,
                             bannerPlacement = AdPlacement.BANNER_ZIKIR,
                             route = AppRoute.ZikirCounter.route,
@@ -343,6 +346,7 @@ fun AppNavHost(
                             NativeFeedAdSlot(
                                 nativeAd = nativeAd,
                                 nativePlacement = AdPlacement.NATIVE_FEED_HOME,
+                                nativeAdUnitId = adUnitIds.native,
                                 bannerAdUnitId = adUnitIds.banner,
                                 bannerPlacement = AdPlacement.BANNER_DEFAULT,
                                 route = AppRoute.QuranSuraList.route,
@@ -391,6 +395,7 @@ fun AppNavHost(
                             NativeFeedAdSlot(
                                 nativeAd = nativeAd,
                                 nativePlacement = AdPlacement.NATIVE_FEED_CONTENT,
+                                nativeAdUnitId = adUnitIds.native,
                                 bannerAdUnitId = adUnitIds.banner,
                                 bannerPlacement = AdPlacement.BANNER_CONTENT_DETAIL,
                                 route = AppRoute.QuranSuraDetail.route.substringBefore("/{"),
@@ -418,6 +423,7 @@ fun AppNavHost(
                             NativeFeedAdSlot(
                                 nativeAd = nativeAd,
                                 nativePlacement = AdPlacement.NATIVE_FEED_CONTENT,
+                                nativeAdUnitId = adUnitIds.native,
                                 bannerAdUnitId = adUnitIds.banner,
                                 bannerPlacement = AdPlacement.BANNER_CONTENT_DETAIL,
                                 route = AppRoute.QuranBookmarks.route,
@@ -500,6 +506,7 @@ fun AppNavHost(
                         NativeFeedAdSlot(
                             nativeAd = nativeAd,
                             nativePlacement = AdPlacement.NATIVE_FEED_CONTENT,
+                            nativeAdUnitId = adUnitIds.native,
                             bannerAdUnitId = adUnitIds.banner,
                             bannerPlacement = AdPlacement.BANNER_CONTENT_DETAIL,
                             route = AppRoute.Content.route,
@@ -544,6 +551,7 @@ fun AppNavHost(
                     NativeFeedAdSlot(
                         nativeAd = nativeAd,
                         nativePlacement = AdPlacement.NATIVE_FEED_CONTENT,
+                        nativeAdUnitId = adUnitIds.native,
                         bannerAdUnitId = adUnitIds.banner,
                         bannerPlacement = AdPlacement.BANNER_CONTENT_LIST,
                         route = AppRoute.PrayerList.route,
@@ -624,6 +632,7 @@ fun AppNavHost(
                         NativeFeedAdSlot(
                             nativeAd = nativeAd,
                             nativePlacement = AdPlacement.NATIVE_FEED_CONTENT,
+                            nativeAdUnitId = adUnitIds.native,
                             bannerAdUnitId = adUnitIds.banner,
                             bannerPlacement = AdPlacement.BANNER_CONTENT_DETAIL,
                             route = AppRoute.PrayerDetail.route.substringBefore("/{"),
@@ -669,6 +678,7 @@ fun AppNavHost(
                         NativeFeedAdSlot(
                             nativeAd = nativeAd,
                             nativePlacement = AdPlacement.NATIVE_FEED_CONTENT,
+                            nativeAdUnitId = adUnitIds.native,
                             bannerAdUnitId = adUnitIds.banner,
                             bannerPlacement = AdPlacement.BANNER_CONTENT_LIST,
                             route = AppRoute.MiraclesList.route,
@@ -736,6 +746,7 @@ fun AppNavHost(
                     NativeFeedAdSlot(
                         nativeAd = nativeAd,
                         nativePlacement = AdPlacement.NATIVE_FEED_CONTENT,
+                        nativeAdUnitId = adUnitIds.native,
                         bannerAdUnitId = adUnitIds.banner,
                         bannerPlacement = AdPlacement.BANNER_CONTENT_DETAIL,
                         route = AppRoute.MiraclesDetail.route.substringBefore("/{"),

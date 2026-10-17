@@ -25,6 +25,8 @@ class InterstitialAdManager @Inject constructor(
     private val preferencesDataSource: PreferencesDataSource,
     private val adRevenueLogger: AdRevenueLogger,
     private val adsPolicyProvider: AdsPolicyProvider,
+    private val fullScreenShowCoordinator: FullScreenShowCoordinator,
+    private val adPreloadRequestBudget: AdPreloadRequestBudget,
 ) {
     private var interstitialAd: InterstitialAd? = null
     private var interstitialAdNext: InterstitialAd? = null
@@ -35,6 +37,7 @@ class InterstitialAdManager @Inject constructor(
     private var currentRoute: String? = null
     private var currentLoadContext: Context? = null
     private var loadBackoffState = AdLoadBackoffState()
+    private var hasImpressedInProcess = false
     private var lastLoadStartedAtMillis: Long = 0L
     private val callbackScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -96,6 +99,14 @@ class InterstitialAdManager @Inject constructor(
         }
         if (interstitialAd != null && currentAdUnitId == adUnitId) {
             Timber.d("Interstitial load skipped; ad already ready adUnit=%s", adUnitId)
+            return
+        }
+
+        if (policy.demandAwarePreloadEnabled && !adPreloadRequestBudget.tryReserve()) {
+            Timber.d("Interstitial optional load deferred: shared request budget exhausted")
+            adRevenueLogger.logSuppressed(
+                AdFormat.INTERSTITIAL, placement, adUnitId, "request_budget", route,
+            )
             return
         }
 
@@ -331,6 +342,18 @@ class InterstitialAdManager @Inject constructor(
             return
         }
 
+        if (!fullScreenShowCoordinator.tryBegin(AdFormat.INTERSTITIAL)) {
+            adRevenueLogger.logShowBlocked(
+                adFormat = AdFormat.INTERSTITIAL,
+                placement = placement,
+                suppressReason = AdSuppressReason.COOLDOWN,
+                route = route,
+                trigger = triggerKind.analyticsValue,
+            )
+            onAdDismissed()
+            return
+        }
+
         currentPlacement = placement
         currentRoute = route
         var impressionStampRecorded = false
@@ -344,6 +367,7 @@ class InterstitialAdManager @Inject constructor(
 
         ad.fullScreenContentCallback = object : FullScreenContentCallback() {
             override fun onAdDismissedFullScreenContent() {
+                fullScreenShowCoordinator.finish(AdFormat.INTERSTITIAL)
                 Timber.d("Interstitial dismissed placement=%s route=%s adUnit=%s", placement.analyticsValue, route, ad.adUnitId)
                 adRevenueLogger.logDismissed(
                     adFormat = AdFormat.INTERSTITIAL,
@@ -370,6 +394,7 @@ class InterstitialAdManager @Inject constructor(
             }
 
             override fun onAdFailedToShowFullScreenContent(adError: AdError) {
+                fullScreenShowCoordinator.finish(AdFormat.INTERSTITIAL)
                 Timber.w("Interstitial failed to show placement=%s err=%s", placement.analyticsValue, adError.message)
                 adRevenueLogger.logFailedToShow(
                     adFormat = AdFormat.INTERSTITIAL,
@@ -400,6 +425,7 @@ class InterstitialAdManager @Inject constructor(
             }
 
             override fun onAdShowedFullScreenContent() {
+                fullScreenShowCoordinator.onImpression(AdFormat.INTERSTITIAL)
                 Timber.d("Interstitial showed placement=%s route=%s adUnit=%s", placement.analyticsValue, route, ad.adUnitId)
                 adRevenueLogger.logServed(
                     adFormat = AdFormat.INTERSTITIAL,
@@ -411,6 +437,8 @@ class InterstitialAdManager @Inject constructor(
             }
 
             override fun onAdImpression() {
+                fullScreenShowCoordinator.onImpression(AdFormat.INTERSTITIAL)
+                hasImpressedInProcess = true
                 Timber.d("Interstitial impression placement=%s route=%s adUnit=%s", placement.analyticsValue, route, ad.adUnitId)
                 adRevenueLogger.logImpression(
                     adFormat = AdFormat.INTERSTITIAL,
@@ -444,7 +472,14 @@ class InterstitialAdManager @Inject constructor(
                 )
             }
         }
-        ad.show(activity)
+        try {
+            ad.show(activity)
+        } catch (error: IllegalStateException) {
+            fullScreenShowCoordinator.finish(AdFormat.INTERSTITIAL)
+            interstitialAd = null
+            Timber.w(error, "Interstitial show threw before a full-screen callback")
+            onAdDismissed()
+        }
     }
 
     internal fun loadNextIfNeeded() {
@@ -452,12 +487,20 @@ class InterstitialAdManager @Inject constructor(
         if (!AdsConsentRuntimeState.canRequestAds.value) return
         if (isLoadingNext || interstitialAdNext != null) return
         if (adsPolicyProvider.getPolicy().interstitialPoolMax < 2) return
+        if (adsPolicyProvider.getPolicy().demandAwarePreloadEnabled && !hasImpressedInProcess) return
 
         Timber.d(
             "Interstitial loading next slot placement=%s adUnit=%s",
             currentPlacement.analyticsValue,
             adUnitId,
         )
+        if (adsPolicyProvider.getPolicy().demandAwarePreloadEnabled && !adPreloadRequestBudget.tryReserve()) {
+            Timber.d("Interstitial second slot deferred: shared request budget exhausted")
+            adRevenueLogger.logSuppressed(
+                AdFormat.INTERSTITIAL, currentPlacement, adUnitId, "request_budget", currentRoute,
+            )
+            return
+        }
         isLoadingNext = true
         val adRequest = AdRequest.Builder().build()
         InterstitialAd.load(

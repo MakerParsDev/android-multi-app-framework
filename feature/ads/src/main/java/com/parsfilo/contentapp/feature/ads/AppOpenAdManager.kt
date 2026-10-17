@@ -25,6 +25,8 @@ class AppOpenAdManager @Inject constructor(
     private val preferencesDataSource: PreferencesDataSource,
     private val adRevenueLogger: AdRevenueLogger,
     private val adsPolicyProvider: AdsPolicyProvider,
+    private val fullScreenShowCoordinator: FullScreenShowCoordinator,
+    private val adPreloadRequestBudget: AdPreloadRequestBudget,
 ) {
     enum class ShowCompletionReason {
         BLOCKED,
@@ -100,6 +102,14 @@ class AppOpenAdManager @Inject constructor(
                 placement.analyticsValue,
                 isLoadingAd,
                 isAdAvailable(),
+            )
+            return
+        }
+
+        if (policy.demandAwarePreloadEnabled && !adPreloadRequestBudget.tryReserve()) {
+            Timber.d("App-open optional load deferred: shared request budget exhausted")
+            adRevenueLogger.logSuppressed(
+                AdFormat.APP_OPEN, placement, adUnitId, "request_budget",
             )
             return
         }
@@ -339,6 +349,19 @@ class AppOpenAdManager @Inject constructor(
             return
         }
 
+        if (!fullScreenShowCoordinator.tryBegin(AdFormat.APP_OPEN)) {
+            adRevenueLogger.logShowBlocked(
+                adFormat = AdFormat.APP_OPEN,
+                placement = currentPlacement,
+                suppressReason = AdSuppressReason.COOLDOWN,
+                route = route,
+                trigger = triggerReason.analyticsValue,
+                diagnostics = currentDiagnostics(),
+            )
+            onShowComplete(ShowCompletionReason.BLOCKED)
+            return
+        }
+
         var impressionStampRecorded = false
         isShowingAd = true
         adRevenueLogger.logShowStarted(
@@ -356,6 +379,7 @@ class AppOpenAdManager @Inject constructor(
         )
         ad.fullScreenContentCallback = object : FullScreenContentCallback() {
             override fun onAdDismissedFullScreenContent() {
+                fullScreenShowCoordinator.finish(AdFormat.APP_OPEN)
                 Timber.d(
                     "AppOpen dismissed placement=%s route=%s adUnit=%s",
                     currentPlacement.analyticsValue,
@@ -381,6 +405,7 @@ class AppOpenAdManager @Inject constructor(
             }
 
             override fun onAdFailedToShowFullScreenContent(adError: AdError) {
+                fullScreenShowCoordinator.finish(AdFormat.APP_OPEN)
                 Timber.d(
                     "AppOpen failedToShow placement=%s route=%s code=%d msg=%s",
                     currentPlacement.analyticsValue,
@@ -411,6 +436,7 @@ class AppOpenAdManager @Inject constructor(
             }
 
             override fun onAdImpression() {
+                fullScreenShowCoordinator.onImpression(AdFormat.APP_OPEN)
                 Timber.d(
                     "AppOpen impression placement=%s route=%s adUnit=%s",
                     currentPlacement.analyticsValue,
@@ -455,6 +481,9 @@ class AppOpenAdManager @Inject constructor(
             }
 
             override fun onAdShowedFullScreenContent() {
+                // Even if a network omits its impression callback, do not stack
+                // another automatic fullscreen immediately after visible content.
+                fullScreenShowCoordinator.onImpression(AdFormat.APP_OPEN)
                 Timber.d(
                     "AppOpen showedFullScreen placement=%s route=%s adUnit=%s",
                     currentPlacement.analyticsValue,
@@ -470,7 +499,15 @@ class AppOpenAdManager @Inject constructor(
             }
         }
 
-        ad.show(activity)
+        try {
+            ad.show(activity)
+        } catch (error: IllegalStateException) {
+            fullScreenShowCoordinator.finish(AdFormat.APP_OPEN)
+            appOpenAd = null
+            isShowingAd = false
+            Timber.w(error, "App-open show threw before a full-screen callback")
+            onShowComplete(ShowCompletionReason.ATTEMPTED)
+        }
     }
 
     fun clearAd() {
