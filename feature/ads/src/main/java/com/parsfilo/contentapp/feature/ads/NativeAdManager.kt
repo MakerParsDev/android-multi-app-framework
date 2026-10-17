@@ -102,7 +102,7 @@ class NativeAdManager @Inject constructor(
                 placement = placement,
                 suppressReason = resolveSuppressReasonForNative(placement, policy),
             )
-            destroyAds()
+            destroyAds(gateClosed = true)
             return
         }
         pruneExpiredAds()
@@ -291,7 +291,7 @@ class NativeAdManager @Inject constructor(
                 placement = placement,
                 suppressReason = resolveSuppressReasonForNative(placement, policy),
             )
-            destroyAds()
+            destroyAds(gateClosed = true)
             return null
         }
         pruneExpiredAds()
@@ -367,7 +367,7 @@ class NativeAdManager @Inject constructor(
         return pooled?.ad
     }
 
-    fun destroyAds() {
+    fun destroyAds(gateClosed: Boolean = false) {
         // Only pooled (not UI-transferred) native ads are counted as discarded.
         val discarded =
             synchronized(nativeAds) {
@@ -378,7 +378,7 @@ class NativeAdManager @Inject constructor(
                 cached
             }
         val reason =
-            if (!AdsConsentRuntimeState.canRequestAds.value || !canShowAdsByGate) {
+            if (gateClosed || !AdsConsentRuntimeState.canRequestAds.value || !canShowAdsByGate) {
                 NativeAdDiscardReason.GATE_CLOSED
             } else {
                 NativeAdDiscardReason.RESET

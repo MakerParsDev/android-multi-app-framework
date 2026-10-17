@@ -124,6 +124,47 @@ class NativeAdManagerInventoryTest {
         }
     }
 
+    @Test
+    fun disabledPlacementOnLoadDiscardsPooledInventoryAsGateClosed() {
+        val ad = mockk<NativeAd>(relaxed = true)
+        addPooled(ad, loadedAt = SystemTimeProvider.nowMillis())
+        every { policy.isNativePlacementEnabled(AdPlacement.NATIVE_FEED_HOME) } returns false
+
+        manager.loadAds(
+            RuntimeEnvironment.getApplication(),
+            "test-native",
+            AdPlacement.NATIVE_FEED_HOME,
+            count = 1,
+        )
+
+        verify(exactly = 1) { ad.destroy() }
+        verify(exactly = 1) {
+            logger.logNativeInventoryDiscarded(
+                AdPlacement.NATIVE_FEED_HOME,
+                "test-native",
+                NativeAdDiscardReason.GATE_CLOSED,
+            )
+        }
+    }
+
+    @Test
+    fun disabledPlacementOnGetDiscardsPooledInventoryAsGateClosed() {
+        val ad = mockk<NativeAd>(relaxed = true)
+        addPooled(ad, loadedAt = SystemTimeProvider.nowMillis())
+        every { policy.isNativePlacementEnabled(AdPlacement.NATIVE_FEED_HOME) } returns false
+
+        assertThat(manager.getNativeAd(AdPlacement.NATIVE_FEED_HOME)).isNull()
+
+        verify(exactly = 1) { ad.destroy() }
+        verify(exactly = 1) {
+            logger.logNativeInventoryDiscarded(
+                AdPlacement.NATIVE_FEED_HOME,
+                "test-native",
+                NativeAdDiscardReason.GATE_CLOSED,
+            )
+        }
+    }
+
     @Suppress("UNCHECKED_CAST")
     private fun addPooled(
         ad: NativeAd,
