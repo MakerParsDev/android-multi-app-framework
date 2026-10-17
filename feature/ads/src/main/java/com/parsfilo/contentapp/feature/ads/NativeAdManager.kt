@@ -375,6 +375,9 @@ class NativeAdManager @Inject constructor(
                 val cached = nativeAds.toList()
                 nativeAds.forEach { it.ad.destroy() }
                 nativeAds.clear()
+                // Reset batch state while holding the same lock used to start
+                // a new generation; a late reset must not clear its isLoading.
+                isLoading = false
                 cached
             }
         val reason =
@@ -386,7 +389,6 @@ class NativeAdManager @Inject constructor(
         discarded.forEach {
             adRevenueLogger.logNativeInventoryDiscarded(it.placement, it.adUnitId, reason)
         }
-        isLoading = false
         Timber.d("All native ads destroyed")
     }
 
