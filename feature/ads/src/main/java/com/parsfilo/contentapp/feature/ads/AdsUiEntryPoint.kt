@@ -12,4 +12,6 @@ interface AdsUiEntryPoint {
     fun adGateChecker(): AdGateChecker
 
     fun adsPolicyProvider(): AdsPolicyProvider
+
+    fun nativeAdManager(): NativeAdManager
 }

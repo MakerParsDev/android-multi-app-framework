@@ -902,16 +902,21 @@ class AdOrchestrator
                 adSessionContext.activeRoute,
                 loadReason = reason.analyticsValue,
             )
-            nativeAdManager.loadAds(
-                context,
-                AppAdUnitIds.resolvePlacement(
+            if (!policy.demandAwarePreloadEnabled) {
+                nativeAdManager.loadAds(
                     context,
+                    AppAdUnitIds.resolvePlacement(
+                        context,
+                        AdPlacement.NATIVE_FEED_HOME,
+                        BuildConfig.USE_TEST_ADS,
+                    ),
                     AdPlacement.NATIVE_FEED_HOME,
-                    BuildConfig.USE_TEST_ADS,
-                ),
-                AdPlacement.NATIVE_FEED_HOME,
-                policy.nativePoolMax,
-            )
+                    policy.nativePoolMax,
+                )
+            } else {
+                // Test cohort: wait until a native ad slot is actually composed.
+                Timber.d("Native bootstrap skipped: demand-aware cohort")
+            }
             if (includeAppOpenWarmup && !appOpenWarmupRequested) {
                 appOpenWarmupRequested = true
                 Timber.d("AppOpen warm preload requested during bootstrap")
