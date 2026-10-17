@@ -212,14 +212,22 @@ class NativeAdManager @Inject constructor(
                         } else {
                             Timber.w("Native load warning code=%d msg=%s", error.code, error.message)
                         }
-                        // Do not let an invalidated batch modify the next
-                        // batch's backoff or in-flight load state.
-                        if (synchronized(nativeAds) { nativeLoadGeneration != requestGeneration }) return
-                        loadBackoffState = AdLoadBackoffPolicy.onLoadFailure(
-                            nowMillis = SystemTimeProvider.nowMillis(),
-                            current = loadBackoffState,
-                            errorCode = error.code,
-                        )
+                        // Keep generation validation and all batch-state updates
+                        // atomic: stale callbacks must not mutate newer loads.
+                        val backoffAttempt =
+                            synchronized(nativeAds) {
+                                if (nativeLoadGeneration != requestGeneration) return
+                                loadBackoffState =
+                                    AdLoadBackoffPolicy.onLoadFailure(
+                                        nowMillis = SystemTimeProvider.nowMillis(),
+                                        current = loadBackoffState,
+                                        errorCode = error.code,
+                                    )
+                                if (loadedCount.incrementAndGet() >= targetCount) {
+                                    isLoading = false
+                                }
+                                loadBackoffState.failureStreak
+                            }
                         adRevenueLogger.logFailedToLoad(
                             adFormat = AdFormat.NATIVE,
                             placement = placement,
@@ -228,21 +236,19 @@ class NativeAdManager @Inject constructor(
                             errorMessage = error.message,
                             errorDomain = error.domain,
                             route = null,
-                            backoffAttempt = loadBackoffState.failureStreak,
+                            backoffAttempt = backoffAttempt,
                         )
-                        if (loadedCount.incrementAndGet() >= targetCount) {
-                            isLoading = false
-                        }
                     }
 
                     override fun onAdLoaded() {
-                        if (synchronized(nativeAds) { nativeLoadGeneration != requestGeneration }) return
-                        loadBackoffState = AdLoadBackoffPolicy.onLoadSuccess()
-                        val current = loadedCount.incrementAndGet()
-                        _adLoadedFlow.tryEmit(Unit)
-                        if (current >= targetCount) {
-                            isLoading = false
+                        synchronized(nativeAds) {
+                            if (nativeLoadGeneration != requestGeneration) return
+                            loadBackoffState = AdLoadBackoffPolicy.onLoadSuccess()
+                            if (loadedCount.incrementAndGet() >= targetCount) {
+                                isLoading = false
+                            }
                         }
+                        _adLoadedFlow.tryEmit(Unit)
                     }
 
                     override fun onAdImpression() {

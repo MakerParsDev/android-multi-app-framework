@@ -144,6 +144,33 @@ class NativeAdLoaderCallbacksTest {
     }
 
     @Test
+    fun staleSuccessAndFailureCallbacksCannotCompleteTheNextBatch() {
+        beginLoad()
+        val oldListener = adListener.captured
+        manager.destroyAds()
+        beginLoad()
+
+        oldListener.onAdLoaded()
+        val failure = mockk<LoadAdError>(relaxed = true) {
+            every { code } returns 2
+            every { domain } returns "com.google.android.gms.ads"
+            every { message } returns "timeout"
+        }
+        oldListener.onAdFailedToLoad(failure)
+        // Still in-flight: another load must not create a third SDK request.
+        manager.loadAds(
+            RuntimeEnvironment.getApplication(),
+            "test-native",
+            AdPlacement.NATIVE_FEED_HOME,
+            count = 1,
+        )
+        verify(exactly = 2) { sdkLoader.loadAd(any<AdRequest>()) }
+        verify(exactly = 0) {
+            logger.logFailedToLoad(any(), any(), any(), any(), any(), any(), any(), any())
+        }
+    }
+
+    @Test
     fun staleFailureCallbackNeverPoisonsTheNextLoadBatch() {
         beginLoad()
         val staleListener = adListener.captured
