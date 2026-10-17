@@ -16,6 +16,18 @@ require(umpTestDeviceHash.isEmpty() || Regex("[A-Fa-f0-9]{32}").matches(umpTestD
     "UMP_TEST_DEVICE_HASH must be a 32-character hexadecimal debug device hash."
 }
 
+// Local QA opt-in only: lets a physical debug build exercise the treatment
+// without touching the live Remote Config template or exposing real users.
+val demandAwareDebugOverride =
+    providers
+        .gradleProperty("ADS_DEMAND_AWARE_DEBUG_OVERRIDE")
+        .orNull
+        .orEmpty()
+        .trim()
+require(demandAwareDebugOverride in listOf("", "true", "false")) {
+    "ADS_DEMAND_AWARE_DEBUG_OVERRIDE must be true or false"
+}
+
 android {
     namespace = "com.parsfilo.contentapp.feature.ads"
     compileSdk = requiredToolchainInt("toolchain.android.compileSdk")
@@ -45,10 +57,16 @@ android {
     buildTypes {
         getByName("debug") {
             buildConfigField("String", "UMP_TEST_DEVICE_HASH", "\"$umpTestDeviceHash\"")
+            buildConfigField(
+                "boolean",
+                "ADS_DEMAND_AWARE_DEBUG_OVERRIDE",
+                if (demandAwareDebugOverride == "true") "true" else "false",
+            )
         }
         getByName("release") {
             // Never carry device identifiers into production APKs/AABs.
             buildConfigField("String", "UMP_TEST_DEVICE_HASH", "\"\"")
+            buildConfigField("boolean", "ADS_DEMAND_AWARE_DEBUG_OVERRIDE", "false")
         }
     }
 

@@ -35,6 +35,36 @@ serving restrictions and intentionally does not throttle rewarded requests
 or SDK-controlled banner refreshes. No client-side bound guarantees account
 policy approval.
 
+## Local physical-device treatment smoke test
+
+The **debug-only** Gradle project property
+`ADS_DEMAND_AWARE_DEBUG_OVERRIDE=true` allows a developer's own debug APK
+to exercise the treatment against **Google test ad units**, without publishing
+any Firebase Remote Config condition. The default is false; invalid strings
+fail configuration and the **release BuildConfig is always false**, regardless
+of Gradle input.
+
+For example, use
+`./gradlew :app:assembleIsmiazamduasiDebug -PADS_DEMAND_AWARE_DEBUG_OVERRIDE=true`
+on a private build agent with real, ignored flavor Firebase configuration.
+Install only on a consenting, authorized device that has **no existing
+production installation of that package**, so production state is preserved.
+Confirm the debug UI displays "Test Reklamı" and native loads occur after a
+composed slot. This local override is not evidence of revenue improvement.
+
+## Native inventory loss diagnostics
+
+The new privacy-safe `ad_inventory_discarded` GA4 event records only native
+inventory **loaded into the manager but discarded before UI handoff**. The
+registered event-scoped custom dimension `ad_discard_reason` is one of
+`ttl_expired`, `pool_full`, `gate_closed`, or `reset`. It is paired with
+existing bounded `ad_format` / `ad_placement` / app version fields; no
+per-user or per-request correlation token is added. Native ads handed to the
+UI may remain unviewed, so do not equate `ad_served` with an AdMob
+impression. Compare aggregated request, loaded, discarded, served and
+impression events for the **same app/version/date/cohort**; allow for
+Analytics reporting delay and consent-dependent data omission.
+
 ## Experiment and analysis
 
 1. **Before enabling any treatment cohort:** release the verified code to

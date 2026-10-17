@@ -11,6 +11,13 @@ import org.junit.Test
 class AdsPolicyProviderTest {
 
     @Test
+    fun `treatment remains off by default in ordinary debug builds`() {
+        val policy = AdsPolicyProvider(mockRemoteConfig(longs = emptyMap(), strings = emptyMap())).getPolicy()
+        assertThat(BuildConfig.ADS_DEMAND_AWARE_DEBUG_OVERRIDE).isFalse()
+        assertThat(policy.demandAwarePreloadEnabled).isFalse()
+    }
+
+    @Test
     fun `getPolicy sanitizes invalid values and parses placement CSV`() {
         val remoteConfigManager = mockRemoteConfig(
             longs = mapOf(
