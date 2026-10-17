@@ -501,7 +501,7 @@ class AppOpenAdManager @Inject constructor(
 
         try {
             ad.show(activity)
-        } catch (error: RuntimeException) {
+        } catch (error: IllegalStateException) {
             fullScreenShowCoordinator.finish(AdFormat.APP_OPEN)
             appOpenAd = null
             isShowingAd = false

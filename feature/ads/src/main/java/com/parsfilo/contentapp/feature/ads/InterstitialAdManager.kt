@@ -474,7 +474,7 @@ class InterstitialAdManager @Inject constructor(
         }
         try {
             ad.show(activity)
-        } catch (error: RuntimeException) {
+        } catch (error: IllegalStateException) {
             fullScreenShowCoordinator.finish(AdFormat.INTERSTITIAL)
             interstitialAd = null
             Timber.w(error, "Interstitial show threw before a full-screen callback")
