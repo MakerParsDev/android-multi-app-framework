@@ -2,7 +2,6 @@ package com.parsfilo.contentapp.feature.ads
 
 import android.content.Context
 import com.google.android.gms.ads.AdListener
-import com.google.android.gms.ads.AdLoader
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdValue
 import com.google.android.gms.ads.LoadAdError
@@ -37,8 +36,13 @@ class NativeAdManager @Inject constructor(
     private val adGateChecker: AdGateChecker,
     private val adsPolicyProvider: AdsPolicyProvider,
     private val adPreloadRequestBudget: AdPreloadRequestBudget,
+    private val nativeAdLoaderFactory: NativeAdLoaderFactory,
 ) {
     private val nativeAds = mutableListOf<PooledNativeAd>()
+
+    // Invalidates SDK callbacks from requests issued before a pool reset.
+    // All generation/pool checks occur under the nativeAds monitor.
+    private var nativeLoadGeneration = 0L
     private val gateScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     @Volatile
@@ -127,10 +131,14 @@ class NativeAdManager @Inject constructor(
             return
         }
 
-        currentAdUnitId = adUnitId
-        currentPlacement = placement
-        currentLoadContext = loadContext.findActivity() ?: loadContext
-        isLoading = true
+        val requestGeneration =
+            synchronized(nativeAds) {
+                currentAdUnitId = adUnitId
+                currentPlacement = placement
+                currentLoadContext = loadContext.findActivity() ?: loadContext
+                isLoading = true
+                nativeLoadGeneration
+            }
 
         val loadedCount = AtomicInteger(0)
 
@@ -142,7 +150,7 @@ class NativeAdManager @Inject constructor(
                 adUnitId = adUnitId,
                 route = null,
             )
-            val adLoader = AdLoader.Builder(currentLoadContext ?: appContext, adUnitId)
+            val adLoader = nativeAdLoaderFactory.create(currentLoadContext ?: appContext, adUnitId)
                 .forNativeAd { ad: NativeAd ->
                     adRevenueLogger.logLoaded(
                         adFormat = AdFormat.NATIVE,
@@ -164,31 +172,36 @@ class NativeAdManager @Inject constructor(
                             ),
                         )
                     }
-                    // An async response can outlive UMP/premium gate changes.
-                    // Never reinsert it into the pool once requests are blocked.
-                    if (!canUseNativeAds(placement)) {
+                    // Decisions are made under the pool lock: an old async
+                    // callback must not repopulate a reset/revoked pool.
+                    val discardReason =
+                        synchronized(nativeAds) {
+                            val reason =
+                                nativeAdDiscardReason(
+                                    requestGeneration = requestGeneration,
+                                    activeGeneration = nativeLoadGeneration,
+                                    gateOpen = canUseNativeAds(placement),
+                                    poolSize = nativeAds.size,
+                                    poolMax = poolMax,
+                                )
+                            if (reason == null) {
+                                nativeAds.add(
+                                    PooledNativeAd(
+                                        ad = ad,
+                                        loadedAtMillis = SystemTimeProvider.nowMillis(),
+                                        placement = placement,
+                                        adUnitId = adUnitId,
+                                    ),
+                                )
+                            }
+                            reason
+                        }
+                    if (discardReason != null) {
                         ad.destroy()
                         adRevenueLogger.logNativeInventoryDiscarded(
-                            placement, adUnitId, NativeAdDiscardReason.GATE_CLOSED,
+                            placement, adUnitId, discardReason,
                         )
                         return@forNativeAd
-                    }
-                    synchronized(nativeAds) {
-                        if (nativeAds.size >= poolMax) {
-                            ad.destroy()
-                            adRevenueLogger.logNativeInventoryDiscarded(
-                                placement, adUnitId, NativeAdDiscardReason.POOL_FULL,
-                            )
-                        } else {
-                            nativeAds.add(
-                                PooledNativeAd(
-                                    ad = ad,
-                                    loadedAtMillis = SystemTimeProvider.nowMillis(),
-                                    placement = placement,
-                                    adUnitId = adUnitId,
-                                ),
-                            )
-                        }
                     }
                     Timber.d("Native ad loaded (pool=%d)", synchronized(nativeAds) { nativeAds.size })
                 }
@@ -199,6 +212,9 @@ class NativeAdManager @Inject constructor(
                         } else {
                             Timber.w("Native load warning code=%d msg=%s", error.code, error.message)
                         }
+                        // Do not let an invalidated batch modify the next
+                        // batch's backoff or in-flight load state.
+                        if (synchronized(nativeAds) { nativeLoadGeneration != requestGeneration }) return
                         loadBackoffState = AdLoadBackoffPolicy.onLoadFailure(
                             nowMillis = SystemTimeProvider.nowMillis(),
                             current = loadBackoffState,
@@ -220,6 +236,7 @@ class NativeAdManager @Inject constructor(
                     }
 
                     override fun onAdLoaded() {
+                        if (synchronized(nativeAds) { nativeLoadGeneration != requestGeneration }) return
                         loadBackoffState = AdLoadBackoffPolicy.onLoadSuccess()
                         val current = loadedCount.incrementAndGet()
                         _adLoadedFlow.tryEmit(Unit)
@@ -354,6 +371,7 @@ class NativeAdManager @Inject constructor(
         // Only pooled (not UI-transferred) native ads are counted as discarded.
         val discarded =
             synchronized(nativeAds) {
+                nativeLoadGeneration++
                 val cached = nativeAds.toList()
                 nativeAds.forEach { it.ad.destroy() }
                 nativeAds.clear()
