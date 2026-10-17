@@ -1,5 +1,6 @@
 package com.parsfilo.contentapp.feature.ads
 
+import android.os.SystemClock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -13,30 +14,26 @@ import javax.inject.Singleton
 class FullScreenShowCoordinator @Inject constructor() {
     private var activeFormat: AdFormat? = null
     private var lastImpressionAtMs: Long? = null
-    private var activeSinceMs: Long = 0L
 
     @Synchronized
     fun tryBegin(
         format: AdFormat,
-        nowMs: Long = SystemTimeProvider.nowMillis(),
+        nowMs: Long = SystemClock.elapsedRealtime(),
     ): Boolean {
         require(format == AdFormat.APP_OPEN || format == AdFormat.INTERSTITIAL)
-        // Failsafe for lost SDK callbacks; never keep a process blocked indefinitely.
-        if (activeFormat != null && nowMs - activeSinceMs > STALE_RESERVATION_MS) {
-            activeFormat = null
-        }
+        // Never abandon an active SDK-owned show solely because time elapsed.
+        // Only its actual dismissal/failure callback may release the reservation.
         if (activeFormat != null) return false
         val lastImpression = lastImpressionAtMs
         if (lastImpression != null && (nowMs - lastImpression) in 0 until MIN_SPACING_MS) {
             return false
         }
         activeFormat = format
-        activeSinceMs = nowMs
         return true
     }
 
     @Synchronized
-    fun onImpression(format: AdFormat, nowMs: Long = SystemTimeProvider.nowMillis()) {
+    fun onImpression(format: AdFormat, nowMs: Long = SystemClock.elapsedRealtime()) {
         if (activeFormat == format) lastImpressionAtMs = nowMs
     }
 
@@ -47,6 +44,5 @@ class FullScreenShowCoordinator @Inject constructor() {
 
     companion object {
         const val MIN_SPACING_MS: Long = 30_000L
-        private const val STALE_RESERVATION_MS: Long = 10 * 60_000L
     }
 }

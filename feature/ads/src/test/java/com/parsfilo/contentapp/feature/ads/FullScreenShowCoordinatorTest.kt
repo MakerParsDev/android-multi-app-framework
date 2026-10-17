@@ -25,10 +25,12 @@ class FullScreenShowCoordinatorTest {
     }
 
     @Test
-    fun staleReservationDoesNotBlockProcessForever() {
+    fun activeShowNeverExpiresWithoutSdkCallback() {
         val gate = FullScreenShowCoordinator()
         assertThat(gate.tryBegin(AdFormat.INTERSTITIAL, 1_000L)).isTrue()
-        assertThat(gate.tryBegin(AdFormat.APP_OPEN, 601_001L)).isTrue()
+        assertThat(gate.tryBegin(AdFormat.APP_OPEN, 601_001L)).isFalse()
+        gate.finish(AdFormat.INTERSTITIAL)
+        assertThat(gate.tryBegin(AdFormat.APP_OPEN, 601_002L)).isTrue()
     }
 
     @Test

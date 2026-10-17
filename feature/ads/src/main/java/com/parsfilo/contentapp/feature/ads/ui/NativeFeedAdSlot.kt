@@ -12,6 +12,7 @@ import com.parsfilo.contentapp.feature.ads.AdPlacement
 import com.parsfilo.contentapp.feature.ads.AdsConsentRuntimeState
 import com.parsfilo.contentapp.feature.ads.AdsUiEntryPoint
 import dagger.hilt.android.EntryPointAccessors
+import kotlinx.coroutines.delay
 
 @Composable
 fun NativeFeedAdSlot(
@@ -33,11 +34,15 @@ fun NativeFeedAdSlot(
     val policy = entryPoint.adsPolicyProvider().getPolicy()
     LaunchedEffect(nativeAd, nativePlacement, nativeAdUnitId, canRequestAds, canShowAds, policy.demandAwarePreloadEnabled) {
         if (policy.demandAwarePreloadEnabled && nativeAd == null && canRequestAds && canShowAds) {
-            // Demand signal: slot is actually composed, not merely a route hint.
-            // Loading is deduplicated and subject to SDK error backoff in the manager.
-            entryPoint.nativeAdManager().loadAds(
-                appContext, nativeAdUnitId, nativePlacement, count = 1,
-            )
+            // A deferred request leaves nativeAd null; retry at most twice while
+            // this slot remains composed and eligible. Changes to consent/slot
+            // cancel the effect; manager deduplication and SDK backoff still apply.
+            repeat(3) { attempt ->
+                entryPoint.nativeAdManager().loadAds(
+                    appContext, nativeAdUnitId, nativePlacement, count = 1,
+                )
+                if (attempt < 2) delay(60_000L)
+            }
         }
     }
     if (nativeAd != null) {

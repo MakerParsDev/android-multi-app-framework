@@ -496,6 +496,9 @@ class InterstitialAdManager @Inject constructor(
         )
         if (adsPolicyProvider.getPolicy().demandAwarePreloadEnabled && !adPreloadRequestBudget.tryReserve()) {
             Timber.d("Interstitial second slot deferred: shared request budget exhausted")
+            adRevenueLogger.logSuppressed(
+                AdFormat.INTERSTITIAL, currentPlacement, adUnitId, "request_budget", currentRoute,
+            )
             return
         }
         isLoadingNext = true

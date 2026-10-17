@@ -25,6 +25,10 @@ Rewarded formats are user initiated and retain their existing reward gates.
 | Native/interstitial/app-open requests | Existing format-specific backoff/deduplication | Same plus best-effort 12 optional requests per rolling 60s across the three formats |
 | Full-screen concurrency | Shared automatic format spacing (30s) | Same |
 
+For a composed native slot with no loaded ad, the treatment retries at
+most twice at 60-second intervals while the slot and consent remain valid.
+SDK deduplication and no-fill backoff still apply.
+
 The 12-per-minute ceiling is a product-side protection against bursts,
 **not** an official Google AdMob request quota. It never relaxes server-side
 serving restrictions and intentionally does not throttle rewarded requests
