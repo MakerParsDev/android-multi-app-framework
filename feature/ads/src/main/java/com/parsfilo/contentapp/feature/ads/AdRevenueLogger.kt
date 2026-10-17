@@ -338,6 +338,26 @@ class AdRevenueLogger @Inject constructor(
         )
     }
 
+    /** One event per loaded native ad discarded *before* any UI hand-off. */
+    internal fun logNativeInventoryDiscarded(
+        placement: AdPlacement,
+        adUnitId: String,
+        reason: NativeAdDiscardReason,
+    ) {
+        appAnalytics.logEvent(
+            AnalyticsEventName.AD_INVENTORY_DISCARDED,
+            adEventBundle(AdFormat.NATIVE, placement, adUnitId, null).apply {
+                putString(AnalyticsParamKey.AD_DISCARD_REASON, reason.analyticsValue)
+            },
+        )
+        recordRuntimeTelemetry(
+            adFormat = AdFormat.NATIVE,
+            placement = placement,
+            event = "inventory_discarded",
+            suppressReason = reason.analyticsValue,
+        )
+    }
+
     fun logSuppressed(
         adFormat: AdFormat,
         placement: AdPlacement,

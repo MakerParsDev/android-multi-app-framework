@@ -134,8 +134,11 @@ class AdsPolicyProvider @Inject constructor(
                         ?: DEFAULT_REWARDED_INTERSTITIAL_ENABLED
                 )
         val demandAwarePreloadEnabled =
-            remoteConfigManager.getBooleanOrNull(KEY_DEMAND_AWARE_PRELOAD_ENABLED)
-                ?: DEFAULT_DEMAND_AWARE_PRELOAD_ENABLED
+            (BuildConfig.DEBUG && BuildConfig.ADS_DEMAND_AWARE_DEBUG_OVERRIDE) ||
+                (
+                    remoteConfigManager.getBooleanOrNull(KEY_DEMAND_AWARE_PRELOAD_ENABLED)
+                        ?: DEFAULT_DEMAND_AWARE_PRELOAD_ENABLED
+                )
         val nativeBannerFallbackEnabled =
             remoteConfigManager.getBooleanOrNull(KEY_NATIVE_BANNER_FALLBACK_ENABLED)
                 ?: DEFAULT_NATIVE_BANNER_FALLBACK_ENABLED
