@@ -164,9 +164,21 @@ class NativeAdManager @Inject constructor(
                             ),
                         )
                     }
+                    // An async response can outlive UMP/premium gate changes.
+                    // Never reinsert it into the pool once requests are blocked.
+                    if (!canUseNativeAds(placement)) {
+                        ad.destroy()
+                        adRevenueLogger.logNativeInventoryDiscarded(
+                            placement, adUnitId, NativeAdDiscardReason.GATE_CLOSED,
+                        )
+                        return@forNativeAd
+                    }
                     synchronized(nativeAds) {
                         if (nativeAds.size >= poolMax) {
                             ad.destroy()
+                            adRevenueLogger.logNativeInventoryDiscarded(
+                                placement, adUnitId, NativeAdDiscardReason.POOL_FULL,
+                            )
                         } else {
                             nativeAds.add(
                                 PooledNativeAd(
@@ -339,9 +351,22 @@ class NativeAdManager @Inject constructor(
     }
 
     fun destroyAds() {
-        synchronized(nativeAds) {
-            nativeAds.forEach { it.ad.destroy() }
-            nativeAds.clear()
+        // Only pooled (not UI-transferred) native ads are counted as discarded.
+        val discarded =
+            synchronized(nativeAds) {
+                val cached = nativeAds.toList()
+                nativeAds.forEach { it.ad.destroy() }
+                nativeAds.clear()
+                cached
+            }
+        val reason =
+            if (!AdsConsentRuntimeState.canRequestAds.value || !canShowAdsByGate) {
+                NativeAdDiscardReason.GATE_CLOSED
+            } else {
+                NativeAdDiscardReason.RESET
+            }
+        discarded.forEach {
+            adRevenueLogger.logNativeInventoryDiscarded(it.placement, it.adUnitId, reason)
         }
         isLoading = false
         Timber.d("All native ads destroyed")
@@ -350,15 +375,22 @@ class NativeAdManager @Inject constructor(
     private fun pruneExpiredAds() {
         val ttlMs = adsPolicyProvider.getPolicy().nativeTtlMs.takeIf { it > 0 } ?: DEFAULT_NATIVE_TTL_MS
         val now = SystemTimeProvider.nowMillis()
+        val expired = mutableListOf<PooledNativeAd>()
         synchronized(nativeAds) {
             val iterator = nativeAds.iterator()
             while (iterator.hasNext()) {
                 val pooled = iterator.next()
                 if (now - pooled.loadedAtMillis > ttlMs) {
                     pooled.ad.destroy()
+                    expired.add(pooled)
                     iterator.remove()
                 }
             }
+        }
+        expired.forEach {
+            adRevenueLogger.logNativeInventoryDiscarded(
+                it.placement, it.adUnitId, NativeAdDiscardReason.EXPIRED,
+            )
         }
     }
 
