@@ -26,6 +26,39 @@ class AdRevenueLoggerTest {
     private val logger = AdRevenueLogger(appAnalytics, preferencesDataSource)
 
     @Test
+    fun `discarded native inventory records bounded reason and placement`() {
+        logger.logNativeInventoryDiscarded(
+            placement = AdPlacement.NATIVE_FEED_HOME,
+            adUnitId = "test-native-unit",
+            reason = NativeAdDiscardReason.EXPIRED,
+        )
+
+        verify {
+            appAnalytics.logEvent(
+                AnalyticsEventName.AD_INVENTORY_DISCARDED,
+                withArg { bundle ->
+                    requireNotNull(bundle)
+                    assertThat(bundle.getString(AnalyticsParamKey.AD_FORMAT)).isEqualTo("native")
+                    assertThat(bundle.getString(AnalyticsParamKey.PLACEMENT))
+                        .isEqualTo(AdPlacement.NATIVE_FEED_HOME.analyticsValue)
+                    assertThat(bundle.getString(AnalyticsParamKey.AD_DISCARD_REASON))
+                        .isEqualTo("ttl_expired")
+                    assertThat(bundle.keySet().contains(AnalyticsParamKey.ERROR_MESSAGE)).isFalse()
+                },
+            )
+        }
+        coVerify(timeout = 1_000L) {
+            preferencesDataSource.recordAdRuntimeEvent(
+                match {
+                    it.event == "inventory_discarded" &&
+                        it.suppressReason == "ttl_expired" &&
+                        it.placement == AdPlacement.NATIVE_FEED_HOME.analyticsValue
+                },
+            )
+        }
+    }
+
+    @Test
     fun `show intent logs GA4 event and placement runtime counter`() {
         logger.logShowIntent(
             adFormat = AdFormat.REWARDED,
