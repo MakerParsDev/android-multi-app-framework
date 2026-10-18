@@ -175,7 +175,7 @@ class NativeAdManagerInventoryTest {
         // test-only reflective fixture verifies the SDK ad lifecycle.
         val type = Class.forName("com.parsfilo.contentapp.feature.ads.PooledNativeAd")
         val constructor = type.declaredConstructors.single().apply { isAccessible = true }
-        val pooled = constructor.newInstance(ad, loadedAt, placement, "test-native")
+        val pooled = constructor.newInstance(ad, loadedAt, placement, "test-native", NativeImpressionAttribution())
         val field = NativeAdManager::class.java.getDeclaredField("nativeAds").apply { isAccessible = true }
         val cache = field.get(manager) as MutableList<Any>
         cache.add(pooled)

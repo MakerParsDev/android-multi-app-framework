@@ -65,6 +65,28 @@ impression. Compare aggregated request, loaded, discarded, served and
 impression events for the **same app/version/date/cohort**; allow for
 Analytics reporting delay and consent-dependent data omission.
 
+## SDK impression attribution (next client release)
+
+Firebase/AdMob collects **automatic** `ad_impression` events on linked Android app streams;
+never manually emit that same event from the app, or an Analytics aggregate can
+mix SDK and app-side counters. The SDK callback now emits the separate
+`ad_placement_impression` event with bounded `ad_format` and `ad_placement`
+from the **actual displayed slot**, not just the original native preload pool.
+This is a diagnostic callback count and not the source of truth for paid
+AdMob impressions or estimated earnings. Native attribution binds one
+`AdLoader.loadAd()` callback to its own ad instance and records at most
+one observed impression, only after UI handoff; a never-shown pooled ad
+is counted neither as served nor as a placement impression.
+
+Use `ad_placement_impression` versus `ad_served`, grouped by the same
+app/version/placement/date, to diagnose preloading and UI exposure. Use
+AdMob network-reported impressions for actual monetization and the automatic
+`ad_impression` event for its SDK collection context, not as a directly
+interchangeable denominator. Register the existing `ad_placement`/
+`ad_format` custom dimensions for the new diagnostic event; never add
+high-cardinality user IDs. Earlier app versions cannot retroactively fill
+missing placement parameters on automatic SDK events.
+
 ## Experiment and analysis
 
 1. **Before enabling any treatment cohort:** release the verified code to

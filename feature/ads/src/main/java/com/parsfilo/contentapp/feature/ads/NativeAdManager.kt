@@ -22,11 +22,35 @@ import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/** One request uses one AdLoader/AdListener. Bind its SDK impression to the UI slot
+ * that actually consumed that exact ad, even when the native pool fell back. */
+internal class NativeImpressionAttribution {
+    private var servedPlacement: AdPlacement? = null
+    private var impressionRecorded = false
+
+    @Synchronized
+    fun markServed(placement: AdPlacement) {
+        servedPlacement = placement
+    }
+
+    @Synchronized
+    fun actualPlacement(): AdPlacement? = servedPlacement
+
+    @Synchronized
+    fun consumeImpression(): AdPlacement? {
+        if (impressionRecorded) return null
+        val placement = servedPlacement ?: return null
+        impressionRecorded = true
+        return placement
+    }
+}
+
 private data class PooledNativeAd(
     val ad: NativeAd,
     val loadedAtMillis: Long,
     val placement: AdPlacement,
     val adUnitId: String,
+    val impressionAttribution: NativeImpressionAttribution,
 )
 
 @Singleton
@@ -143,6 +167,7 @@ class NativeAdManager @Inject constructor(
         val loadedCount = AtomicInteger(0)
 
         repeat(targetCount) {
+            val impressionAttribution = NativeImpressionAttribution()
             val requestStartedAtMillis = SystemTimeProvider.nowMillis()
             adRevenueLogger.logRequest(
                 adFormat = AdFormat.NATIVE,
@@ -165,7 +190,7 @@ class NativeAdManager @Inject constructor(
                             AdPaidEventContext(
                                 adUnitId = adUnitId,
                                 adFormat = AdFormat.NATIVE,
-                                placement = placement,
+                                placement = impressionAttribution.actualPlacement() ?: placement,
                                 route = null,
                                 adValue = adValue,
                                 responseMeta = adRevenueLogger.extractResponseMeta(ad.responseInfo),
@@ -191,6 +216,7 @@ class NativeAdManager @Inject constructor(
                                         loadedAtMillis = SystemTimeProvider.nowMillis(),
                                         placement = placement,
                                         adUnitId = adUnitId,
+                                        impressionAttribution = impressionAttribution,
                                     ),
                                 )
                             }
@@ -252,8 +278,14 @@ class NativeAdManager @Inject constructor(
                     }
 
                     override fun onAdImpression() {
-                        // Native click/impression callbacks here can't be deterministically tied to the
-                        // exact pooled ad instance after UI handoff. Use ILRD + served logs instead.
+                        // This listener belongs to a single loadAd(), not to the shared native pool.
+                        // Unserved/discarded ads are never counted as UI impressions.
+                        val actualPlacement = impressionAttribution.consumeImpression() ?: return
+                        adRevenueLogger.logImpression(
+                            adFormat = AdFormat.NATIVE,
+                            placement = actualPlacement,
+                            adUnitId = adUnitId,
+                        )
                     }
                 })
                 .withNativeAdOptions(
@@ -313,6 +345,7 @@ class NativeAdManager @Inject constructor(
                 null
             } else {
                 val selected = nativeAds.removeAt(idx)
+                selected.impressionAttribution.markServed(placement)
                 if (selected.placement != placement) {
                     Timber.d(
                         "Native placement fallback requested=%s served=%s adUnit=%s",
@@ -339,19 +372,19 @@ class NativeAdManager @Inject constructor(
         if (pooled != null) {
             Timber.d(
                 "Native ad served placement=%s adUnit=%s",
-                pooled.placement.analyticsValue,
+                placement.analyticsValue,
                 pooled.adUnitId,
             )
             adRevenueLogger.logShowStarted(
                 adFormat = AdFormat.NATIVE,
-                placement = pooled.placement,
+                placement = placement,
                 adUnitId = pooled.adUnitId,
                 route = null,
                 trigger = "native_slot",
             )
             adRevenueLogger.logServed(
                 adFormat = AdFormat.NATIVE,
-                placement = pooled.placement,
+                placement = placement,
                 adUnitId = pooled.adUnitId,
             )
         }

@@ -37,7 +37,7 @@ fun AppAnalytics.logPurchaseFailed(reason: String) {
 
 fun AppAnalytics.logAdImpression(adType: String, adUnitId: String) {
     logEvent(
-        AnalyticsEventName.AD_IMPRESSION,
+        AnalyticsEventName.AD_PLACEMENT_IMPRESSION,
         android.os.Bundle().apply {
             putString(AnalyticsParamKey.AD_TYPE, adType)
             putString(AnalyticsParamKey.AD_UNIT_ID, adUnitId)
