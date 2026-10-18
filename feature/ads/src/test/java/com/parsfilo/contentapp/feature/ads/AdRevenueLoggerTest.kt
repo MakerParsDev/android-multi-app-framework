@@ -59,6 +59,27 @@ class AdRevenueLoggerTest {
     }
 
     @Test
+    fun `SDK impression uses dedicated placement event not Firebase auto impression`() {
+        logger.logImpression(
+            adFormat = AdFormat.NATIVE,
+            placement = AdPlacement.NATIVE_FEED_HOME,
+            adUnitId = "test-native-unit",
+        )
+        verify(exactly = 1) {
+            appAnalytics.logEvent(
+                AnalyticsEventName.AD_PLACEMENT_IMPRESSION,
+                withArg { bundle ->
+                    requireNotNull(bundle)
+                    assertThat(bundle.getString(AnalyticsParamKey.AD_FORMAT)).isEqualTo("native")
+                    assertThat(bundle.getString(AnalyticsParamKey.PLACEMENT))
+                        .isEqualTo(AdPlacement.NATIVE_FEED_HOME.analyticsValue)
+                },
+            )
+        }
+        verify(exactly = 0) { appAnalytics.logEvent(AnalyticsEventName.AD_IMPRESSION, any()) }
+    }
+
+    @Test
     fun `show intent logs GA4 event and placement runtime counter`() {
         logger.logShowIntent(
             adFormat = AdFormat.REWARDED,

@@ -7,8 +7,8 @@
 - Schema version: **2**
 - GA4 property: **526790653**
 - Retention policy: **14 months**
-- Declared events: **70**
-- Declared parameters: **82**
+- Declared events: **72**
+- Declared parameters: **85**
 - User properties: **8**
 
 Event names and parameters are immutable within a schema version. Any rename requires a
@@ -72,8 +72,10 @@ Retire from key-event status:
 | `ad_failed_to_show` | monetization | no |
 | `ad_failed_to_show_fullscreen` | monetization | no |
 | `ad_impression` | monetization | no |
+| `ad_inventory_discarded` | monetization | no |
 | `ad_loaded` | monetization | no |
 | `ad_paid_event` | monetization | no |
+| `ad_placement_impression` | monetization | no |
 | `ad_preload_requested` | monetization | no |
 | `ad_request_sent` | monetization | no |
 | `ad_served` | monetization | no |
@@ -139,6 +141,8 @@ Retire from key-event status:
 
 | Parameter | Types | GA4 registration | Cardinality |
 |---|---|---|---|
+| `ad_discard_reason` | string | none | not-registered |
+| `ad_error_category` | string | none | not-registered |
 | `ad_format` | string | dimension | low |
 | `ad_placement` | string | dimension | medium |
 | `ad_ready` | integer | none | not-registered |
@@ -212,6 +216,7 @@ Retire from key-event status:
 | `time_since_load_ms` | integer | none | not-registered |
 | `total_duration_ms` | integer | none | not-registered |
 | `total_watch_count` | integer | none | not-registered |
+| `ump_error_category` | string | none | not-registered |
 | `ump_form_shown` | integer | none | not-registered |
 | `ump_result` | string | none | not-registered |
 | `user_tenure_days` | declared-only | none | not-registered |

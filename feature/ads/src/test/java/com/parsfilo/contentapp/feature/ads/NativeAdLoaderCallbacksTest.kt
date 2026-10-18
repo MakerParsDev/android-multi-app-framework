@@ -103,6 +103,48 @@ class NativeAdLoaderCallbacksTest {
     }
 
     @Test
+    fun sdkNativeImpressionUsesActualHandedOffPlacementOnlyOnce() {
+        beginLoad()
+        val ad = mockk<NativeAd>(relaxed = true)
+        every { ad.responseInfo } returns null
+        nativeListener.captured.onNativeAdLoaded(ad)
+        adListener.captured.onAdLoaded()
+
+        // A load/queued ad does not constitute a user-visible impression.
+        adListener.captured.onAdImpression()
+        verify(exactly = 0) { logger.logImpression(any(), any(), any(), any()) }
+
+        // A pooled home ad can be placed on a content slot by the fallback policy.
+        assertThat(manager.getNativeAd(AdPlacement.NATIVE_FEED_CONTENT)).isSameInstanceAs(ad)
+        adListener.captured.onAdImpression()
+        adListener.captured.onAdImpression() // SDK duplicate must not double count.
+        verify(exactly = 1) {
+            logger.logImpression(AdFormat.NATIVE, AdPlacement.NATIVE_FEED_CONTENT, "test-native", null)
+        }
+        verify(exactly = 1) {
+            logger.logServed(AdFormat.NATIVE, AdPlacement.NATIVE_FEED_CONTENT, "test-native", null)
+        }
+        verify(exactly = 0) {
+            logger.logImpression(AdFormat.NATIVE, AdPlacement.NATIVE_FEED_HOME, "test-native", null)
+        }
+    }
+
+    @Test
+    fun discardedNativeCannotProducePlacementImpression() {
+        beginLoad()
+        val ad = mockk<NativeAd>(relaxed = true)
+        every { ad.responseInfo } returns null
+        nativeListener.captured.onNativeAdLoaded(ad)
+        adListener.captured.onAdLoaded()
+        manager.destroyAds()
+        adListener.captured.onAdImpression()
+        verify(exactly = 0) { logger.logImpression(any(), any(), any(), any()) }
+        verify(exactly = 1) {
+            logger.logNativeInventoryDiscarded(AdPlacement.NATIVE_FEED_HOME, "test-native", NativeAdDiscardReason.RESET)
+        }
+    }
+
+    @Test
     fun lateResponseAfterResetIsDestroyedAndCannotRepopulatePool() {
         beginLoad()
         manager.destroyAds()

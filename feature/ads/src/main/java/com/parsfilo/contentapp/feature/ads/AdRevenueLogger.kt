@@ -520,7 +520,7 @@ class AdRevenueLogger @Inject constructor(
         route: String? = null,
     ) {
         appAnalytics.logEvent(
-            AnalyticsEventName.AD_IMPRESSION,
+            AnalyticsEventName.AD_PLACEMENT_IMPRESSION,
             adEventBundle(adFormat, placement, adUnitId, route),
         )
     }
