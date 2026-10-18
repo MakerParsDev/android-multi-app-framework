@@ -358,9 +358,9 @@ jobs:
     timeout-minutes: 30
     needs: [build-release, resolve-flavors]
     if: inputs.do_internal_test || inputs.do_publish
-    # Never select the approval-free environment for production.
-    # A human must review every staged rollout through the protected environment.
-    environment: production
+    # Internal testing runs automatically on protected main; production keeps
+    # the separately protected, reviewer-gated environment.
+    environment: ${{ inputs.do_publish && 'production' || 'play-internal' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

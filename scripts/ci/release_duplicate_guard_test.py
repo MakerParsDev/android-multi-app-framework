@@ -95,7 +95,7 @@ def test_workflow_contract_and_no_permissions_expansion() -> None:
     }
     publication_env = workflow["jobs"]["publish-play"]["environment"]
     assert isinstance(publication_env, str)
-    assert publication_env == "production"
+    assert publication_env == "${{ inputs.do_publish && 'production' || 'play-internal' }}"
     assert workflow["concurrency"]["cancel-in-progress"] is False
 
 

@@ -153,7 +153,7 @@ def test_release_build_and_publish_use_doppler_and_exact_signed_artifacts() -> N
     assert "--artifact-dir" in publish_step["run"]
     assert "find" in publish_step["run"] and "*.aab" in publish_step["run"]
     assert "exactly one signed AAB" in publish_step["run"]
-    assert publish["environment"] == "production"
+    assert publish["environment"] == "${{ inputs.do_publish && 'production' || 'play-internal' }}"
     assert "Install verified Doppler CLI" in [
         step.get("name") for step in publish["steps"]
     ]
@@ -162,7 +162,7 @@ def test_release_build_and_publish_use_doppler_and_exact_signed_artifacts() -> N
 def test_production_publish_requires_manual_protected_environment() -> None:
     workflow = yaml.safe_load((ROOT / ".github/workflows/release.yml").read_text())
     release = workflow["jobs"]["publish-play"]
-    assert release["environment"] == "production"
+    assert release["environment"] == "${{ inputs.do_publish && 'production' || 'play-internal' }}"
     assert release["needs"] == ["build-release", "resolve-flavors"]
     assert release["if"] == "inputs.do_internal_test || inputs.do_publish"
     publish = next(x for x in release["steps"] if x.get("name") == "Publish to Play")
@@ -177,7 +177,7 @@ def test_production_publish_requires_manual_protected_environment() -> None:
     for file in ("play-internal.yml", "release-attested.yml"):
         sibling = yaml.safe_load((ROOT / ".github/workflows" / file).read_text())
         jobs = sibling["jobs"].values()
-        assert any(job.get("environment") == "production" for job in jobs), file
+        assert any(job.get("environment") == "play-internal" for job in jobs), file
 
 
 
