@@ -373,7 +373,7 @@ def test_release_is_manual_protected_and_attested() -> None:
     event = workflow.get("on", workflow.get(True))
     assert list(event) == ["workflow_dispatch"]
     job = workflow["jobs"]["build-attest-release"]
-    assert job["environment"] == "production"
+    assert job["environment"] == "play-internal"
     assert job["permissions"] == {
         "contents": "read",
         "id-token": "write",
@@ -444,7 +444,7 @@ def test_play_internal_builds_attests_and_publishes_one_exact_aab() -> None:
     event = workflow.get("on", workflow.get(True))
     assert list(event) == ["workflow_dispatch"]
     job = workflow["jobs"]["publish-internal"]
-    assert job["environment"] == "production"
+    assert job["environment"] == "play-internal"
     assert job["permissions"] == {
         "contents": "read",
         "id-token": "write",

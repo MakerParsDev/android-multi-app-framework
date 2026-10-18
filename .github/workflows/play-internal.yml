@@ -27,7 +27,7 @@ jobs:
     name: Publish Internal ${{ inputs.flavor }}
     runs-on: ubuntu-24.04
     timeout-minutes: 120
-    environment: production
+    environment: play-internal
     permissions:
       contents: read
       id-token: write
@@ -90,7 +90,7 @@ jobs:
         run: |
           set -euo pipefail
           [[ -n "${DOPPLER_TOKEN:-}" ]] || {
-            echo '::error::production environment secret DOPPLER_TOKEN is missing'
+            echo '::error::DOPPLER_TOKEN is missing for internal release'
             exit 1
           }
 
