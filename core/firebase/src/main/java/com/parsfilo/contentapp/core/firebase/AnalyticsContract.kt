@@ -39,6 +39,7 @@ object AnalyticsEventName {
     const val AD_DISMISSED = "ad_dismissed"
     const val AD_AFTER_ENGAGEMENT = "ad_after_engagement"
     const val AD_IMPRESSION = "ad_impression"
+
     // Dedicated SDK-callback attribution: never double-log Firebase/AdMob auto ad_impression.
     const val AD_PLACEMENT_IMPRESSION = "ad_placement_impression"
     const val AD_SERVED = "ad_served"
