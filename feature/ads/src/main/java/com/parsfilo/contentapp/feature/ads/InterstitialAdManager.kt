@@ -41,8 +41,6 @@ class InterstitialAdManager @Inject constructor(
     private var lastLoadStartedAtMillis: Long = 0L
     private val callbackScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    private fun effectiveCooldownMs(value: Long): Long = if (BuildConfig.DEBUG) 0L else value
-
     fun isAdReady(): Boolean = interstitialAd != null
 
     fun loadAd(
@@ -284,10 +282,8 @@ class InterstitialAdManager @Inject constructor(
             onAdDismissed()
             return
         }
-        val frequencyCapMs = effectiveCooldownMs(
-            policy.interstitialFrequencyCapForPackage(appContext.packageName),
-        )
-        val baseFrequencyCapMs = effectiveCooldownMs(policy.interstitialFrequencyCapMs)
+        val frequencyCapMs = policy.interstitialFrequencyCapForPackage(appContext.packageName)
+        val baseFrequencyCapMs = policy.interstitialFrequencyCapMs
         if (frequencyCapMs != baseFrequencyCapMs) {
             Timber.d(
                 "Interstitial frequency cap relaxed for package=%s capMs=%d",
