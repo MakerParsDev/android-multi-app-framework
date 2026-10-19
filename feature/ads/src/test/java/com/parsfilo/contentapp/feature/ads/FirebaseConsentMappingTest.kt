@@ -148,6 +148,47 @@ class FirebaseConsentMappingTest {
     }
 
     @Test
+    fun `cached refusal with missing or invalid EEA signals denies all Firebase flags`() {
+        val missing = ConsentSignalSnapshot(
+            tcfPurposeConsents = null,
+            tcfVendorConsents = null,
+            gdprApplies = null,
+            usPrivacyString = null,
+            gppString = null,
+        )
+        val invalid = missing.copy(gdprApplies = true, tcfPurposeConsents = "invalid")
+
+        for (signals in listOf(missing, invalid)) {
+            val result = resolveFirebaseConsentModeState(
+                canRequestAds = true,
+                signals = signals,
+                consentStatus = ConsentStatus.Denied,
+            )
+            assertThat(result.analyticsCollectionEnabled).isTrue()
+            assertThat(result.flags.adStorageGranted).isFalse()
+            assertThat(result.flags.analyticsStorageGranted).isFalse()
+            assertThat(result.flags.adUserDataGranted).isFalse()
+            assertThat(result.flags.adPersonalizationGranted).isFalse()
+        }
+
+        val explicitChoice = missing.copy(gdprApplies = true, tcfPurposeConsents = "1001001")
+        val granular = resolveFirebaseConsentModeState(
+            canRequestAds = true,
+            signals = explicitChoice,
+            consentStatus = ConsentStatus.Denied,
+        )
+        assertThat(granular.flags.adStorageGranted).isTrue()
+        assertThat(granular.flags.adPersonalizationGranted).isFalse()
+
+        val unrelated = resolveFirebaseConsentModeState(
+            canRequestAds = true,
+            signals = missing,
+            consentStatus = ConsentStatus.NotRequired,
+        )
+        assertThat(unrelated.flags.adStorageGranted).isTrue()
+    }
+
+    @Test
     fun `cached consent preserves a denial when GDPR signals are unknown`() {
         val refused = ConsentSignalSnapshot(
             tcfPurposeConsents = "00000000000",
