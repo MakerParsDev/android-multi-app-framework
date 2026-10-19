@@ -386,11 +386,15 @@ class AdManager @Inject constructor(
                         privacyOptionsRequired = _privacyOptionsRequired.value,
                         canRequestAds = canRequestAds,
                     )
-                    appAnalytics.logConsentRefreshed(
-                        trigger = "runtime_error_recover",
-                        consentStatus = resolvedStatus.analyticsValue(),
-                        ageGateResult = ageGateStatus.analyticsValue(),
-                    )
+                    // logConsentMissing already emits a consent_refreshed event.
+                    // Do not publish the same missing outcome twice on a failed UMP refresh.
+                    if (resolvedStatus != ConsentStatus.Missing) {
+                        appAnalytics.logConsentRefreshed(
+                            trigger = "runtime_error_recover",
+                            consentStatus = resolvedStatus.analyticsValue(),
+                            ageGateResult = ageGateStatus.analyticsValue(),
+                        )
+                    }
                     if (canRequestAds) {
                         initializeMobileAdsSdk(ageGateStatus)
                     } else {
