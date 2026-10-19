@@ -146,4 +146,28 @@ class FirebaseConsentMappingTest {
         assertThat(isExplicitEeaConsentDenied(signals("00000000000", false))).isFalse()
         assertThat(isExplicitEeaConsentDenied(signals("invalid", true))).isFalse()
     }
+
+    @Test
+    fun `refresh uses current EEA consent even when UMP allows limited ads`() {
+        val rejected = ConsentSignalSnapshot(
+            tcfPurposeConsents = "00000000000",
+            tcfVendorConsents = null,
+            gdprApplies = true,
+            usPrivacyString = null,
+            gppString = null,
+        )
+        val accepted = rejected.copy(tcfPurposeConsents = "10000000000")
+        val otherRegion = rejected.copy(gdprApplies = false)
+
+        assertThat(resolveRefreshedConsentStatus(true, ConsentStatus.Obtained, rejected))
+            .isEqualTo(ConsentStatus.Denied)
+        assertThat(resolveRefreshedConsentStatus(true, ConsentStatus.Denied, accepted))
+            .isEqualTo(ConsentStatus.Obtained)
+        assertThat(resolveRefreshedConsentStatus(true, ConsentStatus.NotRequired, otherRegion))
+            .isEqualTo(ConsentStatus.NotRequired)
+        assertThat(resolveRefreshedConsentStatus(false, ConsentStatus.Obtained, accepted))
+            .isEqualTo(ConsentStatus.Denied)
+        assertThat(resolveRefreshedConsentStatus(true, null, accepted))
+            .isEqualTo(ConsentStatus.Obtained)
+    }
 }
