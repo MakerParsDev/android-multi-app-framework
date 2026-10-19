@@ -46,8 +46,6 @@ class AppOpenAdManager @Inject constructor(
     @Volatile
     private var isShowingAd = false
 
-    private fun effectiveCooldownMs(value: Long): Long = if (BuildConfig.DEBUG) 0L else value
-
     fun isShowingAdNow(): Boolean = isShowingAd
 
     fun isAdReady(): Boolean = isAdAvailable()
@@ -297,7 +295,7 @@ class AppOpenAdManager @Inject constructor(
             return
         }
 
-        val cooldownMs = effectiveCooldownMs(policy.appOpenCooldownMs)
+        val cooldownMs = policy.appOpenCooldownMs
         if (now - prefs.lastAppOpenAdShown < cooldownMs) {
             Timber.d(
                 "AppOpen show blocked: cooldown remainingMs=%d route=%s",
