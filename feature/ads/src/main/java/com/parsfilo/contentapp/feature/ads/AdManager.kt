@@ -151,7 +151,9 @@ class AdManager @Inject constructor(
                                 errorCode = loadAndShowError.errorCode,
                             )
                             val resolvedStatus =
-                                if (consentInformation.canRequestAds()) {
+                                if (isExplicitEeaConsentDenied(readConsentSignals())) {
+                                    ConsentStatus.Denied
+                                } else if (consentInformation.canRequestAds()) {
                                     buildRetryBackoffError(
                                         loadAndShowError.message ?: "Unknown consent error",
                                     )
@@ -180,6 +182,11 @@ class AdManager @Inject constructor(
                                     errorCategory = classifyUmpConsentError("cold_start_form", loadAndShowError.errorCode),
                                 )
                             }
+                            ConsentFunnelDebugDashboard.onConsentOutcome(
+                                granted = consentInformation.canRequestAds() &&
+                                    !isExplicitEeaConsentDenied(readConsentSignals()),
+                                trigger = "cold_start_form_error",
+                            )
                             if (consentInformation.canRequestAds()) {
                                 initializeMobileAdsSdk(ageGateStatus)
                             } else {
@@ -203,7 +210,9 @@ class AdManager @Inject constructor(
                         errorCode = requestConsentError.errorCode,
                     )
                     val resolvedStatus =
-                        if (consentInformation.canRequestAds()) {
+                        if (isExplicitEeaConsentDenied(readConsentSignals())) {
+                            ConsentStatus.Denied
+                        } else if (consentInformation.canRequestAds()) {
                             buildRetryBackoffError(
                                 requestConsentError.message ?: "Consent info update failed",
                             )
@@ -235,7 +244,7 @@ class AdManager @Inject constructor(
                     )
                     if (consentInformation.canRequestAds()) {
                         ConsentFunnelDebugDashboard.onConsentOutcome(
-                            granted = true,
+                            granted = !isExplicitEeaConsentDenied(readConsentSignals()),
                             trigger = "cold_start_error",
                         )
                         initializeMobileAdsSdk(ageGateStatus)
@@ -250,23 +259,41 @@ class AdManager @Inject constructor(
             )
 
             if (consentInformation.canRequestAds()) {
-                Timber.d("AdManager initialize: consent already granted from previous session")
+                Timber.d("AdManager initialize: ad requests allowed by cached UMP status")
+                // Settle the cached choice now: UMP refresh can be delayed or never return.
+                // Ad eligibility is independent from affirmative EEA consent.
+                val cachedStatus = resolveCachedConsentStatus(
+                    cachedStatus = cachedSuccessfulConsentStatus,
+                    signals = readConsentSignals(),
+                )
                 ConsentFunnelDebugDashboard.onConsentOutcome(
-                    granted = true,
+                    granted = cachedStatus != ConsentStatus.Denied,
                     trigger = "cold_start_cached",
                 )
                 updatePrivacyOptionsState(consentInformation)
-                _consentStatus.value = ConsentStatus.NotRequired
+                _consentStatus.value = cachedStatus
                 applyConsentRuntimeState(
-                    consentStatus = ConsentStatus.NotRequired,
+                    consentStatus = cachedStatus,
                     ageGateStatus = ageGateStatus,
                     privacyOptionsRequired = _privacyOptionsRequired.value,
                     canRequestAds = true,
                 )
-                appAnalytics.logConsentNotRequired(
-                    trigger = "cold_start",
-                    ageGateResult = ageGateStatus.analyticsValue(),
-                )
+                when (cachedStatus) {
+                    ConsentStatus.Denied -> appAnalytics.logConsentDenied(
+                        trigger = "cold_start_cached",
+                        umpFormShown = false,
+                        ageGateResult = ageGateStatus.analyticsValue(),
+                    )
+                    ConsentStatus.Obtained -> appAnalytics.logConsentGranted(
+                        trigger = "cold_start_cached",
+                        umpFormShown = false,
+                        ageGateResult = ageGateStatus.analyticsValue(),
+                    )
+                    else -> appAnalytics.logConsentNotRequired(
+                        trigger = "cold_start",
+                        ageGateResult = ageGateStatus.analyticsValue(),
+                    )
+                }
                 initializeMobileAdsSdk(ageGateStatus)
             } else {
                 AdsConsentRuntimeState.update(
@@ -295,12 +322,11 @@ class AdManager @Inject constructor(
                     updatePrivacyOptionsState(consentInformation)
                     val canRequestAds = consentInformation.canRequestAds()
                     Timber.d("AdManager refreshConsent updated canRequestAds=%s", canRequestAds)
-                    val resolvedStatus =
-                        if (canRequestAds) {
-                            cachedSuccessfulConsentStatus ?: ConsentStatus.Obtained
-                        } else {
-                            ConsentStatus.Denied
-                        }
+                    val resolvedStatus = resolveRefreshedConsentStatus(
+                        canRequestAds = canRequestAds,
+                        cachedStatus = cachedSuccessfulConsentStatus,
+                        signals = readConsentSignals(),
+                    )
                     applyConsentRuntimeState(
                         consentStatus = resolvedStatus,
                         ageGateStatus = ageGateStatus,
@@ -329,7 +355,9 @@ class AdManager @Inject constructor(
                     updatePrivacyOptionsState(consentInformation)
                     val canRequestAds = consentInformation.canRequestAds()
                     val resolvedStatus =
-                        if (canRequestAds) {
+                        if (isExplicitEeaConsentDenied(readConsentSignals())) {
+                            ConsentStatus.Denied
+                        } else if (canRequestAds) {
                             buildRetryBackoffError(
                                 requestConsentError.message ?: "Consent refresh failed",
                             )
@@ -438,7 +466,8 @@ class AdManager @Inject constructor(
                                 errorCategory = classifyUmpConsentError("debug_menu_form", formError.errorCode),
                             )
                             ConsentFunnelDebugDashboard.onConsentOutcome(
-                                granted = consentInformation.canRequestAds(),
+                                granted = consentInformation.canRequestAds() &&
+                                    !isExplicitEeaConsentDenied(readConsentSignals()),
                                 trigger = "debug_menu_error",
                             )
                             refreshConsent(activity) { onCompleted(result) }
@@ -473,7 +502,8 @@ class AdManager @Inject constructor(
                         errorCategory = classifyUmpConsentError("debug_menu_info_update", requestError.errorCode),
                     )
                     ConsentFunnelDebugDashboard.onConsentOutcome(
-                        granted = consentInformation.canRequestAds(),
+                        granted = consentInformation.canRequestAds() &&
+                            !isExplicitEeaConsentDenied(readConsentSignals()),
                         trigger = "debug_menu_request_error",
                     )
                     refreshConsent(activity) { onCompleted(result) }
@@ -523,17 +553,24 @@ class AdManager @Inject constructor(
         trigger: String,
         umpFormShown: Boolean,
     ) {
-        ConsentFunnelDebugDashboard.onConsentOutcome(
-            granted = consentInformation.canRequestAds(),
-            trigger = trigger,
-        )
-        if (consentInformation.canRequestAds()) {
-            val resolvedStatus =
-                if (umpFormShown) {
-                    ConsentStatus.Obtained
-                } else {
-                    ConsentStatus.NotRequired
-                }
+        val signals = readConsentSignals()
+        val canRequestAds = consentInformation.canRequestAds()
+        val previousStatus = _consentStatus.value
+        val resolvedStatus =
+            when {
+                !canRequestAds || isExplicitEeaConsentDenied(signals) -> ConsentStatus.Denied
+                umpFormShown -> ConsentStatus.Obtained
+                else -> resolveCachedConsentStatus(previousStatus, signals)
+            }
+        // The cached path already completed this process-local funnel.
+        if (previousStatus == ConsentStatus.Unknown || previousStatus == ConsentStatus.Required) {
+            ConsentFunnelDebugDashboard.onConsentOutcome(
+                granted = canRequestAds && resolvedStatus != ConsentStatus.Denied,
+                trigger = trigger,
+            )
+        }
+        if (canRequestAds) {
+            // UMP may allow limited ad requests after a user rejects EEA consent.
             _consentStatus.value = resolvedStatus
             applyConsentRuntimeState(
                 consentStatus = resolvedStatus,
@@ -541,17 +578,24 @@ class AdManager @Inject constructor(
                 privacyOptionsRequired = _privacyOptionsRequired.value,
                 canRequestAds = true,
             )
-            if (resolvedStatus == ConsentStatus.NotRequired) {
-                appAnalytics.logConsentNotRequired(
-                    trigger = trigger,
-                    ageGateResult = ageGateStatus.analyticsValue(),
-                )
-            } else {
-                appAnalytics.logConsentGranted(
-                    trigger = trigger,
-                    umpFormShown = umpFormShown,
-                    ageGateResult = ageGateStatus.analyticsValue(),
-                )
+            // Cached choice is already logged. Emit an event only for an actual new decision.
+            if (resolvedStatus != previousStatus || umpFormShown) {
+                when (resolvedStatus) {
+                    ConsentStatus.Denied -> appAnalytics.logConsentDenied(
+                        trigger = trigger,
+                        umpFormShown = umpFormShown,
+                        ageGateResult = ageGateStatus.analyticsValue(),
+                    )
+                    ConsentStatus.NotRequired -> appAnalytics.logConsentNotRequired(
+                        trigger = trigger,
+                        ageGateResult = ageGateStatus.analyticsValue(),
+                    )
+                    else -> appAnalytics.logConsentGranted(
+                        trigger = trigger,
+                        umpFormShown = umpFormShown,
+                        ageGateResult = ageGateStatus.analyticsValue(),
+                    )
+                }
             }
             initializeMobileAdsSdk(ageGateStatus)
         } else {
@@ -562,11 +606,13 @@ class AdManager @Inject constructor(
                 privacyOptionsRequired = _privacyOptionsRequired.value,
                 canRequestAds = false,
             )
-            appAnalytics.logConsentDenied(
-                trigger = trigger,
-                umpFormShown = umpFormShown,
-                ageGateResult = ageGateStatus.analyticsValue(),
-            )
+            if (previousStatus != ConsentStatus.Denied || umpFormShown) {
+                appAnalytics.logConsentDenied(
+                    trigger = trigger,
+                    umpFormShown = umpFormShown,
+                    ageGateResult = ageGateStatus.analyticsValue(),
+                )
+            }
             applyGlobalRequestConfiguration(ageGateStatus)
         }
     }
@@ -725,7 +771,7 @@ class AdManager @Inject constructor(
                 )
             },
         )
-        applyFirebaseConsent(canRequestAds)
+        applyFirebaseConsent(canRequestAds, consentStatus)
         _canRequestAds.value = canRequestAds
         _consentStatus.value = consentStatus
         persistConsentState(
@@ -748,12 +794,16 @@ class AdManager @Inject constructor(
         )
     }
 
-    private fun applyFirebaseConsent(consentGranted: Boolean) {
+    private fun applyFirebaseConsent(
+        consentGranted: Boolean,
+        consentStatus: ConsentStatus? = null,
+    ) {
         runCatching {
             val consentSignals = readConsentSignals()
             val consentState = resolveFirebaseConsentModeState(
                 canRequestAds = consentGranted,
                 signals = consentSignals,
+                consentStatus = consentStatus,
             )
             if (lastFirebaseConsentState == consentState) return
             val consentFlags = consentState.flags
@@ -824,6 +874,7 @@ class AdManager @Inject constructor(
         when (preferencesDataSource.adsLastSuccessfulConsentStatus.first().trim().lowercase()) {
             "granted" -> ConsentStatus.Obtained
             "not_required" -> ConsentStatus.NotRequired
+            "denied" -> ConsentStatus.Denied
             else -> null
         }
 
@@ -851,12 +902,8 @@ class AdManager @Inject constructor(
         fun readString(key: String): String? =
             prefsCandidates
                 .asSequence()
-                .mapNotNull { prefs ->
-                    runCatching { prefs.getString(key, null) }.getOrNull()
-                }
-                .firstOrNull { !it.isNullOrBlank() }
-                ?.trim()
-                ?.takeIf { it.isNotEmpty() }
+                .mapNotNull { prefs -> readConsentPreferenceValue(prefs, key) }
+                .firstOrNull()
 
         val gdprAppliesRaw = readString("IABTCF_gdprApplies")
         val gdprApplies = parseIabBoolean(gdprAppliesRaw)
@@ -920,18 +967,72 @@ internal data class ConsentSignalSnapshot(
     val gppString: String?,
 )
 
+/** UMP writes some TCF values as integers or booleans, not only strings. */
+internal fun readConsentPreferenceValue(
+    prefs: android.content.SharedPreferences,
+    key: String,
+): String? =
+    runCatching { prefs.all[key]?.toString()?.trim()?.takeIf { it.isNotEmpty() } }.getOrNull()
+
+/**
+ * UMP's canRequestAds() means ad requests are eligible, not that the user consented.
+ * The all-zero TCF purpose choice is an explicit EEA refusal even if limited ads are permitted.
+ */
+internal fun isExplicitEeaConsentDenied(signals: ConsentSignalSnapshot): Boolean =
+    signals.gdprApplies == true &&
+        !signals.tcfPurposeConsents.isNullOrBlank() &&
+        signals.tcfPurposeConsents.all { it == '0' }
+
+/** A valid nonzero EEA purpose choice supersedes a stale cached "not_required" status. */
+internal fun isEeaConsentObtained(signals: ConsentSignalSnapshot): Boolean =
+    signals.gdprApplies == true &&
+        !signals.tcfPurposeConsents.isNullOrBlank() &&
+        signals.tcfPurposeConsents.all { it == '0' || it == '1' } &&
+        signals.tcfPurposeConsents.any { it == '1' }
+
+/** Resolve cached ad-eligible choice without mistaking unknown GDPR signals for consent. */
+internal fun resolveCachedConsentStatus(
+    cachedStatus: ConsentStatus?,
+    signals: ConsentSignalSnapshot,
+): ConsentStatus =
+    when {
+        isExplicitEeaConsentDenied(signals) -> ConsentStatus.Denied
+        isEeaConsentObtained(signals) -> ConsentStatus.Obtained
+        signals.gdprApplies == false -> ConsentStatus.NotRequired
+        cachedStatus == ConsentStatus.Denied -> ConsentStatus.Denied
+        cachedStatus == ConsentStatus.Obtained -> ConsentStatus.Obtained
+        else -> ConsentStatus.NotRequired
+    }
+
+/** Current TCF choice takes precedence over cached status, independently of ad eligibility. */
+internal fun resolveRefreshedConsentStatus(
+    canRequestAds: Boolean,
+    cachedStatus: ConsentStatus?,
+    signals: ConsentSignalSnapshot,
+): ConsentStatus =
+    if (canRequestAds) resolveCachedConsentStatus(cachedStatus, signals) else ConsentStatus.Denied
+
 internal fun resolveFirebaseConsentModeState(
     canRequestAds: Boolean,
     signals: ConsentSignalSnapshot?,
-): FirebaseConsentModeState =
-    FirebaseConsentModeState(
-        flags =
-            mapToFirebaseConsentGrantedFlags(
-                canRequestAds = canRequestAds,
-                signals = signals,
-            ),
+    consentStatus: ConsentStatus? = null,
+): FirebaseConsentModeState {
+    // UMP may allow limited ads using cached state while its TCF bits are unavailable.
+    // Never treat that as Firebase consent if the last resolved choice was a refusal.
+    val validTcfBits = signals?.tcfPurposeConsents?.let { bits ->
+        bits.isNotEmpty() && bits.all { it == '0' || it == '1' }
+    } == true
+    val cachedRefusalWithoutCurrentChoice =
+        consentStatus == ConsentStatus.Denied && signals?.gdprApplies != false && !validTcfBits
+
+    return FirebaseConsentModeState(
+        flags = mapToFirebaseConsentGrantedFlags(
+            canRequestAds = canRequestAds && !cachedRefusalWithoutCurrentChoice,
+            signals = signals,
+        ),
         analyticsCollectionEnabled = ADVANCED_CONSENT_MODE_COLLECTION_ENABLED,
     )
+}
 
 internal fun mapToFirebaseConsentGrantedFlags(
     granted: Boolean,
@@ -1017,7 +1118,7 @@ internal fun ConsentStatus.analyticsValue(): String =
     }
 
 internal fun ConsentStatus.isSuccessfulResolution(): Boolean =
-    this == ConsentStatus.Obtained || this == ConsentStatus.NotRequired
+    this == ConsentStatus.Obtained || this == ConsentStatus.NotRequired || this == ConsentStatus.Denied
 
 internal fun UmpConsentDebugResult.analyticsValue(): String =
     when (this) {
