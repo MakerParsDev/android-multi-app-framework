@@ -133,6 +133,25 @@ fun emit() {
 
         self.assertTrue(any("conflicting types" in error for error in errors))
 
+    def test_duplicate_custom_dimension_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            app = root / "app/src/main/java/com/parsfilo/contentapp/App.kt"
+            app.parent.mkdir(parents=True)
+            app.write_text("AnalyticsParamKey.FLAVOR_ID\n" + "AnalyticsParamKey.APP_VERSION\n"
+                           + "AnalyticsParamKey.SCHEMA_VERSION\n" + "AnalyticsParamKey.CONSENT_STATE\n"
+                           + "AnalyticsParamKey.SUBSCRIPTION_STATUS\n", encoding="utf-8")
+            policy = root / "core/firebase/src/main/java/com/parsfilo/contentapp/core/firebase/AnalyticsPayloadPolicy.kt"
+            policy.parent.mkdir(parents=True)
+            policy.write_text("AnalyticsParamKey.ERROR_MESSAGE\n", encoding="utf-8")
+            config = self._config()
+            config["custom_dimensions"].append(dict(config["custom_dimensions"][0]))
+            errors = validate_contract(
+                root, config, 1, {"PURCHASE": "purchase"}, self._params(),
+                {"FLAVOR": "flavor"}, self._inventory(),
+            )
+        self.assertIn("Duplicate GA4 custom dimension registration: flavor_id", errors)
+
     @staticmethod
     def _config():
         return {

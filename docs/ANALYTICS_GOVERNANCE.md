@@ -6,7 +6,7 @@
 
 - Schema version: **2**
 - GA4 property: **526790653**
-- Retention policy: **14 months**
+- Target GA4 event retention (not automatically enforced): **14 months**
 - Declared events: **72**
 - Declared parameters: **85**
 - User properties: **8**

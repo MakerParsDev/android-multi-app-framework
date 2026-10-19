@@ -255,6 +255,14 @@ def validate_contract(
 
     dimensions = config.get("custom_dimensions", [])
     metrics = config.get("custom_metrics", [])
+    for label, definitions in (("dimension", dimensions), ("metric", metrics)):
+        seen: set[str] = set()
+        for definition in definitions:
+            parameter = definition.get("parameter_name") if isinstance(definition, dict) else None
+            if isinstance(parameter, str):
+                if parameter in seen:
+                    errors.append("Duplicate GA4 custom %s registration: %s" % (label, parameter))
+                seen.add(parameter)
     for definition in list(dimensions) + list(metrics):
         parameter = definition.get("parameter_name") if isinstance(definition, dict) else None
         if not isinstance(parameter, str) or parameter not in parameter_by_value:
@@ -343,7 +351,7 @@ def render_markdown(report: Mapping[str, Any]) -> str:
         "",
         "- Schema version: **%s**" % report["schema_version"],
         "- GA4 property: **%s**" % report["ga4_property_id"],
-        "- Retention policy: **%s months**" % report["retention_months"],
+        "- Target GA4 event retention (not automatically enforced): **%s months**" % report["retention_months"],
         "- Declared events: **%d**" % len(report["events"]),
         "- Declared parameters: **%d**" % len(report["parameters"]),
         "- User properties: **%d**" % len(report["user_properties"]),
