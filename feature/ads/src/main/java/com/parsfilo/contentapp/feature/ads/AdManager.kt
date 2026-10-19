@@ -312,14 +312,11 @@ class AdManager @Inject constructor(
                     updatePrivacyOptionsState(consentInformation)
                     val canRequestAds = consentInformation.canRequestAds()
                     Timber.d("AdManager refreshConsent updated canRequestAds=%s", canRequestAds)
-                    val resolvedStatus =
-                        when {
-                            isExplicitEeaConsentDenied(readConsentSignals()) -> ConsentStatus.Denied
-                            // A fresh grant must supersede a previously persisted refusal.
-                            canRequestAds -> cachedSuccessfulConsentStatus?.takeUnless { it == ConsentStatus.Denied }
-                                ?: ConsentStatus.Obtained
-                            else -> ConsentStatus.Denied
-                        }
+                    val resolvedStatus = resolveRefreshedConsentStatus(
+                        canRequestAds = canRequestAds,
+                        cachedStatus = cachedSuccessfulConsentStatus,
+                        signals = readConsentSignals(),
+                    )
                     applyConsentRuntimeState(
                         consentStatus = resolvedStatus,
                         ageGateStatus = ageGateStatus,
@@ -963,6 +960,18 @@ internal fun isExplicitEeaConsentDenied(signals: ConsentSignalSnapshot): Boolean
     signals.gdprApplies == true &&
         !signals.tcfPurposeConsents.isNullOrBlank() &&
         signals.tcfPurposeConsents.all { it == '0' }
+
+/** Current TCF choice takes precedence over cached status, independently of ad eligibility. */
+internal fun resolveRefreshedConsentStatus(
+    canRequestAds: Boolean,
+    cachedStatus: ConsentStatus?,
+    signals: ConsentSignalSnapshot,
+): ConsentStatus =
+    when {
+        isExplicitEeaConsentDenied(signals) || !canRequestAds -> ConsentStatus.Denied
+        cachedStatus == ConsentStatus.Denied -> ConsentStatus.Obtained
+        else -> cachedStatus ?: ConsentStatus.Obtained
+    }
 
 internal fun resolveFirebaseConsentModeState(
     canRequestAds: Boolean,
