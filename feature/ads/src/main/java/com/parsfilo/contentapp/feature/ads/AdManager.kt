@@ -276,7 +276,13 @@ class AdManager @Inject constructor(
                     privacyOptionsRequired = _privacyOptionsRequired.value,
                     canRequestAds = true,
                 )
-                if (!cachedEeaDenial) {
+                if (cachedEeaDenial) {
+                    appAnalytics.logConsentDenied(
+                        trigger = "cold_start_cached",
+                        umpFormShown = false,
+                        ageGateResult = ageGateStatus.analyticsValue(),
+                    )
+                } else {
                     appAnalytics.logConsentNotRequired(
                         trigger = "cold_start",
                         ageGateResult = ageGateStatus.analyticsValue(),
@@ -554,6 +560,7 @@ class AdManager @Inject constructor(
                     umpFormShown -> ConsentStatus.Obtained
                     else -> ConsentStatus.NotRequired
                 }
+            val previouslyDenied = _consentStatus.value == ConsentStatus.Denied
             _consentStatus.value = resolvedStatus
             applyConsentRuntimeState(
                 consentStatus = resolvedStatus,
@@ -567,11 +574,14 @@ class AdManager @Inject constructor(
                     ageGateResult = ageGateStatus.analyticsValue(),
                 )
             } else if (explicitEeaDenial) {
-                appAnalytics.logConsentDenied(
-                    trigger = trigger,
-                    umpFormShown = umpFormShown,
-                    ageGateResult = ageGateStatus.analyticsValue(),
-                )
+                // A cached refusal was already logged. A newly shown form is a new decision.
+                if (!previouslyDenied || umpFormShown) {
+                    appAnalytics.logConsentDenied(
+                        trigger = trigger,
+                        umpFormShown = umpFormShown,
+                        ageGateResult = ageGateStatus.analyticsValue(),
+                    )
+                }
             } else {
                 appAnalytics.logConsentGranted(
                     trigger = trigger,
@@ -975,7 +985,8 @@ internal fun resolveRefreshedConsentStatus(
     when {
         isExplicitEeaConsentDenied(signals) || !canRequestAds -> ConsentStatus.Denied
         isEeaConsentObtained(signals) -> ConsentStatus.Obtained
-        cachedStatus == ConsentStatus.Denied -> ConsentStatus.Obtained
+        cachedStatus == ConsentStatus.Denied ->
+            if (signals.gdprApplies == false) ConsentStatus.Obtained else ConsentStatus.Denied
         else -> cachedStatus ?: ConsentStatus.Obtained
     }
 
