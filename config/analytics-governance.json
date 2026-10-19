@@ -58,6 +58,41 @@
       "scope": "EVENT",
       "cardinality": "low",
       "description": "unknown, loading, active, inactive, or error."
+    },
+    {
+      "parameter_name": "ad_error_category",
+      "display_name": "Ad Error Category",
+      "scope": "EVENT",
+      "cardinality": "low",
+      "description": "Bounded AdMob SDK no-fill versus technical failure category."
+    },
+    {
+      "parameter_name": "suppress_reason",
+      "display_name": "Ad Suppression Reason",
+      "scope": "EVENT",
+      "cardinality": "low",
+      "description": "Bounded privacy, pacing, availability, or lifecycle ad suppression reason."
+    },
+    {
+      "parameter_name": "consent_trigger",
+      "display_name": "Consent Trigger",
+      "scope": "EVENT",
+      "cardinality": "low",
+      "description": "Bounded source of a UMP consent action, for example cold_start, runtime, or debug_menu."
+    },
+    {
+      "parameter_name": "ad_discard_reason",
+      "display_name": "Native Inventory Discard Reason",
+      "scope": "EVENT",
+      "cardinality": "low",
+      "description": "Bounded native cache eviction cause: TTL, pool full, consent gate, or reset."
+    },
+    {
+      "parameter_name": "ump_error_category",
+      "display_name": "UMP Error Category",
+      "scope": "EVENT",
+      "cardinality": "low",
+      "description": "Bounded UMP SDK error class and callback stage without personal information."
     }
   ],
   "custom_metrics": [

@@ -18,6 +18,29 @@ from analytics_governance import (
 
 
 class AnalyticsGovernanceTest(unittest.TestCase):
+    def test_live_ga4_diagnostic_dimension_inventory_matches_contract(self) -> None:
+        """Keep confirmed privacy-safe production GA4 dimensions governed in code."""
+        import json
+
+        root = Path(__file__).resolve().parents[2]
+        manifest = json.loads((root / "config/analytics-governance.json").read_text())
+        dimensions = manifest["custom_dimensions"]
+        names = [entry["parameter_name"] for entry in dimensions]
+        self.assertEqual(len(names), len(set(names)), "Duplicate GA4 custom dimensions")
+        self.assertEqual(len(names), 12)
+        required_diagnostics = {
+            "ad_error_category",
+            "suppress_reason",
+            "consent_trigger",
+            "ad_discard_reason",
+            "ump_error_category",
+        }
+        self.assertTrue(required_diagnostics.issubset(names))
+        for entry in dimensions:
+            if entry["parameter_name"] in required_diagnostics:
+                self.assertEqual(entry["scope"], "EVENT")
+                self.assertEqual(entry["cardinality"], "low")
+
     def test_parse_object_constants(self) -> None:
         text = '''
 object AnalyticsEventName {
