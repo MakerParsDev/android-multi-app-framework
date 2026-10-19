@@ -148,6 +148,29 @@ class FirebaseConsentMappingTest {
     }
 
     @Test
+    fun `cached consent preserves a denial when GDPR signals are unknown`() {
+        val refused = ConsentSignalSnapshot(
+            tcfPurposeConsents = "00000000000",
+            tcfVendorConsents = null,
+            gdprApplies = true,
+            usPrivacyString = null,
+            gppString = null,
+        )
+        val accepted = refused.copy(tcfPurposeConsents = "10000000000")
+        val unknown = refused.copy(tcfPurposeConsents = null, gdprApplies = null)
+        val malformed = refused.copy(tcfPurposeConsents = "malformed")
+        val nonEea = refused.copy(gdprApplies = false)
+
+        assertThat(resolveCachedConsentStatus(ConsentStatus.Obtained, refused)).isEqualTo(ConsentStatus.Denied)
+        assertThat(resolveCachedConsentStatus(ConsentStatus.Denied, accepted)).isEqualTo(ConsentStatus.Obtained)
+        assertThat(resolveCachedConsentStatus(ConsentStatus.Denied, unknown)).isEqualTo(ConsentStatus.Denied)
+        assertThat(resolveCachedConsentStatus(ConsentStatus.Denied, malformed)).isEqualTo(ConsentStatus.Denied)
+        assertThat(resolveCachedConsentStatus(ConsentStatus.Denied, nonEea)).isEqualTo(ConsentStatus.NotRequired)
+        assertThat(resolveCachedConsentStatus(ConsentStatus.Obtained, unknown)).isEqualTo(ConsentStatus.Obtained)
+        assertThat(resolveCachedConsentStatus(null, unknown)).isEqualTo(ConsentStatus.NotRequired)
+    }
+
+    @Test
     fun `refresh uses current EEA consent even when UMP allows limited ads`() {
         val rejected = ConsentSignalSnapshot(
             tcfPurposeConsents = "00000000000",
@@ -176,7 +199,9 @@ class FirebaseConsentMappingTest {
         assertThat(resolveRefreshedConsentStatus(true, ConsentStatus.Denied, missingSignals))
             .isEqualTo(ConsentStatus.Denied)
         assertThat(resolveRefreshedConsentStatus(true, ConsentStatus.Denied, otherRegion))
-            .isEqualTo(ConsentStatus.Obtained)
+            .isEqualTo(ConsentStatus.NotRequired)
+        assertThat(resolveRefreshedConsentStatus(true, null, otherRegion))
+            .isEqualTo(ConsentStatus.NotRequired)
         assertThat(resolveRefreshedConsentStatus(true, ConsentStatus.NotRequired, otherRegion))
             .isEqualTo(ConsentStatus.NotRequired)
         assertThat(resolveRefreshedConsentStatus(false, ConsentStatus.Obtained, accepted))
