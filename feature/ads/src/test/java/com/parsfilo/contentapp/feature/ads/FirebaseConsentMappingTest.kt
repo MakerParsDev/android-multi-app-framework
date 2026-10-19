@@ -93,4 +93,161 @@ class FirebaseConsentMappingTest {
         assertThat(result.adUserDataGranted).isFalse()
         assertThat(result.adPersonalizationGranted).isFalse()
     }
+
+    @Test
+    fun `EEA refusal has denied analytics status and counts as resolved decision`() {
+        assertThat(ConsentStatus.Denied.analyticsValue()).isEqualTo("denied")
+        assertThat(ConsentStatus.Denied.isSuccessfulResolution()).isTrue()
+        assertThat(ConsentStatus.Obtained.analyticsValue()).isEqualTo("granted")
+        assertThat(ConsentStatus.Obtained.isSuccessfulResolution()).isTrue()
+    }
+
+    @Test
+    fun `UMP preference reader handles numeric GDPR flags and string TCF bits`() {
+        val prefs = io.mockk.mockk<android.content.SharedPreferences>()
+        io.mockk.every { prefs.all } returns mapOf(
+            "IABTCF_gdprApplies" to 1,
+            "IABTCF_PurposeConsents" to "00000000000",
+            "test_boolean" to true,
+        )
+
+        assertThat(readConsentPreferenceValue(prefs, "IABTCF_gdprApplies")).isEqualTo("1")
+        assertThat(readConsentPreferenceValue(prefs, "IABTCF_PurposeConsents")).isEqualTo("00000000000")
+        assertThat(readConsentPreferenceValue(prefs, "test_boolean")).isEqualTo("true")
+        assertThat(readConsentPreferenceValue(prefs, "absent")).isNull()
+    }
+
+    @Test
+    fun `EEA all-zero TCF purpose choice is explicit refusal despite ad eligibility`() {
+        val signals = ConsentSignalSnapshot(
+            tcfPurposeConsents = "00000000000",
+            tcfVendorConsents = null,
+            gdprApplies = true,
+            usPrivacyString = null,
+            gppString = null,
+        )
+        assertThat(isExplicitEeaConsentDenied(signals)).isTrue()
+        // Consent Mode and ad eligibility are deliberately independent.
+        assertThat(mapToFirebaseConsentGrantedFlags(canRequestAds = true, signals = signals).adStorageGranted)
+            .isFalse()
+    }
+
+    @Test
+    fun `EEA refusal classification excludes granted and non-EEA choices`() {
+        fun signals(purposes: String?, gdpr: Boolean?) = ConsentSignalSnapshot(
+            tcfPurposeConsents = purposes,
+            tcfVendorConsents = null,
+            gdprApplies = gdpr,
+            usPrivacyString = null,
+            gppString = null,
+        )
+        assertThat(isExplicitEeaConsentDenied(signals("10000000000", true))).isFalse()
+        assertThat(isExplicitEeaConsentDenied(signals(null, true))).isFalse()
+        assertThat(isExplicitEeaConsentDenied(signals("00000000000", false))).isFalse()
+        assertThat(isExplicitEeaConsentDenied(signals("invalid", true))).isFalse()
+    }
+
+    @Test
+    fun `cached refusal with missing or invalid EEA signals denies all Firebase flags`() {
+        val missing = ConsentSignalSnapshot(
+            tcfPurposeConsents = null,
+            tcfVendorConsents = null,
+            gdprApplies = null,
+            usPrivacyString = null,
+            gppString = null,
+        )
+        val invalid = missing.copy(gdprApplies = true, tcfPurposeConsents = "invalid")
+
+        for (signals in listOf(missing, invalid)) {
+            val result = resolveFirebaseConsentModeState(
+                canRequestAds = true,
+                signals = signals,
+                consentStatus = ConsentStatus.Denied,
+            )
+            assertThat(result.analyticsCollectionEnabled).isTrue()
+            assertThat(result.flags.adStorageGranted).isFalse()
+            assertThat(result.flags.analyticsStorageGranted).isFalse()
+            assertThat(result.flags.adUserDataGranted).isFalse()
+            assertThat(result.flags.adPersonalizationGranted).isFalse()
+        }
+
+        val explicitChoice = missing.copy(gdprApplies = true, tcfPurposeConsents = "1001001")
+        val granular = resolveFirebaseConsentModeState(
+            canRequestAds = true,
+            signals = explicitChoice,
+            consentStatus = ConsentStatus.Denied,
+        )
+        assertThat(granular.flags.adStorageGranted).isTrue()
+        assertThat(granular.flags.adPersonalizationGranted).isFalse()
+
+        val unrelated = resolveFirebaseConsentModeState(
+            canRequestAds = true,
+            signals = missing,
+            consentStatus = ConsentStatus.NotRequired,
+        )
+        assertThat(unrelated.flags.adStorageGranted).isTrue()
+    }
+
+    @Test
+    fun `cached consent preserves a denial when GDPR signals are unknown`() {
+        val refused = ConsentSignalSnapshot(
+            tcfPurposeConsents = "00000000000",
+            tcfVendorConsents = null,
+            gdprApplies = true,
+            usPrivacyString = null,
+            gppString = null,
+        )
+        val accepted = refused.copy(tcfPurposeConsents = "10000000000")
+        val unknown = refused.copy(tcfPurposeConsents = null, gdprApplies = null)
+        val malformed = refused.copy(tcfPurposeConsents = "malformed")
+        val nonEea = refused.copy(gdprApplies = false)
+
+        assertThat(resolveCachedConsentStatus(ConsentStatus.Obtained, refused)).isEqualTo(ConsentStatus.Denied)
+        assertThat(resolveCachedConsentStatus(ConsentStatus.Denied, accepted)).isEqualTo(ConsentStatus.Obtained)
+        assertThat(resolveCachedConsentStatus(ConsentStatus.Denied, unknown)).isEqualTo(ConsentStatus.Denied)
+        assertThat(resolveCachedConsentStatus(ConsentStatus.Denied, malformed)).isEqualTo(ConsentStatus.Denied)
+        assertThat(resolveCachedConsentStatus(ConsentStatus.Denied, nonEea)).isEqualTo(ConsentStatus.NotRequired)
+        assertThat(resolveCachedConsentStatus(ConsentStatus.Obtained, unknown)).isEqualTo(ConsentStatus.Obtained)
+        assertThat(resolveCachedConsentStatus(null, unknown)).isEqualTo(ConsentStatus.NotRequired)
+    }
+
+    @Test
+    fun `refresh uses current EEA consent even when UMP allows limited ads`() {
+        val rejected = ConsentSignalSnapshot(
+            tcfPurposeConsents = "00000000000",
+            tcfVendorConsents = null,
+            gdprApplies = true,
+            usPrivacyString = null,
+            gppString = null,
+        )
+        val accepted = rejected.copy(tcfPurposeConsents = "10000000000")
+        val malformed = accepted.copy(tcfPurposeConsents = "invalid")
+        val missingSignals = rejected.copy(tcfPurposeConsents = null, gdprApplies = null)
+        val otherRegion = rejected.copy(gdprApplies = false)
+
+        assertThat(resolveRefreshedConsentStatus(true, ConsentStatus.Obtained, rejected))
+            .isEqualTo(ConsentStatus.Denied)
+        assertThat(resolveRefreshedConsentStatus(true, ConsentStatus.Denied, accepted))
+            .isEqualTo(ConsentStatus.Obtained)
+        assertThat(resolveRefreshedConsentStatus(true, ConsentStatus.NotRequired, accepted))
+            .isEqualTo(ConsentStatus.Obtained)
+        assertThat(isEeaConsentObtained(accepted)).isTrue()
+        assertThat(isEeaConsentObtained(malformed)).isFalse()
+        assertThat(resolveRefreshedConsentStatus(true, ConsentStatus.NotRequired, malformed))
+            .isEqualTo(ConsentStatus.NotRequired)
+        assertThat(resolveRefreshedConsentStatus(true, ConsentStatus.Denied, malformed))
+            .isEqualTo(ConsentStatus.Denied)
+        assertThat(resolveRefreshedConsentStatus(true, ConsentStatus.Denied, missingSignals))
+            .isEqualTo(ConsentStatus.Denied)
+        assertThat(resolveRefreshedConsentStatus(true, ConsentStatus.Denied, otherRegion))
+            .isEqualTo(ConsentStatus.NotRequired)
+        assertThat(resolveRefreshedConsentStatus(true, null, otherRegion))
+            .isEqualTo(ConsentStatus.NotRequired)
+        assertThat(resolveRefreshedConsentStatus(true, ConsentStatus.NotRequired, otherRegion))
+            .isEqualTo(ConsentStatus.NotRequired)
+        assertThat(resolveRefreshedConsentStatus(false, ConsentStatus.Obtained, accepted))
+            .isEqualTo(ConsentStatus.Denied)
+        assertThat(resolveRefreshedConsentStatus(true, null, accepted))
+            .isEqualTo(ConsentStatus.Obtained)
+    }
 }
