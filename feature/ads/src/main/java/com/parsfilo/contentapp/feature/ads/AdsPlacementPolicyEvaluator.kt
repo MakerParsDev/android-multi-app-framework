@@ -31,8 +31,6 @@ sealed interface AdEligibility {
 class AdsPlacementPolicyEvaluator @Inject constructor(
     private val adsPolicyProvider: AdsPolicyProvider,
 ) {
-    private fun effectiveCooldownMs(value: Long): Long = if (BuildConfig.DEBUG) 0L else value
-
     fun evaluateInterstitial(context: AdRequestContext): AdEligibility {
         val policy = adsPolicyProvider.getPolicy()
         if (!policy.isInterstitialPlacementEnabled(context.placement)) {
@@ -49,7 +47,7 @@ class AdsPlacementPolicyEvaluator @Inject constructor(
         }
         val lastShownAtMs = context.lastShownAtMs
         if (lastShownAtMs != null) {
-            val cooldownMs = effectiveCooldownMs(policy.interstitialFrequencyCapMs)
+            val cooldownMs = policy.interstitialFrequencyCapMs
             if (SystemTimeProvider.nowMillis() - lastShownAtMs < cooldownMs) {
                 return blocked("interstitial", AdSuppressReason.COOLDOWN, context)
             }
@@ -77,17 +75,16 @@ class AdsPlacementPolicyEvaluator @Inject constructor(
         if (context.isColdStart) {
             return blocked("app_open", AdSuppressReason.COLD_START, context)
         }
-        val resumeGapMs = effectiveCooldownMs(policy.appOpenResumeGapMs)
+        val resumeGapMs = policy.appOpenResumeGapMs
         if ((context.resumeGapMs ?: Long.MAX_VALUE) < resumeGapMs) {
             return blocked("app_open", AdSuppressReason.RESUME_SPAM, context)
         }
         val lastShownAtMs = context.lastShownAtMs
-        val appOpenCooldownMs = effectiveCooldownMs(policy.appOpenCooldownMs)
+        val appOpenCooldownMs = policy.appOpenCooldownMs
         if (lastShownAtMs != null && SystemTimeProvider.nowMillis() - lastShownAtMs < appOpenCooldownMs) {
             return blocked("app_open", AdSuppressReason.COOLDOWN, context)
         }
-        val appOpenMaxPerSession = if (BuildConfig.DEBUG) Int.MAX_VALUE else policy.appOpenMaxPerSession
-        if (context.sessionCount >= appOpenMaxPerSession) {
+        if (context.sessionCount >= policy.appOpenMaxPerSession) {
             return blocked("app_open", AdSuppressReason.SESSION_CAP, context)
         }
         return allowed("app_open", context)
@@ -125,7 +122,7 @@ class AdsPlacementPolicyEvaluator @Inject constructor(
         if (context.isRewardedAdFree) return blocked("rewarded_interstitial", AdSuppressReason.REWARDED_FREE, context)
         if (context.contentInProgress) return blocked("rewarded_interstitial", AdSuppressReason.CONTENT_IN_PROGRESS, context)
         val lastShownAtMs = context.lastShownAtMs
-        val minIntervalMs = effectiveCooldownMs(policy.rewardedInterstitialMinIntervalMs)
+        val minIntervalMs = policy.rewardedInterstitialMinIntervalMs
         if (lastShownAtMs != null && SystemTimeProvider.nowMillis() - lastShownAtMs < minIntervalMs) {
             return blocked("rewarded_interstitial", AdSuppressReason.COOLDOWN, context)
         }

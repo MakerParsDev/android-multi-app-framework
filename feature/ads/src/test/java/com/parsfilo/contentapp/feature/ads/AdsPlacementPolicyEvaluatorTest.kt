@@ -107,11 +107,61 @@ class AdsPlacementPolicyEvaluatorTest {
             ),
         )
 
-        if (BuildConfig.DEBUG) {
-            assertThat(result).isEqualTo(AdEligibility.Allowed)
-        } else {
-            assertThat(result).isEqualTo(AdEligibility.Blocked(AdSuppressReason.RESUME_SPAM))
-        }
+        assertThat(result).isEqualTo(AdEligibility.Blocked(AdSuppressReason.RESUME_SPAM))
+    }
+
+    @Test
+    fun `interstitial enforces cooldown in debug and release`() {
+        val result = evaluator.evaluateInterstitial(
+            baseContext(
+                format = AdFormat.INTERSTITIAL,
+                placement = AdPlacement.INTERSTITIAL_NAV_BREAK,
+                lastShownAtMs = SystemTimeProvider.nowMillis() - 1_000L,
+            ),
+        )
+
+        assertThat(result).isEqualTo(AdEligibility.Blocked(AdSuppressReason.COOLDOWN))
+    }
+
+    @Test
+    fun `app open enforces cooldown in debug and release`() {
+        val result = evaluator.evaluateAppOpen(
+            baseContext(
+                format = AdFormat.APP_OPEN,
+                placement = AdPlacement.APP_OPEN_RESUME,
+                resumeGapMs = 120_000L,
+                lastShownAtMs = SystemTimeProvider.nowMillis() - 1_000L,
+            ),
+        )
+
+        assertThat(result).isEqualTo(AdEligibility.Blocked(AdSuppressReason.COOLDOWN))
+    }
+
+    @Test
+    fun `app open enforces session limit in debug and release`() {
+        val result = evaluator.evaluateAppOpen(
+            baseContext(
+                format = AdFormat.APP_OPEN,
+                placement = AdPlacement.APP_OPEN_RESUME,
+                resumeGapMs = 120_000L,
+                sessionCount = 1,
+            ),
+        )
+
+        assertThat(result).isEqualTo(AdEligibility.Blocked(AdSuppressReason.SESSION_CAP))
+    }
+
+    @Test
+    fun `rewarded interstitial enforces minimum interval in debug and release`() {
+        val result = evaluator.evaluateRewardedInterstitial(
+            baseContext(
+                format = AdFormat.REWARDED_INTERSTITIAL,
+                placement = AdPlacement.REWARDED_INTERSTITIAL_HISTORY_UNLOCK,
+                lastShownAtMs = SystemTimeProvider.nowMillis() - 1_000L,
+            ),
+        )
+
+        assertThat(result).isEqualTo(AdEligibility.Blocked(AdSuppressReason.COOLDOWN))
     }
 
     @Test
