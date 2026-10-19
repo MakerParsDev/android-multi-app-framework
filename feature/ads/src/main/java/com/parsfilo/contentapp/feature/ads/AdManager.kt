@@ -959,6 +959,13 @@ internal fun isExplicitEeaConsentDenied(signals: ConsentSignalSnapshot): Boolean
         !signals.tcfPurposeConsents.isNullOrBlank() &&
         signals.tcfPurposeConsents.all { it == '0' }
 
+/** A valid nonzero EEA purpose choice supersedes a stale cached "not_required" status. */
+internal fun isEeaConsentObtained(signals: ConsentSignalSnapshot): Boolean =
+    signals.gdprApplies == true &&
+        !signals.tcfPurposeConsents.isNullOrBlank() &&
+        signals.tcfPurposeConsents.all { it == '0' || it == '1' } &&
+        signals.tcfPurposeConsents.any { it == '1' }
+
 /** Current TCF choice takes precedence over cached status, independently of ad eligibility. */
 internal fun resolveRefreshedConsentStatus(
     canRequestAds: Boolean,
@@ -967,6 +974,7 @@ internal fun resolveRefreshedConsentStatus(
 ): ConsentStatus =
     when {
         isExplicitEeaConsentDenied(signals) || !canRequestAds -> ConsentStatus.Denied
+        isEeaConsentObtained(signals) -> ConsentStatus.Obtained
         cachedStatus == ConsentStatus.Denied -> ConsentStatus.Obtained
         else -> cachedStatus ?: ConsentStatus.Obtained
     }
