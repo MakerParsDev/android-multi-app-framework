@@ -14,6 +14,10 @@ class SimpleInteractionSmokeTest {
 
     @Test
     fun recreate_keepsRootComposableAvailable() {
+        // A continuously animating compass never settles with automatic clock advancement.
+        if (BuildConfig.CONTENT_FAMILY == "qibla") {
+            composeRule.mainClock.autoAdvance = false
+        }
         composeRule.onNodeWithTag("app_root").fetchSemanticsNode()
         composeRule.activityRule.scenario.recreate()
         composeRule.waitForIdle()

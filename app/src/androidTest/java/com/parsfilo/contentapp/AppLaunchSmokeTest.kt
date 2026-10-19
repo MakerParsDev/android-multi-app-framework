@@ -14,6 +14,10 @@ class AppLaunchSmokeTest {
 
     @Test
     fun appLaunch_showsRootComposable() {
+        // A continuously animating compass does not settle under automatic clock advancement.
+        if (BuildConfig.CONTENT_FAMILY == "qibla") {
+            composeRule.mainClock.autoAdvance = false
+        }
         composeRule.onNodeWithTag("app_root").fetchSemanticsNode()
     }
 }
