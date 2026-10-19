@@ -93,4 +93,49 @@ class FirebaseConsentMappingTest {
         assertThat(result.adUserDataGranted).isFalse()
         assertThat(result.adPersonalizationGranted).isFalse()
     }
+    @Test
+    fun `UMP preference reader handles numeric GDPR flags and string TCF bits`() {
+        val prefs = io.mockk.mockk<android.content.SharedPreferences>()
+        io.mockk.every { prefs.all } returns mapOf(
+            "IABTCF_gdprApplies" to 1,
+            "IABTCF_PurposeConsents" to "00000000000",
+            "test_boolean" to true,
+        )
+
+        assertThat(readConsentPreferenceValue(prefs, "IABTCF_gdprApplies")).isEqualTo("1")
+        assertThat(readConsentPreferenceValue(prefs, "IABTCF_PurposeConsents")).isEqualTo("00000000000")
+        assertThat(readConsentPreferenceValue(prefs, "test_boolean")).isEqualTo("true")
+        assertThat(readConsentPreferenceValue(prefs, "absent")).isNull()
+    }
+
+    @Test
+    fun `EEA all-zero TCF purpose choice is explicit refusal despite ad eligibility`() {
+        val signals = ConsentSignalSnapshot(
+            tcfPurposeConsents = "00000000000",
+            tcfVendorConsents = null,
+            gdprApplies = true,
+            usPrivacyString = null,
+            gppString = null,
+        )
+        assertThat(isExplicitEeaConsentDenied(signals)).isTrue()
+        // Consent Mode and ad eligibility are deliberately independent.
+        assertThat(mapToFirebaseConsentGrantedFlags(canRequestAds = true, signals = signals).adStorageGranted)
+            .isFalse()
+    }
+
+    @Test
+    fun `EEA refusal classification excludes granted and non-EEA choices`() {
+        fun signals(purposes: String?, gdpr: Boolean?) = ConsentSignalSnapshot(
+            tcfPurposeConsents = purposes,
+            tcfVendorConsents = null,
+            gdprApplies = gdpr,
+            usPrivacyString = null,
+            gppString = null,
+        )
+        assertThat(isExplicitEeaConsentDenied(signals("10000000000", true))).isFalse()
+        assertThat(isExplicitEeaConsentDenied(signals(null, true))).isFalse()
+        assertThat(isExplicitEeaConsentDenied(signals("00000000000", false))).isFalse()
+        assertThat(isExplicitEeaConsentDenied(signals("invalid", true))).isFalse()
+    }
+
 }
