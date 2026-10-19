@@ -260,15 +260,13 @@ class AdManager @Inject constructor(
 
             if (consentInformation.canRequestAds()) {
                 Timber.d("AdManager initialize: ad requests allowed by cached UMP status")
-                // Ad eligibility from cached UMP status is not consent to personal data use.
-                // Defer a known EEA refusal's analytics outcome until the fresh UMP callback.
+                // Settle the cached choice now: UMP refresh can be delayed or never return.
+                // Ad eligibility is independent from affirmative EEA consent.
                 val cachedEeaDenial = isExplicitEeaConsentDenied(readConsentSignals())
-                if (!cachedEeaDenial) {
-                    ConsentFunnelDebugDashboard.onConsentOutcome(
-                        granted = true,
-                        trigger = "cold_start_cached",
-                    )
-                }
+                ConsentFunnelDebugDashboard.onConsentOutcome(
+                    granted = !cachedEeaDenial,
+                    trigger = "cold_start_cached",
+                )
                 updatePrivacyOptionsState(consentInformation)
                 val cachedStatus = if (cachedEeaDenial) ConsentStatus.Denied else ConsentStatus.NotRequired
                 _consentStatus.value = cachedStatus
