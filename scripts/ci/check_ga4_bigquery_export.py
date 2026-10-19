@@ -15,6 +15,13 @@ IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
 TABLE_NOT_FOUND = re.compile(r"\bNot found: Table\b", re.IGNORECASE)
 
 
+class AuditArgumentParser(argparse.ArgumentParser):
+    """Keep CLI syntax errors separate from missing export-table status 2."""
+
+    def error(self, message: str) -> None:
+        raise ValueError("invalid CLI arguments: " + message)
+
+
 def expected_tables(as_of: date, *, days: int = 3, lag_days: int = 2) -> list[str]:
     """Ignore recently completed dates, when exports may still be arriving."""
     if days < 1 or lag_days < 1:
@@ -70,14 +77,14 @@ def audit(*, project: str, dataset: str, as_of: date, days: int, lag_days: int) 
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = AuditArgumentParser(description=__doc__)
     parser.add_argument("--project", default="makerpars-oaslananka-mobil")
     parser.add_argument("--dataset", default="analytics_526790653")
     parser.add_argument("--as-of-date", help="REQUIRED: GA4 property-local date YYYY-MM-DD")
     parser.add_argument("--days", type=int, default=3)
     parser.add_argument("--lag-days", type=int, default=2)
-    args = parser.parse_args()
     try:
+        args = parser.parse_args()
         if args.as_of_date is None:
             raise ValueError("--as-of-date is required (GA4 property-local calendar date)")
         as_of = date.fromisoformat(args.as_of_date)

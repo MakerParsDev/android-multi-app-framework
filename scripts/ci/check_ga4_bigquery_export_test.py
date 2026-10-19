@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from datetime import date
+import io
 import json
 import subprocess
 import unittest
@@ -117,6 +118,27 @@ class GA4BigQueryExportTest(unittest.TestCase):
             run.return_value = subprocess.CompletedProcess([], 0, "{", "")
             with self.assertRaises(json.JSONDecodeError):
                 inspect_table(project=PROJECT, dataset=DATASET, name="events_20261017")
+
+    def test_invalid_cli_options_return_error_not_missing(self) -> None:
+        for arguments in (
+            ["--as-of-date", "2026-10-19", "--days", "abc"],
+            ["--as-of-date"],
+            ["--unknown-option", "x"],
+        ):
+            with self.subTest(arguments=arguments):
+                with patch("sys.argv", ["audit.py", *arguments]):
+                    with patch("check_ga4_bigquery_export.subprocess.run") as run:
+                        with patch("sys.stdout", new_callable=io.StringIO) as output:
+                            self.assertEqual(main(), 1)
+                        self.assertIn('"status": "error"', output.getvalue())
+                        run.assert_not_called()
+
+    def test_help_remains_successful(self) -> None:
+        with patch("sys.argv", ["audit.py", "--help"]):
+            with patch("sys.stdout"):
+                with self.assertRaises(SystemExit) as outcome:
+                    main()
+            self.assertEqual(outcome.exception.code, 0)
 
     def test_property_date_is_required(self) -> None:
         with patch("sys.argv", ["check_ga4_bigquery_export.py"]):
