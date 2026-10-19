@@ -93,6 +93,15 @@ class FirebaseConsentMappingTest {
         assertThat(result.adUserDataGranted).isFalse()
         assertThat(result.adPersonalizationGranted).isFalse()
     }
+
+    @Test
+    fun `EEA refusal has denied analytics status and counts as resolved decision`() {
+        assertThat(ConsentStatus.Denied.analyticsValue()).isEqualTo("denied")
+        assertThat(ConsentStatus.Denied.isSuccessfulResolution()).isTrue()
+        assertThat(ConsentStatus.Obtained.analyticsValue()).isEqualTo("granted")
+        assertThat(ConsentStatus.Obtained.isSuccessfulResolution()).isTrue()
+    }
+
     @Test
     fun `UMP preference reader handles numeric GDPR flags and string TCF bits`() {
         val prefs = io.mockk.mockk<android.content.SharedPreferences>()
@@ -137,5 +146,4 @@ class FirebaseConsentMappingTest {
         assertThat(isExplicitEeaConsentDenied(signals("00000000000", false))).isFalse()
         assertThat(isExplicitEeaConsentDenied(signals("invalid", true))).isFalse()
     }
-
 }
