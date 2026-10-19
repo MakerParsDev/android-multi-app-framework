@@ -771,7 +771,7 @@ class AdManager @Inject constructor(
                 )
             },
         )
-        applyFirebaseConsent(canRequestAds)
+        applyFirebaseConsent(canRequestAds, consentStatus)
         _canRequestAds.value = canRequestAds
         _consentStatus.value = consentStatus
         persistConsentState(
@@ -794,12 +794,16 @@ class AdManager @Inject constructor(
         )
     }
 
-    private fun applyFirebaseConsent(consentGranted: Boolean) {
+    private fun applyFirebaseConsent(
+        consentGranted: Boolean,
+        consentStatus: ConsentStatus? = null,
+    ) {
         runCatching {
             val consentSignals = readConsentSignals()
             val consentState = resolveFirebaseConsentModeState(
                 canRequestAds = consentGranted,
                 signals = consentSignals,
+                consentStatus = consentStatus,
             )
             if (lastFirebaseConsentState == consentState) return
             val consentFlags = consentState.flags
@@ -1011,15 +1015,24 @@ internal fun resolveRefreshedConsentStatus(
 internal fun resolveFirebaseConsentModeState(
     canRequestAds: Boolean,
     signals: ConsentSignalSnapshot?,
-): FirebaseConsentModeState =
-    FirebaseConsentModeState(
-        flags =
-            mapToFirebaseConsentGrantedFlags(
-                canRequestAds = canRequestAds,
-                signals = signals,
-            ),
+    consentStatus: ConsentStatus? = null,
+): FirebaseConsentModeState {
+    // UMP may allow limited ads using cached state while its TCF bits are unavailable.
+    // Never treat that as Firebase consent if the last resolved choice was a refusal.
+    val validTcfBits = signals?.tcfPurposeConsents?.let { bits ->
+        bits.isNotEmpty() && bits.all { it == '0' || it == '1' }
+    } == true
+    val cachedRefusalWithoutCurrentChoice =
+        consentStatus == ConsentStatus.Denied && signals?.gdprApplies != false && !validTcfBits
+
+    return FirebaseConsentModeState(
+        flags = mapToFirebaseConsentGrantedFlags(
+            canRequestAds = canRequestAds && !cachedRefusalWithoutCurrentChoice,
+            signals = signals,
+        ),
         analyticsCollectionEnabled = ADVANCED_CONSENT_MODE_COLLECTION_ENABLED,
     )
+}
 
 internal fun mapToFirebaseConsentGrantedFlags(
     granted: Boolean,
