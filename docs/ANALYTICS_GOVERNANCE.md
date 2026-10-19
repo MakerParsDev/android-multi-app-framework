@@ -33,6 +33,11 @@ schema-version increment, parallel reporting during migration, and an explicit G
 | `ad_placement` | Ad Placement | EVENT | medium |
 | `content_id` | Content ID | EVENT | high |
 | `subscription_status` | Subscription Status | EVENT | low |
+| `ad_error_category` | Ad Error Category | EVENT | low |
+| `suppress_reason` | Ad Suppression Reason | EVENT | low |
+| `consent_trigger` | Consent Trigger | EVENT | low |
+| `ad_discard_reason` | Native Inventory Discard Reason | EVENT | low |
+| `ump_error_category` | UMP Error Category | EVENT | low |
 
 ## Custom metrics
 
@@ -141,8 +146,8 @@ Retire from key-event status:
 
 | Parameter | Types | GA4 registration | Cardinality |
 |---|---|---|---|
-| `ad_discard_reason` | string | none | not-registered |
-| `ad_error_category` | string | none | not-registered |
+| `ad_discard_reason` | string | dimension | low |
+| `ad_error_category` | string | dimension | low |
 | `ad_format` | string | dimension | low |
 | `ad_placement` | string | dimension | medium |
 | `ad_ready` | integer | none | not-registered |
@@ -161,7 +166,7 @@ Retire from key-event status:
 | `can_request_ads` | integer | none | not-registered |
 | `consent_state` | string | dimension | low |
 | `consent_status` | string | none | not-registered |
-| `consent_trigger` | string | none | not-registered |
+| `consent_trigger` | string | dimension | low |
 | `content_id` | string | dimension | high |
 | `content_type` | string | none | not-registered |
 | `currency` | string | none | not-registered |
@@ -210,13 +215,13 @@ Retire from key-event status:
 | `session_verse_count` | declared-only | none | not-registered |
 | `show_trigger` | string | none | not-registered |
 | `subscription_status` | string | dimension | low |
-| `suppress_reason` | string | none | not-registered |
+| `suppress_reason` | string | dimension | low |
 | `tab` | string | none | not-registered |
 | `time_hm` | string | none | not-registered |
 | `time_since_load_ms` | integer | none | not-registered |
 | `total_duration_ms` | integer | none | not-registered |
 | `total_watch_count` | integer | none | not-registered |
-| `ump_error_category` | string | none | not-registered |
+| `ump_error_category` | string | dimension | low |
 | `ump_form_shown` | integer | none | not-registered |
 | `ump_result` | string | none | not-registered |
 | `user_tenure_days` | declared-only | none | not-registered |
