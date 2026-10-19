@@ -19,5 +19,8 @@ class AppLaunchSmokeTest {
             composeRule.mainClock.autoAdvance = false
         }
         composeRule.onNodeWithTag("app_root").fetchSemanticsNode()
+        if (BuildConfig.CONTENT_FAMILY == "qibla") {
+            composeRule.onNodeWithTag("qibla_ready").fetchSemanticsNode()
+        }
     }
 }
