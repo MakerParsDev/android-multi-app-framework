@@ -38,19 +38,20 @@ python3 scripts/ci/check_ga4_bigquery_export.py \
   --as-of-date 2026-10-19
 ```
 
-The script issues **only** `bq ls --format=json` (metadata, no BigQuery
-data scan). It checks **three consecutive mature days** ending two
-calendar days before the supplied date. The two-day offset avoids
-misdiagnosing an ordinary next-day delay. Exit codes:
+The script issues **only** three targeted `bq show --format=json` calls (table
+metadata, no BigQuery data scan). It remains valid even if the dataset
+contains thousands of objects, and rejects same-named views. It checks
+**three consecutive mature days** ending two calendar days before the supplied date. The two-day offset avoids
+misdiagnosing an ordinary next-day delay. Always pass the reporting
+date using `--as-of-date` in the GA4 property-local calendar date. Exit codes:
 
 - `0`: daily tables for the 3 mature dates are **present**, **not**
   evidence of complete row content or stream coverage.
-- `2`: one or more required tables are **missing**.
+- `2`: one or more required tables are **missing or not actual TABLE objects**.
 - `1`: bq CLI/permissions/response/timeout/validation error;
   **never** report this as "missing tables".
 
-To check a new day, omit `--as-of-date` (uses the local machine's date,
-so ensure it matches the GA4 property's reporting calendar). The script
+To check a new day, provide that date explicitly as `--as-of-date YYYY-MM-DD` in the GA4 property's local calendar; the host machine's time zone is not trusted. The script
 does not fix quota and should not be scheduled as a write-capable job.
 
 **Once storage is restored**, require three *post-remediation*
