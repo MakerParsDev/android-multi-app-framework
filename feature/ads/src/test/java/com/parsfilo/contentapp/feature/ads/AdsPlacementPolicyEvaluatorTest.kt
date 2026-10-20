@@ -80,6 +80,46 @@ class AdsPlacementPolicyEvaluatorTest {
     }
 
     @Test
+    fun `premium blocks app open despite eligible resume`() {
+        val result = evaluator.evaluateAppOpen(
+            baseContext(
+                format = AdFormat.APP_OPEN,
+                placement = AdPlacement.APP_OPEN_RESUME,
+                isPremium = true,
+                resumeGapMs = 120_000L,
+            ),
+        )
+
+        assertThat(result).isEqualTo(AdEligibility.Blocked(AdSuppressReason.PREMIUM))
+    }
+
+    @Test
+    fun `premium blocks optional rewarded video`() {
+        val result = evaluator.evaluateRewarded(
+            baseContext(
+                format = AdFormat.REWARDED,
+                placement = AdPlacement.REWARDED_REWARDS_SCREEN,
+                isPremium = true,
+            ),
+        )
+
+        assertThat(result).isEqualTo(AdEligibility.Blocked(AdSuppressReason.PREMIUM))
+    }
+
+    @Test
+    fun `premium blocks rewarded interstitial`() {
+        val result = evaluator.evaluateRewardedInterstitial(
+            baseContext(
+                format = AdFormat.REWARDED_INTERSTITIAL,
+                placement = AdPlacement.REWARDED_INTERSTITIAL_HISTORY_UNLOCK,
+                isPremium = true,
+            ),
+        )
+
+        assertThat(result).isEqualTo(AdEligibility.Blocked(AdSuppressReason.PREMIUM))
+    }
+
+    @Test
     fun `interstitial blocks route blacklist`() {
         every { adsPolicyProvider.getPolicy() } returns defaultPolicy(
             interstitialRouteBlocklist = setOf(InterstitialTriggerKind.MODE_SWITCH.analyticsValue),
