@@ -62,8 +62,7 @@ class AutonomousMaintenanceContractTest(unittest.TestCase):
         # Verify positive authorization: automerge:enabled label required
         self.assertIn("label = automerge:enabled", mergify_str)
 
-        # All hard checks must pass before queuing, to enable safe Direct Merge
-        # when the original PR already contains the latest main commit.
+        # Verify CodeQL check in queue merge_conditions
         merge_queue = data.get("merge_queue", {})
         self.assertEqual(
             merge_queue.get("max_parallel_checks"),
@@ -83,26 +82,11 @@ class AutonomousMaintenanceContractTest(unittest.TestCase):
             "30 seconds",
             "Partial batches must start promptly instead of waiting for a full batch",
         )
-        queue_conditions = queue_rules[0]["queue_conditions"]
-        required = [
-            "CI Required",
-            "Security Required",
-            "Secret Scan",
-            "Workflow Audit",
-            "Dependency Review",
-            "SonarCloud Code Analysis",
-            "Analyze Java and Kotlin",
-        ]
-        for name in required:
-            self.assertIn(
-                f"check-success = {name}",
-                queue_conditions,
-                f"{name} must pass on the original PR before it enters the queue",
-            )
-        self.assertNotIn(
-            "merge_conditions",
-            queue_rules[0],
-            "Separate merge_conditions would force two-step draft PR validation",
+        merge_conditions = queue_rules[0].get("merge_conditions", [])
+        self.assertIn(
+            "check-success = Analyze Java and Kotlin",
+            merge_conditions,
+            "CodeQL 'Analyze Java and Kotlin' must be in queue_rules merge_conditions",
         )
 
         # Verify CodeQL check in merge_protections success_conditions

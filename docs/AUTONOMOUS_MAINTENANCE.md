@@ -104,9 +104,7 @@ Configured in `.mergify.yml` using the latest official schema:
   - `max_parallel_checks: 2` caps speculative CI fan-out so the queue cannot multiply the full Android/CodeQL pipeline without bound.
 - **`queue_rules`**:
   - `name: default`, `merge_method: squash`, `batch_size: 3`, `batch_max_wait_time: 30 seconds`.
-  - The original PR must pass all seven required CI/security/SonarCloud/CodeQL checks before entering the queue; GitHub Ruleset and Merge Protections remain mandatory.
-  - The queue has no separate two-step `merge_conditions`, allowing Mergify Direct Merge when a single PR already includes the current `main` tip. This prevents draft-only queue checks from waiting forever for SonarCloud automatic analysis, which does not emit a check on Mergify's draft PR.
-  - When multiple PRs must be tested together, batches of up to three are still supported; a partial batch starts after at most 30 seconds and failed batches are split automatically. Batch CI still needs to satisfy the required checks, including SonarCloud.
+  - Up to three ready PRs are validated as one batch. A partial batch starts after at most 30 seconds, and Mergify automatically splits a failing batch to isolate the offending PR.
 
 ---
 

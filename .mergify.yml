@@ -18,9 +18,7 @@ queue_rules:
       - -label = do-not-merge
       - -label = hold
       - -label = automerge:disabled
-      # Gate on the original PR so the queue can directly merge an up-to-date
-      # PR without waiting for SonarCloud on a temporary draft batch PR.
-      # Merge Protections and the GitHub ruleset still enforce the same checks.
+    merge_conditions:
       - check-success = CI Required
       - check-success = Security Required
       - check-success = Secret Scan
