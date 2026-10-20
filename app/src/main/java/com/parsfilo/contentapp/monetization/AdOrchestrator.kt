@@ -814,8 +814,11 @@ class AdOrchestrator
                 combine(
                     AdsConsentRuntimeState.canRequestAds,
                     adGateChecker.shouldShowAds,
-                ) { consentGranted, adsAllowedByGate ->
-                    consentGranted && adsAllowedByGate
+                    adManager.isSdkReady,
+                ) { canRequestAds, adsAllowedByGate, sdkReady ->
+                    // SDK initialization can overlap UMP refresh; never start
+                    // synchronous ad-loader construction before it completes.
+                    canRequestAds && adsAllowedByGate && sdkReady
                 }.distinctUntilChanged()
                     .collect { canPreload ->
                         Timber.d("Ad gate observer changed canPreload=%s", canPreload)
