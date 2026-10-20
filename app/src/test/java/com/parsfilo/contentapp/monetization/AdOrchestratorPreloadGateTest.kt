@@ -102,6 +102,15 @@ class AdOrchestratorPreloadGateTest {
         runCurrent()
         verify(exactly = 1) { interstitial.loadAd(any(), any(), any(), any(), any()) }
 
+        // A paid or temporarily ad-free user must not preload, even with the SDK ready.
+        adsAllowed.value = false
+        runCurrent()
+        verify(exactly = 1) { interstitial.loadAd(any(), any(), any(), any(), any()) }
+
+        adsAllowed.value = true
+        runCurrent()
+        verify(exactly = 2) { interstitial.loadAd(any(), any(), any(), any(), any()) }
+
         AdsConsentRuntimeState.update(false)
         runCurrent()
         verify(atLeast = 1) { interstitial.clearAd() }
@@ -109,6 +118,6 @@ class AdOrchestratorPreloadGateTest {
         // SDK ready alone cannot reopen the ad gate after consent is revoked.
         assertEquals(false, AdsConsentRuntimeState.canRequestAds.value)
         runCurrent()
-        verify(exactly = 1) { interstitial.loadAd(any(), any(), any(), any(), any()) }
+        verify(exactly = 2) { interstitial.loadAd(any(), any(), any(), any(), any()) }
     }
 }
