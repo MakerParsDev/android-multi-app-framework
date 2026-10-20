@@ -28,8 +28,8 @@ import com.parsfilo.contentapp.core.firebase.logConsentGranted
 import com.parsfilo.contentapp.core.firebase.logConsentMissing
 import com.parsfilo.contentapp.core.firebase.logConsentNotRequired
 import com.parsfilo.contentapp.core.firebase.logConsentRefreshed
-import com.parsfilo.contentapp.core.firebase.logPrivacyOptionsOpened
 import com.parsfilo.contentapp.core.firebase.logPrivacyOptionsError
+import com.parsfilo.contentapp.core.firebase.logPrivacyOptionsOpened
 import com.parsfilo.contentapp.core.firebase.setConsentStatusProperty
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
