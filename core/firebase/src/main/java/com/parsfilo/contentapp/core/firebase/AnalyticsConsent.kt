@@ -72,6 +72,20 @@ fun AppAnalytics.logConsentError(
     )
 }
 
+/**
+ * Report a privacy-options form failure without changing an already established consent state.
+ * A form display error does not revoke or reclassify the user's previous consent choice.
+ */
+fun AppAnalytics.logPrivacyOptionsError(errorCategory: String) {
+    logEvent(
+        AnalyticsEventName.CONSENT_ERROR,
+        Bundle().apply {
+            putString(AnalyticsParamKey.CONSENT_TRIGGER, "privacy_options")
+            putString(AnalyticsParamKey.UMP_ERROR_CATEGORY, errorCategory)
+        },
+    )
+}
+
 fun AppAnalytics.logConsentMissing(trigger: String, ageGateResult: String) {
     setUserProperty(AnalyticsUserPropertyKey.CONSENT_STATUS, "missing")
     setDefaultEventParameter(AnalyticsParamKey.CONSENT_STATE, "missing")
