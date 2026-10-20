@@ -37,13 +37,13 @@
     },
     {
       "coordinate": "ch.qos.logback:logback-core",
-      "version": "1.6.3",
-      "reason": "Security floor retaining the prior Logback fixes and adding the CVE-2026-19880 path-traversal remediation in 1.6.3."
+      "version": "1.6.5",
+      "reason": "Security floor including the CVE-2026-104721 path-traversal fix for MDCBasedDiscriminator, addressing the incomplete protection in 1.6.3."
     },
     {
       "coordinate": "ch.qos.logback:logback-classic",
-      "version": "1.6.3",
-      "reason": "Keep Logback Classic aligned with the secured Core 1.6.3 family so build and lint tooling do not run with mixed Logback versions."
+      "version": "1.6.5",
+      "reason": "Keep Logback Classic aligned with the secured Core 1.6.5 family so build and lint tooling do not run with mixed Logback versions."
     },
     {
       "coordinate": "org.bitbucket.b_c:jose4j",
