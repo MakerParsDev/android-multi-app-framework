@@ -82,13 +82,14 @@ export const verifyPurchase = onRequest(
             });
 
             res.status(200).json(verification);
-        } catch (error) {
+        } catch {
+            // Play API errors can embed the purchase token in the request URL.
+            // Record the operation context only, never the upstream error object.
             logger.error("verifyPurchase failed", {
                 uid: authResult.uid,
                 packageName: payload.value.packageName,
                 productId: payload.value.productId,
                 purchaseType: payload.value.purchaseType,
-                error,
             });
             const fallback: VerifyPurchaseResponse = {
                 verified: false,

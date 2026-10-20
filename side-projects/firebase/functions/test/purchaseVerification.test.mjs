@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { inspect } from "node:util";
 import { after, before, mock, test } from "node:test";
 import { createRequire } from "node:module";
 
@@ -132,7 +134,10 @@ test("Google Play v186 purchase verifier preserves fail-closed premium entitleme
       token: "fake-purchase-token",
     });
     assert.equal(writes.at(-1).data.verified, true);
-    assert.notEqual(writes.at(-1).data.tokenHash, "fake-purchase-token");
+    assert.equal(
+      writes.at(-1).data.tokenHash,
+      createHash("sha256").update("fake-purchase-token").digest("hex"),
+    );
     assert.equal("purchaseToken" in writes.at(-1).data, false);
   });
 
@@ -188,14 +193,23 @@ test("Google Play v186 purchase verifier preserves fail-closed premium entitleme
   await t.test("Play API error denies entitlement and never persists verified status", async () => {
     const beforeWrites = writes.length;
     const beforeErrorLogs = errorLogs.length;
-    playError = new Error("synthetic Google Play API failure");
+    const unsafeUrl = "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.example.test/purchases/subscriptionsv2/tokens/fake-purchase-token";
+    playError = new Error(`synthetic Play API failure: ${unsafeUrl}`);
+    playError.response = { config: { url: unsafeUrl }, status: 403 };
     try {
       const response = await invoke(fakeRequest());
       assert.equal(response.code, 502);
       assert.equal(response.payload.verified, false);
       assert.equal(writes.length, beforeWrites);
       assert.equal(errorLogs.length, beforeErrorLogs + 1);
-      assert.equal(JSON.stringify(errorLogs.at(-1)).includes("fake-purchase-token"), false);
+      assert.equal(errorLogs.at(-1)[0], "verifyPurchase failed");
+      assert.deepEqual(Object.keys(errorLogs.at(-1)[1]).sort(), [
+        "packageName", "productId", "purchaseType", "uid",
+      ]);
+      assert.equal(
+        inspect(errorLogs.at(-1), { depth: 8, showHidden: true }).includes("fake-purchase-token"),
+        false,
+      );
     } finally {
       playError = undefined;
     }
