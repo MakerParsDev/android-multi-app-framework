@@ -38,12 +38,12 @@
     {
       "coordinate": "ch.qos.logback:logback-core",
       "version": "1.6.5",
-      "reason": "Security floor including the CVE-2026-104721 path-traversal fix for MDCBasedDiscriminator, addressing the incomplete protection in 1.6.3."
+      "reason": "Keep Logback Core aligned with Classic 1.6.5 so Gradle build and lint tooling do not resolve mixed Logback family versions."
     },
     {
       "coordinate": "ch.qos.logback:logback-classic",
       "version": "1.6.5",
-      "reason": "Keep Logback Classic aligned with the secured Core 1.6.5 family so build and lint tooling do not run with mixed Logback versions."
+      "reason": "Include the CVE-2026-104721 MDCBasedDiscriminator path-traversal fix (incomplete in Classic 1.6.3) and keep Classic aligned with Core 1.6.5."
     },
     {
       "coordinate": "org.bitbucket.b_c:jose4j",
