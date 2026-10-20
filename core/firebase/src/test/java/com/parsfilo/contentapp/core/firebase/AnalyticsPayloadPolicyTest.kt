@@ -149,6 +149,28 @@ class AnalyticsPayloadPolicyTest {
     }
 
     @Test
+    fun privacyOptionsFailureLogsBoundedCategoryWithoutChangingConsentState() {
+        val firebaseAnalytics = mockk<FirebaseAnalytics>(relaxed = true)
+        val forwarded = mutableListOf<Bundle>()
+        every { firebaseAnalytics.logEvent(any(), any<Bundle>()) } answers {
+            forwarded += secondArg<Bundle>()
+        }
+        val appAnalytics = AppAnalytics(firebaseAnalytics)
+
+        appAnalytics.logPrivacyOptionsError("privacy_options_form_network")
+
+        val payload = forwarded.single()
+        assertThat(payload.getString(AnalyticsParamKey.UMP_ERROR_CATEGORY))
+            .isEqualTo("privacy_options_form_network")
+        assertThat(payload.getString(AnalyticsParamKey.CONSENT_TRIGGER))
+            .isEqualTo("privacy_options")
+        assertThat(payload.containsKey(AnalyticsParamKey.ERROR_MESSAGE)).isFalse()
+        assertThat(payload.containsKey(AnalyticsParamKey.CONSENT_STATUS)).isFalse()
+        verify(exactly = 0) { firebaseAnalytics.setUserProperty(any(), any()) }
+        verify(exactly = 0) { firebaseAnalytics.setDefaultEventParameters(any()) }
+    }
+
+    @Test
     fun consentErrorsRetainLowCardinalityCategoryButNeverForwardRawText() {
         val firebaseAnalytics = mockk<FirebaseAnalytics>(relaxed = true)
         val forwarded = mutableListOf<Bundle>()
