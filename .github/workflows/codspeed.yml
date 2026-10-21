@@ -65,3 +65,9 @@ jobs:
         with:
           mode: walltime
           run: ./gradlew -p benchmarks jmh --no-daemon
+
+      # Read-only diagnostic output, no artifacts or new paid storage.
+      # Missing/invalid JMH JSON must not change CodSpeed's existing verdict.
+      - name: Report sanitized JMH samples
+        if: ${{ always() }}
+        run: python3 benchmarks/tools/report_jmh_samples.py benchmarks/build/results/jmh/results.json
