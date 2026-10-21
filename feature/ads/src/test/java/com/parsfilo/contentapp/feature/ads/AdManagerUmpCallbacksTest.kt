@@ -13,6 +13,7 @@ import com.google.android.ump.UserMessagingPlatform
 import com.google.common.truth.Truth.assertThat
 import com.parsfilo.contentapp.core.datastore.PreferencesDataSource
 import com.parsfilo.contentapp.core.datastore.UserPreferencesData
+import com.parsfilo.contentapp.core.firebase.AnalyticsParamKey
 import com.parsfilo.contentapp.core.firebase.AppAnalytics
 import com.parsfilo.contentapp.core.firebase.RuntimeObservability
 import io.mockk.Runs
@@ -146,7 +147,17 @@ class AdManagerUmpCallbacksTest {
         assertThat((result as ConsentStatus.Error).retryEligibleAtMillis)
             .isGreaterThan(System.currentTimeMillis())
         assertThat(manager.canRequestAds.value).isFalse()
-        verify(exactly = 1) { analytics.logEvent("consent_error", any()) }
+        verify(exactly = 1) {
+            analytics.logEvent(
+                "consent_error",
+                withArg { params ->
+                    assertThat(params?.getString(AnalyticsParamKey.UMP_ERROR_CATEGORY))
+                        .isEqualTo("runtime_refresh_network")
+                    assertThat(params?.getString(AnalyticsParamKey.CONSENT_TRIGGER))
+                        .isEqualTo("runtime")
+                },
+            )
+        }
         verify(exactly = 0) { analytics.logEvent("consent_granted", any()) }
     }
 
@@ -233,7 +244,43 @@ class AdManagerUmpCallbacksTest {
 
         assertThat(manager.consentStatus.value).isEqualTo(ConsentStatus.Denied)
         assertThat(manager.canRequestAds.value).isFalse()
-        verify(exactly = 1) { analytics.logEvent("consent_error", any()) }
+        verify(exactly = 1) {
+            analytics.logEvent(
+                "consent_error",
+                withArg { params ->
+                    assertThat(params?.getString(AnalyticsParamKey.UMP_ERROR_CATEGORY))
+                        .isEqualTo("cold_start_form_invalid_operation")
+                    assertThat(params?.getString(AnalyticsParamKey.CONSENT_TRIGGER))
+                        .isEqualTo("cold_start")
+                },
+            )
+        }
+        verify(exactly = 0) { analytics.logEvent("consent_granted", any()) }
+    }
+
+    @Test
+    fun coldStartInfoUpdateFailurePreservesStageSpecificErrorCategory() {
+        every { preferences.adsLastSuccessfulConsentStatus } returns flowOf("granted")
+        manager.initialize(activity)
+        idleMain()
+
+        failure.captured.onConsentInfoUpdateFailure(
+            FormError(FormError.ErrorCode.INTERNET_ERROR, "synthetic consent network failure"),
+        )
+        idleMain()
+
+        assertThat(manager.canRequestAds.value).isFalse()
+        verify(exactly = 1) {
+            analytics.logEvent(
+                "consent_error",
+                withArg { params ->
+                    assertThat(params?.getString(AnalyticsParamKey.UMP_ERROR_CATEGORY))
+                        .isEqualTo("cold_start_info_update_network")
+                    assertThat(params?.getString(AnalyticsParamKey.CONSENT_TRIGGER))
+                        .isEqualTo("cold_start")
+                },
+            )
+        }
         verify(exactly = 0) { analytics.logEvent("consent_granted", any()) }
     }
 }
