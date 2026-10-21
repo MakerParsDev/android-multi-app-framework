@@ -37,11 +37,14 @@ python3 benchmarks/tools/summarize_jmh_runs.py \
   /tmp/amf-451-local-strong-run3-20261021.json --json
 ```
 
-The JMH analyzer checks benchmark name sets, units, measurement modes, warmup
-and measurement settings, then calculates descriptive min, max, average,
-(max–min)/min, and across-run coefficient of variation. It rejects different
-benchmark modes and sampling configurations rather than silently combining
-numbers. It cannot verify that input files were measured on the same CPU or
+The JMH analyzer checks benchmark name sets, units, measurement modes,
+warmup/measurement settings **and the JMH/JDK/VM versions, JVM arguments,
+thread/fork/batch settings and raw sample counts**. It rejects missing or
+truncated raw fork/iteration samples, duplicate run JSON (including copied
+files) and incompatible JVM configurations rather than silently combining
+numbers. It then calculates descriptive min, max,
+average, (max–min)/min, across-run coefficient of variation, and reports
+samples per run. This requires full JMH JSON files, not only summary rows. It cannot verify that input files were measured on the same CPU or
 at the same source revision; check that separately. The three-run example
 is exploratory and not a statistical proof of a regression or an estimate of
 CodSpeed's hosted Walltime noise floor.

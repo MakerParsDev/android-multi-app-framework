@@ -6,6 +6,7 @@ comparisons require their own provenance and source compatibility evidence.
 """
 
 import argparse
+import hashlib
 import json
 import math
 import statistics
@@ -32,13 +33,50 @@ def load_run(path: Path) -> dict[str, dict]:
             raise ValueError(f"{path}: invalid positive finite score for {name}")
         unit = metric.get("scoreUnit")
         mode = item.get("mode")
-        # Exact JMH configuration matters; avoid comparing mixed sample plans.
-        settings = tuple(item.get(f) for f in (
-            "forks", "warmupIterations", "measurementIterations",
-            "warmupTime", "measurementTime",
-        ))
-        if not isinstance(unit, str) or not isinstance(mode, str) or None in settings:
-            raise ValueError(f"{path}: missing benchmark mode/unit/settings for {name}")
+        # Both the measurement plan and JVM identity can affect the score.
+        # A compatible benchmark name/mode/iteration count alone is insufficient.
+        setting_keys = (
+            "jmhVersion", "jvm", "jvmArgs", "jdkVersion", "vmName",
+            "vmVersion", "threads", "forks", "warmupIterations",
+            "measurementIterations", "warmupTime", "measurementTime",
+            "warmupBatchSize", "measurementBatchSize",
+        )
+        settings = tuple(item.get(f) for f in setting_keys)
+        if (
+            not isinstance(unit, str) or not unit or not isinstance(mode, str)
+            or not mode or None in settings
+            or not isinstance(item.get("jvmArgs"), list)
+            or any(not isinstance(arg, str) for arg in item["jvmArgs"])
+        ):
+            raise ValueError(f"{path}: missing benchmark mode/unit/JVM/settings for {name}")
+        # Lists are mutable and cannot compare safely to run metadata tuples.
+        settings = tuple(
+            tuple(value) if isinstance(value, list) else value
+            for value in settings
+        )
+        forks = item["forks"]
+        iterations = item["measurementIterations"]
+        if (
+            type(forks) is not int or forks < 1
+            or type(iterations) is not int or iterations < 1
+        ):
+            raise ValueError(f"{path}: invalid JMH fork/iteration settings for {name}")
+        # A score without the underlying samples can mask a truncated or
+        # synthesized result. Require the expected number of fork samples.
+        raw = metric.get("rawData")
+        if (
+            not isinstance(raw, list) or len(raw) != forks
+            or any(
+                not isinstance(sample, list) or len(sample) != iterations
+                or any(
+                    isinstance(value, bool) or not isinstance(value, (float, int))
+                    or not math.isfinite(value) or value <= 0
+                    for value in sample
+                )
+                for sample in raw
+            )
+        ):
+            raise ValueError(f"{path}: missing/invalid JMH raw samples for {name}")
         if name in records:
             raise ValueError(f"{path}: duplicate benchmark {name}")
         records[name] = {
@@ -46,6 +84,7 @@ def load_run(path: Path) -> dict[str, dict]:
             "unit": unit,
             "mode": mode,
             "settings": settings,
+            "samples": sum(len(fork) for fork in raw),
         }
     return records
 
@@ -53,6 +92,11 @@ def load_run(path: Path) -> dict[str, dict]:
 def summarize(paths: list[Path]) -> dict:
     if len(paths) < 2:
         raise ValueError("at least two independent JMH JSON runs are required")
+    # Passing one run twice would give a misleading zero-variability estimate.
+    # Even copied byte-identical JSON is not evidence of independent launches.
+    hashes = [hashlib.sha256(p.read_bytes()).digest() for p in paths]
+    if len(set(hashes)) != len(paths):
+        raise ValueError("duplicate JMH run content; independent runs required")
     parsed = [load_run(p) for p in paths]
     names = set(parsed[0])
     for idx, current in enumerate(parsed[1:], start=1):
@@ -74,6 +118,7 @@ def summarize(paths: list[Path]) -> dict:
             "mode": first["mode"],
             "unit": first["unit"],
             "runs": scores,
+            "samples_per_run": [run[name]["samples"] for run in parsed],
             "mean": avg,
             "min": min(scores),
             "max": max(scores),
@@ -85,7 +130,7 @@ def summarize(paths: list[Path]) -> dict:
         "benchmarks": series,
         "caveat": (
             "Descriptive across-run variation only, not a significance test or "
-            "a CodSpeed noise-floor estimate. Confirm source/host/JVM provenance "
+            "a CodSpeed noise-floor estimate. Confirm source/host provenance "
             "before treating repeated measurements as comparable."
         ),
     }
