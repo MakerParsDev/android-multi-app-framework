@@ -41,6 +41,22 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
 
+      # Diagnostics only: hosted Walltime runners may have different CPUs and images.
+      # Print nonsecret hardware/runtime metadata before interpreting CodSpeed deltas.
+      - name: Report benchmark runner environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'runner_os=%s\n' "${RUNNER_OS:-unknown}"
+          printf 'runner_arch=%s\n' "${RUNNER_ARCH:-unknown}"
+          printf 'runner_image_os=%s\n' "${ImageOS:-unknown}"
+          printf 'runner_image_version=%s\n' "${ImageVersion:-unknown}"
+          printf 'kernel_arch=%s\n' "$(uname -m)"
+          cpu_model="$(awk -F: '/^model name[[:space:]]*:/ { sub(/^[[:space:]]+/, "", $2); print $2; exit }' /proc/cpuinfo)"
+          printf 'cpu_model=%s\n' "${cpu_model:-unknown}"
+          printf 'available_processors=%s\n' "$(nproc)"
+          java -version
+
       - name: Build benchmarks
         run: ./gradlew -p benchmarks jmhJar --no-daemon
 
