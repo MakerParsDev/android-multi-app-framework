@@ -13,8 +13,8 @@ import com.google.android.ump.UserMessagingPlatform
 import com.google.common.truth.Truth.assertThat
 import com.parsfilo.contentapp.core.datastore.PreferencesDataSource
 import com.parsfilo.contentapp.core.datastore.UserPreferencesData
-import com.parsfilo.contentapp.core.firebase.AppAnalytics
 import com.parsfilo.contentapp.core.firebase.AnalyticsParamKey
+import com.parsfilo.contentapp.core.firebase.AppAnalytics
 import com.parsfilo.contentapp.core.firebase.RuntimeObservability
 import io.mockk.Runs
 import io.mockk.coEvery
