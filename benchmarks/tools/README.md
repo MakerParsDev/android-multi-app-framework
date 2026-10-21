@@ -108,3 +108,11 @@ interval, or equivalent CodSpeed profiler performance score. More raw
 samples and repeated independent runs are required for a justified
 regression conclusion. A mismatch returns exit 2; missing/unverifiable
 evidence returns exit 3. Do not wire this helper into required CI checks.
+
+## Prospective repeatability planning
+
+See [REPEATABILITY_PROTOCOL.md](REPEATABILITY_PROTOCOL.md) for a preregistration
+checklist, separation of locally estimated JMH variability from CodSpeed's
+hosted Walltime variability, multiple-comparison handling, and the
+non-gating `plan_jmh_repetitions.py` helper. The helper reports a
+**planning scenario**, not a statistical acceptance decision.
