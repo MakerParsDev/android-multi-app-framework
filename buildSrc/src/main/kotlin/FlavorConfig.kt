@@ -22,6 +22,8 @@ object AppFlavors {
             audioFileName = "amenerrasulu.mp3",
             contentFamily = "content",
             monetizationProfile = "reading",
+            // data.json has 2 verses; ContentScreen only inserts native slots at >= 12.
+            capabilityFlags = listOf("no_inline_native_slot"),
         ),
         FlavorConfig(
             name = "ayetelkursi",
