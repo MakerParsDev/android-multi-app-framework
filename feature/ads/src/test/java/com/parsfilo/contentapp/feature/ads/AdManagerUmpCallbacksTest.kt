@@ -55,6 +55,7 @@ class AdManagerUmpCallbacksTest {
     private val success = slot<ConsentInformation.OnConsentInfoUpdateSuccessListener>()
     private val failure = slot<ConsentInformation.OnConsentInfoUpdateFailureListener>()
     private val formDismissed = slot<ConsentForm.OnConsentFormDismissedListener>()
+    private val privacyFormDismissed = slot<ConsentForm.OnConsentFormDismissedListener>()
     private lateinit var manager: AdManager
 
     @Before
@@ -67,6 +68,9 @@ class AdManagerUmpCallbacksTest {
         } just Runs
         every {
             UserMessagingPlatform.loadAndShowConsentFormIfRequired(any(), capture(formDismissed))
+        } just Runs
+        every {
+            UserMessagingPlatform.showPrivacyOptionsForm(any(), capture(privacyFormDismissed))
         } just Runs
         every { consentInfo.canRequestAds() } returns false
         every { MobileAds.getRequestConfiguration() } returns RequestConfiguration.Builder().build()
@@ -255,6 +259,49 @@ class AdManagerUmpCallbacksTest {
                 },
             )
         }
+        verify(exactly = 0) { analytics.logEvent("consent_granted", any()) }
+    }
+
+    @Test
+    fun privacyOptionsFormFailureEmitsCategoryWithoutChangingPreviousRefusal() {
+        setExplicitEeaRefusal()
+        every { consentInfo.privacyOptionsRequirementStatus } returns
+            ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED
+        manager.refreshConsent(activity)
+        idleMain()
+        success.captured.onConsentInfoUpdateSuccess()
+        idleMain()
+        assertThat(manager.consentStatus.value).isEqualTo(ConsentStatus.Denied)
+
+        var completed: Boolean? = null
+        manager.showPrivacyOptions(activity) { completed = it }
+        idleMain()
+        privacyFormDismissed.captured.onConsentFormDismissed(
+            FormError(FormError.ErrorCode.INTERNET_ERROR, "email person@example.com token=secret"),
+        )
+        idleMain()
+
+        assertThat(manager.consentStatus.value).isEqualTo(ConsentStatus.Denied)
+        assertThat(completed).isNull()
+        verify(exactly = 1) {
+            analytics.logEvent(
+                "consent_error",
+                withArg { params ->
+                    assertThat(params.getString(AnalyticsParamKey.UMP_ERROR_CATEGORY))
+                        .isEqualTo("privacy_options_form_network")
+                    assertThat(params.getString(AnalyticsParamKey.CONSENT_TRIGGER))
+                        .isEqualTo("privacy_options")
+                    assertThat(params.containsKey(AnalyticsParamKey.ERROR_MESSAGE)).isFalse()
+                },
+            )
+        }
+        verify(exactly = 0) { analytics.logEvent("consent_granted", any()) }
+
+        success.captured.onConsentInfoUpdateSuccess()
+        idleMain()
+        assertThat(completed).isFalse()
+        assertThat(manager.consentStatus.value).isEqualTo(ConsentStatus.Denied)
+        assertThat(manager.canRequestAds.value).isFalse()
         verify(exactly = 0) { analytics.logEvent("consent_granted", any()) }
     }
 
