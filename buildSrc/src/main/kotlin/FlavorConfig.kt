@@ -32,6 +32,7 @@ object AppFlavors {
             audioFileName = "ayetelkursi.mp3",
             contentFamily = "content",
             monetizationProfile = "reading",
+            capabilityFlags = listOf("no_inline_native_slot"),
         ),
         FlavorConfig(
             name = "bereketduasi",
@@ -39,6 +40,7 @@ object AppFlavors {
             packageName = "com.parsfilo.bereketduasi",
             audioFileName = "bereketduasi.mp3",
             contentFamily = "content",
+            capabilityFlags = listOf("no_inline_native_slot"),
         ),
         FlavorConfig(
             name = "esmaulhusna",
@@ -61,6 +63,7 @@ object AppFlavors {
             packageName = "com.parsfilo.insirahsuresi",
             audioFileName = "insirahsuresi.mp3",
             contentFamily = "content",
+            capabilityFlags = listOf("no_inline_native_slot"),
         ),
         FlavorConfig(
             name = "ismiazamduasi",
@@ -121,6 +124,7 @@ object AppFlavors {
             packageName = "com.parsfilo.nazarayeti",
             audioFileName = "nazarayeti.mp3",
             contentFamily = "content",
+            capabilityFlags = listOf("no_inline_native_slot"),
         ),
         FlavorConfig(
             name = "vakiasuresi",

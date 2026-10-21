@@ -114,9 +114,11 @@ class AdOrchestratorPreloadGateTest {
         runCurrent()
         verify(exactly = 2) { interstitial.loadAd(any(), any(), any(), any(), any()) }
 
-        // This two-verse flavor has no eligible inline native UI slot. It must
-        // not request an unused native ad while other formats still preload.
-        if (BuildConfig.FLAVOR_NAME == "amenerrasulu") {
+        // Short-content flavors have fewer than 12 verses and cannot compose
+        // an inline native slot. Avoid loading ads they can never display.
+        val noNativeSlotFlavors =
+            setOf("amenerrasulu", "ayetelkursi", "bereketduasi", "insirahsuresi", "nazarayeti")
+        if (BuildConfig.FLAVOR_NAME in noNativeSlotFlavors) {
             assertTrue(AppProductDefinition.current.hasCapability("no_inline_native_slot"))
             verify(exactly = 0) { native.loadAds(any(), any(), any(), any()) }
         } else {
