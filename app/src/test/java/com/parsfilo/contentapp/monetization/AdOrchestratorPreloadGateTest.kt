@@ -2,6 +2,7 @@ package com.parsfilo.contentapp.monetization
 
 import android.app.Activity
 import android.content.Context
+import com.parsfilo.contentapp.BuildConfig
 import com.parsfilo.contentapp.core.datastore.PreferencesDataSource
 import com.parsfilo.contentapp.feature.ads.AdGateChecker
 import com.parsfilo.contentapp.feature.ads.AdManager
@@ -16,6 +17,7 @@ import com.parsfilo.contentapp.feature.ads.NativeAdManager
 import com.parsfilo.contentapp.feature.ads.RewardedAdManager
 import com.parsfilo.contentapp.feature.ads.RewardedInterstitialAdManager
 import com.parsfilo.contentapp.feature.ads.RewardedInterstitialCoordinator
+import com.parsfilo.contentapp.product.AppProductDefinition
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -29,6 +31,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -110,6 +113,16 @@ class AdOrchestratorPreloadGateTest {
         adsAllowed.value = true
         runCurrent()
         verify(exactly = 2) { interstitial.loadAd(any(), any(), any(), any(), any()) }
+
+        // This two-verse flavor has no eligible inline native UI slot. It must
+        // not request an unused native ad while other formats still preload.
+        if (BuildConfig.FLAVOR_NAME == "amenerrasulu") {
+            assertTrue(AppProductDefinition.current.hasCapability("no_inline_native_slot"))
+            verify(exactly = 0) { native.loadAds(any(), any(), any(), any()) }
+        } else {
+            // Other flavors retain their existing native preload behavior.
+            verify(atLeast = 1) { native.loadAds(any(), any(), any(), any()) }
+        }
 
         AdsConsentRuntimeState.update(false)
         runCurrent()

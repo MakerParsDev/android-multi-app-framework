@@ -29,6 +29,7 @@ import com.parsfilo.contentapp.feature.ads.RewardedInterstitialCoordinator
 import com.parsfilo.contentapp.feature.ads.RewardedInterstitialIntroSpec
 import com.parsfilo.contentapp.feature.ads.RewardedInterstitialLaunchToken
 import com.parsfilo.contentapp.feature.ads.SystemTimeProvider
+import com.parsfilo.contentapp.product.AppProductDefinition
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.SupervisorJob
@@ -905,7 +906,10 @@ class AdOrchestrator
                 adSessionContext.activeRoute,
                 loadReason = reason.analyticsValue,
             )
-            if (!policy.demandAwarePreloadEnabled) {
+            if (
+                !policy.demandAwarePreloadEnabled &&
+                !AppProductDefinition.current.hasCapability("no_inline_native_slot")
+            ) {
                 nativeAdManager.loadAds(
                     context,
                     AppAdUnitIds.resolvePlacement(
