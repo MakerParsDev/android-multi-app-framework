@@ -68,3 +68,43 @@ overrides the original CodSpeed job/check result.
 separate profiler-based performance-analysis scores. They may be useful for
 debugging sample completeness and run-to-run variation only. Do not infer an
 equivalent CodSpeed Walltime delta or relax the required checks based on them.
+
+
+## Compare JMH evidence from complete GitHub Actions logs
+
+For any two **independent** runs containing the diagnostic step added in #457:
+
+```bash
+gh run view BASE_RUN_ID -R MakerParsDev/android-multi-app-framework --log > /tmp/base.log
+gh run view HEAD_RUN_ID -R MakerParsDev/android-multi-app-framework --log > /tmp/head.log
+python3 benchmarks/tools/compare_jmh_action_logs.py \
+  /tmp/base.log /tmp/head.log --json
+```
+
+By default the analyzer **refuses to calculate a percentage**. It checks
+complete `jmh_evidence_status=available` counts and every bounded numeric
+record, compares CPU model, runner image, JVM, processor allocation,
+benchmark set/mode/unit and per-fork sample lengths. Invalid/missing data,
+copied/identical log files, and mismatched environments fail closed.
+
+If the benchmark source trees were independently verified via the GitHub
+commit history, supply their exact Git SHA-1 tree IDs:
+
+```bash
+git rev-parse BASE_COMMIT:benchmarks/src/jmh
+git rev-parse HEAD_COMMIT:benchmarks/src/jmh
+python3 benchmarks/tools/compare_jmh_action_logs.py \
+  /tmp/base.log /tmp/head.log \
+  --base-benchmark-tree BASE_TREE_SHA \
+  --head-benchmark-tree HEAD_TREE_SHA --json
+```
+
+A `descriptive_review_only` result (exit 0) means runner metadata,
+benchmark source tree IDs, sample shapes and units *appear* compatible.
+The script computes only a **descriptive head-versus-base JMH percentage**;
+it cannot independently authenticate user-supplied Git tree IDs or prove the
+host was otherwise stable. It does not calculate a p-value, confidence
+interval, or equivalent CodSpeed profiler performance score. More raw
+samples and repeated independent runs are required for a justified
+regression conclusion. A mismatch returns exit 2; missing/unverifiable
+evidence returns exit 3. Do not wire this helper into required CI checks.
