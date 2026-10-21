@@ -48,3 +48,23 @@ samples per run. This requires full JMH JSON files, not only summary rows. It ca
 at the same source revision; check that separately. The three-run example
 is exploratory and not a statistical proof of a regression or an estimate of
 CodSpeed's hosted Walltime noise floor.
+
+
+## Numeric JMH evidence in existing benchmark job logs
+
+The optional diagnostic step in `.github/workflows/codspeed.yml` prints only
+allowlisted numeric JMH `primaryMetric.score` and per-fork `rawData`
+values and safe benchmark labels from the local
+`benchmarks/build/results/jmh/results.json`. The JMH fork already writes this
+file during a benchmark run. No new network request, GitHub artifact retention,
+secrets, JVM arguments or source paths are published.
+
+Look for the `jmh_evidence_status` and `jmh_evidence=` prefixed records
+under the **Report sanitized JMH samples** step. The step always returns
+success, even if an upstream benchmark failure left no valid JSON; it never
+overrides the original CodSpeed job/check result.
+
+**Important:** these are JMH-generated measurements, **not** CodSpeed's
+separate profiler-based performance-analysis scores. They may be useful for
+debugging sample completeness and run-to-run variation only. Do not infer an
+equivalent CodSpeed Walltime delta or relax the required checks based on them.
