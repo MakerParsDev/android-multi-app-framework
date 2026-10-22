@@ -691,21 +691,21 @@
         "ayetEN": "  O Allah, we seek Your help.",
         "ayetID": 1,
         "ayetLAT": "  Allâhümme innâ nesteînüke",
-        "ayetTR": "   Allah'ım! Sana sığınırız."
+        "ayetTR": "   Allah'ım! Senden yardım isteriz."
       },
       {
         "ayetAR": "  وَنَسْتَغْفِرُكَ وَنَسْتَهْدِيكَ",
-        "ayetEN": "  We ask for Your forgiveness, and we repent to You.",
+        "ayetEN": "  We seek Your forgiveness and guidance.",
         "ayetID": 2,
         "ayetLAT": "  ve nestağfirüke ve nestehdîke.",
-        "ayetTR": "   Sana istiğfar eder, bağışlanma dileriz ve sana yöneliriz."
+        "ayetTR": "   Günahlarımızı bağışlamanı ve bizi doğru yola iletmeni isteriz."
       },
       {
         "ayetAR": "  وَنُؤْمِنُ بِكَ وَنَتُوبُ إِلَيْكَ",
-        "ayetEN": "  We believe in You and turn to You.",
+        "ayetEN": "  We believe in You and repent to You.",
         "ayetID": 3,
         "ayetLAT": "  Ve nü'minü bike ve netûbü ileyke.",
-        "ayetTR": "   Sana inanır ve sana yöneliriz."
+        "ayetTR": "   Sana inanır, sana tövbe ederiz."
       },
       {
         "ayetAR": "  وَنَتَوَكَّلُ عَلَيْكَ",
@@ -716,24 +716,24 @@
       },
       {
         "ayetAR": "  وَنُثْنِي عَلَيْكَ الْخَيْرَ كُلَّهُ نُشْكُرُكَ",
-        "ayetEN": "  We are grateful to You and thank You.",
+        "ayetEN": "  We praise You for all goodness and thank You.",
         "ayetID": 5,
         "ayetLAT": "  ve nüsnî aleykel-hayra küllehû neşkürüke",
-        "ayetTR": "   Sana şükrederiz ve sana minnettarız."
+        "ayetTR": "   Seni bütün hayırlarla över ve sana şükrederiz."
       },
       {
         "ayetAR": "  وَلَا نَكْفُرُكَ",
-        "ayetEN": "  We do not deny You.",
+        "ayetEN": "  We are not ungrateful to You.",
         "ayetID": 6,
         "ayetLAT": "  ve lâ nekfürük",
         "ayetTR": "   Sana nankörlük etmeyiz."
       },
       {
         "ayetAR": "  وَنَخْلَعُ وَنَتْرُكُ مَنْ يَفْجُرُكَ",
-        "ayetEN": "  We stand up and leave those who oppose You.",
+        "ayetEN": "  We renounce and leave those who defy You.",
         "ayetID": 7,
         "ayetLAT": "  ve nahleu ve netrükü men yefcürük.",
-        "ayetTR": "   Sana kıyam et ve sana karşı geleni terk et."
+        "ayetTR": "   Sana karşı gelenleri terk ederiz."
       }
     ],
     "sureAdiAR": "سورة الفاتحة",
@@ -757,14 +757,14 @@
         "ayetEN": "  We pray to You and prostrate ourselves before You.",
         "ayetID": 2,
         "ayetLAT": "  Ve lâke nüsallî ve nascûdü",
-        "ayetTR": "   Yalnız Sana ibadet eder, yalnız Sana secde ederiz."
+        "ayetTR": "   Namazı yalnız senin için kılar, sana secde ederiz."
       },
       {
         "ayetAR": "  وَإِلَيْكَ نَسْعَى وَنَحْفِدُ",
         "ayetEN": "  We run towards You and serve You.",
         "ayetID": 3,
         "ayetLAT": "  Ve ileyke nas'â ve nahfidü",
-        "ayetTR": "   Yalnız Sana yönelir, yalnız Sana yalvarırız."
+        "ayetTR": "   Yalnız sana yönelir, senin rızan için çalışıp çabalarız."
       },
       {
         "ayetAR": "  وَنَرْجُو رَحْمَتَكَ وَنَخْشَى عَذَابَكَ",
@@ -777,8 +777,8 @@
         "ayetAR": "  إِنَّ عَذَابَكَ بِالْكُفَّارِ مُلْحِقٌ",
         "ayetEN": "  Surely, Your punishment will be inflicted on the disbelievers.",
         "ayetID": 5,
-        "ayetLAT": "  İnnâ azâbeke bil kuffâri mulhık",
-        "ayetTR": "   Şüphesiz kafirlerin azabı helak edicidir."
+        "ayetLAT": "  İnne azâbeke bil kuffâri mülhık.",
+        "ayetTR": "   Şüphesiz senin azabın inkârcılara ulaşır."
       }
     ],
     "sureAdiAR": "سورة الفاتحة",
