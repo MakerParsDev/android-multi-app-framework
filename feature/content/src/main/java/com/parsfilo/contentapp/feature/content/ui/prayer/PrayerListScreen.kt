@@ -360,15 +360,16 @@ fun PrayerListItem(
                 fontWeight = FontWeight.SemiBold
             )
 
-            Spacer(modifier = Modifier.height(dimens.space4))
-
-            // Arapça isim (alt başlık)
-            Text(
-                text = prayer.sureAdiAR,
-                color = colorScheme.primary,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Normal
-            )
+            // Only show verified Arabic subtitles; prayers may have no suitable title.
+            if (prayer.sureAdiAR.isNotBlank()) {
+                Spacer(modifier = Modifier.height(dimens.space4))
+                Text(
+                    text = prayer.sureAdiAR,
+                    color = colorScheme.primary,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Normal
+                )
+            }
 
             if (showVerseCount) {
                 Spacer(modifier = Modifier.height(dimens.space4))
