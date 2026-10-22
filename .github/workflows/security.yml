@@ -157,6 +157,7 @@ jobs:
           python3 scripts/ci/compute_pr_impact_test.py
           python3 scripts/ci/kunut_content_integrity_test.py
           python3 scripts/ci/fatiha_quraysh_content_integrity_test.py
+          python3 scripts/ci/prayer_arabic_subtitle_integrity_test.py
           python3 scripts/ci/validate_legacy_release_request_test.py
           python3 scripts/ci/verify_play_generated_apk_test.py
           python3 scripts/ci/professional_ci_workflows_test.py

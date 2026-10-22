@@ -249,7 +249,7 @@
         "ayetTR": "   Kendilerini besleyip açlıklarını gideren ve her çeşit korkudan emin kılan."
       }
     ],
-    "sureAdiAR": "سورة الكوثر",
+    "sureAdiAR": "سورة قريش",
     "sureAdiEN": "Surah Kureysh",
     "sureAdiTR": "Kureyş Suresi",
     "sureID": 5,
@@ -505,7 +505,7 @@
         "ayetTR": "   Boynunda bir ipten başka bir şey taşımaz."
       }
     ],
-    "sureAdiAR": "سورة التكاثر",
+    "sureAdiAR": "سورة المسد",
     "sureAdiEN": "Surah Tabbet",
     "sureAdiTR": "Tebbet Suresi",
     "sureID": 11,
@@ -550,8 +550,8 @@
         "ayetTR": "   Senden başka ilah yoktur."
       }
     ],
-    "sureAdiAR": "سورة الفاتحة",
-    "sureAdiEN": "Surah Sübhaneke",
+    "sureAdiAR": "",
+    "sureAdiEN": "Sübhaneke Prayer",
     "sureAdiTR": "Sübhaneke Duası",
     "sureID": 12,
     "sureMedya": "SUBHANEKE"
@@ -588,8 +588,8 @@
         "ayetTR": "   Şehadet ederim ki, Allah'tan başka ilah yoktur. Ve yine şehadet ederim ki, Muhammed O'nun kulu ve elçisidir."
       }
     ],
-    "sureAdiAR": "سورة الفاتحة",
-    "sureAdiEN": "Surah Ettahiyyatü",
+    "sureAdiAR": "",
+    "sureAdiEN": "Ettahiyyatü Prayer",
     "sureAdiTR": "Ettahiyyatü Duası",
     "sureID": 13,
     "sureMedya": "ETTAHIYYATU"
@@ -619,8 +619,8 @@
         "ayetTR": "   Şüphesiz Sen, övgüye lâyık, yücesin."
       }
     ],
-    "sureAdiAR": "سورة الفاتحة",
-    "sureAdiEN": "Surah Allahümme Salli",
+    "sureAdiAR": "",
+    "sureAdiEN": "Allahümme Salli Prayer",
     "sureAdiTR": "Allahümme Salli Duası",
     "sureID": 14,
     "sureMedya": "ALLAHUMMESALLI"
@@ -650,8 +650,8 @@
         "ayetTR": "   Şüphesiz Sen, övgüye lâyık, yücesin."
       }
     ],
-    "sureAdiAR": "سورة الفاتحة",
-    "sureAdiEN": "Surah Allahümme Barik",
+    "sureAdiAR": "",
+    "sureAdiEN": "Allahümme Barik Prayer",
     "sureAdiTR": "Allahümme Barik Duası",
     "sureID": 15,
     "sureMedya": "ALLAHUMMEBARIK"
@@ -667,8 +667,8 @@
         "ayetTR": "   Rabbimiz! Bize dünyada iyilik ver, âhirette de iyilik ver ve bizi ateş azabından koru."
       }
     ],
-    "sureAdiAR": "سورة الفاتحة",
-    "sureAdiEN": "Surah Rabbena",
+    "sureAdiAR": "",
+    "sureAdiEN": "Rabbena Atina Prayer",
     "sureAdiTR": "Rabbena Atina Duası",
     "sureID": 16,
     "sureMedya": "RABBENAATINA"
@@ -684,8 +684,8 @@
         "ayetTR": "   Rabbimiz! Beni, anne ve babamı ve inananları hesap gününde bağışla."
       }
     ],
-    "sureAdiAR": "سورة الفاتحة",
-    "sureAdiEN": "Surah Rabbena Firli",
+    "sureAdiAR": "",
+    "sureAdiEN": "Rabbena Firli Prayer",
     "sureAdiTR": "Rabbena Firli Duası",
     "sureID": 17,
     "sureMedya": "RABBENAFIRLI"
@@ -743,8 +743,8 @@
         "ayetTR": "   Sana karşı gelenleri terk ederiz."
       }
     ],
-    "sureAdiAR": "سورة الفاتحة",
-    "sureAdiEN": "Surah Kunut 1",
+    "sureAdiAR": "",
+    "sureAdiEN": "Kunut Prayer 1",
     "sureAdiTR": "Kunut Duası 1",
     "sureID": 18,
     "sureMedya": "KUNUT1"
@@ -788,8 +788,8 @@
         "ayetTR": "   Şüphesiz senin azabın inkârcılara ulaşır."
       }
     ],
-    "sureAdiAR": "سورة الفاتحة",
-    "sureAdiEN": "Surah Kunut 2",
+    "sureAdiAR": "",
+    "sureAdiEN": "Kunut Prayer 2",
     "sureAdiTR": "Kunut Duası 2",
     "sureID": 19,
     "sureMedya": "KUNUT2"
