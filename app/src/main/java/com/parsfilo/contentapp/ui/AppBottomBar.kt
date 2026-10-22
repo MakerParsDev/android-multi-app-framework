@@ -20,11 +20,13 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.ViewCompat
@@ -46,6 +48,8 @@ fun AppBottomBarWithFab(
 ) {
     val dimens = LocalDimens.current
     val colorScheme = MaterialTheme.colorScheme
+    val configuration = LocalConfiguration.current
+    val showLabels = shouldShowBottomBarLabels(configuration.screenWidthDp, configuration.fontScale)
     val density = LocalDensity.current
     val view = LocalView.current
     val currentOnNavigateToDestination = rememberUpdatedState(onNavigateToDestination)
@@ -94,6 +98,7 @@ fun AppBottomBarWithFab(
                 AppBottomNavigationItem(
                     destination = destination,
                     selected = destination.id == selectedId,
+                    showLabels = showLabels,
                     badgeText =
                         destination.badgeText(
                             unreadNotificationCount = unreadNotificationCount,
@@ -112,6 +117,7 @@ fun AppBottomBarWithFab(
 private fun RowScope.AppBottomNavigationItem(
     destination: BottomDestination,
     selected: Boolean,
+    showLabels: Boolean,
     badgeText: String?,
     onClick: () -> Unit,
 ) {
@@ -140,12 +146,20 @@ private fun RowScope.AppBottomNavigationItem(
                 )
             }
         },
-        label = {
-            Text(
-                text = title,
-                fontSize = 10.sp,
-            )
-        },
+        label =
+            if (showLabels) {
+                {
+                    Text(
+                        text = title,
+                        fontSize = 10.sp,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            } else {
+                null
+            },
         alwaysShowLabel = true,
         colors =
             NavigationBarItemDefaults.colors(
@@ -156,6 +170,18 @@ private fun RowScope.AppBottomNavigationItem(
                 unselectedTextColor = colorScheme.onSurfaceVariant,
             ),
     )
+}
+
+// Keep full, localized titles visible when there is enough effective text space.
+// At narrow widths/high font scales, preserve all five 48dp+ destinations and
+// use icon-only items; Icon.contentDescription still exposes the full title.
+internal fun shouldShowBottomBarLabels(
+    screenWidthDp: Int,
+    fontScale: Float,
+): Boolean {
+    val scale = fontScale.coerceAtLeast(1f)
+    val effectiveItemWidthDp = screenWidthDp.toFloat() / bottomDestinations.size / scale
+    return effectiveItemWidthDp >= 68f
 }
 
 @Immutable
