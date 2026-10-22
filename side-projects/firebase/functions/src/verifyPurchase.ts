@@ -255,7 +255,7 @@ async function verifySubscription(
 
     const data = response.data;
     const subscriptionState = data.subscriptionState ?? "SUBSCRIPTION_STATE_UNSPECIFIED";
-    const lineItem = data.lineItems?.[0];
+    const lineItem = data.lineItems?.find((item) => item.productId === payload.productId);
     const expiryTimeMillis = parseExpiry(lineItem?.expiryTime);
     const acknowledgementState = data.acknowledgementState ?? "ACKNOWLEDGEMENT_STATE_UNSPECIFIED";
     const autoRenewing = Boolean(lineItem?.autoRenewingPlan?.autoRenewEnabled);
@@ -263,7 +263,7 @@ async function verifySubscription(
     const verified = [
         "SUBSCRIPTION_STATE_ACTIVE",
         "SUBSCRIPTION_STATE_IN_GRACE_PERIOD",
-    ].includes(subscriptionState);
+    ].includes(subscriptionState) && lineItem != null;
 
     return {
         verified,

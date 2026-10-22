@@ -27,8 +27,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -61,6 +64,8 @@ class BillingManager @Inject constructor(
     private var billingClient: BillingClient = createBillingClient()
 
     private val isConnecting = AtomicBoolean(false)
+    private val purchaseResultVersion = AtomicLong(0L)
+    private val purchaseResultMutex = Mutex()
 
     private fun createScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -347,57 +352,76 @@ class BillingManager @Inject constructor(
         }
     }
 
-    private fun handlePurchases(purchases: List<Purchase>) {
-        _subscriptionState.value = SubscriptionState.Loading
+    @VisibleForTesting
+    internal fun handlePurchases(purchases: List<Purchase>) {
+        val version = purchaseResultVersion.incrementAndGet()
+        if (_subscriptionState.value !is SubscriptionState.Active) {
+            _subscriptionState.value = SubscriptionState.Loading
+        }
         ensureScope()
         scope.launch {
-            applySubscriptionState(resolveSubscriptionStateForPurchases(purchases))
+            val result = verifyPurchases(purchases)
+            purchaseResultMutex.withLock {
+                if (version != purchaseResultVersion.get()) return@withLock
+                applySubscriptionState(result.state)
+                if (version != purchaseResultVersion.get()) return@withLock
+                result.verifiedPurchases.forEach(::acknowledgeIfNeeded)
+            }
         }
     }
+
+    private data class PurchaseResolution(
+        val state: SubscriptionState,
+        val verifiedPurchases: List<Purchase> = emptyList(),
+    )
 
     @VisibleForTesting
     internal suspend fun resolveSubscriptionStateForPurchases(
         purchases: List<Purchase>
-    ): SubscriptionState {
+    ): SubscriptionState = verifyPurchases(purchases).state
+
+    private suspend fun verifyPurchases(purchases: List<Purchase>): PurchaseResolution {
         val purchased = purchases.filter { it.purchaseState == Purchase.PurchaseState.PURCHASED }
+        if (purchased.isEmpty()) return PurchaseResolution(SubscriptionState.Inactive)
 
-        if (purchased.isEmpty()) {
-            return SubscriptionState.Inactive
-        }
-
+        val verified = mutableListOf<Pair<Purchase, VerificationResult>>()
+        var temporaryFailure = false
         purchased.forEach { purchase ->
-            acknowledgeIfNeeded(purchase)
-        }
-
-        val verifiedPurchases = purchased.mapNotNull { purchase ->
-            val verification = billingPurchaseVerifier.verify(
-                packageName = appContext.packageName,
-                purchase = purchase,
-            )
-            if (!verification.verified) {
+            val verification = billingPurchaseVerifier.verify(appContext.packageName, purchase)
+            if (verification.verified) {
+                verified += purchase to verification
+            } else {
+                temporaryFailure = temporaryFailure || verification.isTemporaryFailure()
                 Timber.w(
                     "Purchase verification failed for product=%s state=%s ack=%s reason=%s",
                     purchase.products.firstOrNull().orEmpty(),
                     verification.purchaseState,
                     verification.acknowledgementState,
-                    verification.error.orEmpty()
+                    verification.error.orEmpty(),
                 )
-                return@mapNotNull null
             }
-            verification
         }
 
-        if (verifiedPurchases.isEmpty()) {
-            return SubscriptionState.Inactive
+        if (verified.isEmpty()) {
+            return PurchaseResolution(
+                if (temporaryFailure) SubscriptionState.Error("BILLING_VERIFICATION_UNAVAILABLE")
+                else SubscriptionState.Inactive,
+            )
         }
 
-        val expiryDate = verifiedPurchases.mapNotNull { it.expiryTimeMillis }.maxOrNull()
-        val autoRenewing = verifiedPurchases.any { it.isAutoRenewing }
-        return SubscriptionState.Active(
-            expiryDate = expiryDate,
-            isAutoRenewing = autoRenewing,
+        val expiryDate = verified.mapNotNull { it.second.expiryTimeMillis }.maxOrNull()
+        val autoRenewing = verified.any { it.second.isAutoRenewing }
+        return PurchaseResolution(
+            SubscriptionState.Active(expiryDate = expiryDate, isAutoRenewing = autoRenewing),
+            verified.map { it.first },
         )
     }
+
+    private fun VerificationResult.isTemporaryFailure(): Boolean =
+        purchaseState in setOf(
+            "NETWORK_ERROR", "AUTH_REQUIRED", "AUTH_TOKEN_MISSING", "APP_CHECK_MISSING",
+            "MISCONFIGURED", "PARSE_ERROR", "ERROR",
+        ) || purchaseState.startsWith("HTTP_")
 
     private fun acknowledgeIfNeeded(purchase: Purchase) {
         if (purchase.isAcknowledged) return
@@ -413,12 +437,15 @@ class BillingManager @Inject constructor(
         }
     }
 
-    private fun applySubscriptionState(state: SubscriptionState) {
-        ensureScope()
-        scope.launch {
-            preferencesDataSource.setPremium(state is SubscriptionState.Active)
+    private suspend fun applySubscriptionState(state: SubscriptionState) {
+        if (state is SubscriptionState.Error) {
+            val previous = _subscriptionState.value
+            // Only a locally verified, unexpired entitlement can survive a transient outage.
+            if (previous is SubscriptionState.Active &&
+                (previous.expiryDate?.let { it > System.currentTimeMillis() } == true)
+            ) return
         }
-
+        preferencesDataSource.setPremium(state is SubscriptionState.Active)
         _subscriptionState.value = state
     }
 
@@ -445,6 +472,7 @@ class BillingManager @Inject constructor(
         isConnecting.set(false)
 
         if (resetScope) {
+            purchaseResultVersion.incrementAndGet()
             scope.coroutineContext[Job]?.cancel()
             scope = createScope()
         }

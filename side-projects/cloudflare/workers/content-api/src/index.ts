@@ -354,8 +354,11 @@ async function handleRecaptchaVerify(request: Request, env: Env): Promise<Respon
     "error-codes"?: string[];
   };
 
-  const actionMatches = !expectedAction || verifyJson.action === expectedAction;
-  const success = Boolean(verifyJson.success && actionMatches);
+  const expectedHost = extractHost(origin) || extractHost(referer);
+  const hostnameMatches = verifyJson.hostname?.toLowerCase() === expectedHost;
+  const actionMatches = !verifyJson.action || (expectedAction !== "" && verifyJson.action === expectedAction);
+  const scoreMatches = verifyJson.score == null || verifyJson.score >= 0.5;
+  const success = Boolean(verifyJson.success && hostnameMatches && actionMatches && scoreMatches);
 
   return json({
     success,

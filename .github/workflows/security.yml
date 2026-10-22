@@ -83,16 +83,14 @@ jobs:
         run: pip install semgrep
 
       - name: Run Semgrep
-        continue-on-error: true
         run: |
           semgrep scan \
-            --config auto \
             --config p/kotlin \
-            --config p/android \
+            --config p/security-audit \
             --sarif \
             --output semgrep-results.sarif \
             --error \
-            app/ core/ feature/ || true
+            app/ core/ feature/
 
       - name: Upload SARIF to GitHub
         if: always()

@@ -48,3 +48,34 @@ test("audio traversal and unknown routes are rejected", async () => {
   assert.equal((await worker.fetch(request("/api/audio/..%2Fsecret"), env)).status, 400);
   assert.equal((await worker.fetch(request("/missing"), env)).status, 404);
 });
+
+test("recaptcha denies provider success with wrong hostname or low score", async () => {
+  const originalFetch = globalThis.fetch;
+  try {
+    for (const answer of [
+      { success: true, hostname: "evil.example", action: "login", score: 0.9 },
+      { success: true, hostname: "parsfilo.com", action: "login", score: 0.1 },
+      { success: true, hostname: "parsfilo.com", action: "other", score: 0.9 },
+    ]) {
+      globalThis.fetch = async () => Response.json(answer);
+      const response = await worker.fetch(request("/api/recaptcha-verify", {
+        method: "POST",
+        headers: { origin: "https://parsfilo.com", "content-type": "application/json" },
+        body: JSON.stringify({ token: "a".repeat(40), action: "login" }),
+      }), env);
+      assert.equal(response.status, 200);
+      assert.equal((await response.json()).success, false);
+    }
+    globalThis.fetch = async () => Response.json({
+      success: true, hostname: "parsfilo.com", action: "login", score: 0.9,
+    });
+    const valid = await worker.fetch(request("/api/recaptcha-verify", {
+      method: "POST",
+      headers: { origin: "https://parsfilo.com", "content-type": "application/json" },
+      body: JSON.stringify({ token: "a".repeat(40), action: "login" }),
+    }), env);
+    assert.equal((await valid.json()).success, true);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

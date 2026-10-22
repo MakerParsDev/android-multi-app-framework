@@ -7,9 +7,16 @@ import com.google.common.truth.Truth.assertThat
 import com.parsfilo.contentapp.core.datastore.PreferencesDataSource
 import com.parsfilo.contentapp.core.model.SubscriptionState
 import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 
@@ -30,6 +37,76 @@ class BillingManagerTest {
         billingPurchaseVerifier = purchaseVerifier,
         billingClientFactory = billingClientFactory,
     )
+
+    @Test
+    fun `older verification cannot replace a newer purchase state`() = runBlocking {
+        val delayed = mockk<Purchase> {
+            every { purchaseState } returns Purchase.PurchaseState.PURCHASED
+            every { isAcknowledged } returns true
+            every { products } returns listOf("monthly_sub")
+        }
+        val started = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        coEvery { purchaseVerifier.verify(any(), delayed) } coAnswers {
+            started.complete(Unit)
+            release.await()
+            VerificationResult(true, 4102444800000L, true, "ACTIVE", "ACKNOWLEDGED", null)
+        }
+        try {
+            manager.handlePurchases(listOf(delayed))
+            withTimeout(5_000) { started.await() }
+            manager.handlePurchases(emptyList())
+            withTimeout(5_000) { manager.subscriptionState.first { it is SubscriptionState.Inactive } }
+        } finally {
+            release.complete(Unit)
+        }
+        assertThat(manager.subscriptionState.value).isEqualTo(SubscriptionState.Inactive)
+        coVerify(exactly = 0) { preferencesDataSource.setPremium(true) }
+    }
+
+    @Test
+    fun `temporary outage preserves a still-valid verified subscription`() = runBlocking {
+        val purchase = mockk<Purchase> {
+            every { purchaseState } returns Purchase.PurchaseState.PURCHASED
+            every { isAcknowledged } returns true
+            every { products } returns listOf("monthly_sub")
+        }
+        val secondVerification = CompletableDeferred<Unit>()
+        var calls = 0
+        coEvery { purchaseVerifier.verify(any(), purchase) } coAnswers {
+            if (++calls == 1) {
+                VerificationResult(true, 4102444800000L, true, "ACTIVE", "ACKNOWLEDGED", null)
+            } else {
+                secondVerification.complete(Unit)
+                VerificationResult(false, null, false, "NETWORK_ERROR", "UNKNOWN", "Network unavailable")
+            }
+        }
+        manager.handlePurchases(listOf(purchase))
+        withTimeout(5_000) { manager.subscriptionState.first { it is SubscriptionState.Active } }
+        manager.handlePurchases(listOf(purchase))
+        withTimeout(5_000) { secondVerification.await() }
+        assertThat(manager.subscriptionState.value).isInstanceOf(SubscriptionState.Active::class.java)
+        coVerify(exactly = 0) { preferencesDataSource.setPremium(false) }
+    }
+
+    @Test
+    fun `verified entitlement is stored before acknowledging the purchase`() = runBlocking {
+        val purchase = mockk<Purchase> {
+            every { purchaseState } returns Purchase.PurchaseState.PURCHASED
+            every { isAcknowledged } returns false
+            every { products } returns listOf("monthly_sub")
+            every { purchaseToken } returns "token_abc"
+        }
+        coEvery { purchaseVerifier.verify(any(), purchase) } returns VerificationResult(
+            true, 4102444800000L, true, "ACTIVE", "PENDING", null,
+        )
+        manager.handlePurchases(listOf(purchase))
+        withTimeout(5_000) { manager.subscriptionState.first { it is SubscriptionState.Active } }
+        coVerifyOrder {
+            preferencesDataSource.setPremium(true)
+            billingClient.acknowledgePurchase(any(), any())
+        }
+    }
 
     @Test
     fun `empty purchases resolve to inactive`() = runTest {
@@ -60,6 +137,40 @@ class BillingManagerTest {
         val state = manager.resolveSubscriptionStateForPurchases(listOf(purchase))
 
         assertThat(state).isEqualTo(SubscriptionState.Inactive)
+    }
+
+    @Test
+    fun `temporary verification outage is not treated as an invalid purchase`() = runTest {
+        val purchase = mockk<Purchase> {
+            every { purchaseState } returns Purchase.PurchaseState.PURCHASED
+            every { isAcknowledged } returns false
+            every { products } returns listOf("monthly_sub")
+        }
+        coEvery { purchaseVerifier.verify(any(), purchase) } returns VerificationResult(
+            verified = false, expiryTimeMillis = null, isAutoRenewing = false,
+            purchaseState = "NETWORK_ERROR", acknowledgementState = "UNKNOWN",
+            error = "Network error while verifying purchase",
+        )
+        assertThat(manager.resolveSubscriptionStateForPurchases(listOf(purchase)))
+            .isEqualTo(SubscriptionState.Error("BILLING_VERIFICATION_UNAVAILABLE"))
+        verify(exactly = 0) { billingClient.acknowledgePurchase(any(), any()) }
+    }
+
+    @Test
+    fun `verification never acknowledges a purchase before entitlement is applied`() = runTest {
+        val purchase = mockk<Purchase> {
+            every { purchaseState } returns Purchase.PurchaseState.PURCHASED
+            every { isAcknowledged } returns false
+            every { products } returns listOf("monthly_sub")
+        }
+        coEvery { purchaseVerifier.verify(any(), purchase) } returns VerificationResult(
+            verified = true, expiryTimeMillis = 4102444800000L, isAutoRenewing = true,
+            purchaseState = "SUBSCRIPTION_STATE_ACTIVE", acknowledgementState = "PENDING",
+            error = null,
+        )
+        assertThat(manager.resolveSubscriptionStateForPurchases(listOf(purchase)))
+            .isInstanceOf(SubscriptionState.Active::class.java)
+        verify(exactly = 0) { billingClient.acknowledgePurchase(any(), any()) }
     }
 
     @Test

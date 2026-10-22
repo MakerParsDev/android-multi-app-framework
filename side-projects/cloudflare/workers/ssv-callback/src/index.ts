@@ -87,13 +87,14 @@ export default {
       return new Response('Forbidden: invalid signature', { status: 403 });
     }
 
-    // Idempotent dedup: AdMob may retry on timeout; accept duplicate 200s.
+    // KV dedup is best-effort across regions, not an atomic claim.
     const dedupKey = `txn:${transactionId}`;
     const alreadySeen = await env.SSV_DEDUP.get(dedupKey);
     if (alreadySeen) {
       return new Response('OK', { status: 200 });
     }
-    ctx.waitUntil(env.SSV_DEDUP.put(dedupKey, '1', { expirationTtl: 86400 }));
+    // Do not return 200 until the transaction marker is durably written.
+    await env.SSV_DEDUP.put(dedupKey, '1', { expirationTtl: 86400 });
 
     console.log(
       JSON.stringify({
