@@ -27,7 +27,7 @@
         "ayetTR": "   Rahmân ve Rahîm olan Allah'ın adıyla."
       },
       {
-        "ayetAR": "  اَلرَّحْمٰنِ الرَّحٖيمِۙ",
+        "ayetAR": "  اَلْحَمْدُ لِلّٰهِ رَبِّ الْعَالَمٖينَۙ",
         "ayetEN": "  Praise be to Allah, the Lord of all the worlds.",
         "ayetID": 2,
         "ayetLAT": "  Elhamdü lillahi rabbil alemin",
@@ -218,7 +218,7 @@
     "sureMedya": "NAS"
   },
   {
-    "ayetSayisi": 3,
+    "ayetSayisi": 4,
     "ayetler": [
       {
         "ayetAR": "  لِإِيلَافِ قُرَيْشٍ",
@@ -240,6 +240,13 @@
         "ayetID": 3,
         "ayetLAT": "  Felya'budu rabbe hâzel beyt",
         "ayetTR": "   Öyleyse bu evin Rabbine kulluk etsinler."
+      },
+      {
+        "ayetAR": "  الَّذِي أَطْعَمَهُمْ مِنْ جُوعٍ وَآمَنَهُمْ مِنْ خَوْفٍ",
+        "ayetEN": "  Who has fed them against hunger and secured them against fear.",
+        "ayetID": 4,
+        "ayetLAT": "  Ellezi at'amehum min cuın ve amenehum min havf.",
+        "ayetTR": "   Kendilerini besleyip açlıklarını gideren ve her çeşit korkudan emin kılan."
       }
     ],
     "sureAdiAR": "سورة الكوثر",
