@@ -29,7 +29,6 @@ class ContentViewModel @Inject constructor(
     private val adGateChecker: AdGateChecker,
     private val appAnalytics: AppAnalytics,
 ) : ViewModel() {
-    private var defaultModeApplied = false
     private val reloadSignal = MutableStateFlow(0)
 
     private val versesFlow = reloadSignal.map {
@@ -79,15 +78,6 @@ class ContentViewModel @Inject constructor(
                 )
             }
             preferencesDataSource.setDisplayMode(mode.name)
-        }
-    }
-
-    fun ensureArabicDefault() {
-        if (defaultModeApplied) return
-        defaultModeApplied = true
-
-        viewModelScope.launch {
-            preferencesDataSource.setDisplayMode(DisplayMode.ARABIC.name)
         }
     }
 }

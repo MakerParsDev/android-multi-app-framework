@@ -189,6 +189,30 @@ class ContentViewModelTest {
     }
 
     @Test
+    fun `reopening reader retains every persisted mode without rewriting preferences`() =
+        runTest(testDispatcher) {
+            for (savedMode in listOf(DisplayMode.ARABIC, DisplayMode.LATIN, DisplayMode.TURKISH)) {
+                val persistedPrefs = defaultPrefs.copy(displayMode = savedMode.name, fontSize = 32)
+                every { preferencesDataSource.userData } returns flowOf(persistedPrefs)
+                coEvery { contentRepository.getVerses() } returns Result.Success(testVerses)
+                every { adGateChecker.shouldShowAds } returns flowOf(false)
+
+                repeat(2) {
+                    val viewModel = createViewModel()
+                    viewModel.uiState.test {
+                        assertThat(awaitItem()).isEqualTo(ContentUiState.Loading)
+                        val success = awaitItem() as ContentUiState.Success
+                        assertThat(success.displayMode).isEqualTo(savedMode)
+                        assertThat(success.fontSize).isEqualTo(32)
+                        assertThat(success.shouldShowAds).isFalse()
+                        cancelAndIgnoreRemainingEvents()
+                    }
+                }
+            }
+            coVerify(exactly = 0) { preferencesDataSource.setDisplayMode(any()) }
+        }
+
+    @Test
     fun `repository error emits Error state`() = runTest(testDispatcher) {
         val exception = RuntimeException("Network error")
         coEvery { contentRepository.getVerses() } returns Result.Error(exception)
