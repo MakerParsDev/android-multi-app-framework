@@ -14,7 +14,7 @@ import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
@@ -47,6 +47,8 @@ class BillingManagerTest {
         }
         val started = CompletableDeferred<Unit>()
         val release = CompletableDeferred<Unit>()
+        val processed = Channel<Unit>(Channel.UNLIMITED)
+        manager.onPurchaseResultProcessed = { processed.trySend(Unit) }
         coEvery { purchaseVerifier.verify(any(), delayed) } coAnswers {
             started.complete(Unit)
             release.await()
@@ -56,10 +58,11 @@ class BillingManagerTest {
             manager.handlePurchases(listOf(delayed))
             withTimeout(5_000) { started.await() }
             manager.handlePurchases(emptyList())
-            withTimeout(5_000) { manager.subscriptionState.first { it is SubscriptionState.Inactive } }
+            withTimeout(5_000) { processed.receive() }
         } finally {
             release.complete(Unit)
         }
+        withTimeout(5_000) { processed.receive() }
         assertThat(manager.subscriptionState.value).isEqualTo(SubscriptionState.Inactive)
         coVerify(exactly = 0) { preferencesDataSource.setPremium(true) }
     }
@@ -72,6 +75,8 @@ class BillingManagerTest {
             every { products } returns listOf("monthly_sub")
         }
         val secondVerification = CompletableDeferred<Unit>()
+        val processed = Channel<Unit>(Channel.UNLIMITED)
+        manager.onPurchaseResultProcessed = { processed.trySend(Unit) }
         var calls = 0
         coEvery { purchaseVerifier.verify(any(), purchase) } coAnswers {
             if (++calls == 1) {
@@ -82,9 +87,10 @@ class BillingManagerTest {
             }
         }
         manager.handlePurchases(listOf(purchase))
-        withTimeout(5_000) { manager.subscriptionState.first { it is SubscriptionState.Active } }
+        withTimeout(5_000) { processed.receive() }
         manager.handlePurchases(listOf(purchase))
         withTimeout(5_000) { secondVerification.await() }
+        withTimeout(5_000) { processed.receive() }
         assertThat(manager.subscriptionState.value).isInstanceOf(SubscriptionState.Active::class.java)
         coVerify(exactly = 0) { preferencesDataSource.setPremium(false) }
     }
@@ -100,8 +106,12 @@ class BillingManagerTest {
         coEvery { purchaseVerifier.verify(any(), purchase) } returns VerificationResult(
             true, 4102444800000L, true, "ACTIVE", "PENDING", null,
         )
+        val acknowledged = CompletableDeferred<Unit>()
+        every { billingClient.acknowledgePurchase(any(), any()) } answers {
+            acknowledged.complete(Unit)
+        }
         manager.handlePurchases(listOf(purchase))
-        withTimeout(5_000) { manager.subscriptionState.first { it is SubscriptionState.Active } }
+        withTimeout(5_000) { acknowledged.await() }
         coVerifyOrder {
             preferencesDataSource.setPremium(true)
             billingClient.acknowledgePurchase(any(), any())

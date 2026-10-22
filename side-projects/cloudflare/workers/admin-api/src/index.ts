@@ -1768,12 +1768,14 @@ async function verifySubscriptionPurchase(
   };
   const lineItem = data.lineItems?.find((item) => item.productId === payload.productId);
   const subscriptionState = data.subscriptionState ?? "SUBSCRIPTION_STATE_UNSPECIFIED";
+  const expiryTimeMillis = parseExpiryMillis(lineItem?.expiryTime);
   return {
     verified: (subscriptionState === "SUBSCRIPTION_STATE_ACTIVE" ||
-      subscriptionState === "SUBSCRIPTION_STATE_IN_GRACE_PERIOD") && lineItem != null,
+      subscriptionState === "SUBSCRIPTION_STATE_IN_GRACE_PERIOD") &&
+      expiryTimeMillis != null && expiryTimeMillis > Date.now(),
     purchaseState: subscriptionState,
     acknowledgementState: data.acknowledgementState ?? "ACKNOWLEDGEMENT_STATE_UNSPECIFIED",
-    expiryTimeMillis: parseExpiryMillis(lineItem?.expiryTime),
+    expiryTimeMillis,
     autoRenewing: Boolean(lineItem?.autoRenewingPlan?.autoRenewEnabled),
   };
 }

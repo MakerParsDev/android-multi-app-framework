@@ -165,6 +165,33 @@ test("Google Play v186 purchase verifier preserves fail-closed premium entitleme
     assert.equal(response.payload.expiryTimeMillis, Date.parse("2030-01-01T00:00:00Z"));
   });
 
+  await t.test("deferred or expired matching line items do not grant premium", async () => {
+    for (const lineItem of [
+      { productId: "reklamsiz_kullanim" },
+      { productId: "reklamsiz_kullanim", expiryTime: "2020-01-01T00:00:00Z" },
+    ]) {
+      playResponse = {
+        subscriptionState: "SUBSCRIPTION_STATE_ACTIVE",
+        lineItems: [
+          lineItem,
+          { productId: "other_product", expiryTime: "2030-01-01T00:00:00Z" },
+        ],
+      };
+      const response = await invoke(fakeRequest());
+      assert.equal(response.code, 200);
+      assert.equal(response.payload.verified, false);
+    }
+  });
+
+  await t.test("matching unexpired grace-period item retains premium", async () => {
+    playResponse = {
+      subscriptionState: "SUBSCRIPTION_STATE_IN_GRACE_PERIOD",
+      lineItems: [{ productId: "reklamsiz_kullanim", expiryTime: "2030-01-01T00:00:00Z" }],
+    };
+    const response = await invoke(fakeRequest());
+    assert.equal(response.payload.verified, true);
+  });
+
   await t.test("expired subscription is not premium", async () => {
     playResponse = {
       subscriptionState: "SUBSCRIPTION_STATE_EXPIRED",

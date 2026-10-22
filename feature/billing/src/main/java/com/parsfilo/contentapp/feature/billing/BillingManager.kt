@@ -67,6 +67,9 @@ class BillingManager @Inject constructor(
     private val purchaseResultVersion = AtomicLong(0L)
     private val purchaseResultMutex = Mutex()
 
+    @VisibleForTesting
+    internal var onPurchaseResultProcessed: (() -> Unit)? = null
+
     private fun createScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private fun ensureScope() {
@@ -360,12 +363,16 @@ class BillingManager @Inject constructor(
         }
         ensureScope()
         scope.launch {
-            val result = verifyPurchases(purchases)
-            purchaseResultMutex.withLock {
-                if (version != purchaseResultVersion.get()) return@withLock
-                applySubscriptionState(result.state)
-                if (version != purchaseResultVersion.get()) return@withLock
-                result.verifiedPurchases.forEach(::acknowledgeIfNeeded)
+            try {
+                val result = verifyPurchases(purchases)
+                purchaseResultMutex.withLock {
+                    if (version != purchaseResultVersion.get()) return@withLock
+                    applySubscriptionState(result.state)
+                    if (version != purchaseResultVersion.get()) return@withLock
+                    result.verifiedPurchases.forEach(::acknowledgeIfNeeded)
+                }
+            } finally {
+                onPurchaseResultProcessed?.invoke()
             }
         }
     }

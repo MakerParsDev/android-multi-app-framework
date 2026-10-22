@@ -263,7 +263,7 @@ async function verifySubscription(
     const verified = [
         "SUBSCRIPTION_STATE_ACTIVE",
         "SUBSCRIPTION_STATE_IN_GRACE_PERIOD",
-    ].includes(subscriptionState) && lineItem != null;
+    ].includes(subscriptionState) && expiryTimeMillis != null && expiryTimeMillis > Date.now();
 
     return {
         verified,
