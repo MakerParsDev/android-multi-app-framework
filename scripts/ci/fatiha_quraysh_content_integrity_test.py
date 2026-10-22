@@ -40,6 +40,14 @@ class QuranReaderContentIntegrityTest(unittest.TestCase):
         self.assertEqual(4, len(verses))
         self.assertEqual([1, 2, 3, 4], [v["ayetID"] for v in verses])
         self.assertEqual(QURAYSH_VERSE_FOUR, verses[3]["ayetAR"].strip())
+        expected_translations = {
+            "ayetLAT": "Ellezi at'amehum min cuın ve amenehum min havf.",
+            "ayetTR": "Kendilerini besleyip açlıklarını gideren ve her çeşit korkudan emin kılan.",
+            "ayetEN": "Who has fed them against hunger and secured them against fear.",
+        }
+        for field, expected in expected_translations.items():
+            with self.subTest(verse=4, field=field):
+                self.assertEqual(expected, verses[3][field].strip())
         for verse in verses:
             for field in ("ayetAR", "ayetLAT", "ayetTR", "ayetEN"):
                 with self.subTest(verse=verse["ayetID"], field=field):
