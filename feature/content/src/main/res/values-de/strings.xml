@@ -7,6 +7,9 @@
     <string name="content_mode_turkish">Übersetzung</string>
     <string name="content_error_friendly">Inhalt konnte nicht geladen werden. Bitte erneut versuchen.</string>
     <string name="content_retry">Erneut versuchen</string>
+    <string name="content_copy_arabic">Arabischen Text kopieren</string>
+    <string name="content_copy_latin">Lateinische Umschrift kopieren</string>
+    <string name="content_copy_translation">Übersetzung kopieren</string>
     <string name="content_verse_copied">Vers in die Zwischenablage kopiert</string>
     <string name="miracles_default_title">Wundergebete</string>
     <string name="miracles_section_description">Erklärung</string>
