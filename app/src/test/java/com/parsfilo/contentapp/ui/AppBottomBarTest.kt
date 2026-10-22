@@ -64,7 +64,7 @@ class AppBottomBarTest {
                 Triple(320, 1.3f, false),
                 Triple(320, 1.8f, false),
                 Triple(320, 2.0f, false),
-                Triple(360, 1.0f, true),
+                Triple(360, 1.0f, false),
                 Triple(360, 1.3f, false),
                 Triple(360, 1.8f, false),
                 Triple(360, 2.0f, false),
@@ -74,8 +74,10 @@ class AppBottomBarTest {
                 Triple(411, 1.8f, false),
                 Triple(411, 2.0f, false),
                 Triple(480, 1.3f, true),
-                Triple(700, 2.0f, true),
+                Triple(700, 2.0f, false),
+                Triple(720, 2.0f, true),
             )
+        assertFalse(shouldShowBottomBarLabels(411, 1.1f, horizontalNavInsetDp = 16f))
         cases.forEach { (widthDp, scale, expectedLabels) ->
             assertEquals(
                 "Unexpected label layout at ${widthDp}dp and ${scale}x font",
@@ -88,7 +90,7 @@ class AppBottomBarTest {
     @Test
     fun `five icon only destinations each have at least 48dp in minimum viewport`() {
         assertFalse(shouldShowBottomBarLabels(320, 1.0f))
-        assertTrue(320 / bottomDestinations.size >= 48)
+        assertTrue((320 - 8 * (bottomDestinations.size - 1)) / bottomDestinations.size >= 48)
     }
 
     private fun destination(route: AppRoute): BottomDestination {

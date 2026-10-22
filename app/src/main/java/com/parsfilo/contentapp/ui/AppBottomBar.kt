@@ -49,9 +49,22 @@ fun AppBottomBarWithFab(
     val dimens = LocalDimens.current
     val colorScheme = MaterialTheme.colorScheme
     val configuration = LocalConfiguration.current
-    val showLabels = shouldShowBottomBarLabels(configuration.screenWidthDp, configuration.fontScale)
     val density = LocalDensity.current
     val view = LocalView.current
+    val systemNavInsets =
+        ViewCompat
+            .getRootWindowInsets(view)
+            ?.getInsets(WindowInsetsCompat.Type.navigationBars())
+    val horizontalNavInsetDp =
+        with(density) {
+            ((systemNavInsets?.left ?: 0) + (systemNavInsets?.right ?: 0)).toDp().value
+        }
+    val showLabels =
+        shouldShowBottomBarLabels(
+            configuration.screenWidthDp,
+            configuration.fontScale,
+            horizontalNavInsetDp,
+        )
     val currentOnNavigateToDestination = rememberUpdatedState(onNavigateToDestination)
     val selectedId =
         remember(currentDestination) {
@@ -63,11 +76,7 @@ fun AppBottomBarWithFab(
                 }?.id ?: AppRoute.HomeGraph.route
         }
     val systemNavBottomInsetPx =
-        ViewCompat
-            .getRootWindowInsets(view)
-            ?.getInsets(WindowInsetsCompat.Type.navigationBars())
-            ?.bottom
-            ?.toFloat() ?: with(density) { 48.dp.toPx() }
+        systemNavInsets?.bottom?.toFloat() ?: with(density) { 48.dp.toPx() }
     NavigationBar(
         modifier =
             Modifier
@@ -178,9 +187,13 @@ private fun RowScope.AppBottomNavigationItem(
 internal fun shouldShowBottomBarLabels(
     screenWidthDp: Int,
     fontScale: Float,
+    horizontalNavInsetDp: Float = 0f,
 ): Boolean {
-    val scale = fontScale.coerceAtLeast(1f)
-    val effectiveItemWidthDp = screenWidthDp.toFloat() / bottomDestinations.size / scale
+    val itemCount = bottomDestinations.size
+    val material3ItemGapDp = 8f * (itemCount - 1)
+    val availableWidthDp =
+        (screenWidthDp - horizontalNavInsetDp - material3ItemGapDp).coerceAtLeast(0f)
+    val effectiveItemWidthDp = availableWidthDp / itemCount / fontScale.coerceAtLeast(1f)
     return effectiveItemWidthDp >= 68f
 }
 
