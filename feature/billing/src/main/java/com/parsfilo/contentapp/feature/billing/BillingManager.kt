@@ -404,8 +404,11 @@ class BillingManager @Inject constructor(
 
         if (verified.isEmpty()) {
             return PurchaseResolution(
-                if (temporaryFailure) SubscriptionState.Error("BILLING_VERIFICATION_UNAVAILABLE")
-                else SubscriptionState.Inactive,
+                if (temporaryFailure) {
+                    SubscriptionState.Error("BILLING_VERIFICATION_UNAVAILABLE")
+                } else {
+                    SubscriptionState.Inactive
+                },
             )
         }
 
@@ -421,7 +424,8 @@ class BillingManager @Inject constructor(
         purchaseState in setOf(
             "NETWORK_ERROR", "AUTH_REQUIRED", "AUTH_TOKEN_MISSING", "APP_CHECK_MISSING",
             "MISCONFIGURED", "PARSE_ERROR", "ERROR",
-        ) || purchaseState.startsWith("HTTP_")
+        ) ||
+            purchaseState.startsWith("HTTP_")
 
     private fun acknowledgeIfNeeded(purchase: Purchase) {
         if (purchase.isAcknowledged) return
@@ -443,7 +447,9 @@ class BillingManager @Inject constructor(
             // Only a locally verified, unexpired entitlement can survive a transient outage.
             if (previous is SubscriptionState.Active &&
                 (previous.expiryDate?.let { it > System.currentTimeMillis() } == true)
-            ) return
+            ) {
+                return
+            }
         }
         preferencesDataSource.setPremium(state is SubscriptionState.Active)
         _subscriptionState.value = state
