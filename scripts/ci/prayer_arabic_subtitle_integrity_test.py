@@ -33,6 +33,21 @@ class PrayerArabicSubtitleIntegrityTest(unittest.TestCase):
             with self.subTest(prayer=record_id):
                 self.assertEqual("", self.rows[record_id]["sureAdiAR"])
 
+    def test_non_quranic_prayers_are_not_called_suras_in_english(self):
+        expected = {
+            12: "Sübhaneke Prayer",
+            13: "Ettahiyyatü Prayer",
+            14: "Allahümme Salli Prayer",
+            15: "Allahümme Barik Prayer",
+            16: "Rabbena Atina Prayer",
+            17: "Rabbena Firli Prayer",
+            18: "Kunut Prayer 1",
+            19: "Kunut Prayer 2",
+        }
+        for record_id, title in expected.items():
+            with self.subTest(prayer=record_id):
+                self.assertEqual(title, self.rows[record_id]["sureAdiEN"])
+
     def test_sura_titles_are_not_copied_from_other_suras(self):
         sura_titles = [self.rows[idx]["sureAdiAR"] for idx in range(1, 12)]
         self.assertEqual(len(sura_titles), len(set(sura_titles)))
