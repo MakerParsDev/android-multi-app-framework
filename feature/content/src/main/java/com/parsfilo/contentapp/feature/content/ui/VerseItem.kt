@@ -78,6 +78,7 @@ fun VerseItem(
         DisplayMode.TURKISH -> pickTranslation()
     }
 
+    val copySuccessMessage = stringResource(R.string.content_verse_copied)
     val copyActionLabel = stringResource(
         when (displayMode) {
             DisplayMode.ARABIC -> R.string.content_copy_arabic
@@ -150,8 +151,8 @@ fun VerseItem(
 
                 IconButton(
                     onClick = {
-                        copyToClipboard(context, verseText)
-                        view.announceForAccessibility(context.getString(R.string.content_verse_copied))
+                        copyToClipboard(context, verseText, copySuccessMessage)
+                        view.announceForAccessibility(copySuccessMessage)
                     },
                     modifier = Modifier
                         .size(48.dp)
@@ -168,8 +169,8 @@ fun VerseItem(
     }
 }
 
-private fun copyToClipboard(context: Context, verseText: String) {
+private fun copyToClipboard(context: Context, verseText: String, successMessage: String) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
     clipboard.setPrimaryClip(ClipData.newPlainText("verse_text", verseText))
-    Toast.makeText(context, context.getString(R.string.content_verse_copied), Toast.LENGTH_SHORT).show()
+    Toast.makeText(context, successMessage, Toast.LENGTH_SHORT).show()
 }
