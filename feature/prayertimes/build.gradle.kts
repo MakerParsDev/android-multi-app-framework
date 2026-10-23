@@ -12,6 +12,7 @@ android {
 
     defaultConfig {
         minSdk = requiredToolchainInt("toolchain.android.minSdk")
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildFeatures {
@@ -61,6 +62,9 @@ dependencies {
     testImplementation(libs.turbine)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.robolectric)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.runner)
+    androidTestImplementation(libs.mockk.android)
     testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.json.jvm)
 }
