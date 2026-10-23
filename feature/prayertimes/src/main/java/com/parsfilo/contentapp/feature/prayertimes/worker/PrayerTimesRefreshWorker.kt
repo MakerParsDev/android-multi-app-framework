@@ -51,6 +51,7 @@ class PrayerTimesRefreshWorker(
         if (result == Result.success()) {
             runCatching { PrayerTimesWidgetReceiver.refreshAll(applicationContext) }
                 .onFailure { error ->
+                    if (error is CancellationException || error !is Exception) throw error
                     Timber.w("PrayerTimesRefreshWorker widget refresh failed (%s)", error.javaClass.simpleName)
                 }
         }
@@ -112,6 +113,10 @@ internal object PrayerTimesRefreshExecution {
 
         when (refresh) {
             is RefreshResult.Failed -> {
+                // Some repository implementations wrap cancellation in Failed.
+                if (refresh.throwable is CancellationException || refresh.throwable !is Exception) {
+                    throw refresh.throwable
+                }
                 Timber.w("Prayer refresh failed (%s); retrying", refresh.throwable.javaClass.simpleName)
                 return ListenableWorker.Result.retry()
             }

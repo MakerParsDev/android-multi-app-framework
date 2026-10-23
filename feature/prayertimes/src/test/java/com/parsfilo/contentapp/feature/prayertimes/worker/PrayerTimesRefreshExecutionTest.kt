@@ -52,6 +52,15 @@ class PrayerTimesRefreshExecutionTest {
         coVerify(exactly = 0) { scheduler.scheduleNextForCurrentFlavor() }
     }
 
+    @Test fun `wrapped cancellation propagates rather than retrying`() = runTest {
+        coEvery { repository.refreshIfNeeded(42, false) } returns RefreshResult.Failed(
+            CancellationException("worker cancelled"),
+        )
+        val attempt = runCatching { execute() }
+        assertThat(attempt.exceptionOrNull()).isInstanceOf(CancellationException::class.java)
+        coVerify(exactly = 0) { scheduler.scheduleNextForCurrentFlavor() }
+    }
+
     @Test fun `temporary parsing failure returns retry`() = runTest {
         coEvery { repository.refreshIfNeeded(42, false) } returns RefreshResult.Failed(IllegalStateException("empty response"))
         assertThat(execute()).isEqualTo(ListenableWorker.Result.retry())

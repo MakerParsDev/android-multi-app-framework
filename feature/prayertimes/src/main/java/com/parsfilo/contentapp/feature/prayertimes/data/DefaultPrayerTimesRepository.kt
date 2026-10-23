@@ -24,6 +24,7 @@ import com.parsfilo.contentapp.feature.prayertimes.model.PrayerTimesDay
 import com.parsfilo.contentapp.feature.prayertimes.model.PrayerTimesMode
 import com.parsfilo.contentapp.feature.prayertimes.model.RefreshResult
 import com.parsfilo.contentapp.feature.prayertimes.model.ResolveResult
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -161,6 +162,10 @@ class DefaultPrayerTimesRepository @Inject constructor(
             handleRefreshFailure(error = e, districtId = districtId, hasToday = hasToday)
         } catch (e: SecurityException) {
             handleRefreshFailure(error = e, districtId = districtId, hasToday = hasToday)
+        } catch (e: CancellationException) {
+            // CancellationException is an IllegalStateException on the JVM.
+            // Never turn a cancelled WorkManager coroutine into a cache fallback.
+            throw e
         } catch (e: IllegalStateException) {
             handleRefreshFailure(error = e, districtId = districtId, hasToday = hasToday)
         } catch (e: IllegalArgumentException) {
