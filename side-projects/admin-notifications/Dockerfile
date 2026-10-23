@@ -1,11 +1,12 @@
-FROM node:22-alpine AS build
+FROM node:24.12-alpine AS build
 
-WORKDIR /app
+WORKDIR /app/side-projects/admin-notifications
 
-COPY package.json package-lock.json ./
+COPY side-projects/admin-notifications/package.json side-projects/admin-notifications/package-lock.json ./
 RUN npm ci
 
-COPY . .
+COPY side-projects/admin-notifications/ ./
+COPY .ci/apps.json /app/.ci/apps.json
 
 ARG VITE_FIREBASE_API_KEY
 ARG VITE_FIREBASE_AUTH_DOMAIN
@@ -14,6 +15,7 @@ ARG VITE_FIREBASE_APP_ID
 ARG VITE_FIREBASE_MESSAGING_SENDER_ID
 ARG VITE_FIREBASE_STORAGE_BUCKET
 ARG VITE_FIREBASE_FUNCTIONS_REGION
+ARG VITE_ADMIN_ALLOWED_EMAILS
 ARG VITE_FUNCTIONS_BASE_URL
 
 ENV VITE_FIREBASE_API_KEY=${VITE_FIREBASE_API_KEY}
@@ -23,11 +25,15 @@ ENV VITE_FIREBASE_APP_ID=${VITE_FIREBASE_APP_ID}
 ENV VITE_FIREBASE_MESSAGING_SENDER_ID=${VITE_FIREBASE_MESSAGING_SENDER_ID}
 ENV VITE_FIREBASE_STORAGE_BUCKET=${VITE_FIREBASE_STORAGE_BUCKET}
 ENV VITE_FIREBASE_FUNCTIONS_REGION=${VITE_FIREBASE_FUNCTIONS_REGION}
+ENV VITE_ADMIN_ALLOWED_EMAILS=${VITE_ADMIN_ALLOWED_EMAILS}
 ENV VITE_FUNCTIONS_BASE_URL=${VITE_FUNCTIONS_BASE_URL}
 
 RUN npm run build
 
-FROM nginx:1.27-alpine
+FROM nginxinc/nginx-unprivileged:1.30-alpine
 
-COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY side-projects/admin-notifications/docker/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/side-projects/admin-notifications/dist /usr/share/nginx/html
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=15s --retries=3 \
+    CMD wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1

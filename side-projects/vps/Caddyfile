@@ -4,12 +4,12 @@
 
 {$ADMIN_SUBDOMAIN}.{$PARSFILO_DOMAIN} {
 	encode zstd gzip
-	reverse_proxy admin-notifications:80
+	reverse_proxy admin-notifications:8080
 }
 
 {$PARSFILO_DOMAIN}, {$WWW_SUBDOMAIN}.{$PARSFILO_DOMAIN} {
 	encode zstd gzip
-	reverse_proxy mobil-web:80
+	reverse_proxy mobil-web:8080
 }
 
 # Optional API bridge while functions still run on Firebase.

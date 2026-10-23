@@ -1,0 +1,21 @@
+# Minimal build context: never send root secrets or unrelated workspaces.
+**
+!.ci/
+!.ci/apps.json
+!side-projects/
+!side-projects/admin-notifications/
+!side-projects/admin-notifications/**
+**/node_modules/
+**/node_modules/**
+**/dist/
+**/dist/**
+**/coverage/
+**/coverage/**
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/*.jks
+**/*.p12
+**/.git/
+**/.git/**

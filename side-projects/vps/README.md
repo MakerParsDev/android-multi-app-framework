@@ -1,78 +1,47 @@
-# VPS Bootstrap (Parsfilo)
+# Parsfilo VPS deployment
 
-Bu klasor, Android disi parcalari tek VPS uzerinde calistirmak icin ilk hazirlik setidir.
+This directory hosts the admin notifications dashboard and static mobile website behind Caddy. Google Play, Firebase Auth, FCM, AdMob and Crashlytics remain with their existing providers.
 
-## Bu paket neyi tasir
+## Prerequisites
 
-- `admin.parsfilo.com` -> `side-projects/admin-notifications` (React/Vite build)
-- `parsfilo.com` + `www.parsfilo.com` -> `side-projects/firebase/mobil_web/public` (statik site)
-- `api.parsfilo.com` -> simdilik Firebase Functions bridge (`FIREBASE_FUNCTIONS_BASE_URL`)
+- Linux host with Docker Engine, Docker Compose v2 or later, and DNS pointing the selected apex, `www`, `admin` and `api` hosts at the VPS.
+- TLS/ACME email address, accessible Firebase project configuration, and a correctly configured Functions upstream.
+- A checkout of the complete repository (the admin Vite build imports `.ci/apps.json`).
 
-Not: FCM/AdMob/Play/Crashlytics yine Google tarafinda kalir.
-
-## Gereksinimler
-
-1. Linux VPS (onerilen: Ubuntu 24.04 LTS)
-2. Docker + Docker Compose plugin
-3. DNS:
-   - `A` kaydi: `parsfilo.com` -> VPS IP
-   - `A` kaydi: `admin.parsfilo.com` -> VPS IP
-   - `A` kaydi: `www.parsfilo.com` -> VPS IP
-   - `A` kaydi: `api.parsfilo.com` -> VPS IP
-
-## Kurulum
-
-1. VPS'e repo cek:
+## Prepare environment
 
 ```bash
-git clone <repo-url>
 cd android-multi-app-framework/side-projects/vps
+cp .env.template .env
+# Edit .env locally. Do not commit populated .env files.
+bash scripts/preflight.sh
 ```
 
-2. Env dosyasini olustur:
+Set all the actual `VITE_FIREBASE_*`, function endpoint, domain and admin-authorization values in `.env`. This file is consumed only at runtime/by the Docker build; it must not be committed. Frontend `VITE_` parameters become public browser configuration; **never** place private credentials in these variables.
+
+## Verify images without deploying
+
+The admin build uses Node 24.12 and a Dockerfile-specific allowlist (`side-projects/admin-notifications/Dockerfile.dockerignore`). It includes only the admin sources plus `.ci/apps.json`, excluding root credentials, other projects, and generated files.
 
 ```bash
-cp .env.example .env
+docker compose config --quiet
+docker compose build admin-notifications mobil-web
 ```
 
-3. `.env` icindeki bos degerleri doldur:
-   - `VITE_FIREBASE_API_KEY`
-   - `VITE_FIREBASE_APP_ID`
-   - `VITE_FIREBASE_MESSAGING_SENDER_ID`
-   - gerekiyorsa `VITE_FUNCTIONS_BASE_URL`
+Both NGINX-based images run as unprivileged UID 101, listen internally on port 8080, and provide a Docker HTTP health check. Caddy forwards to `admin-notifications:8080` and `mobil-web:8080`. Caddy's public ports 80/443 are unchanged.
 
-4. Servisleri kaldir:
+## Controlled deployment
+
+Only after configuration, verification, and explicit deployment approval:
 
 ```bash
 docker compose up -d --build
-```
-
-5. Durum kontrol:
-
-```bash
 docker compose ps
-docker compose logs -f caddy
+docker compose logs --tail=100 caddy admin-notifications mobil-web
 ```
 
-## Yeniden deploy
-
-```bash
-git pull
-docker compose up -d --build
-```
+Verify that both web containers report **healthy**, the admin dashboard and static website answer HTTPS through Caddy, and Firebase sign-in is authorized for the configured domains. Check all DNS entries and certificate issuance before opening production traffic.
 
 ## Rollback
 
-Bir onceki commit'e donup tekrar build:
-
-```bash
-git checkout <previous-commit>
-docker compose up -d --build
-```
-
-## Operasyon notlari
-
-- Ilk sertifika aliminda DNS propagasyonu tamamlanmadiysa SSL gec gelebilir.
-- Cloudflare proxy kullanacaksan ilk kurulumda gecici olarak `DNS only` ile acmak daha stabil olur.
-- Admin panelde sign-in hata alirsan Firebase Auth Authorized domains listesinde `admin.parsfilo.com` ve `parsfilo.com` oldugunu dogrula.
-
+Record the deployed Git commit and last known-good image identifiers. If health checks or production requests fail, restore the previous revision/images and run `docker compose up -d --build`, followed by `docker compose ps` and HTTP smoke checks. Rebuild from a trusted, reviewed Git revision; do not delete Docker volumes or alter live Firebase data as part of an ordinary web rollback.

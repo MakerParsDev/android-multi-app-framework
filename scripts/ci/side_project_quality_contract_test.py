@@ -161,6 +161,43 @@ class SideProjectQualityContractTest(unittest.TestCase):
             self.assertIn("gitSha", text, source.as_posix())
             self.assertIn("builtAt", text, source.as_posix())
 
+    def test_vps_web_containers_build_with_unprivileged_healthy_nginx(self) -> None:
+        compose = (ROOT / "side-projects/vps/docker-compose.yml").read_text(encoding="utf-8")
+        caddy = (ROOT / "side-projects/vps/Caddyfile").read_text(encoding="utf-8")
+        admin = (ROOT / "side-projects/admin-notifications/Dockerfile").read_text(encoding="utf-8")
+        mobile = (ROOT / "side-projects/firebase/mobil_web/Dockerfile").read_text(encoding="utf-8")
+        dockerignore = (ROOT / "side-projects/admin-notifications/Dockerfile.dockerignore").read_text(encoding="utf-8")
+
+        # Admin Vite resolves @ciapps against repository root. Its build context
+        # must include only this static catalog and the admin project sources.
+        self.assertIn("context: ../..", compose)
+        self.assertIn("dockerfile: side-projects/admin-notifications/Dockerfile", compose)
+        self.assertIn("COPY .ci/apps.json /app/.ci/apps.json", admin)
+        self.assertIn("!.ci/apps.json", dockerignore)
+        self.assertIn("**", dockerignore)
+        for forbidden in ("**/.env", "**/.env.*", "**/node_modules/", "**/*.pem", "**/*.jks"):
+            self.assertIn(forbidden, dockerignore)
+        self.assertIn("FROM node:24.12-alpine", admin)
+        env_template = ROOT / "side-projects/vps/.env.template"
+        self.assertTrue(env_template.is_file())
+        template = env_template.read_text(encoding="utf-8")
+        for key in ("PARSFILO_DOMAIN", "CADDY_ACME_EMAIL", "FIREBASE_FUNCTIONS_BASE_URL", "VITE_FIREBASE_API_KEY"):
+            self.assertIn(f"{key}=", template)
+
+        preflight = (ROOT / "side-projects/vps/scripts/preflight.sh").read_text(encoding="utf-8")
+        self.assertIn('Missing or empty ${key}', preflight)
+        self.assertIn('grep -Eq "^${key}=[^[:space:]]+"', preflight)
+
+        for name, dockerfile, nginx_path in (
+            ("admin-notifications", admin, ROOT / "side-projects/admin-notifications/docker/nginx.conf"),
+            ("mobil-web", mobile, ROOT / "side-projects/firebase/mobil_web/docker/nginx.conf"),
+        ):
+            self.assertIn("FROM nginxinc/nginx-unprivileged:", dockerfile, name)
+            self.assertIn("HEALTHCHECK", dockerfile, name)
+            self.assertIn("http://127.0.0.1:8080/", dockerfile, name)
+            self.assertIn("listen 8080;", nginx_path.read_text(encoding="utf-8"), name)
+            self.assertIn(f"reverse_proxy {name}:8080", caddy)
+
     def test_gradle_static_gate_validates_side_project_contract(self) -> None:
         text = ROOT_BUILD.read_text(encoding="utf-8")
         self.assertIn("validateSideProjectQualityContract", text)

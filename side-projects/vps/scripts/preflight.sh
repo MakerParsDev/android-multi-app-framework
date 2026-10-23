@@ -22,8 +22,8 @@ required=(
 )
 
 for key in "${required[@]}"; do
-  if ! grep -q "^${key}=" .env; then
-    echo "ERROR: Missing ${key} in .env"
+  if ! grep -Eq "^${key}=[^[:space:]]+" .env; then
+    echo "ERROR: Missing or empty ${key} in .env"
     exit 1
   fi
 done
