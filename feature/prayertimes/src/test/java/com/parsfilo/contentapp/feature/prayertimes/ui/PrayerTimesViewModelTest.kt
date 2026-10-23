@@ -6,6 +6,7 @@ import com.parsfilo.contentapp.core.datastore.PrayerPreferencesDataSource
 import com.parsfilo.contentapp.feature.prayertimes.R
 import com.parsfilo.contentapp.feature.prayertimes.alarm.PrayerAlarmSoundPlayer
 import com.parsfilo.contentapp.feature.prayertimes.data.PrayerTimesRepository
+import com.parsfilo.contentapp.feature.prayertimes.model.PrayerAlarmScheduleStatus
 import com.parsfilo.contentapp.feature.prayertimes.model.PrayerAlarmSettings
 import com.parsfilo.contentapp.feature.prayertimes.model.PrayerCity
 import com.parsfilo.contentapp.feature.prayertimes.model.PrayerCountry
@@ -73,6 +74,77 @@ class PrayerTimesViewModelTest {
                 UiText.StringResource(R.string.prayertimes_resolve_failed),
             )
         }
+
+    @Test
+    fun enableWithNoLocationKeepsIntentButReportsNoAlarm() = runTest(testDispatcher) {
+        val repo = FakePrayerTimesRepository().apply { modeFlow.value = PrayerTimesMode.MANUAL }
+        val viewModel = PrayerTimesViewModel(repo, prayerPreferencesDataSource, prayerAlarmSoundPlayer)
+        val collector = backgroundScope.launch { viewModel.uiState.collect {} }
+        runCurrent()
+        viewModel.onAlarmEnabledChanged(true)
+        runCurrent()
+        assertThat(repo.alarmSettingsFlow.value.enabled).isTrue()
+        assertThat(viewModel.uiState.value.alarmScheduleStatus)
+            .isEqualTo(PrayerAlarmScheduleStatus.NOT_SCHEDULED)
+        assertThat(viewModel.snackBarMessage.value)
+            .isEqualTo(UiText.StringResource(R.string.prayertimes_alarm_choose_location))
+        collector.cancel()
+    }
+
+    @Test
+    fun successfulRegistrationIsDistinctFromEnabledPreference() = runTest(testDispatcher) {
+        val repo = FakePrayerTimesRepository().apply {
+            modeFlow.value = PrayerTimesMode.MANUAL
+            scheduleResult = true
+        }
+        val viewModel = PrayerTimesViewModel(repo, prayerPreferencesDataSource, prayerAlarmSoundPlayer)
+        val collector = backgroundScope.launch { viewModel.uiState.collect {} }
+        runCurrent()
+        viewModel.onAlarmEnabledChanged(true)
+        runCurrent()
+        assertThat(viewModel.uiState.value.alarmScheduleStatus)
+            .isEqualTo(PrayerAlarmScheduleStatus.SCHEDULED)
+        assertThat(viewModel.snackBarMessage.value).isNull()
+        collector.cancel()
+    }
+
+    @Test
+    fun restartWithDistrictRevalidatesFailedSchedule() = runTest(testDispatcher) {
+        val repo = FakePrayerTimesRepository().apply {
+            modeFlow.value = PrayerTimesMode.MANUAL
+            alarmSettingsFlow.value = PrayerAlarmSettings(enabled = true)
+            scheduleResult = false
+            selectionFlow.value = PrayerLocationSelection(1, 2, 3, "test district")
+        }
+        val viewModel = PrayerTimesViewModel(repo, prayerPreferencesDataSource, prayerAlarmSoundPlayer)
+        val collector = backgroundScope.launch { viewModel.uiState.collect {} }
+        runCurrent()
+        assertThat(repo.scheduleAttempts).isAtLeast(1)
+        assertThat(viewModel.uiState.value.alarmScheduleStatus)
+            .isEqualTo(PrayerAlarmScheduleStatus.NOT_SCHEDULED)
+        collector.cancel()
+    }
+
+    @Test
+    fun refreshAfterDataArrivesConfirmsPreviouslyFailedAlarm() = runTest(testDispatcher) {
+        val repo = FakePrayerTimesRepository().apply {
+            modeFlow.value = PrayerTimesMode.MANUAL
+            alarmSettingsFlow.value = PrayerAlarmSettings(enabled = true)
+            selectionFlow.value = PrayerLocationSelection(1, 2, 3, "test district")
+            scheduleResult = false
+        }
+        val viewModel = PrayerTimesViewModel(repo, prayerPreferencesDataSource, prayerAlarmSoundPlayer)
+        val collector = backgroundScope.launch { viewModel.uiState.collect {} }
+        runCurrent()
+        assertThat(viewModel.uiState.value.alarmScheduleStatus)
+            .isEqualTo(PrayerAlarmScheduleStatus.NOT_SCHEDULED)
+        repo.scheduleResult = true
+        viewModel.refresh()
+        runCurrent()
+        assertThat(viewModel.uiState.value.alarmScheduleStatus)
+            .isEqualTo(PrayerAlarmScheduleStatus.SCHEDULED)
+        collector.cancel()
+    }
 
     @Test
     fun `selection change triggers background refresh`() = runTest(testDispatcher) {
@@ -287,16 +359,27 @@ private class FakePrayerTimesRepository : PrayerTimesRepository {
         modeFlow.value = mode
     }
 
-    override suspend fun setAlarmEnabled(enabled: Boolean) {
+    var scheduleResult = false
+    var scheduleAttempts = 0
+
+    override suspend fun setAlarmEnabled(enabled: Boolean): Boolean {
         alarmSettingsFlow.value = alarmSettingsFlow.value.copy(enabled = enabled)
+        return enabled && scheduleResult
     }
 
-    override suspend fun setAlarmOffsetMinutes(minutes: Int) {
+    override suspend fun setAlarmOffsetMinutes(minutes: Int): Boolean {
         alarmSettingsFlow.value = alarmSettingsFlow.value.copy(offsetMinutes = minutes)
+        return alarmSettingsFlow.value.enabled && scheduleResult
     }
 
-    override suspend fun setSelectedAlarmPrayerKeys(keys: Set<String>) {
+    override suspend fun setSelectedAlarmPrayerKeys(keys: Set<String>): Boolean {
         alarmSettingsFlow.value = alarmSettingsFlow.value.copy(selectedPrayerKeys = keys)
+        return alarmSettingsFlow.value.enabled && scheduleResult
+    }
+
+    override suspend fun tryScheduleAlarm(): Boolean {
+        scheduleAttempts += 1
+        return alarmSettingsFlow.value.enabled && scheduleResult
     }
 
     override suspend fun setManualSelection(countryId: Int, cityId: Int, districtId: Int) {

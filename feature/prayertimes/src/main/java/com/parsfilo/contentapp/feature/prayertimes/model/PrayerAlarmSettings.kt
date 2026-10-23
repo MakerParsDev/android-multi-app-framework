@@ -6,3 +6,11 @@ data class PrayerAlarmSettings(
     val selectedPrayerKeys: Set<String> = emptySet(),
     val soundUri: String? = null,
 )
+
+/** A scheduling attempt outcome, distinct from the user's enabled preference. */
+enum class PrayerAlarmScheduleStatus {
+    UNKNOWN,
+    SCHEDULED,
+    NOT_SCHEDULED,
+    DISABLED,
+}

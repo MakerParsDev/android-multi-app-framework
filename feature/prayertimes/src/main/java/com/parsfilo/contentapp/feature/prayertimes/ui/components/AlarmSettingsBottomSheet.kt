@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.parsfilo.contentapp.core.designsystem.component.AppButton
 import com.parsfilo.contentapp.feature.prayertimes.R
+import com.parsfilo.contentapp.feature.prayertimes.model.PrayerAlarmScheduleStatus
 import com.parsfilo.contentapp.feature.prayertimes.model.PrayerAlarmSettings
 import com.parsfilo.contentapp.feature.prayertimes.model.PrayerAppVariant
 
@@ -44,6 +45,9 @@ internal data class AlarmSoundOption(
 internal fun AlarmSettingsBottomSheet(
     variant: PrayerAppVariant,
     settings: PrayerAlarmSettings,
+    alarmScheduleStatus: PrayerAlarmScheduleStatus,
+    hasLocation: Boolean,
+    onChooseLocationOrRefresh: () -> Unit,
     onDismissRequest: () -> Unit,
     onEnabledChanged: (Boolean) -> Unit,
     onOffsetChanged: (Int) -> Unit,
@@ -99,6 +103,36 @@ internal fun AlarmSettingsBottomSheet(
             )
 
             if (settings.enabled) {
+                val scheduleText = when (alarmScheduleStatus) {
+                    PrayerAlarmScheduleStatus.SCHEDULED -> R.string.prayertimes_alarm_scheduled
+                    PrayerAlarmScheduleStatus.NOT_SCHEDULED -> {
+                        if (hasLocation) {
+                            R.string.prayertimes_alarm_schedule_unavailable
+                        } else {
+                            R.string.prayertimes_alarm_choose_location
+                        }
+                    }
+                    PrayerAlarmScheduleStatus.UNKNOWN -> R.string.prayertimes_alarm_unverified
+                    PrayerAlarmScheduleStatus.DISABLED -> R.string.prayertimes_alarm_disabled
+                }
+                Text(
+                    text = stringResource(scheduleText),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (alarmScheduleStatus == PrayerAlarmScheduleStatus.NOT_SCHEDULED) {
+                    AppButton(
+                        text = stringResource(
+                            if (hasLocation) {
+                                R.string.prayertimes_refresh
+                            } else {
+                                R.string.prayertimes_change_location
+                            },
+                        ),
+                        onClick = onChooseLocationOrRefresh,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
                 Text(
                     text = stringResource(
                         R.string.prayertimes_alarm_offset_value, settings.offsetMinutes

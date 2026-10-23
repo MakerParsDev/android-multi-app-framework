@@ -44,11 +44,14 @@ interface PrayerTimesRepository {
 
     suspend fun setMode(mode: PrayerTimesMode)
 
-    suspend fun setAlarmEnabled(enabled: Boolean)
+    suspend fun setAlarmEnabled(enabled: Boolean): Boolean
 
-    suspend fun setAlarmOffsetMinutes(minutes: Int)
+    suspend fun setAlarmOffsetMinutes(minutes: Int): Boolean
 
-    suspend fun setSelectedAlarmPrayerKeys(keys: Set<String>)
+    suspend fun setSelectedAlarmPrayerKeys(keys: Set<String>): Boolean
+
+    /** Revalidate alarm registration against current preferences and cached times. */
+    suspend fun tryScheduleAlarm(): Boolean
 
     suspend fun setManualSelection(
         countryId: Int,

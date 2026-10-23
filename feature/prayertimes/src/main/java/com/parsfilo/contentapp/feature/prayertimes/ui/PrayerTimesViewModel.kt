@@ -9,6 +9,7 @@ import com.parsfilo.contentapp.feature.prayertimes.data.HijriCalendarConverter
 import com.parsfilo.contentapp.feature.prayertimes.data.NextPrayerInfo
 import com.parsfilo.contentapp.feature.prayertimes.data.PrayerDateTime
 import com.parsfilo.contentapp.feature.prayertimes.data.PrayerTimesRepository
+import com.parsfilo.contentapp.feature.prayertimes.model.PrayerAlarmScheduleStatus
 import com.parsfilo.contentapp.feature.prayertimes.model.PrayerAlarmSettings
 import com.parsfilo.contentapp.feature.prayertimes.model.PrayerCity
 import com.parsfilo.contentapp.feature.prayertimes.model.PrayerCountry
@@ -51,6 +52,7 @@ class PrayerTimesViewModel @Inject constructor(
     private val _snackBarMessage = MutableStateFlow<UiText?>(null)
     private val resolvingLocationState = MutableStateFlow(false)
     private val refreshingState = MutableStateFlow(false)
+    private val alarmScheduleStatusState = MutableStateFlow(PrayerAlarmScheduleStatus.UNKNOWN)
     private val pendingResolvedLocationNameState = MutableStateFlow<String?>(null)
     private val _events = MutableSharedFlow<PrayerTimesUiEvent>(extraBufferCapacity = 1)
 
@@ -92,6 +94,15 @@ class PrayerTimesViewModel @Inject constructor(
                             else -> Unit
                         }
                     }
+                    val settings = repository.observeAlarmSettings().first()
+                    if (settings.enabled) {
+                        // Startup/reselection must revalidate; enabled preference is not proof
+                        // that the OS still has a scheduled alarm.
+                        val scheduled = repository.tryScheduleAlarm()
+                        recordAlarmScheduleResult(enabled = true, scheduled = scheduled, notify = false)
+                    } else {
+                        alarmScheduleStatusState.value = PrayerAlarmScheduleStatus.DISABLED
+                    }
                 }
         }
 
@@ -131,11 +142,13 @@ class PrayerTimesViewModel @Inject constructor(
         coreUiInputs,
         refreshingState,
         currentTimeMillis,
-    ) { core, isRefreshing, nowMillis ->
+        alarmScheduleStatusState,
+    ) { core, isRefreshing, nowMillis, scheduleStatus ->
         UiInputs(
             mode = core.mode,
             selection = core.selection,
             alarmSettings = core.alarmSettings,
+            alarmScheduleStatus = scheduleStatus,
             isResolvingLocation = core.isResolvingLocation,
             pendingResolvedLocationName = core.pendingResolvedLocationName,
             isRefreshing = isRefreshing,
@@ -163,6 +176,11 @@ class PrayerTimesViewModel @Inject constructor(
                     selection = inputs.selection,
                     days = days,
                     alarmSettings = inputs.alarmSettings,
+                    alarmScheduleStatus = if (inputs.alarmSettings.enabled) {
+                        inputs.alarmScheduleStatus
+                    } else {
+                        PrayerAlarmScheduleStatus.DISABLED
+                    },
                     isResolvingLocation = inputs.isResolvingLocation,
                     pendingResolvedLocationName = inputs.pendingResolvedLocationName,
                     isRefreshing = inputs.isRefreshing,
@@ -195,19 +213,45 @@ class PrayerTimesViewModel @Inject constructor(
 
     fun onAlarmEnabledChanged(enabled: Boolean) {
         viewModelScope.launch {
-            repository.setAlarmEnabled(enabled)
+            alarmScheduleStatusState.value = PrayerAlarmScheduleStatus.UNKNOWN
+            val scheduled = repository.setAlarmEnabled(enabled)
+            recordAlarmScheduleResult(enabled, scheduled, notify = enabled)
         }
     }
 
     fun onAlarmOffsetChanged(minutes: Int) {
         viewModelScope.launch {
-            repository.setAlarmOffsetMinutes(minutes)
+            alarmScheduleStatusState.value = PrayerAlarmScheduleStatus.UNKNOWN
+            val scheduled = repository.setAlarmOffsetMinutes(minutes)
+            val enabled = repository.observeAlarmSettings().first().enabled
+            recordAlarmScheduleResult(enabled, scheduled, notify = enabled)
         }
     }
 
     fun onAlarmPrayerKeysChanged(keys: Set<String>) {
         viewModelScope.launch {
-            repository.setSelectedAlarmPrayerKeys(keys)
+            alarmScheduleStatusState.value = PrayerAlarmScheduleStatus.UNKNOWN
+            val scheduled = repository.setSelectedAlarmPrayerKeys(keys)
+            val enabled = repository.observeAlarmSettings().first().enabled
+            recordAlarmScheduleResult(enabled, scheduled, notify = enabled)
+        }
+    }
+
+    private suspend fun recordAlarmScheduleResult(enabled: Boolean, scheduled: Boolean, notify: Boolean) {
+        alarmScheduleStatusState.value = when {
+            !enabled -> PrayerAlarmScheduleStatus.DISABLED
+            scheduled -> PrayerAlarmScheduleStatus.SCHEDULED
+            else -> PrayerAlarmScheduleStatus.NOT_SCHEDULED
+        }
+        if (enabled && !scheduled && notify) {
+            val selectedDistrict = repository.observeCurrentSelection().first()
+            _snackBarMessage.value = UiText.StringResource(
+                if (selectedDistrict == null) {
+                    R.string.prayertimes_alarm_choose_location
+                } else {
+                    R.string.prayertimes_alarm_schedule_unavailable
+                },
+            )
         }
     }
 
@@ -240,6 +284,10 @@ class PrayerTimesViewModel @Inject constructor(
                     }
 
                     else -> Unit
+                }
+                if (repository.observeAlarmSettings().first().enabled) {
+                    val scheduled = repository.tryScheduleAlarm()
+                    recordAlarmScheduleResult(enabled = true, scheduled = scheduled, notify = false)
                 }
             } finally {
                 refreshingState.value = false
@@ -347,6 +395,7 @@ data class PrayerTimesUiState(
     val selection: PrayerLocationSelection? = null,
     val days: List<PrayerTimesDay> = emptyList(),
     val alarmSettings: PrayerAlarmSettings = PrayerAlarmSettings(),
+    val alarmScheduleStatus: PrayerAlarmScheduleStatus = PrayerAlarmScheduleStatus.UNKNOWN,
     val isResolvingLocation: Boolean = false,
     val pendingResolvedLocationName: String? = null,
     val isRefreshing: Boolean = false,
@@ -588,6 +637,7 @@ private data class UiInputs(
     val mode: PrayerTimesMode,
     val selection: PrayerLocationSelection?,
     val alarmSettings: PrayerAlarmSettings,
+    val alarmScheduleStatus: PrayerAlarmScheduleStatus,
     val isResolvingLocation: Boolean,
     val pendingResolvedLocationName: String?,
     val isRefreshing: Boolean,
