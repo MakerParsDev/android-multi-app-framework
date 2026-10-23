@@ -36,9 +36,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,24 +67,44 @@ fun MessagesRoute(
     viewModel: MessagesViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val sendState by viewModel.sendState.collectAsStateWithLifecycle()
     MessagesScreen(
-        uiState = uiState, onSendMessage = viewModel::sendMessage
+        uiState = uiState,
+        onSendMessage = viewModel::sendMessage,
+        sendState = sendState,
+        onResetSendState = viewModel::resetSendState,
     )
 }
 
 @Composable
 fun MessagesScreen(
     uiState: MessagesUiState,
-    onSendMessage: (String, String, String) -> Unit
+    onSendMessage: (String, String, String) -> Unit,
+    sendState: MessageSendState = MessageSendState.Idle,
+    onResetSendState: () -> Unit = {},
 ) {
-    var showDialog by remember { mutableStateOf(false) }
+    var showDialog by rememberSaveable { mutableStateOf(false) }
+
+    val openDialog = {
+        onResetSendState()
+        showDialog = true
+    }
+    val dismissDialog = {
+        if (sendState != MessageSendState.Sending) {
+            showDialog = false
+            onResetSendState()
+        }
+    }
+    LaunchedEffect(sendState) {
+        if (showDialog && sendState == MessageSendState.Sent) dismissDialog()
+    }
     val sendLabel = stringResource(R.string.messages_send)
     val dimens = LocalDimens.current
 
     Scaffold(
         containerColor = Color.Transparent, floatingActionButton = {
             FloatingActionButton(
-                onClick = { showDialog = true },
+                onClick = openDialog,
                 modifier = Modifier
                     .navigationBarsPadding()
                     .padding(
@@ -195,7 +216,7 @@ fun MessagesScreen(
                             Spacer(modifier = Modifier.height(dimens.space16))
                             AppButton(
                                 text = stringResource(R.string.messages_empty_cta),
-                                onClick = { showDialog = true },
+                                onClick = openDialog,
                             )
                         }
                     } else {
@@ -227,9 +248,11 @@ fun MessagesScreen(
     }
 
     if (showDialog) {
-        SendMessageDialog(onDismiss = { }, onSend = { subject, message ->
-            onSendMessage(subject, message, "GENERAL")
-        })
+        SendMessageDialog(
+            onDismiss = dismissDialog,
+            onSend = { subject, message -> onSendMessage(subject, message, "GENERAL") },
+            sendState = sendState,
+        )
     }
 }
 
@@ -407,20 +430,22 @@ private fun formatMessageDate(epochMillis: Long): String = runCatching {
 @Composable
 fun SendMessageDialog(
     onDismiss: () -> Unit,
-    onSend: (String, String) -> Unit
+    onSend: (String, String) -> Unit,
+    sendState: MessageSendState = MessageSendState.Idle,
 ) {
-    var subject by remember { mutableStateOf("") }
-    var message by remember { mutableStateOf("") }
+    var subject by rememberSaveable { mutableStateOf("") }
+    var message by rememberSaveable { mutableStateOf("") }
+    val sending = sendState == MessageSendState.Sending
     val dimens = LocalDimens.current
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!sending) onDismiss() },
         title = { Text(stringResource(R.string.messages_send)) },
         text = {
             Column {
                 AppTextField(
                     value = subject,
-                    onValueChange = { subject = it },
+                    onValueChange = { if (!sending) subject = it },
                     label = stringResource(R.string.messages_subject),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
@@ -428,24 +453,36 @@ fun SendMessageDialog(
                 Spacer(modifier = Modifier.height(dimens.space4))
                 AppTextField(
                     value = message,
-                    onValueChange = { message = it },
+                    onValueChange = { if (!sending) message = it },
                     label = stringResource(R.string.messages_body),
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3
                 )
+                if (sending) {
+                    Spacer(modifier = Modifier.height(dimens.space8))
+                    CircularProgressIndicator()
+                }
+                if (sendState == MessageSendState.Error) {
+                    Spacer(modifier = Modifier.height(dimens.space8))
+                    Text(
+                        text = stringResource(R.string.messages_send_error),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
             }
         },
         confirmButton = {
             AppTextButton(
                 text = stringResource(R.string.send),
-                onClick = { onSend(subject, message) },
-                enabled = subject.isNotBlank() && message.isNotBlank(),
+                onClick = { if (!sending) onSend(subject, message) },
+                enabled = !sending && subject.isNotBlank() && message.isNotBlank(),
             )
         },
         dismissButton = {
             AppTextButton(
                 text = stringResource(R.string.cancel),
                 onClick = onDismiss,
+                enabled = !sending,
             )
         }
     )

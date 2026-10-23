@@ -11,4 +11,5 @@
     <string name="messages_error">Hata: %s</string>
     <string name="send">Gönder</string>
     <string name="cancel">İptal</string>
+    <string name="messages_send_error">Mesaj gönderilemedi. Lütfen yeniden deneyin.</string>
 </resources>
