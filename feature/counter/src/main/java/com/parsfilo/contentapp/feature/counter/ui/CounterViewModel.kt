@@ -385,7 +385,11 @@ class CounterViewModel @Inject constructor(
     }
 
     fun onReminderSettingsToggle() {
-        _uiState.value = _uiState.value.copy(showReminderSettings = !_uiState.value.showReminderSettings)
+        val current = _uiState.value
+        _uiState.value = current.copy(
+            showReminderSettings = !current.showReminderSettings,
+            showSessionHistory = false,
+        )
     }
 
     fun onFirstSessionReminderAction() {
@@ -400,7 +404,11 @@ class CounterViewModel @Inject constructor(
     }
 
     fun onSessionHistoryToggle() {
-        _uiState.value = _uiState.value.copy(showSessionHistory = !_uiState.value.showSessionHistory)
+        val current = _uiState.value
+        _uiState.value = current.copy(
+            showSessionHistory = !current.showSessionHistory,
+            showReminderSettings = false,
+        )
     }
 
     fun onSessionHistoryDismissed() {

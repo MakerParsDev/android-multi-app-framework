@@ -196,128 +196,127 @@ fun CounterScreen(
             isPremium = uiState.isPremium,
             content = bannerAdContent,
         )
-        return
-    }
+    } else {
+        BackHandler {
+            onZikirSelectorToggle()
+        }
 
-    BackHandler {
-        onZikirSelectorToggle()
-    }
+        Scaffold(
+            modifier =
+                Modifier
+                    .testTag("counter_root")
+                    .fillMaxSize(),
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            contentWindowInsets = WindowInsets.safeDrawing.only(
+                WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
+            ),
+        ) { innerPadding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .consumeWindowInsets(innerPadding),
+            ) {
+                CounterHeaderBar(
+                    onReminderClick = onReminderSettingsToggle,
+                    onHistoryClick = onSessionHistoryToggle,
+                    onSettingsClick = onSettingsClick,
+                    onRewardsClick = onRewardsClick,
+                    isHapticEnabled = uiState.isHapticEnabled,
+                    isSoundEnabled = uiState.isSoundEnabled,
+                    onToggleHaptic = onToggleHaptic,
+                    onToggleSound = onToggleSound,
+                    onOpenZikirList = onZikirSelectorToggle,
+                )
 
-    Scaffold(
-        modifier =
-            Modifier
-                .testTag("counter_root")
-                .fillMaxSize(),
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        contentWindowInsets = WindowInsets.safeDrawing.only(
-            WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
-        ),
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .consumeWindowInsets(innerPadding),
-        ) {
-            CounterHeaderBar(
-                onReminderClick = onReminderSettingsToggle,
-                onHistoryClick = onSessionHistoryToggle,
-                onSettingsClick = onSettingsClick,
-                onRewardsClick = onRewardsClick,
-                isHapticEnabled = uiState.isHapticEnabled,
-                isSoundEnabled = uiState.isSoundEnabled,
-                onToggleHaptic = onToggleHaptic,
-                onToggleSound = onToggleSound,
-                onOpenZikirList = onZikirSelectorToggle,
-            )
-
-            if (!uiState.isPremium) {
-                bannerAdContent?.invoke()
-            }
-
-            if (uiState.isLoading) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
+                if (!uiState.isPremium) {
+                    bannerAdContent?.invoke()
                 }
-            } else {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .verticalScroll(scrollState)
-                        .padding(horizontal = d.space16, vertical = d.space10),
-                    verticalArrangement = Arrangement.spacedBy(d.space12),
-                ) {
-                    StreakBadge(
-                        streak = uiState.currentStreak,
-                        todayTotal = uiState.todayTotalCount,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
 
-                    DailyProgressSection(
-                        todayTotal = uiState.todayTotalCount,
-                        dailyGoal = uiState.dailyGoal,
-                        progress = uiState.dailyGoalProgress,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-
-                    val selectedZikir = uiState.selectedZikir
-                    if (selectedZikir != null) {
-                        ZikirTextCard(
-                            zikir = selectedZikir,
-                            onChangeClick = onZikirSelectorToggle,
-                        )
-                    }
-
-                    TargetSelectorRow(
-                        targetCount = uiState.targetCount,
-                        onTargetChanged = onTargetChanged,
-                    )
-
-                    CurrentCountSection(
-                        currentCount = uiState.currentCount,
-                        targetCount = uiState.targetCount,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-
-                    CounterFab(
-                        arabicText = selectedZikir?.arabicText.orEmpty(),
-                        latinText = selectedZikir?.latinText.orEmpty(),
-                        currentCount = uiState.currentCount,
-                        onTap = onCounterTapped,
-                        modifier =
-                            Modifier
-                                .testTag("counter_increment")
-                                .align(Alignment.CenterHorizontally),
-                        contentDescription = pluralStringResource(
-                            R.plurals.counter_content_description_fab,
-                            uiState.currentCount,
-                            uiState.currentCount,
-                        ),
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(d.space10),
+                if (uiState.isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        AppButton(
-                            text = stringResource(R.string.counter_reset),
-                            onClick = onResetCurrentCount,
-                            modifier = Modifier.weight(1f),
-                        )
-                        AppButton(
-                            text = stringResource(R.string.counter_share),
-                            onClick = onShareSession,
-                            modifier = Modifier.weight(1f),
-                        )
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
                     }
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .verticalScroll(scrollState)
+                            .padding(horizontal = d.space16, vertical = d.space10),
+                        verticalArrangement = Arrangement.spacedBy(d.space12),
+                    ) {
+                        StreakBadge(
+                            streak = uiState.currentStreak,
+                            todayTotal = uiState.todayTotalCount,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
 
-                    Spacer(modifier = Modifier.height(d.space8))
+                        DailyProgressSection(
+                            todayTotal = uiState.todayTotalCount,
+                            dailyGoal = uiState.dailyGoal,
+                            progress = uiState.dailyGoalProgress,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+
+                        val selectedZikir = uiState.selectedZikir
+                        if (selectedZikir != null) {
+                            ZikirTextCard(
+                                zikir = selectedZikir,
+                                onChangeClick = onZikirSelectorToggle,
+                            )
+                        }
+
+                        TargetSelectorRow(
+                            targetCount = uiState.targetCount,
+                            onTargetChanged = onTargetChanged,
+                        )
+
+                        CurrentCountSection(
+                            currentCount = uiState.currentCount,
+                            targetCount = uiState.targetCount,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+
+                        CounterFab(
+                            arabicText = selectedZikir?.arabicText.orEmpty(),
+                            latinText = selectedZikir?.latinText.orEmpty(),
+                            currentCount = uiState.currentCount,
+                            onTap = onCounterTapped,
+                            modifier =
+                                Modifier
+                                    .testTag("counter_increment")
+                                    .align(Alignment.CenterHorizontally),
+                            contentDescription = pluralStringResource(
+                                R.plurals.counter_content_description_fab,
+                                uiState.currentCount,
+                                uiState.currentCount,
+                            ),
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(d.space10),
+                        ) {
+                            AppButton(
+                                text = stringResource(R.string.counter_reset),
+                                onClick = onResetCurrentCount,
+                                modifier = Modifier.weight(1f),
+                            )
+                            AppButton(
+                                text = stringResource(R.string.counter_share),
+                                onClick = onShareSession,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(d.space8))
+                    }
                 }
             }
         }
