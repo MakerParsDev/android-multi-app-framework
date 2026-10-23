@@ -5,30 +5,29 @@ import android.content.Context
 import android.content.Intent
 import com.parsfilo.contentapp.core.datastore.PrayerPreferencesDataSource
 import com.parsfilo.contentapp.feature.prayertimes.model.PrayerAppVariant
-import dagger.hilt.android.AndroidEntryPoint
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import timber.log.Timber
-import javax.inject.Inject
 
-@AndroidEntryPoint
 class PrayerAlarmReceiver : BroadcastReceiver() {
-
-    @Inject
-    lateinit var prayerAlarmNotifier: PrayerAlarmNotifier
-
-    @Inject
-    lateinit var prayerAlarmScheduler: PrayerAlarmScheduler
-
-    @Inject
-    lateinit var prayerPreferencesDataSource: PrayerPreferencesDataSource
+    internal var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    internal var dependenciesProvider: (Context) -> PrayerAlarmDependencies = ::resolveDependencies
 
     override fun onReceive(
-        context: Context?,
+        context: Context,
         intent: Intent?,
     ) {
         if (intent?.action != PrayerAlarmScheduler.ACTION_FIRE_ALARM) return
@@ -40,42 +39,95 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
             intent.getStringExtra(PrayerAlarmScheduler.EXTRA_LOCAL_DATE),
             intent.getStringExtra(PrayerAlarmScheduler.EXTRA_TIME_HM),
         )
+        val dependencies = dependenciesProvider(context.applicationContext)
         val pendingResult = goAsync()
 
         val receiverJob = SupervisorJob()
-        val receiverScope = CoroutineScope(receiverJob + Dispatchers.IO)
+        val receiverScope = CoroutineScope(receiverJob + ioDispatcher)
 
         receiverScope.launch {
             try {
-                runCatching {
-                    val variant = intent.getStringExtra(PrayerAlarmScheduler.EXTRA_VARIANT)
-                        ?.let { runCatching { PrayerAppVariant.valueOf(it) }.getOrNull() }
-                        ?: context?.let { PrayerVariantResolver.resolve(it) }
-                        ?: PrayerAppVariant.NAMAZ_VAKITLERI
+                val variant = intent.getStringExtra(PrayerAlarmScheduler.EXTRA_VARIANT)
+                    ?.let { runCatching { PrayerAppVariant.valueOf(it) }.getOrNull() }
+                    ?: PrayerVariantResolver.resolve(context)
 
-                    val payload = PrayerAlarmPayload(
-                        prayerKey = intent.getStringExtra(PrayerAlarmScheduler.EXTRA_PRAYER_KEY).orEmpty(),
-                        timeHm = intent.getStringExtra(PrayerAlarmScheduler.EXTRA_TIME_HM).orEmpty(),
-                        localDate = intent.getStringExtra(PrayerAlarmScheduler.EXTRA_LOCAL_DATE).orEmpty(),
-                        triggerAtMillis = intent.getLongExtra(
-                            PrayerAlarmScheduler.EXTRA_TRIGGER_AT,
-                            System.currentTimeMillis(),
-                        ),
-                    )
-
-                    val soundUri = prayerPreferencesDataSource.preferences.first().alarmSoundUri
-                    prayerAlarmNotifier.show(payload = payload, variant = variant, soundUri = soundUri)
-                    prayerAlarmScheduler.scheduleNext(variant)
-                    Timber.d("PrayerAlarmReceiver handled and scheduled next alarm variant=%s", variant.name)
-                }.onFailure { error ->
-                    if (error is CancellationException) throw error
-                    Timber.w(error, "Prayer alarm receiver failed")
-                }
+                val payload = PrayerAlarmPayload(
+                    prayerKey = intent.getStringExtra(PrayerAlarmScheduler.EXTRA_PRAYER_KEY).orEmpty(),
+                    timeHm = intent.getStringExtra(PrayerAlarmScheduler.EXTRA_TIME_HM).orEmpty(),
+                    localDate = intent.getStringExtra(PrayerAlarmScheduler.EXTRA_LOCAL_DATE).orEmpty(),
+                    triggerAtMillis = intent.getLongExtra(
+                        PrayerAlarmScheduler.EXTRA_TRIGGER_AT,
+                        System.currentTimeMillis(),
+                    ),
+                )
+                deliverAndReschedule(dependencies, variant, payload)
             } finally {
-                receiverJob.cancel()
-                Timber.d("PrayerAlarmReceiver finished")
                 pendingResult.finish()
+                receiverJob.cancel()
             }
         }
     }
+
+    // Notification delivery is best-effort. Its failures must not discard the one-shot alarm chain.
+    @Suppress("TooGenericExceptionCaught") // Receiver boundary isolates platform/DAO errors.
+    private suspend fun deliverAndReschedule(
+        dependencies: PrayerAlarmDependencies,
+        variant: PrayerAppVariant,
+        payload: PrayerAlarmPayload,
+    ) {
+        try {
+            withTimeout(NOTIFICATION_TIMEOUT_MS) {
+                val soundUri = dependencies.preferences.preferences.first().alarmSoundUri
+                dependencies.notifier.show(payload = payload, variant = variant, soundUri = soundUri)
+            }
+        } catch (_: TimeoutCancellationException) {
+            Timber.w("Prayer notification timed out variant=%s", variant.name)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            Timber.w(error, "Prayer notification failed variant=%s", variant.name)
+        } finally {
+            // A cancelled/failed notification should still attempt the next legitimate alarm.
+            withContext(NonCancellable) {
+                try {
+                    val scheduled = withTimeout(SCHEDULING_TIMEOUT_MS) {
+                        dependencies.scheduler.scheduleNext(variant)
+                    }
+                    if (!scheduled) {
+                        Timber.w("Prayer next-alarm schedule unavailable variant=%s", variant.name)
+                    }
+                } catch (_: TimeoutCancellationException) {
+                    Timber.w("Prayer next-alarm scheduling timed out variant=%s", variant.name)
+                } catch (error: Exception) {
+                    Timber.w(error, "Prayer next-alarm scheduling failed variant=%s", variant.name)
+                }
+            }
+        }
+    }
+
+    private fun resolveDependencies(context: Context): PrayerAlarmDependencies {
+        val entry = EntryPointAccessors.fromApplication(context, PrayerAlarmReceiverEntryPoint::class.java)
+        return PrayerAlarmDependencies(entry.prayerAlarmScheduler(), entry.prayerAlarmNotifier(), entry.prayerPreferencesDataSource())
+    }
+
+    internal companion object {
+        const val NOTIFICATION_TIMEOUT_MS = 4_000L
+        const val SCHEDULING_TIMEOUT_MS = 4_000L
+    }
+}
+
+internal data class PrayerAlarmDependencies(
+    val scheduler: PrayerAlarmScheduler,
+    val notifier: PrayerAlarmNotifier,
+    val preferences: PrayerPreferencesDataSource,
+)
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface PrayerAlarmReceiverEntryPoint {
+    fun prayerAlarmScheduler(): PrayerAlarmScheduler
+
+    fun prayerAlarmNotifier(): PrayerAlarmNotifier
+
+    fun prayerPreferencesDataSource(): PrayerPreferencesDataSource
 }

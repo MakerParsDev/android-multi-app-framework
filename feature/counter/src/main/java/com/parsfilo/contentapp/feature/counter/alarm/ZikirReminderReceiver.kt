@@ -4,45 +4,94 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.parsfilo.contentapp.feature.counter.data.ZikirRepository
-import dagger.hilt.android.AndroidEntryPoint
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import timber.log.Timber
-import javax.inject.Inject
 
-@AndroidEntryPoint
 class ZikirReminderReceiver : BroadcastReceiver() {
-
-    @Inject
-    lateinit var zikirReminderNotifier: ZikirReminderNotifier
-
-    @Inject
-    lateinit var zikirReminderScheduler: ZikirReminderScheduler
-
-    @Inject
-    lateinit var zikirRepository: ZikirRepository
+    internal var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    internal var dependenciesProvider: (Context) -> ZikirReminderDependencies = ::resolveDependencies
 
     override fun onReceive(context: Context, intent: Intent?) {
-        val action = intent?.action ?: return
-        Timber.d("ZikirReminderReceiver triggered action=%s", action)
+        if (intent?.action != ZikirReminderScheduler.ACTION_ZIKIR_REMINDER) return
+        val dependencies = dependenciesProvider(context.applicationContext)
         val pendingResult = goAsync()
-
-        val receiverScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-        receiverScope.launch {
+        val receiverJob = SupervisorJob()
+        CoroutineScope(receiverJob + ioDispatcher).launch {
             try {
-                if (action == ZikirReminderScheduler.ACTION_ZIKIR_REMINDER) {
-                    val todayTotal = zikirRepository.getTodayTotalCount().first()
-                    Timber.d("Zikir daily reminder fired todayTotal=%d", todayTotal)
-                    zikirReminderNotifier.showDailyReminder(todayTotalCount = todayTotal)
-                    zikirReminderScheduler.scheduleOrCancelFromPreferences()
-                }
+                deliverAndReschedule(dependencies)
             } finally {
-                Timber.d("ZikirReminderReceiver finished action=%s", action)
                 pendingResult.finish()
+                receiverJob.cancel()
             }
         }
     }
+
+    // Repository and notification errors must not prevent tomorrow's reminder.
+    @Suppress("TooGenericExceptionCaught") // Receiver boundary isolates platform/DAO errors.
+    private suspend fun deliverAndReschedule(dependencies: ZikirReminderDependencies) {
+        try {
+            withTimeout(NOTIFICATION_TIMEOUT_MS) {
+                val todayTotal = dependencies.repository.getTodayTotalCount().first()
+                dependencies.notifier.showDailyReminder(todayTotalCount = todayTotal)
+            }
+        } catch (_: TimeoutCancellationException) {
+            Timber.w("Zikir notification timed out")
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            Timber.w(error, "Zikir notification failed")
+        } finally {
+            withContext(NonCancellable) {
+                try {
+                    withTimeout(SCHEDULING_TIMEOUT_MS) {
+                        dependencies.scheduler.scheduleOrCancelFromPreferences()
+                    }
+                } catch (_: TimeoutCancellationException) {
+                    Timber.w("Zikir next-reminder scheduling timed out")
+                } catch (error: Exception) {
+                    Timber.w(error, "Zikir next-reminder scheduling failed")
+                }
+            }
+        }
+    }
+
+    private fun resolveDependencies(context: Context): ZikirReminderDependencies {
+        val entry = EntryPointAccessors.fromApplication(context, ZikirReminderReceiverEntryPoint::class.java)
+        return ZikirReminderDependencies(entry.zikirReminderScheduler(), entry.zikirReminderNotifier(), entry.zikirRepository())
+    }
+
+    internal companion object {
+        const val NOTIFICATION_TIMEOUT_MS = 4_000L
+        const val SCHEDULING_TIMEOUT_MS = 4_000L
+    }
+}
+
+internal data class ZikirReminderDependencies(
+    val scheduler: ZikirReminderScheduler,
+    val notifier: ZikirReminderNotifier,
+    val repository: ZikirRepository,
+)
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface ZikirReminderReceiverEntryPoint {
+    fun zikirReminderScheduler(): ZikirReminderScheduler
+
+    fun zikirReminderNotifier(): ZikirReminderNotifier
+
+    fun zikirRepository(): ZikirRepository
 }
