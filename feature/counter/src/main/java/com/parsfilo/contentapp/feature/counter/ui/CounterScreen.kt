@@ -106,6 +106,7 @@ fun CounterScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     val clipboard = LocalClipboard.current
     val reminderSavedMessage = stringResource(R.string.counter_reminder_saved)
+    val reminderUnavailableMessage = stringResource(R.string.counter_reminder_unavailable)
     val copiedMessage = stringResource(R.string.counter_copied)
     val firstSessionReminderPrompt = stringResource(R.string.counter_first_session_reminder_prompt)
     val firstSessionReminderAction = stringResource(R.string.counter_first_session_reminder_action)
@@ -137,6 +138,10 @@ fun CounterScreen(
     LaunchedEffect(reminderUiEvents) {
         reminderUiEvents.collect { event ->
             when (event) {
+                CounterReminderUiEvent.ReminderSaved ->
+                    snackbarHostState.showSnackbar(reminderSavedMessage)
+                CounterReminderUiEvent.ReminderScheduleUnavailable ->
+                    snackbarHostState.showSnackbar(reminderUnavailableMessage)
                 CounterReminderUiEvent.RequestExactAlarmPermission -> {
                     val result = snackbarHostState.showSnackbar(
                         message = exactAlarmPermissionMessage,
@@ -321,12 +326,7 @@ fun CounterScreen(
     if (uiState.showReminderSettings) {
         ReminderSettingsSheet(
             initialSettings = uiState.reminderSettings,
-            onSave = { settings ->
-                onReminderSaved(settings)
-                scope.launch {
-                    snackbarHostState.showSnackbar(reminderSavedMessage)
-                }
-            },
+            onSave = onReminderSaved,
             onDismiss = onReminderSettingsToggle,
         )
     }

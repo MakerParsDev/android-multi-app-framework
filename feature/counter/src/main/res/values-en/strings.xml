@@ -55,6 +55,7 @@
     <string name="counter_streak_reminder">Streak alert (9:00 PM)</string>
     <string name="counter_save">Save</string>
     <string name="counter_reminder_saved">Reminder settings saved</string>
+    <string name="counter_reminder_unavailable">Reminder settings saved, but no alarm was scheduled. Please check again later.</string>
     <string name="counter_exact_alarm_permission_required">To notify exactly on time, allow Alarms &amp; reminders access.</string>
     <string name="counter_exact_alarm_permission_action">Allow</string>
     <string name="counter_exact_alarm_settings_open_failed">Unable to open the permission screen.</string>
