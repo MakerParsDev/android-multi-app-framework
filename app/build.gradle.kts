@@ -190,6 +190,22 @@ val validateReleaseConfig =
         val keyPassword = pick("KEY_PASSWORD").orEmpty()
         val pushRegistrationUrl = pushRegistrationUrlValue
         val purchaseVerificationUrl = purchaseVerificationUrlValue
+        // Must resolve with the exact precedence used by :core:auth's web_client_id.
+        val localWebClientId =
+            Properties()
+                .apply {
+                    val localFile = rootProject.file("local.properties")
+                    if (localFile.exists()) {
+                        localFile.inputStream().use { load(it) }
+                    }
+                }.getProperty("WEB_CLIENT_ID")
+        val releaseWebClientId =
+            sequenceOf(
+                providers.gradleProperty("WEB_CLIENT_ID").orNull,
+                providers.environmentVariable("WEB_CLIENT_ID").orNull,
+                providers.environmentVariable("FIREBASE_WEB_CLIENT_ID").orNull,
+                localWebClientId,
+            ).firstOrNull { !it.isNullOrBlank() }?.trim().orEmpty()
 
         doLast {
             val errors = mutableListOf<String>()
@@ -213,6 +229,9 @@ val validateReleaseConfig =
                 errors += "Missing PUSH_REGISTRATION_URL (required for release/publish tasks)"
             } else if (!pushRegistrationUrl.startsWith("https://", ignoreCase = true)) {
                 errors += "PUSH_REGISTRATION_URL must start with https:// (resolved='$pushRegistrationUrl')"
+            }
+            if (!Regex("^[0-9]+-[A-Za-z0-9_-]+\\.apps\\.googleusercontent\\.com$").matches(releaseWebClientId)) {
+                errors += "Missing or invalid WEB_CLIENT_ID/FIREBASE_WEB_CLIENT_ID for Google sign-in in release builds"
             }
             if (purchaseVerificationUrl.isBlank()) {
                 errors += "Missing PURCHASE_VERIFICATION_URL (required for release/publish tasks)"

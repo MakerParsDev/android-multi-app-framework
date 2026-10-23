@@ -20,7 +20,7 @@ DATA = {
     "google_storage_bucket": "sample.appspot.com",
     "firebase_database_url": "https://example.invalid",
     "admob_app_id": "ca-app-pub-fake",
-    "web_client_id": "example.apps.googleusercontent.com",
+    "web_client_id": "123456789-test.apps.googleusercontent.com",
 }
 
 
@@ -98,6 +98,16 @@ def test_optional_tech_resources_may_be_absent():
     records = parse_resources(sample())
     records.pop("firebase_database_url")
     assert validate_firebase_resources(records, EXPECTED)["firebase_database_url"].startswith("absent")
+
+
+def test_reject_missing_or_invalid_embedded_google_signin_client():
+    for invalid in (None, "", "example.apps.googleusercontent.com", "1234-invalid.example.com"):
+        records = parse_resources(sample())
+        if invalid is None:
+            records.pop("web_client_id")
+        else:
+            records["web_client_id"] = [("", invalid)]
+        raises(lambda: validate_firebase_resources(records, EXPECTED))
 
 
 def test_requires_exactly_one_universal_apk():
