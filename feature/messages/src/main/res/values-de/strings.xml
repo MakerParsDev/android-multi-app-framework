@@ -7,6 +7,7 @@
     <string name="messages_subject">Betreff</string>
     <string name="messages_body">Deine Nachricht</string>
     <string name="messages_has_reply">Antwort vorhanden</string>
+    <string name="messages_load_error">Nachrichten können momentan nicht geladen werden. Bitte versuche es später erneut.</string>
     <string name="messages_error">Fehler: %s</string>
     <string name="send">Senden</string>
     <string name="cancel">Abbrechen</string>

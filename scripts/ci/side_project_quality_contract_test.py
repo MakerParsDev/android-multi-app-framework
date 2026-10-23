@@ -41,6 +41,34 @@ class SideProjectQualityContractTest(unittest.TestCase):
                 "deploy_verified_side_project.mjs", scripts["deploy"], project
             )
 
+    def test_messages_query_index_and_nonfatal_firestore_errors(self) -> None:
+        indexes = json.loads(
+            (ROOT / "side-projects/firebase/firestore.indexes.json").read_text(encoding="utf-8")
+        )["indexes"]
+        required = {
+            "collectionGroup": "user_messages",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {"fieldPath": "userId", "order": "ASCENDING"},
+                {"fieldPath": "createdAt", "order": "DESCENDING"},
+            ],
+        }
+        self.assertIn(required, indexes)
+
+        main = (ROOT / "app/src/main/java/com/parsfilo/contentapp/ui/MainViewModel.kt").read_text(encoding="utf-8")
+        badge_flow = main.split("val unreadMessageCount:", 1)[1].split("private val latestOtherAppsBadgeSignature", 1)[0]
+        self.assertIn(".getMessages()", badge_flow)
+        self.assertIn(".catch { error ->", badge_flow)
+        self.assertIn("emit(0)", badge_flow)
+        self.assertLess(badge_flow.index(".catch { error ->"), badge_flow.index(".stateIn("))
+
+        screen = (ROOT / "feature/messages/src/main/java/com/parsfilo/contentapp/feature/messages/ui/MessagesScreen.kt").read_text(encoding="utf-8")
+        self.assertIn("R.string.messages_load_error", screen)
+        self.assertNotIn("uiState.throwable.message", screen)
+        for lang in ("values", "values-en", "values-de"):
+            strings = (ROOT / f"feature/messages/src/main/res/{lang}/strings.xml").read_text(encoding="utf-8")
+            self.assertIn('name="messages_load_error"', strings)
+
     def test_admin_worker_has_compile_lint_test_and_predeploy_gate(self) -> None:
         scripts = json.loads(ADMIN.read_text(encoding="utf-8"))["scripts"]
         self.assertIn("check", scripts)
