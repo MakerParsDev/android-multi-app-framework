@@ -11,5 +11,6 @@
     <string name="messages_error">Fehler: %s</string>
     <string name="send">Senden</string>
     <string name="cancel">Abbrechen</string>
+    <string name="messages_send_error">Nachricht konnte nicht gesendet werden. Bitte versuche es erneut.</string>
 </resources>
 

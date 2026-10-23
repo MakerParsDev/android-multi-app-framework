@@ -50,4 +50,9 @@ dependencies {
     implementation(libs.firebase.auth) {
         exclude(group = "com.google.android.gms", module = "play-services-identity-credentials")
     }
+
+    testImplementation(libs.junit)
+    testImplementation(libs.mockk)
+    testImplementation(libs.truth)
+    testImplementation(libs.kotlinx.coroutines.test)
 }
