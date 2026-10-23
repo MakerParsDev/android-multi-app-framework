@@ -39,6 +39,7 @@ object BillingErrorKeys {
     const val CONNECTING = "BILLING_CONNECTING"
     const val RECONNECTING = "BILLING_RECONNECTING"
     const val UNSUPPORTED = "BILLING_UNSUPPORTED"
+    const val AUTH_REQUIRED = "BILLING_AUTH_REQUIRED"
 }
 
 @Singleton
@@ -138,6 +139,11 @@ class BillingManager @Inject constructor(
     }
 
     fun launchBillingFlow(activity: Activity, billingProduct: BillingProduct) {
+        // Do not permit a charge when server verification cannot identify the buyer.
+        if (!billingPurchaseVerifier.hasSignedInUser()) {
+            _subscriptionState.value = SubscriptionState.Error(BillingErrorKeys.AUTH_REQUIRED)
+            return
+        }
         if (!billingClient.isReady) {
             startConnection()
             _subscriptionState.value = SubscriptionState.Error(BillingErrorKeys.CONNECTING)

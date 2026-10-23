@@ -106,6 +106,20 @@ class BillingPurchaseVerifierTest {
     }
 
     @Test
+    fun signedInStatusMatchesFirebaseUser() {
+        val verifier = BillingPurchaseVerifier(
+            firebaseAuth = firebaseAuth,
+            firebaseAppCheck = firebaseAppCheck,
+            runtimeObservability = runtimeObservability,
+            verificationUrl = "https://example.com/verify",
+        )
+        every { firebaseAuth.currentUser } returns null
+        assertThat(verifier.hasSignedInUser()).isFalse()
+        every { firebaseAuth.currentUser } returns mockk()
+        assertThat(verifier.hasSignedInUser()).isTrue()
+    }
+
+    @Test
     fun missingAuthUserReturnsAuthRequired() = runTest {
         every { firebaseAuth.currentUser } returns null
         val verifier = BillingPurchaseVerifier(

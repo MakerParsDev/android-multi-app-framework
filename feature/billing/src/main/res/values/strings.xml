@@ -9,6 +9,8 @@
     <string name="billing_error_connecting">Ödeme servisine bağlanılıyor, tekrar deneyin</string>
     <string name="billing_error_reconnecting">Ödeme servisine yeniden bağlanılıyor, tekrar deneyin</string>
     <string name="billing_error_unsupported">Bu cihazda abonelik satın alınamıyor. Google Play’i güncelleyin ve tekrar deneyin.</string>
+    <string name="billing_sign_in_required">Satın alma ve reklamsız erişim için önce Google hesabınızla giriş yapın. Önceden satın aldıysanız giriş sonrası aboneliğiniz yeniden kontrol edilir.</string>
+    <string name="billing_sign_in_action">Google ile giriş yap</string>
     <string name="billing_plans_loading">Planlar yükleniyor…</string>
     <string name="billing_selected_badge">Seçili</string>
     <string name="billing_subscribe">Google Play ile satın al</string>

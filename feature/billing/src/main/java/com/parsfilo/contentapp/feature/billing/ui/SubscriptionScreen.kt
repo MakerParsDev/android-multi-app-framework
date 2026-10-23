@@ -67,6 +67,7 @@ import com.parsfilo.contentapp.feature.billing.model.BillingProduct
 @Composable
 fun SubscriptionRoute(
     onBackClick: () -> Unit = {},
+    onSignInRequired: () -> Unit = {},
     viewModel: SubscriptionViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -76,6 +77,7 @@ fun SubscriptionRoute(
     SubscriptionScreen(
         uiState = uiState,
         onBackClick = onBackClick,
+        onSignInClick = onSignInRequired,
         onPlanSelected = { productPackage ->
             activity?.let { act ->
                 viewModel.billingManager.launchBillingFlow(act, productPackage)
@@ -88,6 +90,7 @@ fun SubscriptionRoute(
 fun SubscriptionScreen(
     uiState: SubscriptionUiState,
     onBackClick: () -> Unit = {},
+    onSignInClick: () -> Unit = {},
     onPlanSelected: (BillingProduct) -> Unit
 ) {
     val dimens = LocalDimens.current
@@ -144,70 +147,85 @@ fun SubscriptionScreen(
         )
         Spacer(modifier = Modifier.height(dimens.space24))
 
-        when (uiState.subscriptionState) {
-            is SubscriptionState.Active -> {
-                // Aktif abonelik
-                AppCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
-                    shape = RoundedCornerShape(dimens.radiusLarge)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(dimens.space20),
-                        verticalAlignment = Alignment.CenterVertically
+        if (!uiState.isSignedIn) {
+            Text(
+                text = stringResource(R.string.billing_sign_in_required),
+                color = colorScheme.onSurface,
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(dimens.space16))
+            AppButton(
+                text = stringResource(R.string.billing_sign_in_action),
+                onClick = onSignInClick,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        } else {
+            when (uiState.subscriptionState) {
+                is SubscriptionState.Active -> {
+                    // Aktif abonelik
+                    AppCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
+                        shape = RoundedCornerShape(dimens.radiusLarge)
                     ) {
-                        Icon(
-                            imageVector = Icons.Filled.CheckCircle,
-                            contentDescription = null,
-                            tint = colorScheme.primary,
-                            modifier = Modifier.size(dimens.iconLg)
-                        )
-                        Spacer(modifier = Modifier.size(dimens.space12))
-                        Column {
-                            Text(
-                                text = stringResource(R.string.billing_active_title),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = colorScheme.onSurface,
-                                fontWeight = FontWeight.Bold
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(dimens.space20),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.CheckCircle,
+                                contentDescription = null,
+                                tint = colorScheme.primary,
+                                modifier = Modifier.size(dimens.iconLg)
                             )
-                            Text(
-                                text = stringResource(R.string.billing_active_subtitle),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = colorScheme.onSurfaceVariant
-                            )
+                            Spacer(modifier = Modifier.size(dimens.space12))
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.billing_active_title),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = colorScheme.onSurface,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = stringResource(R.string.billing_active_subtitle),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }
-            }
 
-            is SubscriptionState.Loading -> {
-                SubscriptionLoadingSkeleton()
-            }
-
-            is SubscriptionState.Error -> {
-                val resolvedMessage = when (uiState.subscriptionState.message) {
-                    BillingErrorKeys.CONNECTING -> stringResource(R.string.billing_error_connecting)
-                    BillingErrorKeys.RECONNECTING -> stringResource(R.string.billing_error_reconnecting)
-                    BillingErrorKeys.UNSUPPORTED -> stringResource(R.string.billing_error_unsupported)
-                    else -> uiState.subscriptionState.message.orEmpty()
+                is SubscriptionState.Loading -> {
+                    SubscriptionLoadingSkeleton()
                 }
-                Text(
-                    text = stringResource(
-                        R.string.billing_error_prefix,
-                        resolvedMessage
-                    ),
-                    color = colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(modifier = Modifier.height(dimens.space16))
-                PlansList(uiState.productDetails, onPlanSelected)
-            }
 
-            else -> {
-                // Inactive veya Unknown → planları göster
-                PlansList(uiState.productDetails, onPlanSelected)
+                is SubscriptionState.Error -> {
+                    val resolvedMessage = when (uiState.subscriptionState.message) {
+                        BillingErrorKeys.CONNECTING -> stringResource(R.string.billing_error_connecting)
+                        BillingErrorKeys.RECONNECTING -> stringResource(R.string.billing_error_reconnecting)
+                        BillingErrorKeys.UNSUPPORTED -> stringResource(R.string.billing_error_unsupported)
+                        else -> uiState.subscriptionState.message.orEmpty()
+                    }
+                    Text(
+                        text = stringResource(
+                            R.string.billing_error_prefix,
+                            resolvedMessage
+                        ),
+                        color = colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(dimens.space16))
+                    PlansList(uiState.productDetails, onPlanSelected)
+                }
+
+                else -> {
+                    // Inactive veya Unknown → planları göster
+                    PlansList(uiState.productDetails, onPlanSelected)
+                }
             }
         }
 

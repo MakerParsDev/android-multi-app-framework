@@ -1,11 +1,13 @@
 package com.parsfilo.contentapp.feature.billing
 
+import android.app.Activity
 import android.content.Context
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.Purchase
 import com.google.common.truth.Truth.assertThat
 import com.parsfilo.contentapp.core.datastore.PreferencesDataSource
 import com.parsfilo.contentapp.core.model.SubscriptionState
+import com.parsfilo.contentapp.feature.billing.model.BillingProduct
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.coVerifyOrder
@@ -37,6 +39,17 @@ class BillingManagerTest {
         billingPurchaseVerifier = purchaseVerifier,
         billingClientFactory = billingClientFactory,
     )
+
+    @Test
+    fun `signed out buyer cannot open Google Play checkout`() {
+        every { purchaseVerifier.hasSignedInUser() } returns false
+
+        manager.launchBillingFlow(mockk<Activity>(), mockk<BillingProduct>())
+
+        assertThat(manager.subscriptionState.value)
+            .isEqualTo(SubscriptionState.Error(BillingErrorKeys.AUTH_REQUIRED))
+        verify(exactly = 0) { billingClient.launchBillingFlow(any(), any()) }
+    }
 
     @Test
     fun `older verification cannot replace a newer purchase state`() = runBlocking {
