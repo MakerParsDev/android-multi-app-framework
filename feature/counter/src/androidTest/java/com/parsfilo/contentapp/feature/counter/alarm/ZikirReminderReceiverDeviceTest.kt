@@ -5,6 +5,8 @@ import android.content.IntentFilter
 import androidx.core.content.ContextCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 import com.parsfilo.contentapp.feature.counter.data.ZikirRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -15,8 +17,11 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Real Android broadcast path with injected fake dependencies; no user alarms or notifications.
@@ -33,6 +38,23 @@ class ZikirReminderReceiverDeviceTest {
 
     @Test fun unavailableOrDisabledReminderDoesNotLoop() = exercise(Fault.DISABLED)
 
+    @Test fun durableRecoveryEnqueueDeduplicates() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext
+        val manager = WorkManager.getInstance(context)
+        val workName = "zikir_reminder_recovery"
+        try {
+            runBlocking {
+                ZikirReminderRecoveryWorker.enqueue(context)
+                ZikirReminderRecoveryWorker.enqueue(context)
+            }
+            val entries = manager.getWorkInfosForUniqueWork(workName).get(20, TimeUnit.SECONDS)
+            assertEquals(1, entries.size)
+            assertEquals(WorkInfo.State.ENQUEUED, entries.single().state)
+        } finally {
+            manager.cancelUniqueWork(workName).result.get(20, TimeUnit.SECONDS)
+        }
+    }
+
     private enum class Fault { NOTIFIER, DAO, SCHEDULER, NORMAL, DISABLED }
 
     private fun exercise(fault: Fault) {
@@ -41,6 +63,8 @@ class ZikirReminderReceiverDeviceTest {
         val notifier = mockk<ZikirReminderNotifier>()
         val repository = mockk<ZikirRepository>()
         val called = CompletableDeferred<Unit>()
+        val recoveryCalled = CompletableDeferred<Unit>()
+        val recoveryCount = AtomicInteger(0)
         every { repository.getTodayTotalCount() } returns if (fault == Fault.DAO) {
             flow { throw IllegalStateException("synthetic DAO failure") }
         } else {
@@ -55,7 +79,12 @@ class ZikirReminderReceiverDeviceTest {
             if (fault == Fault.DISABLED) null else ReminderScheduleMode.EXACT
         }
         val receiver = ZikirReminderReceiver().apply {
-            dependenciesProvider = { ZikirReminderDependencies(scheduler, notifier, repository) }
+            dependenciesProvider = {
+                ZikirReminderDependencies(scheduler, notifier, repository, enqueueRecovery = {
+                    recoveryCount.incrementAndGet()
+                    recoveryCalled.complete(Unit)
+                })
+            }
         }
         ContextCompat.registerReceiver(
             context,
@@ -66,7 +95,11 @@ class ZikirReminderReceiverDeviceTest {
         try {
             context.sendBroadcast(Intent(ZikirReminderScheduler.ACTION_ZIKIR_REMINDER).setPackage(context.packageName))
             runBlocking { withTimeout(9_000L) { called.await() } }
+            if (fault == Fault.SCHEDULER) {
+                runBlocking { withTimeout(9_000L) { recoveryCalled.await() } }
+            }
             InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+            assertEquals(if (fault == Fault.SCHEDULER) 1 else 0, recoveryCount.get())
             coVerify(exactly = 1) { scheduler.scheduleOrCancelFromPreferences() }
             coVerify(exactly = if (fault == Fault.DAO) 0 else 1) {
                 notifier.showDailyReminder(any())

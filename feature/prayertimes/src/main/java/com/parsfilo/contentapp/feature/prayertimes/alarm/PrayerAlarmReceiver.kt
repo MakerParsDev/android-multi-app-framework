@@ -98,21 +98,44 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
                     }
                 } catch (_: TimeoutCancellationException) {
                     Timber.w("Prayer next-alarm scheduling timed out variant=%s", variant.name)
+                    queueRecovery(dependencies, variant)
                 } catch (error: Exception) {
                     Timber.w(error, "Prayer next-alarm scheduling failed variant=%s", variant.name)
+                    queueRecovery(dependencies, variant)
                 }
             }
         }
     }
 
+    @Suppress("TooGenericExceptionCaught") // An enqueue failure must not crash the broadcast receiver.
+    private suspend fun queueRecovery(dependencies: PrayerAlarmDependencies, variant: PrayerAppVariant) {
+        try {
+            withTimeout(RECOVERY_ENQUEUE_TIMEOUT_MS) {
+                dependencies.enqueueRecovery(variant)
+            }
+        } catch (_: TimeoutCancellationException) {
+            Timber.w("Prayer recovery enqueue timed out variant=%s", variant.name)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            Timber.w(error, "Unable to enqueue durable prayer alarm recovery variant=%s", variant.name)
+        }
+    }
+
     private fun resolveDependencies(context: Context): PrayerAlarmDependencies {
         val entry = EntryPointAccessors.fromApplication(context, PrayerAlarmReceiverEntryPoint::class.java)
-        return PrayerAlarmDependencies(entry.prayerAlarmScheduler(), entry.prayerAlarmNotifier(), entry.prayerPreferencesDataSource())
+        return PrayerAlarmDependencies(
+            scheduler = entry.prayerAlarmScheduler(),
+            notifier = entry.prayerAlarmNotifier(),
+            preferences = entry.prayerPreferencesDataSource(),
+            enqueueRecovery = { variant -> PrayerAlarmRecoveryWorker.enqueue(context, variant) },
+        )
     }
 
     internal companion object {
         const val NOTIFICATION_TIMEOUT_MS = 4_000L
         const val SCHEDULING_TIMEOUT_MS = 4_000L
+        const val RECOVERY_ENQUEUE_TIMEOUT_MS = 1_500L
     }
 }
 
@@ -120,6 +143,8 @@ internal data class PrayerAlarmDependencies(
     val scheduler: PrayerAlarmScheduler,
     val notifier: PrayerAlarmNotifier,
     val preferences: PrayerPreferencesDataSource,
+    // No-op default is solely for injected isolated-test fakes; production always supplies queue.
+    val enqueueRecovery: suspend (PrayerAppVariant) -> Unit = {},
 )
 
 @EntryPoint
