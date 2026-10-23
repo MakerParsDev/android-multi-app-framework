@@ -89,6 +89,9 @@ class ZikirReminderScheduler @Inject constructor(
         return scheduleDaily(hour, minute)
     }
 
+    fun isAlarmServiceAvailable(): Boolean =
+        context.getSystemService(AlarmManager::class.java) != null
+
     fun canRequestExactAlarmPermission(): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return false
         return !canScheduleExactAlarmsNow()

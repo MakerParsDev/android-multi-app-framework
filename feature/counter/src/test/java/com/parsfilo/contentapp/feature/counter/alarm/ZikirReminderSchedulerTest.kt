@@ -24,12 +24,14 @@ class ZikirReminderSchedulerTest {
 
     @Test fun missingAlarmManagerIsUnavailable() {
         val scheduler = ZikirReminderScheduler(contextWith(null), preferences)
+        assertThat(scheduler.isAlarmServiceAvailable()).isFalse()
         assertThat(scheduler.scheduleDaily(9, 30)).isEqualTo(ReminderScheduleMode.UNAVAILABLE)
     }
 
     @Test fun missingPendingIntentIsUnavailableWithoutAlarmWrite() {
         val alarmManager = mockk<AlarmManager>(relaxed = true)
         val scheduler = ZikirReminderScheduler(contextWith(alarmManager), preferences)
+        assertThat(scheduler.isAlarmServiceAvailable()).isTrue()
         val result = scheduler.scheduleDaily(9, 30) { null }
         assertThat(result).isEqualTo(ReminderScheduleMode.UNAVAILABLE)
         verify(exactly = 0) { alarmManager.setAndAllowWhileIdle(any(), any(), any()) }

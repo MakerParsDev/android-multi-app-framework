@@ -16,6 +16,7 @@ import com.parsfilo.contentapp.feature.counter.sharing.ZikirShareHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -27,6 +28,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import org.json.JSONArray
 import org.json.JSONObject
 import timber.log.Timber
@@ -447,14 +449,7 @@ class CounterViewModel @Inject constructor(
                 }
                 Timber.d("Reminder schedule result=%s", scheduleMode)
                 if (scheduleMode == ReminderScheduleMode.UNAVAILABLE) {
-                    try {
-                        zikirReminderScheduler.enqueueUnavailableRecovery()
-                    } catch (error: CancellationException) {
-                        throw error
-                    } catch (error: Exception) {
-                        Timber.w(error, "Unable to enqueue zikir reminder recovery")
-                    }
-                    _reminderUiEvents.emit(reminderFeedbackFor(ReminderScheduleMode.UNAVAILABLE))
+                    reportUnavailableReminder()
                 } else {
                     _reminderUiEvents.emit(reminderFeedbackFor(scheduleMode))
                     if (scheduleMode == ReminderScheduleMode.INEXACT_FALLBACK &&
@@ -476,7 +471,9 @@ class CounterViewModel @Inject constructor(
     @Suppress("TooGenericExceptionCaught") // Preserve explicit feedback for platform failures.
     fun onExactAlarmPermissionSettingsReturned() {
         viewModelScope.launch {
-            if (!zikirReminderScheduler.canRequestExactAlarmPermission()) {
+            if (!zikirReminderScheduler.isAlarmServiceAvailable()) {
+                reportUnavailableReminder()
+            } else if (!zikirReminderScheduler.canRequestExactAlarmPermission()) {
                 val scheduleMode = try {
                     zikirReminderScheduler.scheduleOrCancelFromPreferences()
                 } catch (error: CancellationException) {
@@ -487,14 +484,7 @@ class CounterViewModel @Inject constructor(
                 }
                 Timber.d("Exact alarm settings returned: permission granted, reschedule result=%s", scheduleMode)
                 if (scheduleMode == ReminderScheduleMode.UNAVAILABLE) {
-                    try {
-                        zikirReminderScheduler.enqueueUnavailableRecovery()
-                    } catch (error: CancellationException) {
-                        throw error
-                    } catch (error: Exception) {
-                        Timber.w(error, "Unable to enqueue zikir reminder recovery after permission")
-                    }
-                    _reminderUiEvents.emit(reminderFeedbackFor(ReminderScheduleMode.UNAVAILABLE))
+                    reportUnavailableReminder()
                 } else {
                     _reminderUiEvents.emit(CounterReminderUiEvent.ExactAlarmPermissionGranted)
                 }
@@ -503,6 +493,25 @@ class CounterViewModel @Inject constructor(
                 _reminderUiEvents.emit(
                     CounterReminderUiEvent.ExactAlarmPermissionStillMissing
                 )
+            }
+        }
+    }
+
+    @Suppress("TooGenericExceptionCaught") // WorkManager enqueue is bounded independently of UI.
+    private suspend fun reportUnavailableReminder() {
+        // Never wait for WorkManager persistence before showing a truthful failure message.
+        _reminderUiEvents.emit(reminderFeedbackFor(ReminderScheduleMode.UNAVAILABLE))
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                withTimeout(1_500L) {
+                    zikirReminderScheduler.enqueueUnavailableRecovery()
+                }
+            } catch (_: TimeoutCancellationException) {
+                Timber.w("Zikir reminder recovery enqueue timed out")
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                Timber.w(error, "Unable to enqueue zikir reminder recovery")
             }
         }
     }
