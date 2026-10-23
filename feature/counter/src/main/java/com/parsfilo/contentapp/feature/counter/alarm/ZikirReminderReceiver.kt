@@ -58,7 +58,11 @@ class ZikirReminderReceiver : BroadcastReceiver() {
             withContext(NonCancellable) {
                 try {
                     withTimeout(SCHEDULING_TIMEOUT_MS) {
-                        dependencies.scheduler.scheduleOrCancelFromPreferences()
+                        val result = dependencies.scheduler.scheduleOrCancelFromPreferences()
+                        if (result == ReminderScheduleMode.UNAVAILABLE) {
+                            Timber.w("Zikir next-reminder scheduling unavailable")
+                            queueRecovery(dependencies)
+                        }
                     }
                 } catch (_: TimeoutCancellationException) {
                     Timber.w("Zikir next-reminder scheduling timed out")
