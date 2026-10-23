@@ -774,7 +774,10 @@ fun AppNavHost(
 
         // Subscription Tab
         composable(AppRoute.Subscription.route) {
-            SubscriptionRoute(onBackClick = { navController.popBackStack() })
+            SubscriptionRoute(
+                onBackClick = { navController.popBackStack() },
+                onSignInRequired = { navController.navigate(AppRoute.Auth.route) },
+            )
         }
 
         // Other Apps Tab
@@ -793,8 +796,13 @@ fun AppNavHost(
             composable(AppRoute.Auth.route) {
                 AuthRoute(
                     onSignInSuccess = {
-                        navController.navigate(AppRoute.MessageList.route) {
-                            popUpTo(AppRoute.Auth.route) { inclusive = true }
+                        // Resume the paywall after an explicit sign-in from Subscription.
+                        if (navController.previousBackStackEntry?.destination?.route == AppRoute.Subscription.route) {
+                            navController.popBackStack()
+                        } else {
+                            navController.navigate(AppRoute.MessageList.route) {
+                                popUpTo(AppRoute.Auth.route) { inclusive = true }
+                            }
                         }
                     },
                 )

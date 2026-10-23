@@ -9,6 +9,9 @@
     <string name="billing_error_connecting">Verbindung zum Zahlungsdienst wird hergestellt, bitte versuche es erneut</string>
     <string name="billing_error_reconnecting">Verbindung zum Zahlungsdienst wird erneut hergestellt, bitte versuche es erneut</string>
     <string name="billing_error_unsupported">Abonnements werden auf diesem Gerät nicht unterstützt. Bitte Google Play aktualisieren und erneut versuchen.</string>
+    <string name="billing_sign_in_required">Melde dich vor dem Kauf werbefreien Zugriffs mit Google an. Vorhandene Käufe werden nach der Anmeldung erneut geprüft.</string>
+    <string name="billing_sign_in_action">Mit Google anmelden</string>
+    <string name="billing_error_verification_unavailable">Die Kaufprüfung ist vorübergehend nicht verfügbar. Prüfe deine Verbindung und versuche es erneut.</string>
     <string name="billing_plans_loading">Pläne werden geladen…</string>
     <string name="billing_selected_badge">Ausgewählt</string>
     <string name="billing_subscribe">Bei Google Play kaufen</string>

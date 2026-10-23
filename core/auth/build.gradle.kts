@@ -14,6 +14,16 @@ val localProperties =
         }
     }
 
+// The release jobs supply FIREBASE_WEB_CLIENT_ID from the authorized secret store.
+// local.properties is only a developer fallback, not the sole source of this resource.
+val webClientId =
+    sequenceOf(
+        providers.gradleProperty("WEB_CLIENT_ID").orNull,
+        providers.environmentVariable("WEB_CLIENT_ID").orNull,
+        providers.environmentVariable("FIREBASE_WEB_CLIENT_ID").orNull,
+        localProperties.getProperty("WEB_CLIENT_ID"),
+    ).firstOrNull { !it.isNullOrBlank() }?.trim().orEmpty()
+
 android {
     namespace = "com.parsfilo.contentapp.core.auth"
     compileSdk = requiredToolchainInt("toolchain.android.compileSdk")
@@ -21,7 +31,7 @@ android {
 
     defaultConfig {
         minSdk = requiredToolchainInt("toolchain.android.minSdk")
-        resValue("string", "web_client_id", localProperties.getProperty("WEB_CLIENT_ID", ""))
+        resValue("string", "web_client_id", webClientId)
     }
 
     buildFeatures {

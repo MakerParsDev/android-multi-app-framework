@@ -67,8 +67,11 @@ export const recaptchaVerify = onRequest(
                 return;
             }
 
-            const actionMatches = !expectedAction || verifyJson.action === expectedAction;
-            const success = Boolean(verifyJson.success && actionMatches);
+            const expectedHost = extractHost(req.get("origin")) || extractHost(req.get("referer"));
+            const hostnameMatches = verifyJson.hostname?.toLowerCase() === expectedHost;
+            const actionMatches = !verifyJson.action || (expectedAction !== "" && verifyJson.action === expectedAction);
+            const scoreMatches = verifyJson.score == null || verifyJson.score >= 0.5;
+            const success = Boolean(verifyJson.success && hostnameMatches && actionMatches && scoreMatches);
 
             if (!success) {
                 logger.warn("recaptchaVerify validation failed", {

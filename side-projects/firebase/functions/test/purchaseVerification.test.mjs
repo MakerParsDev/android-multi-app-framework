@@ -122,7 +122,7 @@ test("Google Play v186 purchase verifier preserves fail-closed premium entitleme
     playResponse = {
       subscriptionState: "SUBSCRIPTION_STATE_ACTIVE",
       acknowledgementState: "ACKNOWLEDGEMENT_STATE_ACKNOWLEDGED",
-      lineItems: [{ expiryTime: "2030-01-01T00:00:00Z", autoRenewingPlan: { autoRenewEnabled: true } }],
+      lineItems: [{ productId: "reklamsiz_kullanim", expiryTime: "2030-01-01T00:00:00Z", autoRenewingPlan: { autoRenewEnabled: true } }],
     };
     const response = await invoke(fakeRequest());
     assert.equal(response.code, 200);
@@ -141,10 +141,61 @@ test("Google Play v186 purchase verifier preserves fail-closed premium entitleme
     assert.equal("purchaseToken" in writes.at(-1).data, false);
   });
 
+  await t.test("active token for a different product does not grant entitlement", async () => {
+    playResponse = {
+      subscriptionState: "SUBSCRIPTION_STATE_ACTIVE",
+      lineItems: [{ productId: "different_product", expiryTime: "2030-01-01T00:00:00Z" }],
+    };
+    const response = await invoke(fakeRequest());
+    assert.equal(response.code, 200);
+    assert.equal(response.payload.verified, false);
+    assert.equal(writes.at(-1).data.verified, false);
+  });
+
+  await t.test("the matching item is selected even when it is not first", async () => {
+    playResponse = {
+      subscriptionState: "SUBSCRIPTION_STATE_ACTIVE",
+      lineItems: [
+        { productId: "other", expiryTime: "2027-01-01T00:00:00Z" },
+        { productId: "reklamsiz_kullanim", expiryTime: "2030-01-01T00:00:00Z" },
+      ],
+    };
+    const response = await invoke(fakeRequest());
+    assert.equal(response.payload.verified, true);
+    assert.equal(response.payload.expiryTimeMillis, Date.parse("2030-01-01T00:00:00Z"));
+  });
+
+  await t.test("deferred or expired matching line items do not grant premium", async () => {
+    for (const lineItem of [
+      { productId: "reklamsiz_kullanim" },
+      { productId: "reklamsiz_kullanim", expiryTime: "2020-01-01T00:00:00Z" },
+    ]) {
+      playResponse = {
+        subscriptionState: "SUBSCRIPTION_STATE_ACTIVE",
+        lineItems: [
+          lineItem,
+          { productId: "other_product", expiryTime: "2030-01-01T00:00:00Z" },
+        ],
+      };
+      const response = await invoke(fakeRequest());
+      assert.equal(response.code, 200);
+      assert.equal(response.payload.verified, false);
+    }
+  });
+
+  await t.test("matching unexpired grace-period item retains premium", async () => {
+    playResponse = {
+      subscriptionState: "SUBSCRIPTION_STATE_IN_GRACE_PERIOD",
+      lineItems: [{ productId: "reklamsiz_kullanim", expiryTime: "2030-01-01T00:00:00Z" }],
+    };
+    const response = await invoke(fakeRequest());
+    assert.equal(response.payload.verified, true);
+  });
+
   await t.test("expired subscription is not premium", async () => {
     playResponse = {
       subscriptionState: "SUBSCRIPTION_STATE_EXPIRED",
-      lineItems: [{ expiryTime: "2020-01-01T00:00:00Z" }],
+      lineItems: [{ productId: "reklamsiz_kullanim", expiryTime: "2020-01-01T00:00:00Z" }],
     };
     const response = await invoke(fakeRequest());
     assert.equal(response.code, 200);

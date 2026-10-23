@@ -32,6 +32,7 @@ dependencies {
     implementation(project(":core:designsystem"))
     implementation(project(":core:datastore"))
     implementation(project(":core:firebase"))
+    implementation(project(":core:auth"))
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.play.billing.ktx)

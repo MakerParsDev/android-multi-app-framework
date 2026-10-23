@@ -34,6 +34,9 @@ class BillingPurchaseVerifier @Inject constructor(
     private val runtimeObservability: RuntimeObservability,
     @Named(PURCHASE_VERIFICATION_URL) private val verificationUrl: String,
 ) {
+    /** An identity is required by the purchase verification API before checkout. */
+    fun hasSignedInUser(): Boolean = firebaseAuth.currentUser != null
+
     private val okHttpClient: OkHttpClient =
         OkHttpClient.Builder().connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
