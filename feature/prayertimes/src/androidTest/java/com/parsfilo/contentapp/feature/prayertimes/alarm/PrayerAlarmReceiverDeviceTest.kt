@@ -5,6 +5,8 @@ import android.content.IntentFilter
 import androidx.core.content.ContextCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 import com.parsfilo.contentapp.core.datastore.PrayerPreferencesData
 import com.parsfilo.contentapp.core.datastore.PrayerPreferencesDataSource
 import com.parsfilo.contentapp.feature.prayertimes.model.PrayerAppVariant
@@ -17,8 +19,11 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Hardware-/emulator-backed BroadcastReceiver test with strictly injected fakes.
@@ -36,6 +41,23 @@ class PrayerAlarmReceiverDeviceTest {
 
     @Test fun unavailableOrDisabledReminderDoesNotLoop() = exercise(Fault.DISABLED)
 
+    @Test fun durableRecoveryEnqueueDeduplicates() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext
+        val manager = WorkManager.getInstance(context)
+        val workName = "prayer_alarm_recovery_" + PrayerAppVariant.NAMAZ_VAKITLERI.name
+        try {
+            runBlocking {
+                PrayerAlarmRecoveryWorker.enqueue(context, PrayerAppVariant.NAMAZ_VAKITLERI)
+                PrayerAlarmRecoveryWorker.enqueue(context, PrayerAppVariant.NAMAZ_VAKITLERI)
+            }
+            val entries = manager.getWorkInfosForUniqueWork(workName).get(20, TimeUnit.SECONDS)
+            assertEquals(1, entries.size)
+            assertEquals(WorkInfo.State.ENQUEUED, entries.single().state)
+        } finally {
+            manager.cancelUniqueWork(workName).result.get(20, TimeUnit.SECONDS)
+        }
+    }
+
     private enum class Fault { NOTIFIER, PREFERENCES, SCHEDULER, NORMAL, DISABLED }
 
     private fun exercise(fault: Fault) {
@@ -45,6 +67,8 @@ class PrayerAlarmReceiverDeviceTest {
         val preferences = mockk<PrayerPreferencesDataSource>()
         val data = mockk<PrayerPreferencesData>()
         val called = CompletableDeferred<Unit>()
+        val recoveryCalled = CompletableDeferred<Unit>()
+        val recoveryCount = AtomicInteger(0)
         every { data.alarmSoundUri } returns null
         every { preferences.preferences } returns if (fault == Fault.PREFERENCES) {
             flow { throw IllegalStateException("synthetic preferences failure") }
@@ -60,7 +84,12 @@ class PrayerAlarmReceiverDeviceTest {
             fault != Fault.DISABLED
         }
         val receiver = PrayerAlarmReceiver().apply {
-            dependenciesProvider = { PrayerAlarmDependencies(scheduler, notifier, preferences) }
+            dependenciesProvider = {
+                PrayerAlarmDependencies(scheduler, notifier, preferences, enqueueRecovery = {
+                    recoveryCount.incrementAndGet()
+                    recoveryCalled.complete(Unit)
+                })
+            }
         }
         ContextCompat.registerReceiver(
             context,
@@ -75,7 +104,11 @@ class PrayerAlarmReceiverDeviceTest {
             context.sendBroadcast(intent)
             runBlocking { withTimeout(9_000L) { called.await() } }
             // Wait for the receiver's bounded finalization before checking exact invocation counts.
+            if (fault == Fault.SCHEDULER) {
+                runBlocking { withTimeout(9_000L) { recoveryCalled.await() } }
+            }
             InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+            assertEquals(if (fault == Fault.SCHEDULER) 1 else 0, recoveryCount.get())
             coVerify(exactly = 1) { scheduler.scheduleNext(PrayerAppVariant.NAMAZ_VAKITLERI) }
             coVerify(exactly = if (fault == Fault.PREFERENCES) 0 else 1) {
                 notifier.show(any(), any(), any())

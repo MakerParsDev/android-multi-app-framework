@@ -65,9 +65,46 @@ class PrayerAlarmReceiverTest {
     }
 
     @Test fun schedulerExceptionStillFinishesPendingResult() = runTest {
-        val (receiver, scheduler, _, _) = createReceiver(this)
+        val (receiver, scheduler, notifier, prefs) = createReceiver(this)
+        val recoveryCalls = java.util.concurrent.atomic.AtomicInteger(0)
+        receiver.dependenciesProvider = {
+            PrayerAlarmDependencies(scheduler, notifier, prefs, enqueueRecovery = {
+                recoveryCalls.incrementAndGet()
+            })
+        }
         coEvery { scheduler.scheduleNext(any()) } throws IllegalStateException("synthetic failure")
         val shadow = dispatch(receiver)
+        advanceUntilIdle()
+        coVerify(exactly = 1) { scheduler.scheduleNext(any()) }
+        assertThat(recoveryCalls.get()).isEqualTo(1)
+        assertFinished(shadow)
+    }
+
+    @Test fun enqueueFailureDoesNotLeakFromReceiver() = runTest {
+        val (receiver, scheduler, notifier, prefs) = createReceiver(this)
+        receiver.dependenciesProvider = {
+            PrayerAlarmDependencies(scheduler, notifier, prefs, enqueueRecovery = {
+                throw IllegalStateException("synthetic WorkManager failure")
+            })
+        }
+        coEvery { scheduler.scheduleNext(any()) } throws IllegalStateException("rearm failed")
+        val shadow = dispatch(receiver)
+        advanceUntilIdle()
+        coVerify(exactly = 1) { scheduler.scheduleNext(any()) }
+        assertFinished(shadow)
+    }
+
+    @Test fun stalledRecoveryEnqueueIsBounded() = runTest {
+        val (receiver, scheduler, notifier, prefs) = createReceiver(this)
+        receiver.dependenciesProvider = {
+            PrayerAlarmDependencies(scheduler, notifier, prefs, enqueueRecovery = {
+                CompletableDeferred<Unit>().await()
+            })
+        }
+        coEvery { scheduler.scheduleNext(any()) } throws IllegalStateException("rearm failed")
+        val shadow = dispatch(receiver)
+        runCurrent()
+        advanceTimeBy(PrayerAlarmReceiver.RECOVERY_ENQUEUE_TIMEOUT_MS)
         advanceUntilIdle()
         coVerify(exactly = 1) { scheduler.scheduleNext(any()) }
         assertFinished(shadow)
@@ -94,7 +131,13 @@ class PrayerAlarmReceiverTest {
     }
 
     @Test fun stalledSchedulerTimesOutAndFinishesPendingResult() = runTest {
-        val (receiver, scheduler, _, _) = createReceiver(this)
+        val (receiver, scheduler, notifier, prefs) = createReceiver(this)
+        val recoveryCalls = java.util.concurrent.atomic.AtomicInteger(0)
+        receiver.dependenciesProvider = {
+            PrayerAlarmDependencies(scheduler, notifier, prefs, enqueueRecovery = {
+                recoveryCalls.incrementAndGet()
+            })
+        }
         coEvery { scheduler.scheduleNext(any()) } coAnswers {
             CompletableDeferred<Boolean>().await()
         }
@@ -103,6 +146,7 @@ class PrayerAlarmReceiverTest {
         advanceTimeBy(PrayerAlarmReceiver.SCHEDULING_TIMEOUT_MS)
         advanceUntilIdle()
         coVerify(exactly = 1) { scheduler.scheduleNext(any()) }
+        assertThat(recoveryCalls.get()).isEqualTo(1)
         assertFinished(shadow)
     }
 
