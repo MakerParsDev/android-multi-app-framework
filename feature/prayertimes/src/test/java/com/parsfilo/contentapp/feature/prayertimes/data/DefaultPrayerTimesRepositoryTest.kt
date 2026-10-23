@@ -70,6 +70,31 @@ class DefaultPrayerTimesRepositoryTest {
     }
 
     @Test
+    fun enabledPreferencePreservesIntentWhileFalseAlarmResultIsObservable() = runTest(testDispatcher) {
+        coEvery { prayerAlarmScheduler.scheduleNextForCurrentFlavor() } returns false
+        val scheduled = repository.setAlarmEnabled(true)
+        assertThat(scheduled).isFalse()
+        coVerify(exactly = 1) { preferencesDataSource.setAlarmEnabled(true) }
+        coVerify(exactly = 1) { prayerAlarmScheduler.scheduleNextForCurrentFlavor() }
+    }
+
+    @Test
+    fun schedulerExceptionIsReportedAsFailure() = runTest(testDispatcher) {
+        coEvery { prayerAlarmScheduler.scheduleNextForCurrentFlavor() } throws
+            IllegalStateException("synthetic alarm failure")
+        assertThat(repository.setAlarmEnabled(true)).isFalse()
+        coVerify(exactly = 1) { preferencesDataSource.setAlarmEnabled(true) }
+    }
+
+    @Test
+    fun schedulerCancellationPropagates() = runTest(testDispatcher) {
+        coEvery { prayerAlarmScheduler.scheduleNextForCurrentFlavor() } throws
+            CancellationException("cancelled")
+        val result = runCatching { repository.setAlarmEnabled(true) }
+        assertThat(result.exceptionOrNull()).isInstanceOf(CancellationException::class.java)
+    }
+
+    @Test
     fun `refreshIfNeeded returns SkippedFresh when cache is still healthy`() = runTest(testDispatcher) {
         coEvery { prayerTimesDao.getSyncState(DISTRICT_ID) } returns PrayerSyncStateEntity(
             districtId = DISTRICT_ID,
