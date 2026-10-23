@@ -39,6 +39,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -84,18 +85,21 @@ fun MessagesScreen(
     onResetSendState: () -> Unit = {},
 ) {
     var showDialog by rememberSaveable { mutableStateOf(false) }
+    // Immediate UI lock protects the gap before the ViewModel's StateFlow recomposes.
+    var sendInFlight by remember { mutableStateOf(false) }
 
     val openDialog = {
         onResetSendState()
         showDialog = true
     }
     val dismissDialog = {
-        if (sendState != MessageSendState.Sending) {
+        if (!sendInFlight && sendState != MessageSendState.Sending) {
             showDialog = false
             onResetSendState()
         }
     }
     LaunchedEffect(sendState) {
+        if (sendState != MessageSendState.Sending) sendInFlight = false
         if (showDialog && sendState == MessageSendState.Sent) dismissDialog()
     }
     val sendLabel = stringResource(R.string.messages_send)
@@ -250,8 +254,14 @@ fun MessagesScreen(
     if (showDialog) {
         SendMessageDialog(
             onDismiss = dismissDialog,
-            onSend = { subject, message -> onSendMessage(subject, message, "GENERAL") },
+            onSend = { subject, message ->
+                if (!sendInFlight) {
+                    sendInFlight = true
+                    onSendMessage(subject, message, "GENERAL")
+                }
+            },
             sendState = sendState,
+            isSending = sendInFlight,
         )
     }
 }
@@ -432,10 +442,11 @@ fun SendMessageDialog(
     onDismiss: () -> Unit,
     onSend: (String, String) -> Unit,
     sendState: MessageSendState = MessageSendState.Idle,
+    isSending: Boolean = false,
 ) {
     var subject by rememberSaveable { mutableStateOf("") }
     var message by rememberSaveable { mutableStateOf("") }
-    val sending = sendState == MessageSendState.Sending
+    val sending = isSending || sendState == MessageSendState.Sending
     val dimens = LocalDimens.current
 
     AlertDialog(

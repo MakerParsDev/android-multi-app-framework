@@ -118,6 +118,20 @@ class MessageComposerLifecycleTest {
         rule.runOnIdle { assertEquals(1, sends) }
     }
 
+    @Test
+    fun cancelIsBlockedBeforeViewModelSendingStateRecomposes() {
+        var sends = 0
+        // Deliberately keep sendState Idle to reproduce the StateFlow/Compose gap.
+        openComposer(sendMessage = { _, _, _ -> sends++ })
+        rule.onNodeWithText(subject).performTextInput("Mock subject")
+        rule.onNodeWithText(body).performTextInput("Mock message")
+        rule.onNodeWithText(send).performClick()
+        rule.onNodeWithText(send).assertIsNotEnabled()
+        rule.onNodeWithText(cancel).assertIsNotEnabled()
+        rule.onNodeWithText(subject).assertExists()
+        rule.runOnIdle { assertEquals(1, sends) }
+    }
+
     @Test fun acknowledgedSendClosesComposer() {
         var state by mutableStateOf<MessageSendState>(MessageSendState.Idle)
         var sends = 0

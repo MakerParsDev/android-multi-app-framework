@@ -48,7 +48,7 @@ class MessagesViewModel @Inject constructor(
     }
 
     fun sendMessage(subject: String, message: String, category: String) {
-        if (_sendState.value == MessageSendState.Sending) return
+        if (_sendState.value == MessageSendState.Sending || _sendState.value == MessageSendState.Sent) return
         if (subject.isBlank() || message.isBlank()) return
         // Update synchronously to prevent a second tap from starting a second write.
         _sendState.value = MessageSendState.Sending

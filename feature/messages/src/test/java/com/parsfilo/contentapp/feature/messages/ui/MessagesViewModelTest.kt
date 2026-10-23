@@ -82,6 +82,10 @@ class MessagesViewModelTest {
         viewModel.sendMessage("subject", "body", "GENERAL")
         advanceUntilIdle()
         assertThat(viewModel.sendState.value).isEqualTo(MessageSendState.Sent)
+        // A second tap before Compose consumes Sent must not insert again.
+        viewModel.sendMessage("subject", "body", "GENERAL")
+        advanceUntilIdle()
+        coVerify(exactly = 1) { repository.sendMessage("subject", "body", "GENERAL") }
         viewModel.resetSendState()
         assertThat(viewModel.sendState.value).isEqualTo(MessageSendState.Idle)
     }
