@@ -107,7 +107,7 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
 
     private fun resolveDependencies(context: Context): PrayerAlarmDependencies {
         val entry = EntryPointAccessors.fromApplication(context, PrayerAlarmReceiverEntryPoint::class.java)
-        return PrayerAlarmDependencies(entry.scheduler(), entry.notifier(), entry.preferences())
+        return PrayerAlarmDependencies(entry.prayerAlarmScheduler(), entry.prayerAlarmNotifier(), entry.prayerPreferencesDataSource())
     }
 
     internal companion object {
@@ -125,9 +125,9 @@ internal data class PrayerAlarmDependencies(
 @EntryPoint
 @InstallIn(SingletonComponent::class)
 interface PrayerAlarmReceiverEntryPoint {
-    fun scheduler(): PrayerAlarmScheduler
+    fun prayerAlarmScheduler(): PrayerAlarmScheduler
 
-    fun notifier(): PrayerAlarmNotifier
+    fun prayerAlarmNotifier(): PrayerAlarmNotifier
 
-    fun preferences(): PrayerPreferencesDataSource
+    fun prayerPreferencesDataSource(): PrayerPreferencesDataSource
 }

@@ -71,7 +71,7 @@ class ZikirReminderReceiver : BroadcastReceiver() {
 
     private fun resolveDependencies(context: Context): ZikirReminderDependencies {
         val entry = EntryPointAccessors.fromApplication(context, ZikirReminderReceiverEntryPoint::class.java)
-        return ZikirReminderDependencies(entry.scheduler(), entry.notifier(), entry.repository())
+        return ZikirReminderDependencies(entry.zikirReminderScheduler(), entry.zikirReminderNotifier(), entry.zikirRepository())
     }
 
     internal companion object {
@@ -89,9 +89,9 @@ internal data class ZikirReminderDependencies(
 @EntryPoint
 @InstallIn(SingletonComponent::class)
 interface ZikirReminderReceiverEntryPoint {
-    fun scheduler(): ZikirReminderScheduler
+    fun zikirReminderScheduler(): ZikirReminderScheduler
 
-    fun notifier(): ZikirReminderNotifier
+    fun zikirReminderNotifier(): ZikirReminderNotifier
 
-    fun repository(): ZikirRepository
+    fun zikirRepository(): ZikirRepository
 }
