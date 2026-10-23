@@ -208,6 +208,8 @@ fun SubscriptionScreen(
                         BillingErrorKeys.CONNECTING -> stringResource(R.string.billing_error_connecting)
                         BillingErrorKeys.RECONNECTING -> stringResource(R.string.billing_error_reconnecting)
                         BillingErrorKeys.UNSUPPORTED -> stringResource(R.string.billing_error_unsupported)
+                        BillingErrorKeys.AUTH_REQUIRED -> stringResource(R.string.billing_sign_in_required)
+                        BillingErrorKeys.VERIFICATION_UNAVAILABLE -> stringResource(R.string.billing_error_verification_unavailable)
                         else -> uiState.subscriptionState.message.orEmpty()
                     }
                     Text(

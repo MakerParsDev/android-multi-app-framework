@@ -175,7 +175,7 @@ class BillingManagerTest {
             error = "Network error while verifying purchase",
         )
         assertThat(manager.resolveSubscriptionStateForPurchases(listOf(purchase)))
-            .isEqualTo(SubscriptionState.Error("BILLING_VERIFICATION_UNAVAILABLE"))
+            .isEqualTo(SubscriptionState.Error(BillingErrorKeys.VERIFICATION_UNAVAILABLE))
         verify(exactly = 0) { billingClient.acknowledgePurchase(any(), any()) }
     }
 

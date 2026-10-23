@@ -40,6 +40,7 @@ object BillingErrorKeys {
     const val RECONNECTING = "BILLING_RECONNECTING"
     const val UNSUPPORTED = "BILLING_UNSUPPORTED"
     const val AUTH_REQUIRED = "BILLING_AUTH_REQUIRED"
+    const val VERIFICATION_UNAVAILABLE = "BILLING_VERIFICATION_UNAVAILABLE"
 }
 
 @Singleton
@@ -418,7 +419,7 @@ class BillingManager @Inject constructor(
         if (verified.isEmpty()) {
             return PurchaseResolution(
                 if (temporaryFailure) {
-                    SubscriptionState.Error("BILLING_VERIFICATION_UNAVAILABLE")
+                    SubscriptionState.Error(BillingErrorKeys.VERIFICATION_UNAVAILABLE)
                 } else {
                     SubscriptionState.Inactive
                 },

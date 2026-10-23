@@ -11,6 +11,7 @@
     <string name="billing_error_unsupported">Subscriptions are not supported on this device. Please update Google Play and try again.</string>
     <string name="billing_sign_in_required">Sign in with Google before purchasing ad-free access. Existing purchases are checked again after you sign in.</string>
     <string name="billing_sign_in_action">Sign in with Google</string>
+    <string name="billing_error_verification_unavailable">Purchase verification is temporarily unavailable. Check your connection and try again.</string>
     <string name="billing_plans_loading">Loading plans…</string>
     <string name="billing_selected_badge">Selected</string>
     <string name="billing_subscribe">Buy on Google Play</string>
