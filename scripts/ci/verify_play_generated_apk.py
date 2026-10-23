@@ -31,11 +31,12 @@ FIREBASE_FIELDS = (
     "google_app_id", "project_id", "gcm_defaultSenderId", "google_api_key",
     "google_storage_bucket", "firebase_database_url", "admob_app_id", "web_client_id",
 )
-MANDATORY = frozenset(("google_app_id", "project_id", "gcm_defaultSenderId", "google_api_key"))
+MANDATORY = frozenset(("google_app_id", "project_id", "gcm_defaultSenderId", "google_api_key", "web_client_id"))
 RESOURCE_LINE = re.compile(r"^\s*resource 0x[0-9a-fA-F]+ string/([A-Za-z0-9_]+)(?:\s|$)")
 CONFIG_VALUE_LINE = re.compile(r"^\s*\(([^)]*)\)\s+(.+)$")
 QUOTED_STRING = re.compile(r'^"([^"]*)"$')
 API_KEY_PATTERN = re.compile(r"AIza[A-Za-z0-9_-]{35}\Z")
+WEB_CLIENT_PATTERN = re.compile(r"[0-9]+-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com\Z")
 MAX_APK_BYTES = 150 * 1024 * 1024
 
 
@@ -89,6 +90,8 @@ def validate_firebase_resources(records: dict[str, list[tuple[str, str | None]]]
             raise ValueError(f"Firebase resource does not match project configuration: {field}")
         if field == "google_api_key" and not API_KEY_PATTERN.fullmatch(actual):
             raise ValueError("Firebase Android API-key resource is missing/invalid")
+        if field == "web_client_id" and not WEB_CLIENT_PATTERN.fullmatch(actual):
+            raise ValueError("Google sign-in web client resource is missing/invalid")
         result[field] = "verified"
     return result
 

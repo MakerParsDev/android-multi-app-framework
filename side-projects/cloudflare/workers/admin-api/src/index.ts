@@ -1761,18 +1761,21 @@ async function verifySubscriptionPurchase(
     subscriptionState?: string;
     acknowledgementState?: string;
     lineItems?: Array<{
+      productId?: string;
       expiryTime?: string;
       autoRenewingPlan?: { autoRenewEnabled?: boolean };
     }>;
   };
-  const lineItem = data.lineItems?.[0];
+  const lineItem = data.lineItems?.find((item) => item.productId === payload.productId);
   const subscriptionState = data.subscriptionState ?? "SUBSCRIPTION_STATE_UNSPECIFIED";
+  const expiryTimeMillis = parseExpiryMillis(lineItem?.expiryTime);
   return {
-    verified: subscriptionState === "SUBSCRIPTION_STATE_ACTIVE" ||
-      subscriptionState === "SUBSCRIPTION_STATE_IN_GRACE_PERIOD",
+    verified: (subscriptionState === "SUBSCRIPTION_STATE_ACTIVE" ||
+      subscriptionState === "SUBSCRIPTION_STATE_IN_GRACE_PERIOD") &&
+      expiryTimeMillis != null && expiryTimeMillis > Date.now(),
     purchaseState: subscriptionState,
     acknowledgementState: data.acknowledgementState ?? "ACKNOWLEDGEMENT_STATE_UNSPECIFIED",
-    expiryTimeMillis: parseExpiryMillis(lineItem?.expiryTime),
+    expiryTimeMillis,
     autoRenewing: Boolean(lineItem?.autoRenewingPlan?.autoRenewEnabled),
   };
 }
