@@ -15,6 +15,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -82,6 +83,11 @@ class MainViewModel
             messageRepository
                 .getMessages()
                 .map { messages -> messages.count { it.hasReply && !it.isRead } }
+                .catch { error ->
+                    // A failed Firestore listener must not crash the entire app.
+                    Timber.w("Unread messages unavailable (%s)", error.javaClass.simpleName)
+                    emit(0)
+                }
                 .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5_000),

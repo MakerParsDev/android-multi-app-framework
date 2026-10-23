@@ -141,9 +141,7 @@ fun MessagesScreen(
                             elevation = CardDefaults.cardElevation(defaultElevation = dimens.elevationLow),
                         ) {
                             Text(
-                                text = stringResource(
-                                    R.string.messages_error, uiState.throwable.message ?: ""
-                                ),
+                                text = stringResource(R.string.messages_load_error),
                                 modifier = Modifier.padding(dimens.space12),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onErrorContainer
