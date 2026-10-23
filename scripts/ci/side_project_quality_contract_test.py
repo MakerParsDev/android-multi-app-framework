@@ -215,6 +215,20 @@ class SideProjectQualityContractTest(unittest.TestCase):
         preflight = (ROOT / "side-projects/vps/scripts/preflight.sh").read_text(encoding="utf-8")
         self.assertIn('Missing or empty ${key}', preflight)
         self.assertIn('grep -Eq "^${key}=[^[:space:]]+"', preflight)
+        deploy = (ROOT / "side-projects/vps/scripts/deploy.sh").read_text(encoding="utf-8")
+        self.assertIn('bash "$SCRIPT_DIR/preflight.sh"', deploy)
+        self.assertLess(deploy.index('bash "$SCRIPT_DIR/preflight.sh"'), deploy.index('docker compose up -d --build'))
+        self.assertNotIn('docker compose pull || true', deploy)
+        self.assertIn('Copy .env.template to .env', preflight)
+        for key in (
+            "WWW_SUBDOMAIN", "FIREBASE_FUNCTIONS_BASE_URL", "VITE_FIREBASE_MESSAGING_SENDER_ID",
+            "VITE_FIREBASE_STORAGE_BUCKET", "VITE_FIREBASE_FUNCTIONS_REGION",
+            "VITE_FUNCTIONS_BASE_URL", "VITE_ADMIN_ALLOWED_EMAILS",
+        ):
+            self.assertIn(f"  {key}\n", preflight)
+        self.assertIn('docker compose config --quiet', preflight)
+        self.assertIn('Refuse example template destinations', preflight)
+
 
         for name, dockerfile, nginx_path in (
             ("admin-notifications", admin, ROOT / "side-projects/admin-notifications/docker/nginx.conf"),
