@@ -15,6 +15,7 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -112,6 +113,17 @@ class DefaultPrayerTimesRepositoryTest {
         val result = repository.refreshIfNeeded(districtId = DISTRICT_ID, force = false)
 
         assertThat(result).isInstanceOf(RefreshResult.Failed::class.java)
+    }
+
+    @Test
+    fun `refreshIfNeeded propagates cancellation instead of returning Failed`() = runTest(testDispatcher) {
+        coEvery { prayerTimesDao.getSyncState(DISTRICT_ID) } returns null
+        coEvery { prayerTimesDao.countByDistrictAndDate(DISTRICT_ID, any()) } returns 0
+        every { apiClient.getPrayerTimes(DISTRICT_ID) } throws CancellationException("cancelled")
+
+        val attempt = runCatching { repository.refreshIfNeeded(districtId = DISTRICT_ID) }
+
+        assertThat(attempt.exceptionOrNull()).isInstanceOf(CancellationException::class.java)
     }
 
     @Test
