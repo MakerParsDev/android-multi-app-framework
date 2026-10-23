@@ -54,6 +54,37 @@ class ZikirReminderReceiverTest {
         assertFinished(shadow)
     }
 
+    @Test fun unavailableScheduleRequestsRecoveryOnce() = runTest {
+        val (receiver, scheduler, notifier, repo) = createReceiver(this)
+        val recoveryCalls = java.util.concurrent.atomic.AtomicInteger()
+        receiver.dependenciesProvider = {
+            ZikirReminderDependencies(scheduler, notifier, repo, enqueueRecovery = {
+                recoveryCalls.incrementAndGet()
+            })
+        }
+        coEvery { scheduler.scheduleOrCancelFromPreferences() } returns ReminderScheduleMode.UNAVAILABLE
+        val shadow = dispatch(receiver)
+        advanceUntilIdle()
+        coVerify(exactly = 1) { scheduler.scheduleOrCancelFromPreferences() }
+        assertThat(recoveryCalls.get()).isEqualTo(1)
+        assertFinished(shadow)
+    }
+
+    @Test fun successfulInexactScheduleDoesNotRequestRecovery() = runTest {
+        val (receiver, scheduler, notifier, repo) = createReceiver(this)
+        val recoveryCalls = java.util.concurrent.atomic.AtomicInteger()
+        receiver.dependenciesProvider = {
+            ZikirReminderDependencies(scheduler, notifier, repo, enqueueRecovery = {
+                recoveryCalls.incrementAndGet()
+            })
+        }
+        coEvery { scheduler.scheduleOrCancelFromPreferences() } returns ReminderScheduleMode.INEXACT_FALLBACK
+        val shadow = dispatch(receiver)
+        advanceUntilIdle()
+        assertThat(recoveryCalls.get()).isEqualTo(0)
+        assertFinished(shadow)
+    }
+
     @Test fun normalDeliveryRearmsOnlyOnce() = runTest {
         val (receiver, scheduler, notifier, _) = createReceiver(this)
         val shadow = dispatch(receiver)

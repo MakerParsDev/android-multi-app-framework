@@ -32,8 +32,14 @@ class ZikirReminderRecoveryWorker(
                 ZikirReminderRecoveryEntryPoint::class.java,
             )
             // Null is expected when the reminder has since been disabled.
-            entry.recoveryZikirReminderScheduler().scheduleOrCancelFromPreferences()
-            Result.success()
+            val mode = entry.recoveryZikirReminderScheduler().scheduleOrCancelFromPreferences()
+            if (mode == ReminderScheduleMode.UNAVAILABLE) {
+                Timber.w("Zikir reminder still unavailable on recovery attempt=%d", runAttemptCount + 1)
+                if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
+            } else {
+                // null is the expected disabled-preference outcome.
+                Result.success()
+            }
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {

@@ -55,6 +55,7 @@
     <string name="counter_streak_reminder">Serienwarnung (21:00 Uhr)</string>
     <string name="counter_save">Speichern</string>
     <string name="counter_reminder_saved">Erinnerung gespeichert</string>
+    <string name="counter_reminder_unavailable">Erinnerung gespeichert, aber kein Alarm geplant. Bitte später erneut prüfen.</string>
     <string name="counter_exact_alarm_permission_required">Für Erinnerungen zur exakten Uhrzeit ist die Berechtigung „Alarme &amp; Erinnerungen“ erforderlich.</string>
     <string name="counter_exact_alarm_permission_action">Erlauben</string>
     <string name="counter_exact_alarm_settings_open_failed">Der Berechtigungsbildschirm konnte nicht geöffnet werden.</string>

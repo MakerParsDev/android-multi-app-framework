@@ -55,6 +55,7 @@
     <string name="counter_streak_reminder">Seri uyarısı (akşam 21:00)</string>
     <string name="counter_save">Kaydet</string>
     <string name="counter_reminder_saved">Hatırlatıcı ayarları kaydedildi</string>
+    <string name="counter_reminder_unavailable">Hatırlatıcı ayarları kaydedildi ancak alarm kurulamadı. Lütfen daha sonra tekrar kontrol edin.</string>
     <string name="counter_exact_alarm_permission_required">Tam saatinde hatırlatma için Alarmlar ve Hatırlatıcılar izni gerekir.</string>
     <string name="counter_exact_alarm_permission_action">İzin ver</string>
     <string name="counter_exact_alarm_settings_open_failed">İzin ekranı açılamadı.</string>
