@@ -18,6 +18,7 @@ import com.parsfilo.contentapp.feature.prayertimes.model.PrayerTimesMode
 import com.parsfilo.contentapp.feature.prayertimes.model.RefreshResult
 import com.parsfilo.contentapp.feature.prayertimes.model.ResolveResult
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -88,6 +89,61 @@ class PrayerTimesViewModelTest {
             .isEqualTo(PrayerAlarmScheduleStatus.NOT_SCHEDULED)
         assertThat(viewModel.snackBarMessage.value)
             .isEqualTo(UiText.StringResource(R.string.prayertimes_alarm_choose_location))
+        collector.cancel()
+    }
+
+    @Test
+    fun lateStartupRevalidationCannotOverrideNewerDisable() = runTest(testDispatcher) {
+        val oldResult = CompletableDeferred<Boolean>()
+        val repo = FakePrayerTimesRepository().apply {
+            modeFlow.value = PrayerTimesMode.MANUAL
+            alarmSettingsFlow.value = PrayerAlarmSettings(enabled = true)
+            selectionFlow.value = PrayerLocationSelection(1, 2, 3, "old district")
+            scheduleBarrier = oldResult
+        }
+        val vm = PrayerTimesViewModel(repo, prayerPreferencesDataSource, prayerAlarmSoundPlayer)
+        val collector = backgroundScope.launch { vm.uiState.collect {} }
+        runCurrent()
+        assertThat(repo.scheduleAttempts).isEqualTo(1)
+
+        vm.onAlarmEnabledChanged(false)
+        runCurrent()
+        assertThat(vm.uiState.value.alarmScheduleStatus)
+            .isEqualTo(PrayerAlarmScheduleStatus.DISABLED)
+
+        oldResult.complete(true)
+        runCurrent()
+        assertThat(vm.uiState.value.alarmScheduleStatus)
+            .isEqualTo(PrayerAlarmScheduleStatus.DISABLED)
+        assertThat(repo.alarmSettingsFlow.value.enabled).isFalse()
+        collector.cancel()
+    }
+
+    @Test
+    fun changingDistrictClearsPreviouslyConfirmedScheduleBeforeRefresh() = runTest(testDispatcher) {
+        val repo = FakePrayerTimesRepository().apply {
+            modeFlow.value = PrayerTimesMode.MANUAL
+            alarmSettingsFlow.value = PrayerAlarmSettings(enabled = true)
+            selectionFlow.value = PrayerLocationSelection(1, 2, 3, "old district")
+            scheduleResult = true
+        }
+        val vm = PrayerTimesViewModel(repo, prayerPreferencesDataSource, prayerAlarmSoundPlayer)
+        val collector = backgroundScope.launch { vm.uiState.collect {} }
+        runCurrent()
+        assertThat(vm.uiState.value.alarmScheduleStatus)
+            .isEqualTo(PrayerAlarmScheduleStatus.SCHEDULED)
+
+        val newDistrictRefresh = CompletableDeferred<Unit>()
+        repo.districtRefreshBarrier = newDistrictRefresh
+        repo.selectionFlow.value = PrayerLocationSelection(1, 2, 4, "new district")
+        runCurrent()
+        assertThat(vm.uiState.value.alarmScheduleStatus)
+            .isEqualTo(PrayerAlarmScheduleStatus.UNKNOWN)
+
+        newDistrictRefresh.complete(Unit)
+        runCurrent()
+        assertThat(vm.uiState.value.alarmScheduleStatus)
+            .isEqualTo(PrayerAlarmScheduleStatus.SCHEDULED)
         collector.cancel()
     }
 
@@ -330,6 +386,7 @@ private class FakePrayerTimesRepository : PrayerTimesRepository {
 
     override suspend fun refreshIfNeeded(districtId: Int, force: Boolean): RefreshResult {
         refreshCalls += RefreshCall(districtId = districtId, force = force)
+        if (districtId == 4) districtRefreshBarrier?.await()
         return refreshResult
     }
 
@@ -361,6 +418,8 @@ private class FakePrayerTimesRepository : PrayerTimesRepository {
 
     var scheduleResult = false
     var scheduleAttempts = 0
+    var scheduleBarrier: CompletableDeferred<Boolean>? = null
+    var districtRefreshBarrier: CompletableDeferred<Unit>? = null
 
     override suspend fun setAlarmEnabled(enabled: Boolean): Boolean {
         alarmSettingsFlow.value = alarmSettingsFlow.value.copy(enabled = enabled)
@@ -379,7 +438,7 @@ private class FakePrayerTimesRepository : PrayerTimesRepository {
 
     override suspend fun tryScheduleAlarm(): Boolean {
         scheduleAttempts += 1
-        return alarmSettingsFlow.value.enabled && scheduleResult
+        return scheduleBarrier?.await() ?: (alarmSettingsFlow.value.enabled && scheduleResult)
     }
 
     override suspend fun setManualSelection(countryId: Int, cityId: Int, districtId: Int) {

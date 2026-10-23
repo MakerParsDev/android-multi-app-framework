@@ -53,6 +53,9 @@ class PrayerTimesViewModel @Inject constructor(
     private val resolvingLocationState = MutableStateFlow(false)
     private val refreshingState = MutableStateFlow(false)
     private val alarmScheduleStatusState = MutableStateFlow(PrayerAlarmScheduleStatus.UNKNOWN)
+
+    // Status responses from older async calls cannot overwrite newer user intent.
+    private var alarmScheduleGeneration: Long = 0L
     private val pendingResolvedLocationNameState = MutableStateFlow<String?>(null)
     private val _events = MutableSharedFlow<PrayerTimesUiEvent>(extraBufferCapacity = 1)
 
@@ -76,6 +79,8 @@ class PrayerTimesViewModel @Inject constructor(
                 .map { it?.districtId }
                 .distinctUntilChanged()
                 .collect { districtId ->
+                    // The prior district's confirmed schedule is no longer applicable.
+                    val generation = beginAlarmScheduleAttempt()
                     if (districtId != null) {
                         val result = repository.refreshIfNeeded(districtId = districtId, force = false)
                         when (result) {
@@ -99,8 +104,13 @@ class PrayerTimesViewModel @Inject constructor(
                         // Startup/reselection must revalidate; enabled preference is not proof
                         // that the OS still has a scheduled alarm.
                         val scheduled = repository.tryScheduleAlarm()
-                        recordAlarmScheduleResult(enabled = true, scheduled = scheduled, notify = false)
-                    } else {
+                        recordAlarmScheduleResult(
+                            enabled = true,
+                            scheduled = scheduled,
+                            notify = false,
+                            generation = generation,
+                        )
+                    } else if (generation == alarmScheduleGeneration) {
                         alarmScheduleStatusState.value = PrayerAlarmScheduleStatus.DISABLED
                     }
                 }
@@ -213,31 +223,43 @@ class PrayerTimesViewModel @Inject constructor(
 
     fun onAlarmEnabledChanged(enabled: Boolean) {
         viewModelScope.launch {
-            alarmScheduleStatusState.value = PrayerAlarmScheduleStatus.UNKNOWN
+            val generation = beginAlarmScheduleAttempt()
             val scheduled = repository.setAlarmEnabled(enabled)
-            recordAlarmScheduleResult(enabled, scheduled, notify = enabled)
+            recordAlarmScheduleResult(enabled, scheduled, notify = enabled, generation = generation)
         }
     }
 
     fun onAlarmOffsetChanged(minutes: Int) {
         viewModelScope.launch {
-            alarmScheduleStatusState.value = PrayerAlarmScheduleStatus.UNKNOWN
+            val generation = beginAlarmScheduleAttempt()
             val scheduled = repository.setAlarmOffsetMinutes(minutes)
             val enabled = repository.observeAlarmSettings().first().enabled
-            recordAlarmScheduleResult(enabled, scheduled, notify = enabled)
+            recordAlarmScheduleResult(enabled, scheduled, notify = enabled, generation = generation)
         }
     }
 
     fun onAlarmPrayerKeysChanged(keys: Set<String>) {
         viewModelScope.launch {
-            alarmScheduleStatusState.value = PrayerAlarmScheduleStatus.UNKNOWN
+            val generation = beginAlarmScheduleAttempt()
             val scheduled = repository.setSelectedAlarmPrayerKeys(keys)
             val enabled = repository.observeAlarmSettings().first().enabled
-            recordAlarmScheduleResult(enabled, scheduled, notify = enabled)
+            recordAlarmScheduleResult(enabled, scheduled, notify = enabled, generation = generation)
         }
     }
 
-    private suspend fun recordAlarmScheduleResult(enabled: Boolean, scheduled: Boolean, notify: Boolean) {
+    private fun beginAlarmScheduleAttempt(): Long {
+        alarmScheduleGeneration += 1
+        alarmScheduleStatusState.value = PrayerAlarmScheduleStatus.UNKNOWN
+        return alarmScheduleGeneration
+    }
+
+    private suspend fun recordAlarmScheduleResult(
+        enabled: Boolean,
+        scheduled: Boolean,
+        notify: Boolean,
+        generation: Long,
+    ) {
+        if (generation != alarmScheduleGeneration) return
         alarmScheduleStatusState.value = when {
             !enabled -> PrayerAlarmScheduleStatus.DISABLED
             scheduled -> PrayerAlarmScheduleStatus.SCHEDULED
@@ -245,6 +267,7 @@ class PrayerTimesViewModel @Inject constructor(
         }
         if (enabled && !scheduled && notify) {
             val selectedDistrict = repository.observeCurrentSelection().first()
+            if (generation != alarmScheduleGeneration) return
             _snackBarMessage.value = UiText.StringResource(
                 if (selectedDistrict == null) {
                     R.string.prayertimes_alarm_choose_location
@@ -270,6 +293,7 @@ class PrayerTimesViewModel @Inject constructor(
             refreshingState.value = true
             try {
                 val districtId = uiState.value.selection?.districtId ?: return@launch
+                val generation = beginAlarmScheduleAttempt()
                 when (repository.refreshIfNeeded(districtId, force = true)) {
                     RefreshResult.InvalidSelection -> {
                         _snackBarMessage.value = UiText.StringResource(
@@ -287,7 +311,12 @@ class PrayerTimesViewModel @Inject constructor(
                 }
                 if (repository.observeAlarmSettings().first().enabled) {
                     val scheduled = repository.tryScheduleAlarm()
-                    recordAlarmScheduleResult(enabled = true, scheduled = scheduled, notify = false)
+                    recordAlarmScheduleResult(
+                        enabled = true,
+                        scheduled = scheduled,
+                        notify = false,
+                        generation = generation,
+                    )
                 }
             } finally {
                 refreshingState.value = false
