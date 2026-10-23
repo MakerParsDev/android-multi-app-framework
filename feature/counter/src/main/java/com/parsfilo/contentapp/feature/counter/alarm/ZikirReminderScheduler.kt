@@ -24,17 +24,25 @@ class ZikirReminderScheduler @Inject constructor(
     private val preferencesDataSource: PreferencesDataSource,
 ) {
 
-    fun scheduleDaily(hour: Int, minute: Int): ReminderScheduleMode {
+    fun scheduleDaily(hour: Int, minute: Int): ReminderScheduleMode =
+        scheduleDaily(hour, minute, ::reminderPendingIntent)
+
+    // Internal test seam: simulate missing PendingIntent without creating an actual alarm.
+    internal fun scheduleDaily(
+        hour: Int,
+        minute: Int,
+        pendingIntentProvider: (Int) -> PendingIntent?,
+    ): ReminderScheduleMode {
         val alarmManager = context.getSystemService(AlarmManager::class.java)
             ?: run {
                 Timber.w("AlarmManager unavailable; reminder scheduling skipped")
-                return ReminderScheduleMode.INEXACT_FALLBACK
+                return ReminderScheduleMode.UNAVAILABLE
             }
-        val pendingIntent = reminderPendingIntent(
-            flags = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        val pendingIntent = pendingIntentProvider(
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         ) ?: run {
             Timber.w("Reminder PendingIntent could not be created; scheduling skipped")
-            return ReminderScheduleMode.INEXACT_FALLBACK
+            return ReminderScheduleMode.UNAVAILABLE
         }
 
         val triggerAt =
@@ -81,6 +89,9 @@ class ZikirReminderScheduler @Inject constructor(
         return scheduleDaily(hour, minute)
     }
 
+    fun isAlarmServiceAvailable(): Boolean =
+        context.getSystemService(AlarmManager::class.java) != null
+
     fun canRequestExactAlarmPermission(): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return false
         return !canScheduleExactAlarmsNow()
@@ -90,6 +101,10 @@ class ZikirReminderScheduler @Inject constructor(
         val alarmManager = context.getSystemService(AlarmManager::class.java) ?: return false
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
         return alarmManager.canScheduleExactAlarms()
+    }
+
+    suspend fun enqueueUnavailableRecovery() {
+        ZikirReminderRecoveryWorker.enqueue(context)
     }
 
     fun scheduleStreakCheckWorker() {
@@ -161,6 +176,8 @@ class ZikirReminderScheduler @Inject constructor(
                 )
                 scheduleInexact(alarmManager, triggerAt, pendingIntent)
             }
+
+            ReminderScheduleMode.UNAVAILABLE -> error("UNAVAILABLE is not an alarm scheduling policy")
         }
     }
 
@@ -189,4 +206,5 @@ class ZikirReminderScheduler @Inject constructor(
 enum class ReminderScheduleMode {
     EXACT,
     INEXACT_FALLBACK,
+    UNAVAILABLE,
 }

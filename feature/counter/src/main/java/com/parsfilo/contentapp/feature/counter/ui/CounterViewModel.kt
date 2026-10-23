@@ -14,7 +14,9 @@ import com.parsfilo.contentapp.feature.counter.model.ZikirItem
 import com.parsfilo.contentapp.feature.counter.model.ZikirSession
 import com.parsfilo.contentapp.feature.counter.sharing.ZikirShareHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -26,6 +28,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import org.json.JSONArray
 import org.json.JSONObject
 import timber.log.Timber
@@ -419,6 +422,7 @@ class CounterViewModel @Inject constructor(
         }
     }
 
+    @Suppress("TooGenericExceptionCaught") // AlarmManager and WorkManager can throw platform exceptions.
     fun onReminderSaved(settings: ReminderSettings) {
         viewModelScope.launch {
             Timber.d(
@@ -435,35 +439,79 @@ class CounterViewModel @Inject constructor(
             preferencesDataSource.setZikirDailyGoal(settings.dailyGoal)
             preferencesDataSource.setZikirStreakReminderEnabled(settings.streakReminderEnabled)
             if (settings.enabled) {
-                val scheduleMode = zikirReminderScheduler.scheduleDaily(settings.hour, settings.minute)
+                val scheduleMode = try {
+                    zikirReminderScheduler.scheduleDaily(settings.hour, settings.minute)
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    Timber.w(error, "Unable to schedule zikir reminder")
+                    ReminderScheduleMode.UNAVAILABLE
+                }
                 Timber.d("Reminder schedule result=%s", scheduleMode)
-                if (scheduleMode == ReminderScheduleMode.INEXACT_FALLBACK &&
-                    zikirReminderScheduler.canRequestExactAlarmPermission()
-                ) {
-                    Timber.d("Exact alarm permission required; emitting reminder permission request event")
-                    _reminderUiEvents.emit(CounterReminderUiEvent.RequestExactAlarmPermission)
+                if (scheduleMode == ReminderScheduleMode.UNAVAILABLE) {
+                    reportUnavailableReminder()
+                } else {
+                    _reminderUiEvents.emit(reminderFeedbackFor(scheduleMode))
+                    if (scheduleMode == ReminderScheduleMode.INEXACT_FALLBACK &&
+                        zikirReminderScheduler.canRequestExactAlarmPermission()
+                    ) {
+                        Timber.d("Exact alarm permission required; emitting reminder permission request event")
+                        _reminderUiEvents.emit(CounterReminderUiEvent.RequestExactAlarmPermission)
+                    }
                 }
             } else {
                 zikirReminderScheduler.cancel()
+                _reminderUiEvents.emit(CounterReminderUiEvent.ReminderSaved)
             }
             zikirReminderScheduler.scheduleStreakCheckWorker()
             _uiState.value = _uiState.value.copy(showReminderSettings = false)
         }
     }
 
+    @Suppress("TooGenericExceptionCaught") // Preserve explicit feedback for platform failures.
     fun onExactAlarmPermissionSettingsReturned() {
         viewModelScope.launch {
-            if (!zikirReminderScheduler.canRequestExactAlarmPermission()) {
-                val scheduleMode = zikirReminderScheduler.scheduleOrCancelFromPreferences()
+            if (!zikirReminderScheduler.isAlarmServiceAvailable()) {
+                reportUnavailableReminder()
+            } else if (!zikirReminderScheduler.canRequestExactAlarmPermission()) {
+                val scheduleMode = try {
+                    zikirReminderScheduler.scheduleOrCancelFromPreferences()
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    Timber.w(error, "Unable to reschedule reminder after exact-alarm settings")
+                    ReminderScheduleMode.UNAVAILABLE
+                }
                 Timber.d("Exact alarm settings returned: permission granted, reschedule result=%s", scheduleMode)
-                _reminderUiEvents.emit(
-                    CounterReminderUiEvent.ExactAlarmPermissionGranted
-                )
+                if (scheduleMode == ReminderScheduleMode.UNAVAILABLE) {
+                    reportUnavailableReminder()
+                } else {
+                    _reminderUiEvents.emit(CounterReminderUiEvent.ExactAlarmPermissionGranted)
+                }
             } else {
                 Timber.d("Exact alarm settings returned: permission still missing")
                 _reminderUiEvents.emit(
                     CounterReminderUiEvent.ExactAlarmPermissionStillMissing
                 )
+            }
+        }
+    }
+
+    @Suppress("TooGenericExceptionCaught") // WorkManager enqueue is bounded independently of UI.
+    private suspend fun reportUnavailableReminder() {
+        // Never wait for WorkManager persistence before showing a truthful failure message.
+        _reminderUiEvents.emit(reminderFeedbackFor(ReminderScheduleMode.UNAVAILABLE))
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                withTimeout(1_500L) {
+                    zikirReminderScheduler.enqueueUnavailableRecovery()
+                }
+            } catch (_: TimeoutCancellationException) {
+                Timber.w("Zikir reminder recovery enqueue timed out")
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                Timber.w(error, "Unable to enqueue zikir reminder recovery")
             }
         }
     }
