@@ -413,22 +413,33 @@ class DefaultPrayerTimesRepository @Inject constructor(
         )
     }
 
-    override suspend fun setAlarmEnabled(enabled: Boolean): Unit = withContext(ioDispatcher) {
+    override suspend fun setAlarmEnabled(enabled: Boolean): Boolean = withContext(ioDispatcher) {
         prayerPreferencesDataSource.setAlarmEnabled(enabled)
-        runCatching { prayerAlarmScheduler.scheduleNextForCurrentFlavor() }
-            .onFailure { Timber.w(it, "Unable to reschedule prayer alarm after enabled update") }
+        scheduleAlarmSafely("enabled update")
     }
 
-    override suspend fun setAlarmOffsetMinutes(minutes: Int): Unit = withContext(ioDispatcher) {
+    override suspend fun setAlarmOffsetMinutes(minutes: Int): Boolean = withContext(ioDispatcher) {
         prayerPreferencesDataSource.setAlarmOffsetMinutes(minutes)
-        runCatching { prayerAlarmScheduler.scheduleNextForCurrentFlavor() }
-            .onFailure { Timber.w(it, "Unable to reschedule prayer alarm after offset update") }
+        scheduleAlarmSafely("offset update")
     }
 
-    override suspend fun setSelectedAlarmPrayerKeys(keys: Set<String>): Unit = withContext(ioDispatcher) {
+    override suspend fun setSelectedAlarmPrayerKeys(keys: Set<String>): Boolean = withContext(ioDispatcher) {
         prayerPreferencesDataSource.setSelectedAlarmPrayerKeys(keys)
-        runCatching { prayerAlarmScheduler.scheduleNextForCurrentFlavor() }
-            .onFailure { Timber.w(it, "Unable to reschedule prayer alarm after prayer keys update") }
+        scheduleAlarmSafely("prayer keys update")
+    }
+
+    override suspend fun tryScheduleAlarm(): Boolean = withContext(ioDispatcher) {
+        scheduleAlarmSafely("status revalidation")
+    }
+
+    @Suppress("TooGenericExceptionCaught") // AlarmManager and provider failures are platform-specific.
+    private suspend fun scheduleAlarmSafely(reason: String): Boolean = try {
+        prayerAlarmScheduler.scheduleNextForCurrentFlavor()
+    } catch (error: CancellationException) {
+        throw error
+    } catch (error: Exception) {
+        Timber.w(error, "Unable to schedule prayer alarm during %s", reason)
+        false
     }
 
     override suspend fun setManualSelection(

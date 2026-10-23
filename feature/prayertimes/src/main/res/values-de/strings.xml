@@ -47,8 +47,12 @@
     <string name="prayertimes_next_7_days">Nächste 7 Tage</string>
     <string name="prayertimes_alarm_title">Gebets-Erinnerungen</string>
     <string name="prayertimes_alarm_desc">Lokale Benachrichtigungen für Gebetszeiten planen</string>
-    <string name="prayertimes_alarm_enabled">Alarm an</string>
+    <string name="prayertimes_alarm_enabled">Erinnerungen gewünscht</string>
     <string name="prayertimes_alarm_disabled">Alarm aus</string>
+    <string name="prayertimes_alarm_scheduled">Nächste Erinnerung geplant.</string>
+    <string name="prayertimes_alarm_schedule_unavailable">Erinnerung gespeichert, aber kein Alarm geplant. Bitte Gebetszeiten aktualisieren.</string>
+    <string name="prayertimes_alarm_choose_location">Erinnerung gespeichert, aber kein Alarm geplant. Bitte zuerst einen Bezirk wählen.</string>
+    <string name="prayertimes_alarm_unverified">Erinnerungen gewünscht; Alarmplanung noch nicht bestätigt.</string>
     <string name="prayertimes_alarm_offset_value">%1$d Min vorher benachrichtigen</string>
     <string name="prayertimes_alarm_prayers">Erinnerte Gebete</string>
     <string name="prayertimes_alarm_sound_title">Alarmton</string>

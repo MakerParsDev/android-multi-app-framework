@@ -385,6 +385,12 @@ fun PrayerTimesScreen(
         AlarmSettingsBottomSheet(
             variant = variant,
             settings = uiState.alarmSettings,
+            alarmScheduleStatus = uiState.alarmScheduleStatus,
+            hasLocation = uiState.selection != null,
+            onChooseLocationOrRefresh = {
+                showAlarmSheetState.value = false
+                if (uiState.selection == null) onOpenLocationPicker() else onRefresh()
+            },
             onDismissRequest = { showAlarmSheetState.value = false },
             onEnabledChanged = onAlarmEnabledChanged,
             onOffsetChanged = onAlarmOffsetChanged,
