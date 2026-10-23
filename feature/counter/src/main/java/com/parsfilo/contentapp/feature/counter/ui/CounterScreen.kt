@@ -178,24 +178,31 @@ fun CounterScreen(
     }
 
     if (uiState.showZikirSelector) {
-        ZikirSelectorPage(
-            zikirList = uiState.zikirList,
-            selectedKey = uiState.selectedZikir?.key,
-            onSelect = onZikirSelected,
-            onDismiss = onZikirSelectorToggle,
-            onAddCustomZikir = onAddCustomZikir,
-            onDeleteZikir = onDeleteZikir,
-            onSettingsClick = onSettingsClick,
-            onRewardsClick = onRewardsClick,
-            onReminderClick = onReminderSettingsToggle,
-            onHistoryClick = onSessionHistoryToggle,
-            isHapticEnabled = uiState.isHapticEnabled,
-            isSoundEnabled = uiState.isSoundEnabled,
-            onToggleHaptic = onToggleHaptic,
-            onToggleSound = onToggleSound,
-            isPremium = uiState.isPremium,
-            content = bannerAdContent,
-        )
+        Box(modifier = Modifier.fillMaxSize()) {
+            ZikirSelectorPage(
+                zikirList = uiState.zikirList,
+                selectedKey = uiState.selectedZikir?.key,
+                onSelect = onZikirSelected,
+                onDismiss = onZikirSelectorToggle,
+                onAddCustomZikir = onAddCustomZikir,
+                onDeleteZikir = onDeleteZikir,
+                onSettingsClick = onSettingsClick,
+                onRewardsClick = onRewardsClick,
+                onReminderClick = onReminderSettingsToggle,
+                onHistoryClick = onSessionHistoryToggle,
+                isHapticEnabled = uiState.isHapticEnabled,
+                isSoundEnabled = uiState.isSoundEnabled,
+                onToggleHaptic = onToggleHaptic,
+                onToggleSound = onToggleSound,
+                isPremium = uiState.isPremium,
+                content = bannerAdContent,
+            )
+            // Keep reminder and exact-alarm feedback visible while the list is active.
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
+        }
     } else {
         BackHandler {
             onZikirSelectorToggle()

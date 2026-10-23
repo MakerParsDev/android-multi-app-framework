@@ -15,7 +15,11 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.parsfilo.contentapp.core.designsystem.AppTheme
 import com.parsfilo.contentapp.feature.counter.R
 import com.parsfilo.contentapp.feature.counter.model.CounterUiState
+import com.parsfilo.contentapp.feature.counter.ui.CounterReminderUiEvent
 import com.parsfilo.contentapp.feature.counter.ui.CounterScreen
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.emptyFlow
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -29,7 +33,11 @@ class CounterSelectorModalRegressionTest {
 
     private fun label(id: Int) = context.getString(id)
 
-    private fun showCounter(selector: Boolean = true) {
+    private fun showCounter(
+        selector: Boolean = true,
+        feedback: Flow<CounterReminderUiEvent> = emptyFlow(),
+        onSaveFeedback: (() -> Unit)? = null,
+    ) {
         var uiState by mutableStateOf(
             CounterUiState(
                 showZikirSelector = selector,
@@ -62,7 +70,11 @@ class CounterSelectorModalRegressionTest {
                             showSessionHistory = false,
                         )
                     },
-                    onReminderSaved = {},
+                    onReminderSaved = {
+                        uiState = uiState.copy(showReminderSettings = false)
+                        onSaveFeedback?.invoke()
+                    },
+                    reminderUiEvents = feedback,
                     onSessionHistoryToggle = {
                         uiState = uiState.copy(
                             showSessionHistory = !uiState.showSessionHistory,
@@ -116,6 +128,19 @@ class CounterSelectorModalRegressionTest {
         rule.onNodeWithText(label(R.string.counter_continue)).performClick()
         rule.onNodeWithTag("counter_root").assertExists()
         rule.onNodeWithText(label(R.string.counter_history_empty)).assertDoesNotExist()
+    }
+
+    @Test
+    fun selectorReminderSaveFeedbackShowsWithoutLeavingSelector() {
+        val events = MutableSharedFlow<CounterReminderUiEvent>(replay = 1)
+        showCounter(feedback = events, onSaveFeedback = {
+            events.tryEmit(CounterReminderUiEvent.ReminderSaved)
+        })
+        openMenu()
+        rule.onNodeWithText(label(R.string.counter_reminder_title)).performClick()
+        rule.onNodeWithText(label(R.string.counter_save)).performClick()
+        rule.onNodeWithText(label(R.string.counter_reminder_saved)).assertIsDisplayed()
+        rule.onNodeWithText(label(R.string.counter_add_zikir)).assertExists()
     }
 
     @Test
