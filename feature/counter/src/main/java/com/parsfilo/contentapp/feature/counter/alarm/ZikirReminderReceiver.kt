@@ -62,21 +62,44 @@ class ZikirReminderReceiver : BroadcastReceiver() {
                     }
                 } catch (_: TimeoutCancellationException) {
                     Timber.w("Zikir next-reminder scheduling timed out")
+                    queueRecovery(dependencies)
                 } catch (error: Exception) {
                     Timber.w(error, "Zikir next-reminder scheduling failed")
+                    queueRecovery(dependencies)
                 }
             }
         }
     }
 
+    @Suppress("TooGenericExceptionCaught") // An enqueue failure must not crash the broadcast receiver.
+    private suspend fun queueRecovery(dependencies: ZikirReminderDependencies) {
+        try {
+            withTimeout(RECOVERY_ENQUEUE_TIMEOUT_MS) {
+                dependencies.enqueueRecovery()
+            }
+        } catch (_: TimeoutCancellationException) {
+            Timber.w("Zikir reminder recovery enqueue timed out")
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            Timber.w(error, "Unable to enqueue durable zikir reminder recovery")
+        }
+    }
+
     private fun resolveDependencies(context: Context): ZikirReminderDependencies {
         val entry = EntryPointAccessors.fromApplication(context, ZikirReminderReceiverEntryPoint::class.java)
-        return ZikirReminderDependencies(entry.zikirReminderScheduler(), entry.zikirReminderNotifier(), entry.zikirRepository())
+        return ZikirReminderDependencies(
+            scheduler = entry.zikirReminderScheduler(),
+            notifier = entry.zikirReminderNotifier(),
+            repository = entry.zikirRepository(),
+            enqueueRecovery = { ZikirReminderRecoveryWorker.enqueue(context) },
+        )
     }
 
     internal companion object {
         const val NOTIFICATION_TIMEOUT_MS = 4_000L
         const val SCHEDULING_TIMEOUT_MS = 4_000L
+        const val RECOVERY_ENQUEUE_TIMEOUT_MS = 1_500L
     }
 }
 
@@ -84,6 +107,8 @@ internal data class ZikirReminderDependencies(
     val scheduler: ZikirReminderScheduler,
     val notifier: ZikirReminderNotifier,
     val repository: ZikirRepository,
+    // No-op default is solely for injected isolated-test fakes; production always supplies queue.
+    val enqueueRecovery: suspend () -> Unit = {},
 )
 
 @EntryPoint

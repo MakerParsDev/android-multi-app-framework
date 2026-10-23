@@ -64,9 +64,46 @@ class ZikirReminderReceiverTest {
     }
 
     @Test fun schedulerFailureStillFinishesPendingResult() = runTest {
-        val (receiver, scheduler, _, _) = createReceiver(this)
+        val (receiver, scheduler, notifier, repo) = createReceiver(this)
+        val recoveryCalls = java.util.concurrent.atomic.AtomicInteger(0)
+        receiver.dependenciesProvider = {
+            ZikirReminderDependencies(scheduler, notifier, repo, enqueueRecovery = {
+                recoveryCalls.incrementAndGet()
+            })
+        }
         coEvery { scheduler.scheduleOrCancelFromPreferences() } throws IllegalStateException("synthetic failure")
         val shadow = dispatch(receiver)
+        advanceUntilIdle()
+        coVerify(exactly = 1) { scheduler.scheduleOrCancelFromPreferences() }
+        assertThat(recoveryCalls.get()).isEqualTo(1)
+        assertFinished(shadow)
+    }
+
+    @Test fun enqueueFailureDoesNotLeakFromReceiver() = runTest {
+        val (receiver, scheduler, notifier, repo) = createReceiver(this)
+        receiver.dependenciesProvider = {
+            ZikirReminderDependencies(scheduler, notifier, repo, enqueueRecovery = {
+                throw IllegalStateException("synthetic WorkManager failure")
+            })
+        }
+        coEvery { scheduler.scheduleOrCancelFromPreferences() } throws IllegalStateException("rearm failed")
+        val shadow = dispatch(receiver)
+        advanceUntilIdle()
+        coVerify(exactly = 1) { scheduler.scheduleOrCancelFromPreferences() }
+        assertFinished(shadow)
+    }
+
+    @Test fun stalledRecoveryEnqueueIsBounded() = runTest {
+        val (receiver, scheduler, notifier, repo) = createReceiver(this)
+        receiver.dependenciesProvider = {
+            ZikirReminderDependencies(scheduler, notifier, repo, enqueueRecovery = {
+                CompletableDeferred<Unit>().await()
+            })
+        }
+        coEvery { scheduler.scheduleOrCancelFromPreferences() } throws IllegalStateException("rearm failed")
+        val shadow = dispatch(receiver)
+        runCurrent()
+        advanceTimeBy(ZikirReminderReceiver.RECOVERY_ENQUEUE_TIMEOUT_MS)
         advanceUntilIdle()
         coVerify(exactly = 1) { scheduler.scheduleOrCancelFromPreferences() }
         assertFinished(shadow)
@@ -93,7 +130,13 @@ class ZikirReminderReceiverTest {
     }
 
     @Test fun stalledSchedulerTimesOutAndFinishesPendingResult() = runTest {
-        val (receiver, scheduler, _, _) = createReceiver(this)
+        val (receiver, scheduler, notifier, repo) = createReceiver(this)
+        val recoveryCalls = java.util.concurrent.atomic.AtomicInteger(0)
+        receiver.dependenciesProvider = {
+            ZikirReminderDependencies(scheduler, notifier, repo, enqueueRecovery = {
+                recoveryCalls.incrementAndGet()
+            })
+        }
         coEvery { scheduler.scheduleOrCancelFromPreferences() } coAnswers {
             CompletableDeferred<ReminderScheduleMode?>().await()
         }
@@ -102,6 +145,7 @@ class ZikirReminderReceiverTest {
         advanceTimeBy(ZikirReminderReceiver.SCHEDULING_TIMEOUT_MS)
         advanceUntilIdle()
         coVerify(exactly = 1) { scheduler.scheduleOrCancelFromPreferences() }
+        assertThat(recoveryCalls.get()).isEqualTo(1)
         assertFinished(shadow)
     }
 
