@@ -49,7 +49,7 @@ cleanup() {
         device shell cmd alarm set-timezone "$TZ_ORIG" >/dev/null 2>&1 || true
     fi
     if [ "$INSTALLED" -eq 1 ]; then
-        run_test cleanupIsolatedSystemLifecycleCheck >/dev/null 2>&1 || true
+        ( run_test cleanupIsolatedSystemLifecycleCheck ) >/dev/null 2>&1 || true
         device uninstall "$P" >/dev/null 2>&1 || true
     fi
     printf 'CLEANUP: original timezone=%s; test package removal attempted=%s\n' "$TZ_ORIG" "$INSTALLED"
