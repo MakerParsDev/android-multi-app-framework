@@ -389,6 +389,17 @@ class CounterViewModel @Inject constructor(
                         val snapshot = activeSnapshot(_uiState.value, session.completedAt)
                         if (snapshot?.sessionId == session.id) {
                             preferencesDataSource.setActiveZikirSessionSnapshot(snapshot)
+                            // Count is now durable even if the subsequent Room history write fails.
+                            _uiState.update { state ->
+                                if (state.activeSessionId == session.id) {
+                                    state.copy(
+                                        savedCount = maxOf(state.savedCount, session.completedCount),
+                                        checkpointStatus = CounterCheckpointStatus.SAVED,
+                                    )
+                                } else {
+                                    state
+                                }
+                            }
                         }
                     }
                     val committed = zikirRepository.saveSession(session)
@@ -402,10 +413,19 @@ class CounterViewModel @Inject constructor(
                 throw cancelled
             } catch (error: Exception) {
                 Timber.e(error, "Unable to persist completed zikir session")
-                _uiState.value = _uiState.value.copy(
-                    completionPersistenceStatus = CompletionPersistenceStatus.FAILED,
-                    checkpointStatus = CounterCheckpointStatus.FAILED,
-                )
+                _uiState.update { state ->
+                    state.copy(
+                        completionPersistenceStatus = CompletionPersistenceStatus.FAILED,
+                        // Failure to save history does not undo a completed DataStore checkpoint.
+                        checkpointStatus = if (state.activeSessionId == session.id &&
+                            state.savedCount >= session.completedCount
+                        ) {
+                            CounterCheckpointStatus.SAVED
+                        } else {
+                            CounterCheckpointStatus.FAILED
+                        },
+                    )
+                }
                 return@launch
             }
             // History and streak are now committed in a single Room transaction.

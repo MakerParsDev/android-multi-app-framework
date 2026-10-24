@@ -407,6 +407,8 @@ class CounterCompletionPersistenceTest {
         assertThat(vm.uiState.value.currentCount).isEqualTo(1)
         assertThat(vm.uiState.value.completionPersistenceStatus)
             .isEqualTo(CompletionPersistenceStatus.SAVING)
+        assertThat(vm.uiState.value.savedCount).isEqualTo(1)
+        assertThat(vm.uiState.value.checkpointStatus).isEqualTo(CounterCheckpointStatus.SAVED)
         assertThat(vm.uiState.value.showSessionComplete).isTrue()
         val stableId = vm.uiState.value.lastCompletedSession!!.id
         assertThat(stableId).isGreaterThan(0L)
@@ -438,6 +440,8 @@ class CounterCompletionPersistenceTest {
         runCurrent()
         assertThat(vm.uiState.value.completionPersistenceStatus)
             .isEqualTo(CompletionPersistenceStatus.FAILED)
+        assertThat(vm.uiState.value.savedCount).isEqualTo(1)
+        assertThat(vm.uiState.value.checkpointStatus).isEqualTo(CounterCheckpointStatus.SAVED)
         vm.onDismissSessionComplete()
         assertThat(vm.uiState.value.currentCount).isEqualTo(1)
 
@@ -448,6 +452,48 @@ class CounterCompletionPersistenceTest {
         assertThat(ids[0]).isEqualTo(ids[1])
         assertThat(vm.uiState.value.completionPersistenceStatus)
             .isEqualTo(CompletionPersistenceStatus.SAVED)
+        coVerify(exactly = 2) { repository.saveSession(any()) }
+    }
+
+    @Test
+    fun completionCheckpointFailureNeverAcknowledgesAnUnsavedFinalTap() = runTest(dispatcher) {
+        coEvery { prefs.setActiveZikirSessionSnapshot(any()) } throws IOException("synthetic disk unavailable")
+        val vm = viewModel()
+        runCurrent()
+        vm.onCounterTapped()
+        runCurrent()
+        assertThat(vm.uiState.value.currentCount).isEqualTo(1)
+        assertThat(vm.uiState.value.savedCount).isEqualTo(0)
+        assertThat(vm.uiState.value.checkpointStatus).isEqualTo(CounterCheckpointStatus.FAILED)
+        assertThat(vm.uiState.value.completionPersistenceStatus)
+            .isEqualTo(CompletionPersistenceStatus.FAILED)
+        coVerify(exactly = 0) { repository.saveSession(any()) }
+    }
+
+    @Test
+    fun committedRoomHistoryWithFailedSnapshotCleanupStillAcknowledgesSavedCount() = runTest(dispatcher) {
+        coEvery { repository.saveSession(any()) } returnsMany listOf(true, false)
+        coEvery { prefs.clearActiveZikirSessionIfId(any()) } throws IOException("synthetic cleanup failure")
+        val vm = viewModel()
+        runCurrent()
+        vm.onCounterTapped()
+        runCurrent()
+        assertThat(vm.uiState.value.currentCount).isEqualTo(1)
+        assertThat(vm.uiState.value.savedCount).isEqualTo(1)
+        assertThat(vm.uiState.value.checkpointStatus).isEqualTo(CounterCheckpointStatus.SAVED)
+        assertThat(vm.uiState.value.completionPersistenceStatus)
+            .isEqualTo(CompletionPersistenceStatus.FAILED)
+
+        coEvery { prefs.clearActiveZikirSessionIfId(any()) } coAnswers {
+            if (snapshots.value?.sessionId == firstArg<Long>()) snapshots.value = null
+        }
+        vm.retryCompletedSessionSave()
+        runCurrent()
+        assertThat(vm.uiState.value.completionPersistenceStatus)
+            .isEqualTo(CompletionPersistenceStatus.SAVED)
+        assertThat(vm.uiState.value.checkpointStatus).isEqualTo(CounterCheckpointStatus.SAVED)
+        assertThat(vm.uiState.value.savedCount).isEqualTo(1)
+        assertThat(snapshots.value).isNull()
         coVerify(exactly = 2) { repository.saveSession(any()) }
     }
 
