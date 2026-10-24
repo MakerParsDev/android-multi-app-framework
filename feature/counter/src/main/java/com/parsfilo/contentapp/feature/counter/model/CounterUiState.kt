@@ -13,11 +13,20 @@ enum class CompletionPersistenceStatus {
     FAILED,
 }
 
+enum class CounterCheckpointStatus {
+    SAVED,
+    SAVING,
+    FAILED,
+}
+
 data class CounterUiState(
     val isLoading: Boolean = true,
     val zikirList: List<ZikirItem> = emptyList(),
     val selectedZikir: ZikirItem? = null,
     val currentCount: Int = 0,
+    // The last DataStore edit that returned successfully for this session.
+    val savedCount: Int = 0,
+    val checkpointStatus: CounterCheckpointStatus = CounterCheckpointStatus.SAVED,
     val activeSessionId: Long = 0L,
     val targetCount: Int = 33,
     val sessionStartTime: Long = 0L,

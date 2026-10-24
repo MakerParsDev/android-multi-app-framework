@@ -51,6 +51,7 @@ import com.parsfilo.contentapp.core.designsystem.component.AppButton
 import com.parsfilo.contentapp.core.designsystem.component.AppCard
 import com.parsfilo.contentapp.core.designsystem.tokens.LocalDimens
 import com.parsfilo.contentapp.feature.counter.R
+import com.parsfilo.contentapp.feature.counter.model.CounterCheckpointStatus
 import com.parsfilo.contentapp.feature.counter.model.CounterUiState
 import com.parsfilo.contentapp.feature.counter.model.ReminderSettings
 import com.parsfilo.contentapp.feature.counter.model.ZikirItem
@@ -288,6 +289,8 @@ fun CounterScreen(
 
                         CurrentCountSection(
                             currentCount = uiState.currentCount,
+                            savedCount = uiState.savedCount,
+                            checkpointStatus = uiState.checkpointStatus,
                             targetCount = uiState.targetCount,
                             modifier = Modifier.fillMaxWidth(),
                         )
@@ -387,6 +390,8 @@ fun CounterScreen(
 @Composable
 private fun CurrentCountSection(
     currentCount: Int,
+    savedCount: Int,
+    checkpointStatus: CounterCheckpointStatus,
     targetCount: Int,
     modifier: Modifier = Modifier,
 ) {
@@ -417,6 +422,25 @@ private fun CurrentCountSection(
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            if (currentCount > 0 || checkpointStatus != CounterCheckpointStatus.SAVED) {
+                Text(
+                    text = when (checkpointStatus) {
+                        CounterCheckpointStatus.SAVED ->
+                            stringResource(R.string.counter_checkpoint_saved, savedCount)
+                        CounterCheckpointStatus.SAVING ->
+                            stringResource(R.string.counter_checkpoint_saving, savedCount)
+                        CounterCheckpointStatus.FAILED ->
+                            stringResource(R.string.counter_checkpoint_failed, savedCount)
+                    },
+                    modifier = Modifier.testTag("counter_checkpoint_status"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (checkpointStatus == CounterCheckpointStatus.FAILED) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
+            }
             LinearProgressIndicator(
                 progress = { progress },
                 modifier = Modifier.fillMaxWidth(),

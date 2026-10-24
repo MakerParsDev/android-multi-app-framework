@@ -11,6 +11,7 @@ import com.parsfilo.contentapp.feature.counter.alarm.ZikirReminderNotifier
 import com.parsfilo.contentapp.feature.counter.alarm.ZikirReminderScheduler
 import com.parsfilo.contentapp.feature.counter.data.ZikirRepository
 import com.parsfilo.contentapp.feature.counter.model.CompletionPersistenceStatus
+import com.parsfilo.contentapp.feature.counter.model.CounterCheckpointStatus
 import com.parsfilo.contentapp.feature.counter.model.CounterHapticEvent
 import com.parsfilo.contentapp.feature.counter.model.CounterUiState
 import com.parsfilo.contentapp.feature.counter.model.ReminderSettings
@@ -31,6 +32,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -119,6 +121,12 @@ class CounterViewModel @Inject constructor(
                 zikirList = zikirList,
                 selectedZikir = selected,
                 currentCount = recovered?.count ?: 0,
+                savedCount = recovered?.count ?: 0,
+                checkpointStatus = if (recoveredSession != null) {
+                    CounterCheckpointStatus.SAVING
+                } else {
+                    CounterCheckpointStatus.SAVED
+                },
                 activeSessionId = recovered?.sessionId ?: 0L,
                 targetCount = recovered?.target ?: selected?.defaultTarget ?: _uiState.value.targetCount,
                 isSessionActive = recovered != null,
@@ -257,19 +265,56 @@ class CounterViewModel @Inject constructor(
             )
         }
 
-    /** Skip obsolete queued writes to avoid restoring a deliberately reset session. */
+    /** Only a completed DataStore write is acknowledged as a safely saved count. */
     @Suppress("TooGenericExceptionCaught")
     private fun queueActiveSnapshot(snapshot: ActiveZikirSessionSnapshot?) {
         val revision = activeSnapshotRevision.incrementAndGet()
+        _uiState.update { it.copy(checkpointStatus = CounterCheckpointStatus.SAVING) }
         viewModelScope.launch(ioDispatcher) {
             activeSnapshotWriteMutex.withLock {
                 if (revision != activeSnapshotRevision.get()) return@withLock
                 try {
                     preferencesDataSource.setActiveZikirSessionSnapshot(snapshot)
+                    _uiState.update { state ->
+                        when {
+                            snapshot == null &&
+                                revision == activeSnapshotRevision.get() &&
+                                state.currentCount == 0 &&
+                                state.completionPersistenceStatus == CompletionPersistenceStatus.NONE ->
+                                state.copy(savedCount = 0, checkpointStatus = CounterCheckpointStatus.SAVED)
+                            snapshot != null &&
+                                state.activeSessionId == snapshot.sessionId &&
+                                state.selectedZikir?.key == snapshot.zikirKey -> {
+                                // An older write can succeed while a newer one is queued.
+                                // It is safe to acknowledge its count, but not the newer target.
+                                val latest = revision == activeSnapshotRevision.get() &&
+                                    state.currentCount == snapshot.count &&
+                                    state.targetCount == snapshot.target
+                                state.copy(
+                                    savedCount = maxOf(state.savedCount, snapshot.count),
+                                    checkpointStatus = if (latest) {
+                                        CounterCheckpointStatus.SAVED
+                                    } else {
+                                        state.checkpointStatus
+                                    },
+                                )
+                            }
+                            else -> state
+                        }
+                    }
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (error: Exception) {
                     Timber.w(error, "Failed to checkpoint active zikir count")
+                    _uiState.update { state ->
+                        if (revision == activeSnapshotRevision.get() &&
+                            (snapshot == null || state.activeSessionId == snapshot.sessionId)
+                        ) {
+                            state.copy(checkpointStatus = CounterCheckpointStatus.FAILED)
+                        } else {
+                            state
+                        }
+                    }
                 }
             }
         }
@@ -309,6 +354,7 @@ class CounterViewModel @Inject constructor(
 
             _uiState.value = state.copy(
                 currentCount = newCount,
+                checkpointStatus = CounterCheckpointStatus.SAVING,
                 activeSessionId = session.id,
                 isSessionActive = true,
                 sessionStartTime = sessionStart,
@@ -320,6 +366,7 @@ class CounterViewModel @Inject constructor(
         } else {
             val updated = state.copy(
                 currentCount = newCount,
+                savedCount = if (state.activeSessionId > 0L) state.savedCount else 0,
                 activeSessionId = state.activeSessionId.takeIf { it > 0L } ?: freshSessionId(),
                 isSessionActive = true,
                 sessionStartTime = sessionStart,
@@ -357,10 +404,21 @@ class CounterViewModel @Inject constructor(
                 Timber.e(error, "Unable to persist completed zikir session")
                 _uiState.value = _uiState.value.copy(
                     completionPersistenceStatus = CompletionPersistenceStatus.FAILED,
+                    checkpointStatus = CounterCheckpointStatus.FAILED,
                 )
                 return@launch
             }
             // History and streak are now committed in a single Room transaction.
+            _uiState.update { state ->
+                if (state.activeSessionId == session.id) {
+                    state.copy(
+                        savedCount = session.completedCount,
+                        checkpointStatus = CounterCheckpointStatus.SAVED,
+                    )
+                } else {
+                    state
+                }
+            }
             _uiState.value = _uiState.value.copy(
                 completionPersistenceStatus = CompletionPersistenceStatus.SAVED,
             )
@@ -394,16 +452,17 @@ class CounterViewModel @Inject constructor(
 
     fun onZikirSelected(item: ZikirItem) {
         if (_uiState.value.completionPersistenceStatus != CompletionPersistenceStatus.NONE) return
-        queueActiveSnapshot(null)
         _uiState.value = _uiState.value.copy(
             selectedZikir = item,
             targetCount = item.defaultTarget,
             currentCount = 0,
+            savedCount = 0,
             activeSessionId = 0L,
             isSessionActive = false,
             sessionStartTime = 0L,
             showZikirSelector = false,
         )
+        queueActiveSnapshot(null)
         viewModelScope.launch {
             preferencesDataSource.setLastSelectedZikirKey(item.key)
         }
@@ -438,17 +497,18 @@ class CounterViewModel @Inject constructor(
             baseItems = baseItems,
             customItems = currentCustomItems + item,
         )
-        queueActiveSnapshot(null)
         _uiState.value = _uiState.value.copy(
             zikirList = updatedList,
             selectedZikir = item,
             targetCount = normalizedTarget,
             currentCount = 0,
+            savedCount = 0,
             activeSessionId = 0L,
             isSessionActive = false,
             sessionStartTime = 0L,
             showZikirSelector = false,
         )
+        queueActiveSnapshot(null)
 
         viewModelScope.launch(ioDispatcher) {
             preferencesDataSource.setCustomZikirItemsJson(serializeCustomZikirItems(updatedList))
@@ -460,10 +520,11 @@ class CounterViewModel @Inject constructor(
         if (_uiState.value.completionPersistenceStatus != CompletionPersistenceStatus.NONE) return
         val state = _uiState.value
         val newState = state.afterZikirDeletion(item) ?: return
-        if (state.selectedZikir?.key == item.key) queueActiveSnapshot(null)
         _uiState.value = newState.copy(
             activeSessionId = if (state.selectedZikir?.key == item.key) 0L else state.activeSessionId,
+            savedCount = if (state.selectedZikir?.key == item.key) 0 else state.savedCount,
         )
+        if (state.selectedZikir?.key == item.key) queueActiveSnapshot(null)
 
         viewModelScope.launch {
             deletePersistenceMutex.withLock {
@@ -492,13 +553,13 @@ class CounterViewModel @Inject constructor(
 
     fun onResetCurrentCount() {
         if (_uiState.value.completionPersistenceStatus != CompletionPersistenceStatus.NONE) return
-        queueActiveSnapshot(null)
         _uiState.value = _uiState.value.copy(
             currentCount = 0,
             activeSessionId = 0L,
             isSessionActive = false,
             sessionStartTime = 0L,
         )
+        queueActiveSnapshot(null)
     }
 
     fun onTargetChanged(newTarget: Int) {
@@ -526,6 +587,8 @@ class CounterViewModel @Inject constructor(
             showSessionComplete = false,
             completionPersistenceStatus = CompletionPersistenceStatus.NONE,
             currentCount = 0,
+            savedCount = 0,
+            checkpointStatus = CounterCheckpointStatus.SAVED,
             activeSessionId = 0L,
             isSessionActive = false,
             sessionStartTime = 0L,
