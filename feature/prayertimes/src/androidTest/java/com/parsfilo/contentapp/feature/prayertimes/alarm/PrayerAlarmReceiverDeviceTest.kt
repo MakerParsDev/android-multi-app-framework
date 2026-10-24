@@ -39,7 +39,9 @@ class PrayerAlarmReceiverDeviceTest {
 
     @Test fun normalDeliverySchedulesOnce() = exercise(Fault.NORMAL)
 
-    @Test fun unavailableOrDisabledReminderDoesNotLoop() = exercise(Fault.DISABLED)
+    @Test fun disabledReminderDoesNotLoop() = exercise(Fault.DISABLED)
+
+    @Test fun enabledAlarmWithMissingFutureCacheEnqueuesRecovery() = exercise(Fault.UNAVAILABLE)
 
     @Test fun durableRecoveryEnqueueDeduplicates() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext
@@ -58,7 +60,7 @@ class PrayerAlarmReceiverDeviceTest {
         }
     }
 
-    private enum class Fault { NOTIFIER, PREFERENCES, SCHEDULER, NORMAL, DISABLED }
+    private enum class Fault { NOTIFIER, PREFERENCES, SCHEDULER, NORMAL, DISABLED, UNAVAILABLE }
 
     private fun exercise(fault: Fault) {
         val context = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext
@@ -70,6 +72,8 @@ class PrayerAlarmReceiverDeviceTest {
         val recoveryCalled = CompletableDeferred<Unit>()
         val recoveryCount = AtomicInteger(0)
         every { data.alarmSoundUri } returns null
+        every { data.alarmEnabled } returns (fault != Fault.DISABLED)
+        every { data.selectedDistrictId } returns 42
         every { preferences.preferences } returns if (fault == Fault.PREFERENCES) {
             flow { throw IllegalStateException("synthetic preferences failure") }
         } else {
@@ -81,7 +85,7 @@ class PrayerAlarmReceiverDeviceTest {
         coEvery { scheduler.scheduleNext(any()) } coAnswers {
             called.complete(Unit)
             if (fault == Fault.SCHEDULER) throw IllegalStateException("synthetic scheduler failure")
-            fault != Fault.DISABLED
+            fault != Fault.DISABLED && fault != Fault.UNAVAILABLE
         }
         val receiver = PrayerAlarmReceiver().apply {
             dependenciesProvider = {
@@ -104,11 +108,11 @@ class PrayerAlarmReceiverDeviceTest {
             context.sendBroadcast(intent)
             runBlocking { withTimeout(9_000L) { called.await() } }
             // Wait for the receiver's bounded finalization before checking exact invocation counts.
-            if (fault == Fault.SCHEDULER) {
+            if (fault == Fault.SCHEDULER || fault == Fault.UNAVAILABLE) {
                 runBlocking { withTimeout(9_000L) { recoveryCalled.await() } }
             }
             InstrumentationRegistry.getInstrumentation().waitForIdleSync()
-            assertEquals(if (fault == Fault.SCHEDULER) 1 else 0, recoveryCount.get())
+            assertEquals(if (fault == Fault.SCHEDULER || fault == Fault.UNAVAILABLE) 1 else 0, recoveryCount.get())
             coVerify(exactly = 1) { scheduler.scheduleNext(PrayerAppVariant.NAMAZ_VAKITLERI) }
             coVerify(exactly = if (fault == Fault.PREFERENCES) 0 else 1) {
                 notifier.show(any(), any(), any())

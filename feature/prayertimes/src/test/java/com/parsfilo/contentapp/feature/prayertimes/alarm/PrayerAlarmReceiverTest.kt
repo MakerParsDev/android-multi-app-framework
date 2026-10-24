@@ -152,12 +152,53 @@ class PrayerAlarmReceiverTest {
         assertFinished(shadow)
     }
 
-    @Test fun disabledOrUnavailableSchedulingStillFinishesPendingResult() = runTest {
-        val (receiver, scheduler, _, _) = createReceiver(this)
+    @Test fun unavailableFutureAlarmEnqueuesRecoveryWhenEnabled() = runTest {
+        val (receiver, scheduler, notifier, prefs) = createReceiver(this)
+        var enqueueCount = 0
+        receiver.dependenciesProvider = {
+            PrayerAlarmDependencies(scheduler, notifier, prefs, enqueueRecovery = { enqueueCount++ })
+        }
         coEvery { scheduler.scheduleNext(any()) } returns false
         val shadow = dispatch(receiver)
         advanceUntilIdle()
         coVerify(exactly = 1) { scheduler.scheduleNext(any()) }
+        assertThat(enqueueCount).isEqualTo(1)
+        assertFinished(shadow)
+    }
+
+    @Test fun disabledAlarmDoesNotEnqueueRecovery() = runTest {
+        val (receiver, scheduler, notifier, prefs) = createReceiver(this)
+        val disabled = mockk<PrayerPreferencesData>()
+        every { disabled.alarmSoundUri } returns null
+        every { disabled.alarmEnabled } returns false
+        every { disabled.selectedDistrictId } returns 42
+        every { prefs.preferences } returns flowOf(disabled)
+        var enqueueCount = 0
+        receiver.dependenciesProvider = {
+            PrayerAlarmDependencies(scheduler, notifier, prefs, enqueueRecovery = { enqueueCount++ })
+        }
+        coEvery { scheduler.scheduleNext(any()) } returns false
+        val shadow = dispatch(receiver)
+        advanceUntilIdle()
+        assertThat(enqueueCount).isEqualTo(0)
+        assertFinished(shadow)
+    }
+
+    @Test fun missingDistrictDoesNotEnqueueRecovery() = runTest {
+        val (receiver, scheduler, notifier, prefs) = createReceiver(this)
+        val missingDistrict = mockk<PrayerPreferencesData>()
+        every { missingDistrict.alarmSoundUri } returns null
+        every { missingDistrict.alarmEnabled } returns true
+        every { missingDistrict.selectedDistrictId } returns null
+        every { prefs.preferences } returns flowOf(missingDistrict)
+        var enqueueCount = 0
+        receiver.dependenciesProvider = {
+            PrayerAlarmDependencies(scheduler, notifier, prefs, enqueueRecovery = { enqueueCount++ })
+        }
+        coEvery { scheduler.scheduleNext(any()) } returns false
+        val shadow = dispatch(receiver)
+        advanceUntilIdle()
+        assertThat(enqueueCount).isEqualTo(0)
         assertFinished(shadow)
     }
 
@@ -194,6 +235,8 @@ class PrayerAlarmReceiverTest {
         val prefs = mockk<PrayerPreferencesDataSource>()
         val data = mockk<PrayerPreferencesData>()
         every { data.alarmSoundUri } returns null
+        every { data.alarmEnabled } returns true
+        every { data.selectedDistrictId } returns 42
         every { prefs.preferences } returns flowOf(data)
         coEvery { notifier.show(any(), any(), any()) } returns Unit
         coEvery { scheduler.scheduleNext(any()) } returns true
