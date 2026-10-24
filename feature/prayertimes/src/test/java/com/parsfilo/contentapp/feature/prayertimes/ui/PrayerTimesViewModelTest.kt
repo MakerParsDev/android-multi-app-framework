@@ -271,10 +271,17 @@ class PrayerTimesViewModelTest {
 
         val viewModel =
             PrayerTimesViewModel(repository, prayerPreferencesDataSource, prayerAlarmSoundPlayer)
+        val uiCollector = backgroundScope.launch { viewModel.uiState.collect {} }
         runCurrent()
         viewModel.resolveByDeviceLocation()
         runCurrent()
 
+        assertThat(repository.committedAutoSelections).isEmpty()
+        assertThat(repository.selectionFlow.value).isNull()
+        assertThat(viewModel.uiState.value.pendingResolvedLocationName).isEqualTo("Test")
+        viewModel.confirmResolvedLocationSuggestion()
+        runCurrent()
+        assertThat(repository.committedAutoSelections).hasSize(1)
         assertThat(repository.refreshCalls).contains(RefreshCall(districtId = 42, force = false))
         assertThat(viewModel.snackBarMessage.value).isEqualTo(
             UiText.StringResource(
@@ -282,7 +289,132 @@ class PrayerTimesViewModelTest {
                 listOf("Test"),
             ),
         )
+        uiCollector.cancel()
     }
+
+    @Test
+    fun `rejecting proposed district preserves accepted manual district and mode`() =
+        runTest(testDispatcher) {
+            val accepted = PrayerLocationSelection(1, 2, 7, "Accepted A")
+            val proposed = PrayerLocationSelection(1, 2, 8, "Proposed B")
+            val repository = FakePrayerTimesRepository().apply {
+                modeFlow.value = PrayerTimesMode.MANUAL
+                selectionFlow.value = accepted
+                resolveResult = ResolveResult.Success(proposed)
+            }
+            val vm = PrayerTimesViewModel(repository, prayerPreferencesDataSource, prayerAlarmSoundPlayer)
+            val collector = backgroundScope.launch { vm.uiState.collect {} }
+            runCurrent()
+            vm.resolveByDeviceLocation()
+            runCurrent()
+            assertThat(vm.uiState.value.pendingResolvedLocationName).isEqualTo("Proposed B")
+            assertThat(repository.selectionFlow.value).isEqualTo(accepted)
+            assertThat(repository.modeFlow.value).isEqualTo(PrayerTimesMode.MANUAL)
+            vm.rejectResolvedLocationSuggestion()
+            runCurrent()
+            assertThat(repository.committedAutoSelections).isEmpty()
+            assertThat(repository.selectionFlow.value).isEqualTo(accepted)
+            assertThat(repository.modeFlow.value).isEqualTo(PrayerTimesMode.MANUAL)
+            assertThat(repository.refreshCalls).doesNotContain(RefreshCall(8, false))
+            collector.cancel()
+        }
+
+    @Test
+    fun `accepting proposed district commits exactly once after yes`() =
+        runTest(testDispatcher) {
+            val accepted = PrayerLocationSelection(1, 2, 7, "Accepted A")
+            val proposed = PrayerLocationSelection(1, 2, 8, "Proposed B")
+            val repository = FakePrayerTimesRepository().apply {
+                modeFlow.value = PrayerTimesMode.MANUAL
+                selectionFlow.value = accepted
+                resolveResult = ResolveResult.Success(proposed)
+            }
+            val vm = PrayerTimesViewModel(repository, prayerPreferencesDataSource, prayerAlarmSoundPlayer)
+            val collector = backgroundScope.launch { vm.uiState.collect {} }
+            runCurrent()
+            vm.resolveByDeviceLocation()
+            runCurrent()
+            assertThat(repository.committedAutoSelections).isEmpty()
+            assertThat(repository.refreshCalls).doesNotContain(RefreshCall(8, false))
+            vm.confirmResolvedLocationSuggestion()
+            vm.confirmResolvedLocationSuggestion()
+            runCurrent()
+            assertThat(repository.committedAutoSelections).containsExactly(proposed)
+            assertThat(repository.selectionFlow.value).isEqualTo(proposed)
+            assertThat(repository.modeFlow.value).isEqualTo(PrayerTimesMode.AUTO)
+            assertThat(repository.refreshCalls).contains(RefreshCall(8, false))
+            collector.cancel()
+        }
+
+    @Test
+    fun `unaccepted proposal does not survive viewmodel recreation`() = runTest(testDispatcher) {
+        val accepted = PrayerLocationSelection(1, 2, 7, "Accepted A")
+        val proposed = PrayerLocationSelection(1, 2, 8, "Proposed B")
+        val repository = FakePrayerTimesRepository().apply {
+            modeFlow.value = PrayerTimesMode.MANUAL
+            selectionFlow.value = accepted
+            resolveResult = ResolveResult.Success(proposed)
+        }
+        val first = PrayerTimesViewModel(repository, prayerPreferencesDataSource, prayerAlarmSoundPlayer)
+        val firstCollector = backgroundScope.launch { first.uiState.collect {} }
+        runCurrent()
+        first.resolveByDeviceLocation()
+        runCurrent()
+        assertThat(first.uiState.value.pendingResolvedLocationName).isEqualTo("Proposed B")
+        val recreated = PrayerTimesViewModel(repository, prayerPreferencesDataSource, prayerAlarmSoundPlayer)
+        val secondCollector = backgroundScope.launch { recreated.uiState.collect {} }
+        runCurrent()
+        assertThat(recreated.uiState.value.pendingResolvedLocationName).isNull()
+        assertThat(recreated.uiState.value.selection).isEqualTo(accepted)
+        assertThat(repository.committedAutoSelections).isEmpty()
+        firstCollector.cancel()
+        secondCollector.cancel()
+    }
+
+    @Test
+    fun `same-district auto resolution needs no destructive confirmation`() =
+        runTest(testDispatcher) {
+            val accepted = PrayerLocationSelection(1, 2, 7, "Accepted A")
+            val repository = FakePrayerTimesRepository().apply {
+                modeFlow.value = PrayerTimesMode.MANUAL
+                selectionFlow.value = accepted
+                resolveResult = ResolveResult.Success(accepted)
+            }
+            val vm = PrayerTimesViewModel(repository, prayerPreferencesDataSource, prayerAlarmSoundPlayer)
+            val collector = backgroundScope.launch { vm.uiState.collect {} }
+            runCurrent()
+            vm.resolveByDeviceLocation()
+            runCurrent()
+            assertThat(repository.committedAutoSelections).containsExactly(accepted)
+            assertThat(vm.uiState.value.pendingResolvedLocationName).isNull()
+            collector.cancel()
+        }
+
+    @Test
+    fun `stale asynchronous result cannot override newly selected manual mode`() =
+        runTest(testDispatcher) {
+            val accepted = PrayerLocationSelection(1, 2, 7, "Accepted A")
+            val rejected = PrayerLocationSelection(1, 2, 8, "Stale B")
+            val result = CompletableDeferred<ResolveResult>()
+            val repository = FakePrayerTimesRepository().apply {
+                modeFlow.value = PrayerTimesMode.MANUAL
+                selectionFlow.value = accepted
+                resolveBarrier = result
+            }
+            val vm = PrayerTimesViewModel(repository, prayerPreferencesDataSource, prayerAlarmSoundPlayer)
+            val collector = backgroundScope.launch { vm.uiState.collect {} }
+            runCurrent()
+            vm.resolveByDeviceLocation()
+            runCurrent()
+            vm.onModeChanged(PrayerTimesMode.MANUAL)
+            runCurrent()
+            result.complete(ResolveResult.Success(rejected))
+            runCurrent()
+            assertThat(vm.uiState.value.pendingResolvedLocationName).isNull()
+            assertThat(repository.selectionFlow.value).isEqualTo(accepted)
+            assertThat(repository.committedAutoSelections).isEmpty()
+            collector.cancel()
+        }
 
     @Test
     fun `manual resolve action opens picker on no match`() = runTest(testDispatcher) {
@@ -329,7 +461,8 @@ class PrayerTimesViewModelTest {
         runCurrent()
 
         assertThat(repository.resolveCalls).isEqualTo(1)
-        assertThat(repository.modeFlow.value).isEqualTo(PrayerTimesMode.AUTO)
+        // A failed GPS lookup may not switch the accepted manual location to AUTO.
+        assertThat(repository.modeFlow.value).isEqualTo(PrayerTimesMode.MANUAL)
     }
 
     @Test
@@ -411,6 +544,7 @@ private class FakePrayerTimesRepository : PrayerTimesRepository {
     var suggestion: PrayerLocationSuggestion? = null
     val refreshCalls = mutableListOf<RefreshCall>()
     var resolveCalls: Int = 0
+    var resolveBarrier: CompletableDeferred<ResolveResult>? = null
     var countries: List<PrayerCountry> = emptyList()
     val citiesByCountry: MutableMap<Int, List<PrayerCity>> = mutableMapOf()
     val districtsByCity: MutableMap<Int, List<PrayerDistrict>> = mutableMapOf()
@@ -431,13 +565,17 @@ private class FakePrayerTimesRepository : PrayerTimesRepository {
         return refreshResult
     }
 
-    override suspend fun resolveAndSelectByDeviceLocation(): ResolveResult {
+    val committedAutoSelections = mutableListOf<PrayerLocationSelection>()
+
+    override suspend fun resolveDeviceLocationProposal(): ResolveResult {
         resolveCalls += 1
-        val result = resolveResult
-        if (result is ResolveResult.Success) {
-            selectionFlow.value = result.selection
-        }
-        return result
+        return resolveBarrier?.await() ?: resolveResult
+    }
+
+    override suspend fun commitResolvedAutoSelection(selection: PrayerLocationSelection) {
+        committedAutoSelections += selection
+        selectionFlow.value = selection
+        modeFlow.value = PrayerTimesMode.AUTO
     }
 
     override suspend fun suggestManualSelectionByDeviceLocation(): PrayerLocationSuggestion? =

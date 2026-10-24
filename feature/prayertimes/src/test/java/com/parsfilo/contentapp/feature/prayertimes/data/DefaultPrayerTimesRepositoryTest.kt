@@ -2,12 +2,16 @@ package com.parsfilo.contentapp.feature.prayertimes.data
 
 import com.google.common.truth.Truth.assertThat
 import com.parsfilo.contentapp.core.database.dao.prayer.PrayerTimesDao
+import com.parsfilo.contentapp.core.database.model.prayer.PrayerCityEntity
+import com.parsfilo.contentapp.core.database.model.prayer.PrayerCountryEntity
+import com.parsfilo.contentapp.core.database.model.prayer.PrayerDistrictEntity
 import com.parsfilo.contentapp.core.database.model.prayer.PrayerSyncStateEntity
 import com.parsfilo.contentapp.core.datastore.PrayerPreferencesData
 import com.parsfilo.contentapp.core.datastore.PrayerPreferencesDataSource
 import com.parsfilo.contentapp.core.firebase.AppAnalytics
 import com.parsfilo.contentapp.feature.prayertimes.alarm.PrayerAlarmScheduler
 import com.parsfilo.contentapp.feature.prayertimes.model.RefreshResult
+import com.parsfilo.contentapp.feature.prayertimes.model.ResolveResult
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -22,9 +26,14 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28])
 class DefaultPrayerTimesRepositoryTest {
 
     private val apiClient: EzanVaktiApiClient = mockk()
@@ -68,6 +77,72 @@ class DefaultPrayerTimesRepositoryTest {
         every { appAnalytics.logEvent(any(), any()) } just Runs
         coEvery { prayerTimesDao.touchDistrictAccess(any(), any()) } just Runs
     }
+
+    @Test
+    fun `GPS proposal cannot persist location mode or alarms before user confirmation`() =
+        runTest(testDispatcher) {
+            every { locationResolver.hasLocationPermission() } returns true
+            coEvery { locationResolver.resolveAddressCandidate() } returns PrayerAddressCandidate(
+                country = "Türkiye",
+                city = "İzmir",
+                district = "Konak",
+            )
+            val now = System.currentTimeMillis()
+            coEvery { prayerTimesDao.getCountries() } returns listOf(
+                PrayerCountryEntity(90, "TÜRKİYE", "Turkey", now),
+            )
+            coEvery { prayerTimesDao.getMinCountryFetchedAt() } returns now
+            coEvery { prayerTimesDao.getCities(90) } returns listOf(
+                PrayerCityEntity(35, 90, "İZMİR", "Izmir", now),
+            )
+            coEvery { prayerTimesDao.getMinCityFetchedAt(90) } returns now
+            coEvery { prayerTimesDao.getDistricts(35) } returns listOf(
+                PrayerDistrictEntity(3501, 35, "KONAK", "Konak", now),
+            )
+            coEvery { prayerTimesDao.getMinDistrictFetchedAt(35) } returns now
+
+            val proposal = repository.resolveDeviceLocationProposal()
+            assertThat(proposal).isInstanceOf(ResolveResult.Success::class.java)
+            val selection = (proposal as ResolveResult.Success).selection
+            assertThat(selection.districtId).isEqualTo(3501)
+            coVerify(exactly = 0) { preferencesDataSource.setMode(any()) }
+            coVerify(exactly = 0) { preferencesDataSource.setManualSelection(any(), any(), any()) }
+            coVerify(exactly = 0) {
+                preferencesDataSource.setAcceptedAutoSelection(any(), any(), any())
+            }
+            coVerify(exactly = 0) { preferencesDataSource.setLastAutoDistrictId(any()) }
+            coVerify(exactly = 0) { prayerTimesDao.touchDistrictAccess(any(), any()) }
+            coVerify(exactly = 0) { prayerAlarmScheduler.scheduleNextForCurrentFlavor() }
+
+            repository.commitResolvedAutoSelection(selection)
+            coVerify(exactly = 1) {
+                preferencesDataSource.setAcceptedAutoSelection(90, 35, 3501)
+            }
+            coVerify(exactly = 0) { preferencesDataSource.setManualSelection(any(), any(), any()) }
+            coVerify(exactly = 0) { preferencesDataSource.setLastAutoDistrictId(any()) }
+            coVerify(exactly = 0) { preferencesDataSource.setMode(any()) }
+        }
+
+    @Test
+    fun `permission rejection does not mutate previously accepted location`() =
+        runTest(testDispatcher) {
+            every { locationResolver.hasLocationPermission() } returns false
+            assertThat(repository.resolveDeviceLocationProposal())
+                .isEqualTo(ResolveResult.PermissionDenied)
+            coVerify(exactly = 0) { preferencesDataSource.setManualSelection(any(), any(), any()) }
+            coVerify(exactly = 0) { preferencesDataSource.setLastAutoDistrictId(any()) }
+        }
+
+    @Test
+    fun `cancelled geolocation must propagate instead of proposing stale location`() =
+        runTest(testDispatcher) {
+            every { locationResolver.hasLocationPermission() } returns true
+            coEvery { locationResolver.resolveAddressCandidate() } throws
+                CancellationException("synthetic location cancellation")
+            val outcome = runCatching { repository.resolveDeviceLocationProposal() }
+            assertThat(outcome.exceptionOrNull()).isInstanceOf(CancellationException::class.java)
+            coVerify(exactly = 0) { preferencesDataSource.setManualSelection(any(), any(), any()) }
+        }
 
     @Test
     fun enabledPreferencePreservesIntentWhileFalseAlarmResultIsObservable() = runTest(testDispatcher) {
