@@ -132,6 +132,7 @@ class PrayerAlarmAndroid13PermissionChainTest {
             assertThat(scheduledAlarms.single().triggerAtTime).isGreaterThan(System.currentTimeMillis())
             assertThat(shadowOf(scheduledAlarms.single().operation).savedIntent.action)
                 .isEqualTo(PrayerAlarmScheduler.ACTION_FIRE_ALARM)
+            assertThat(receiverShadow.wentAsync()).isTrue()
             assertThat(shadowOf(receiverShadow.originalPendingResult).future.isDone).isTrue()
 
             val notificationIds = notifications.activeNotifications.map { it.id }
