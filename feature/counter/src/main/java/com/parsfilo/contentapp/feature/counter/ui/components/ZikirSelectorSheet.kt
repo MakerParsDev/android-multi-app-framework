@@ -31,6 +31,8 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.LayoutDirection
@@ -45,6 +47,7 @@ import com.parsfilo.contentapp.feature.counter.model.ZikirItem
 fun ZikirSelectorPage(
     zikirList: List<ZikirItem>,
     selectedKey: String?,
+    activeSessionCount: Int,
     onSelect: (ZikirItem) -> Unit,
     onDismiss: () -> Unit,
     onAddCustomZikir: (arabicText: String, latinText: String, turkishMeaning: String, defaultTarget: Int) -> Unit,
@@ -62,6 +65,7 @@ fun ZikirSelectorPage(
 ) {
     val d = LocalDimens.current
     var showAddDialog by rememberSaveable { mutableStateOf(false) }
+    var pendingDeleteKey by rememberSaveable { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier
@@ -184,7 +188,14 @@ fun ZikirSelectorPage(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.End,
                             ) {
-                                TextButton(onClick = { onDeleteZikir(item) }) {
+                                val deleteDescription = stringResource(
+                                    R.string.counter_delete_named,
+                                    item.latinText,
+                                )
+                                TextButton(
+                                    onClick = { pendingDeleteKey = item.key },
+                                    modifier = Modifier.semantics { contentDescription = deleteDescription },
+                                ) {
                                     Text(text = stringResource(R.string.counter_delete))
                                 }
                             }
@@ -192,6 +203,39 @@ fun ZikirSelectorPage(
                     }
                 }
             }
+        }
+    }
+
+    pendingDeleteKey?.let { key ->
+        zikirList.firstOrNull { it.key == key }?.let { item ->
+            val isActiveSelection = item.key == selectedKey && activeSessionCount > 0
+            AlertDialog(
+                onDismissRequest = { pendingDeleteKey = null },
+                title = { Text(stringResource(R.string.counter_delete_confirm_title)) },
+                text = {
+                    Text(
+                        if (isActiveSelection) {
+                            stringResource(R.string.counter_delete_confirm_active, activeSessionCount)
+                        } else {
+                            stringResource(R.string.counter_delete_confirm_message)
+                        },
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            pendingDeleteKey = null
+                            onDeleteZikir(item)
+                        },
+                        modifier = Modifier.testTag("counter_delete_confirm_button"),
+                    ) { Text(stringResource(R.string.counter_delete)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingDeleteKey = null }) {
+                        Text(stringResource(R.string.counter_cancel))
+                    }
+                },
+            )
         }
     }
 

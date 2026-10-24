@@ -182,6 +182,7 @@ fun CounterScreen(
             ZikirSelectorPage(
                 zikirList = uiState.zikirList,
                 selectedKey = uiState.selectedZikir?.key,
+                activeSessionCount = if (uiState.isSessionActive) uiState.currentCount else 0,
                 onSelect = onZikirSelected,
                 onDismiss = onZikirSelectorToggle,
                 onAddCustomZikir = onAddCustomZikir,

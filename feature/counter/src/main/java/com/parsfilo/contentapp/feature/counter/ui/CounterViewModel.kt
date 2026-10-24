@@ -28,6 +28,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.json.JSONArray
 import org.json.JSONObject
@@ -47,6 +50,9 @@ class CounterViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(CounterUiState())
     val uiState = _uiState.asStateFlow()
+
+    // Serialize catalog persistence when the user confirms several deletions quickly.
+    private val deletePersistenceMutex = Mutex()
 
     private val _hapticEvents = MutableSharedFlow<CounterHapticEvent>(extraBufferCapacity = 1)
     val hapticEvents = _hapticEvents.asSharedFlow()
@@ -314,35 +320,31 @@ class CounterViewModel @Inject constructor(
 
     fun onDeleteZikir(item: ZikirItem) {
         val state = _uiState.value
-        if (state.zikirList.none { it.key == item.key }) return
+        val newState = state.afterZikirDeletion(item) ?: return
+        _uiState.value = newState
 
-        val updatedList = state.zikirList.filterNot { it.key == item.key }
-        val nextSelected = if (state.selectedZikir?.key == item.key) {
-            updatedList.firstOrNull()
-        } else {
-            state.selectedZikir
-        }
-
-        _uiState.value = state.copy(
-            zikirList = updatedList,
-            selectedZikir = nextSelected,
-            targetCount = nextSelected?.defaultTarget ?: state.targetCount,
-            currentCount = 0,
-            isSessionActive = false,
-            sessionStartTime = 0L,
-            showZikirSelector = true,
-        )
-
-        viewModelScope.launch(Dispatchers.IO) {
-            if (item.key.startsWith(CUSTOM_ZIKIR_KEY_PREFIX)) {
-                preferencesDataSource.setCustomZikirItemsJson(serializeCustomZikirItems(updatedList))
-            } else {
-                val deletedDefaultKeys = parseDeletedZikirKeys(preferencesDataSource.deletedZikirKeysJson.first())
-                preferencesDataSource.setDeletedZikirKeysJson(
-                    serializeDeletedZikirKeys(deletedDefaultKeys + item.key),
-                )
+        viewModelScope.launch {
+            deletePersistenceMutex.withLock {
+                withContext(Dispatchers.IO) {
+                    if (item.key.startsWith(CUSTOM_ZIKIR_KEY_PREFIX)) {
+                        preferencesDataSource.setCustomZikirItemsJson(
+                            serializeCustomZikirItems(newState.zikirList),
+                        )
+                    } else {
+                        val deletedDefaultKeys =
+                            parseDeletedZikirKeys(preferencesDataSource.deletedZikirKeysJson.first())
+                        preferencesDataSource.setDeletedZikirKeysJson(
+                            serializeDeletedZikirKeys(deletedDefaultKeys + item.key),
+                        )
+                    }
+                    // Deleting an unrelated catalog item must not disturb the active selection.
+                    if (state.selectedZikir?.key == item.key) {
+                        preferencesDataSource.setLastSelectedZikirKey(
+                            newState.selectedZikir?.key ?: DEFAULT_FALLBACK_ZIKIR_KEY,
+                        )
+                    }
+                }
             }
-            preferencesDataSource.setLastSelectedZikirKey(nextSelected?.key ?: DEFAULT_FALLBACK_ZIKIR_KEY)
         }
     }
 
@@ -703,4 +705,24 @@ class CounterViewModel @Inject constructor(
         private const val CUSTOM_ZIKIR_KEY_PREFIX = "custom_"
         private const val DEFAULT_FALLBACK_ZIKIR_KEY = "subhanallah"
     }
+}
+
+/** A non-selected list deletion must never reset an unrelated in-progress session. */
+internal fun CounterUiState.afterZikirDeletion(item: ZikirItem): CounterUiState? {
+    if (zikirList.none { it.key == item.key }) return null
+    val updatedList = zikirList.filterNot { it.key == item.key }
+    val deletingSelected = selectedZikir?.key == item.key
+    if (!deletingSelected) {
+        return copy(zikirList = updatedList, showZikirSelector = true)
+    }
+    val replacement = updatedList.firstOrNull()
+    return copy(
+        zikirList = updatedList,
+        selectedZikir = replacement,
+        targetCount = replacement?.defaultTarget ?: targetCount,
+        currentCount = 0,
+        isSessionActive = false,
+        sessionStartTime = 0L,
+        showZikirSelector = true,
+    )
 }
