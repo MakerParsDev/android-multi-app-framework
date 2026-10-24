@@ -8,13 +8,19 @@ import com.parsfilo.contentapp.core.database.model.zikir.ZikirStreakEntity
 import com.parsfilo.contentapp.feature.counter.model.ZikirItem
 import com.parsfilo.contentapp.feature.counter.model.ZikirSession
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import org.json.JSONArray
 import timber.log.Timber
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import java.util.TimeZone
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.max
@@ -68,13 +74,15 @@ class ZikirRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getTodayTotalCount(): Flow<Int> {
-        return zikirSessionDao.getTotalCountSince(startOfTodayMillis()).map { it ?: 0 }
-    }
+    override fun getTodayTotalCount(): Flow<Int> =
+        queryCurrentLocalDay { cutoff ->
+            zikirSessionDao.getTotalCountSince(cutoff).map { it ?: 0 }
+        }
 
-    override fun getTodayCompletedSessionCount(): Flow<Int> {
-        return zikirSessionDao.getCompletedSessionCountSince(startOfTodayMillis())
-    }
+    override fun getTodayCompletedSessionCount(): Flow<Int> =
+        queryCurrentLocalDay { cutoff ->
+            zikirSessionDao.getCompletedSessionCountSince(cutoff)
+        }
 
     override suspend fun getOrCreateStreak(): ZikirStreakEntity {
         return zikirStreakDao.getStreak() ?: ZikirStreakEntity().also { zikirStreakDao.upsert(it) }
@@ -109,15 +117,6 @@ class ZikirRepositoryImpl @Inject constructor(
         }
 
         zikirStreakDao.upsert(updated)
-    }
-
-    private fun startOfTodayMillis(): Long {
-        val calendar = Calendar.getInstance()
-        calendar.set(Calendar.HOUR_OF_DAY, 0)
-        calendar.set(Calendar.MINUTE, 0)
-        calendar.set(Calendar.SECOND, 0)
-        calendar.set(Calendar.MILLISECOND, 0)
-        return calendar.timeInMillis
     }
 
     private fun todayKey(): String = dateFormatter().format(System.currentTimeMillis())
@@ -156,4 +155,37 @@ internal fun ZikirSessionEntity.toModel(): ZikirSession {
         durationSeconds = durationSeconds,
         isComplete = isComplete,
     )
+}
+
+/**
+ * Re-subscribe to the Room query after local midnight, even if no rows change.
+ * The minute-long upper bound also detects time-zone and manual clock changes.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+internal fun <T> queryCurrentLocalDay(
+    nowMillis: () -> Long = System::currentTimeMillis,
+    timeZone: () -> TimeZone = TimeZone::getDefault,
+    query: (Long) -> Flow<T>,
+): Flow<T> = flow {
+    while (true) {
+        val now = nowMillis()
+        val zone = timeZone()
+        val (startOfDay, nextMidnight) = localDayBounds(now, zone)
+        emit(startOfDay)
+        delay((nextMidnight - now).coerceIn(1L, 60_000L))
+    }
+}.distinctUntilChanged().flatMapLatest(query)
+
+/** Correct across leap days, DST changes and non-hour time-zone offsets. */
+internal fun localDayBounds(nowMillis: Long, timeZone: TimeZone): Pair<Long, Long> {
+    val calendar = Calendar.getInstance(timeZone).apply {
+        timeInMillis = nowMillis
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }
+    val start = calendar.timeInMillis
+    calendar.add(Calendar.DAY_OF_MONTH, 1)
+    return start to calendar.timeInMillis
 }
