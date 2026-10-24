@@ -9,8 +9,10 @@ import com.parsfilo.contentapp.core.datastore.PreferencesDataSource
 import com.parsfilo.contentapp.feature.counter.model.ZikirSession
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
@@ -59,7 +61,7 @@ class ZikirCompletionAtomicityTest {
             // The completion checkpoint reached durable DataStore, but Room has not committed.
             preferences().setActiveZikirSessionSnapshot(pending)
             assertThat(prefsFile.exists()).isTrue()
-            scope.cancel()
+            scope.coroutineContext[Job]!!.cancelAndJoin()
             scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
             val recovered = preferences().activeZikirSessionSnapshot.first()
@@ -82,7 +84,7 @@ class ZikirCompletionAtomicityTest {
             } finally {
                 firstDb.close()
             }
-            scope.cancel()
+            scope.coroutineContext[Job]!!.cancelAndJoin()
             scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
             // A second restart must replay the SAME ID, not append history or advance streak.
@@ -101,7 +103,7 @@ class ZikirCompletionAtomicityTest {
             } finally {
                 secondDb.close()
             }
-            scope.cancel()
+            scope.coroutineContext[Job]!!.cancelAndJoin()
             scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
             // A third fresh process has neither a stale completion nor duplicated Room records.
