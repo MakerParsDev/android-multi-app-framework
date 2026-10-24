@@ -26,7 +26,11 @@ interface PrayerTimesRepository {
         force: Boolean = false,
     ): RefreshResult
 
-    suspend fun resolveAndSelectByDeviceLocation(): ResolveResult
+    /** Resolve a suggestion without changing the accepted location or alarm registration. */
+    suspend fun resolveDeviceLocationProposal(): ResolveResult
+
+    /** Commit only after explicit acceptance (or when the already selected district matches). */
+    suspend fun commitResolvedAutoSelection(selection: PrayerLocationSelection)
 
     suspend fun suggestManualSelectionByDeviceLocation(): PrayerLocationSuggestion?
 

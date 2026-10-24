@@ -173,19 +173,24 @@ class DefaultPrayerTimesRepository @Inject constructor(
         }
     }
 
-    override suspend fun resolveAndSelectByDeviceLocation(): ResolveResult = withContext(ioDispatcher) {
+    @Suppress("TooGenericExceptionCaught") // Platform geocoders may fail with provider-specific errors.
+    override suspend fun resolveDeviceLocationProposal(): ResolveResult = withContext(ioDispatcher) {
         if (!locationResolver.hasLocationPermission()) {
             appAnalytics.logEvent(AnalyticsEventName.PRAYER_RESOLVE_FALLBACK)
             return@withContext ResolveResult.PermissionDenied
         }
 
-        val candidate = runCatching { locationResolver.resolveAddressCandidate() }
-            .onFailure { Timber.w(it, "resolveAddressCandidate failed") }
-            .getOrNull()
-            ?: run {
-                appAnalytics.logEvent(AnalyticsEventName.PRAYER_RESOLVE_FALLBACK)
-                return@withContext ResolveResult.LocationUnavailable
-            }
+        val candidate = try {
+            locationResolver.resolveAddressCandidate()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            Timber.w(error, "resolveAddressCandidate failed")
+            null
+        } ?: run {
+            appAnalytics.logEvent(AnalyticsEventName.PRAYER_RESOLVE_FALLBACK)
+            return@withContext ResolveResult.LocationUnavailable
+        }
 
         return@withContext try {
             val countries = getCountries(forceRefresh = false)
@@ -233,35 +238,44 @@ class DefaultPrayerTimesRepository @Inject constructor(
                     return@withContext ResolveResult.NoMatch
                 }
 
-            setMode(PrayerTimesMode.AUTO)
-            prayerPreferencesDataSource.setManualSelection(
-                countryId = country.id,
-                cityId = city.id,
-                districtId = district.id,
-            )
-            prayerPreferencesDataSource.setLastAutoDistrictId(district.id)
+            // A resolved GPS candidate is NOT an accepted selection. No persisted
+            // location, mode, prayer times, or alarm registration changes here.
             val selection = PrayerLocationSelection(
                 countryId = country.id,
                 cityId = city.id,
                 districtId = district.id,
                 displayName = "${district.nameTr}, ${city.nameTr}, ${country.nameTr}",
             )
-            refreshIfNeeded(district.id, force = true)
-            appAnalytics.logEvent(
-                AnalyticsEventName.PRAYER_RESOLVE_SUCCESS,
-                Bundle().apply { putInt(AnalyticsParamKey.DISTRICT_ID, district.id) }
-            )
             ResolveResult.Success(selection)
         } catch (e: IOException) {
             logResolveFailure(error = e)
         } catch (e: SecurityException) {
             logResolveFailure(error = e)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: IllegalStateException) {
             logResolveFailure(error = e)
         } catch (e: IllegalArgumentException) {
             logResolveFailure(error = e)
         }
     }
+
+    override suspend fun commitResolvedAutoSelection(selection: PrayerLocationSelection) =
+        withContext(ioDispatcher) {
+            prayerPreferencesDataSource.setAcceptedAutoSelection(
+                countryId = selection.countryId,
+                cityId = selection.cityId,
+                districtId = selection.districtId,
+            )
+            appAnalytics.logEvent(
+                AnalyticsEventName.PRAYER_RESOLVE_SUCCESS,
+                Bundle().apply {
+                    putInt(AnalyticsParamKey.DISTRICT_ID, selection.districtId)
+                },
+            )
+            // ViewModel's active-selection collector refreshes prayer times and
+            // revalidates alarms after the accepted district becomes observable.
+        }
 
     override suspend fun suggestManualSelectionByDeviceLocation(): PrayerLocationSuggestion? =
         withContext(ioDispatcher) {

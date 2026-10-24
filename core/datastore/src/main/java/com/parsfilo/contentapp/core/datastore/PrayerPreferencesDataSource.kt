@@ -51,6 +51,21 @@ class PrayerPreferencesDataSource @Inject constructor(
         }
     }
 
+    /** Persist an explicitly accepted GPS district and AUTO mode in one atomic edit. */
+    suspend fun setAcceptedAutoSelection(
+        countryId: Int,
+        cityId: Int,
+        districtId: Int,
+    ) {
+        prayerPreferences.edit { pref ->
+            pref[Keys.SELECTED_COUNTRY_ID] = countryId
+            pref[Keys.SELECTED_CITY_ID] = cityId
+            pref[Keys.SELECTED_DISTRICT_ID] = districtId
+            pref[Keys.LAST_AUTO_DISTRICT_ID] = districtId
+            pref[Keys.MODE] = PrayerTimesMode.AUTO.name
+        }
+    }
+
     suspend fun setLastAutoDistrictId(districtId: Int) {
         prayerPreferences.edit { pref ->
             pref[Keys.LAST_AUTO_DISTRICT_ID] = districtId
