@@ -64,6 +64,7 @@ dependencies {
     testImplementation(libs.robolectric)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.runner)
+    androidTestImplementation(libs.androidx.work.testing)
     androidTestImplementation(libs.mockk.android)
     testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.json.jvm)
