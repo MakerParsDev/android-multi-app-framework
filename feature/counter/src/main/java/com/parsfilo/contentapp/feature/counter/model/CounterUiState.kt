@@ -18,6 +18,7 @@ data class CounterUiState(
     val zikirList: List<ZikirItem> = emptyList(),
     val selectedZikir: ZikirItem? = null,
     val currentCount: Int = 0,
+    val activeSessionId: Long = 0L,
     val targetCount: Int = 33,
     val sessionStartTime: Long = 0L,
     val isSessionActive: Boolean = false,

@@ -58,6 +58,7 @@ dependencies {
     testImplementation(libs.turbine)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.datastore.preferences)
     androidTestImplementation(libs.androidx.datastore.preferences)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.runner)

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.parsfilo.contentapp.core.common.network.AppDispatchers
 import com.parsfilo.contentapp.core.common.network.Dispatcher
+import com.parsfilo.contentapp.core.datastore.ActiveZikirSessionSnapshot
 import com.parsfilo.contentapp.core.datastore.PreferencesDataSource
 import com.parsfilo.contentapp.feature.counter.alarm.ReminderScheduleMode
 import com.parsfilo.contentapp.feature.counter.alarm.ZikirReminderNotifier
@@ -41,6 +42,7 @@ import timber.log.Timber
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 
 @HiltViewModel
@@ -58,6 +60,9 @@ class CounterViewModel @Inject constructor(
 
     // Serialize catalog persistence when the user confirms several deletions quickly.
     private val deletePersistenceMutex = Mutex()
+
+    private val activeSnapshotWriteMutex = Mutex()
+    private val activeSnapshotRevision = AtomicLong()
 
     private val _hapticEvents = MutableSharedFlow<CounterHapticEvent>(extraBufferCapacity = 1)
     val hapticEvents = _hapticEvents.asSharedFlow()
@@ -91,15 +96,51 @@ class CounterViewModel @Inject constructor(
             )
             val selectedKey = preferencesDataSource.lastSelectedZikirKey.first()
             val selected = zikirList.firstOrNull { it.key == selectedKey } ?: zikirList.firstOrNull()
+            val persisted = preferencesDataSource.activeZikirSessionSnapshot.first()
+            // Only restore the still-selected, still-existing catalog item. A deleted
+            // or explicitly switched-away zikir cannot resurrect its old progress.
+            val recovered = persisted?.takeIf { it.zikirKey == selected?.key }
+            val pendingCompletion = recovered?.takeIf { it.count >= it.target }
+            val recoveredSession = pendingCompletion?.let {
+                ZikirSession(
+                    id = it.sessionId,
+                    zikirKey = selected!!.key,
+                    arabicText = selected.arabicText,
+                    latinText = selected.latinText,
+                    targetCount = it.target,
+                    completedCount = it.count,
+                    completedAt = it.updatedAt,
+                    durationSeconds = ((it.updatedAt - it.startedAt) / 1000L).coerceAtLeast(0L),
+                    isComplete = true,
+                )
+            }
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
                 zikirList = zikirList,
                 selectedZikir = selected,
-                targetCount = selected?.defaultTarget ?: _uiState.value.targetCount,
-                // Selector should be the default entry point; this also recovers
-                // the app when the user deletes every zikir and needs to add one back.
-                showZikirSelector = true,
+                currentCount = recovered?.count ?: 0,
+                activeSessionId = recovered?.sessionId ?: 0L,
+                targetCount = recovered?.target ?: selected?.defaultTarget ?: _uiState.value.targetCount,
+                isSessionActive = recovered != null,
+                sessionStartTime = recovered?.startedAt ?: 0L,
+                showSessionComplete = recoveredSession != null,
+                completionPersistenceStatus = if (recoveredSession != null) {
+                    CompletionPersistenceStatus.SAVING
+                } else {
+                    CompletionPersistenceStatus.NONE
+                },
+                lastCompletedSession = recoveredSession,
+                showZikirSelector = recovered == null,
             )
+            if (persisted != null && recovered == null) {
+                // A stale snapshot cannot take priority over the saved selection.
+                queueActiveSnapshot(null)
+            }
+            if (recoveredSession != null) {
+                // Crash between the snapshot and the Room transaction: retry the
+                // exact same ID; INSERT IGNORE keeps completed-session totals stable.
+                persistCompletedSession(recoveredSession, _uiState.value.todayTotalCount)
+            }
         }
     }
 
@@ -201,6 +242,39 @@ class CounterViewModel @Inject constructor(
         }
     }
 
+    private fun freshSessionId(): Long =
+        (UUID.randomUUID().mostSignificantBits and Long.MAX_VALUE).coerceAtLeast(1L)
+
+    private fun activeSnapshot(state: CounterUiState, updatedAt: Long): ActiveZikirSessionSnapshot? =
+        state.selectedZikir?.takeIf { state.currentCount > 0 && state.activeSessionId > 0L }?.let {
+            ActiveZikirSessionSnapshot(
+                zikirKey = it.key,
+                sessionId = state.activeSessionId,
+                count = state.currentCount,
+                target = state.targetCount,
+                startedAt = state.sessionStartTime,
+                updatedAt = updatedAt,
+            )
+        }
+
+    /** Skip obsolete queued writes to avoid restoring a deliberately reset session. */
+    @Suppress("TooGenericExceptionCaught")
+    private fun queueActiveSnapshot(snapshot: ActiveZikirSessionSnapshot?) {
+        val revision = activeSnapshotRevision.incrementAndGet()
+        viewModelScope.launch(ioDispatcher) {
+            activeSnapshotWriteMutex.withLock {
+                if (revision != activeSnapshotRevision.get()) return@withLock
+                try {
+                    preferencesDataSource.setActiveZikirSessionSnapshot(snapshot)
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Exception) {
+                    Timber.w(error, "Failed to checkpoint active zikir count")
+                }
+            }
+        }
+    }
+
     fun onCounterTapped() {
         val state = _uiState.value
         // A reached target is one logical session until its durable save resolves.
@@ -222,7 +296,7 @@ class CounterViewModel @Inject constructor(
             val durationSeconds = ((now - sessionStart) / 1000L).coerceAtLeast(0L)
             val session = ZikirSession(
                 // The ID is kept for every retry; Room INSERT IGNORE handles a prior commit.
-                id = (UUID.randomUUID().mostSignificantBits and Long.MAX_VALUE).coerceAtLeast(1L),
+                id = state.activeSessionId.takeIf { it > 0L } ?: freshSessionId(),
                 zikirKey = selected.key,
                 arabicText = selected.arabicText,
                 latinText = selected.latinText,
@@ -235,6 +309,7 @@ class CounterViewModel @Inject constructor(
 
             _uiState.value = state.copy(
                 currentCount = newCount,
+                activeSessionId = session.id,
                 isSessionActive = true,
                 sessionStartTime = sessionStart,
                 showSessionComplete = true,
@@ -243,19 +318,39 @@ class CounterViewModel @Inject constructor(
             )
             persistCompletedSession(session = session, previousToday = state.todayTotalCount)
         } else {
-            _uiState.value = state.copy(
+            val updated = state.copy(
                 currentCount = newCount,
+                activeSessionId = state.activeSessionId.takeIf { it > 0L } ?: freshSessionId(),
                 isSessionActive = true,
                 sessionStartTime = sessionStart,
             )
+            _uiState.value = updated
+            queueActiveSnapshot(activeSnapshot(updated, now))
         }
     }
 
     @Suppress("TooGenericExceptionCaught") // Room, IO and provider failures must not silently discard counted progress.
     private fun persistCompletedSession(session: ZikirSession, previousToday: Int) {
+        // Invalidate older queued partial-count writes before committing the final snapshot.
+        activeSnapshotRevision.incrementAndGet()
         viewModelScope.launch {
             val inserted = try {
-                withContext(ioDispatcher) { zikirRepository.saveSession(session) }
+                withContext(ioDispatcher) {
+                    // First durably checkpoint completed progress so a process
+                    // death before Room commit can replay this exact session ID.
+                    activeSnapshotWriteMutex.withLock {
+                        val snapshot = activeSnapshot(_uiState.value, session.completedAt)
+                        if (snapshot?.sessionId == session.id) {
+                            preferencesDataSource.setActiveZikirSessionSnapshot(snapshot)
+                        }
+                    }
+                    val committed = zikirRepository.saveSession(session)
+                    // History has committed; stale recovery may now be cleared.
+                    activeSnapshotWriteMutex.withLock {
+                        preferencesDataSource.clearActiveZikirSessionIfId(session.id)
+                    }
+                    committed
+                }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
@@ -299,10 +394,12 @@ class CounterViewModel @Inject constructor(
 
     fun onZikirSelected(item: ZikirItem) {
         if (_uiState.value.completionPersistenceStatus != CompletionPersistenceStatus.NONE) return
+        queueActiveSnapshot(null)
         _uiState.value = _uiState.value.copy(
             selectedZikir = item,
             targetCount = item.defaultTarget,
             currentCount = 0,
+            activeSessionId = 0L,
             isSessionActive = false,
             sessionStartTime = 0L,
             showZikirSelector = false,
@@ -341,11 +438,13 @@ class CounterViewModel @Inject constructor(
             baseItems = baseItems,
             customItems = currentCustomItems + item,
         )
+        queueActiveSnapshot(null)
         _uiState.value = _uiState.value.copy(
             zikirList = updatedList,
             selectedZikir = item,
             targetCount = normalizedTarget,
             currentCount = 0,
+            activeSessionId = 0L,
             isSessionActive = false,
             sessionStartTime = 0L,
             showZikirSelector = false,
@@ -361,7 +460,10 @@ class CounterViewModel @Inject constructor(
         if (_uiState.value.completionPersistenceStatus != CompletionPersistenceStatus.NONE) return
         val state = _uiState.value
         val newState = state.afterZikirDeletion(item) ?: return
-        _uiState.value = newState
+        if (state.selectedZikir?.key == item.key) queueActiveSnapshot(null)
+        _uiState.value = newState.copy(
+            activeSessionId = if (state.selectedZikir?.key == item.key) 0L else state.activeSessionId,
+        )
 
         viewModelScope.launch {
             deletePersistenceMutex.withLock {
@@ -390,8 +492,10 @@ class CounterViewModel @Inject constructor(
 
     fun onResetCurrentCount() {
         if (_uiState.value.completionPersistenceStatus != CompletionPersistenceStatus.NONE) return
+        queueActiveSnapshot(null)
         _uiState.value = _uiState.value.copy(
             currentCount = 0,
+            activeSessionId = 0L,
             isSessionActive = false,
             sessionStartTime = 0L,
         )
@@ -399,7 +503,16 @@ class CounterViewModel @Inject constructor(
 
     fun onTargetChanged(newTarget: Int) {
         if (_uiState.value.completionPersistenceStatus != CompletionPersistenceStatus.NONE) return
-        _uiState.value = _uiState.value.copy(targetCount = newTarget.coerceAtLeast(1))
+        val current = _uiState.value
+        val requested = newTarget.coerceAtLeast(1)
+        // A smaller target must not silently convert an unfinished count into
+        // a completed session when Android later restores its snapshot.
+        if (current.isSessionActive && requested <= current.currentCount) return
+        val updated = current.copy(targetCount = requested)
+        _uiState.value = updated
+        if (updated.isSessionActive) {
+            queueActiveSnapshot(activeSnapshot(updated, System.currentTimeMillis()))
+        }
     }
 
     fun onCustomTargetSelected(target: Int) {
@@ -413,6 +526,7 @@ class CounterViewModel @Inject constructor(
             showSessionComplete = false,
             completionPersistenceStatus = CompletionPersistenceStatus.NONE,
             currentCount = 0,
+            activeSessionId = 0L,
             isSessionActive = false,
             sessionStartTime = 0L,
         )
