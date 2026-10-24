@@ -559,7 +559,11 @@ private class FakePrayerTimesRepository : PrayerTimesRepository {
         return timesFlow
     }
 
-    override suspend fun refreshIfNeeded(districtId: Int, force: Boolean): RefreshResult {
+    override suspend fun refreshIfNeeded(
+        districtId: Int,
+        force: Boolean,
+        scheduleAlarmAfterRefresh: Boolean,
+    ): RefreshResult {
         refreshCalls += RefreshCall(districtId = districtId, force = force)
         if (districtId == 4) districtRefreshBarrier?.await()
         return refreshResult
