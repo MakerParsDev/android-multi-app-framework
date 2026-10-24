@@ -1,5 +1,6 @@
 package com.parsfilo.contentapp.feature.prayertimes.alarm
 
+import android.app.NotificationManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -7,6 +8,8 @@ import android.os.Bundle
 import com.google.common.truth.Truth.assertThat
 import com.parsfilo.contentapp.core.datastore.PrayerPreferencesData
 import com.parsfilo.contentapp.core.datastore.PrayerPreferencesDataSource
+import com.parsfilo.contentapp.core.datastore.PreferencesDataSource
+import com.parsfilo.contentapp.core.datastore.UserPreferencesData
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -62,6 +65,34 @@ class PrayerAlarmReceiverTest {
         coVerify(exactly = 1) { notifier.show(any(), any(), any()) }
         coVerify(exactly = 1) { scheduler.scheduleNext(any()) }
         assertFinished(shadow)
+    }
+
+    /** Covers the production notifier-to-scheduler sequence without using a real user alarm. */
+    @Config(sdk = [28]) // No Android 13 notification permission required for this isolated Robolectric test.
+    @Test fun realNotificationIsPostedWhileNextSchedulingStillRuns() = runTest {
+        val (receiver, scheduler, _, prayerPrefs) = createReceiver(this)
+        val userPrefs = mockk<PreferencesDataSource>()
+        val userData = mockk<UserPreferencesData>()
+        every { userData.notificationsEnabled } returns true
+        every { userPrefs.userData } returns flowOf(userData)
+        val sound = mockk<PrayerAlarmSoundPlayer>(relaxed = true)
+        val notifier = PrayerAlarmNotifier(context, userPrefs, sound)
+        receiver.dependenciesProvider = {
+            PrayerAlarmDependencies(scheduler, notifier, prayerPrefs)
+        }
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.cancelAll()
+        try {
+            val shadow = dispatch(receiver)
+            advanceUntilIdle()
+            val notificationIds = manager.activeNotifications.map { it.id }
+            assertThat(notificationIds).contains(41_106)
+            assertThat(notificationIds).contains(41_099)
+            coVerify(exactly = 1) { scheduler.scheduleNext(any()) }
+            assertFinished(shadow)
+        } finally {
+            manager.cancelAll()
+        }
     }
 
     @Test fun schedulerExceptionStillFinishesPendingResult() = runTest {
