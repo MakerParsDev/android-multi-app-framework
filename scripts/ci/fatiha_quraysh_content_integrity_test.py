@@ -4,6 +4,7 @@
 Primary references:
 - Diyanet Fâtiha: https://kuran.diyanet.gov.tr/mushaf/kuran-meal-1/fatiha-suresi-1/ayet-1/kuran-yolu-meali-5
 - Diyanet Kureyş: https://kuran.diyanet.gov.tr/kuran?ayet=1&mode=kuran-meal&sure=106
+- Diyanet Tebbet recitation: https://webdosyasp.diyanet.gov.tr/muftuluk/UserFiles/mersin/Ilceler/gulnar/UserFiles/Files/NAMAZ%20SURELERI%CC%87_06dad0a9-8e34-4c89-9087-65a4062b8e1e.pdf
 """
 
 import json
@@ -24,7 +25,7 @@ class QuranReaderContentIntegrityTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         records = json.loads(DATA.read_text(encoding="utf-8"))
-        cls.suras = {row["sureID"]: row for row in records if row["sureID"] in (1, 5)}
+        cls.suras = {row["sureID"]: row for row in records if row["sureID"] in (1, 5, 11)}
 
     def test_fatiha_verse_two_is_praise_not_duplicated_mercy(self):
         verses = self.suras[1]["ayetler"]
@@ -32,6 +33,15 @@ class QuranReaderContentIntegrityTest(unittest.TestCase):
         self.assertEqual(list(range(1, 8)), [v["ayetID"] for v in verses])
         self.assertEqual(FATIHA_VERSE_TWO, verses[1]["ayetAR"].strip())
         self.assertNotEqual(verses[1]["ayetAR"].strip(), verses[2]["ayetAR"].strip())
+
+    def test_tebbet_verse_three_has_verified_latin_recitation_not_turkish_prose(self):
+        record = self.suras[11]
+        verses = record["ayetler"]
+        self.assertEqual(5, record["ayetSayisi"])
+        self.assertEqual([1, 2, 3, 4, 5], [v["ayetID"] for v in verses])
+        self.assertEqual("سَيَصْلَىٰ نَارًا ذَاتَ لَهَبٍ", verses[2]["ayetAR"].strip())
+        self.assertEqual("Seyaslâ nâran zâte leheb.", verses[2]["ayetLAT"].strip())
+        self.assertNotEqual(verses[2]["ayetLAT"].strip(), verses[2]["ayetTR"].strip())
 
     def test_quraysh_contains_all_four_verses_in_order(self):
         record = self.suras[5]
