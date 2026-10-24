@@ -33,6 +33,10 @@ class PreferencesDataSource @Inject constructor(
         it[PreferencesKeys.LAST_ZIKIR_KEY] ?: "subhanallah"
     }
 
+    val activeZikirSessionSnapshot: Flow<ActiveZikirSessionSnapshot?> = userPreferences.data.map {
+        it[PreferencesKeys.ACTIVE_ZIKIR_SESSION_JSON]?.let(ActiveZikirSessionSnapshot::fromJson)
+    }
+
     val zikirReminderEnabled: Flow<Boolean> = userPreferences.data.map {
         it[PreferencesKeys.ZIKIR_REMINDER_ENABLED] ?: false
     }
@@ -330,6 +334,27 @@ class PreferencesDataSource @Inject constructor(
         userPreferences.edit { it[PreferencesKeys.LAST_ZIKIR_KEY] = key }
     }
 
+    suspend fun setActiveZikirSessionSnapshot(snapshot: ActiveZikirSessionSnapshot?) {
+        userPreferences.edit { preferences ->
+            if (snapshot == null) {
+                preferences.remove(PreferencesKeys.ACTIVE_ZIKIR_SESSION_JSON)
+            } else {
+                preferences[PreferencesKeys.ACTIVE_ZIKIR_SESSION_JSON] = snapshot.toJson()
+            }
+        }
+    }
+
+    /** A delayed cleanup cannot erase an unrelated new counting session. */
+    suspend fun clearActiveZikirSessionIfId(sessionId: Long) {
+        userPreferences.edit { preferences ->
+            val active = preferences[PreferencesKeys.ACTIVE_ZIKIR_SESSION_JSON]
+                ?.let(ActiveZikirSessionSnapshot::fromJson)
+            if (active?.sessionId == sessionId) {
+                preferences.remove(PreferencesKeys.ACTIVE_ZIKIR_SESSION_JSON)
+            }
+        }
+    }
+
     suspend fun setZikirReminderEnabled(v: Boolean) {
         userPreferences.edit { it[PreferencesKeys.ZIKIR_REMINDER_ENABLED] = v }
     }
@@ -459,6 +484,7 @@ class PreferencesDataSource @Inject constructor(
         val ZIKIR_HAPTIC = booleanPreferencesKey("zikir_haptic")
         val ZIKIR_SOUND = booleanPreferencesKey("zikir_sound")
         val LAST_ZIKIR_KEY = stringPreferencesKey("last_zikir_key")
+        val ACTIVE_ZIKIR_SESSION_JSON = stringPreferencesKey("active_zikir_session_json")
         val ZIKIR_REMINDER_ENABLED = booleanPreferencesKey("zikir_reminder_enabled")
         val ZIKIR_REMINDER_HOUR = intPreferencesKey("zikir_reminder_hour")
         val ZIKIR_REMINDER_MINUTE = intPreferencesKey("zikir_reminder_minute")
