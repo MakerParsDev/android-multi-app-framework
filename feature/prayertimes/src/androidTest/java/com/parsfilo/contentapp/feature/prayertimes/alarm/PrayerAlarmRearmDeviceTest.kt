@@ -119,7 +119,7 @@ class PrayerAlarmRearmDeviceTest {
     }
 
     @Test
-    fun failedSwitchPreservesPriorAlarmPendingIntent() = runBlocking {
+    fun failedSwitchPreservesPriorPendingIntentIdentity() = runBlocking {
         checkIsolated()
         val realScheduler = scheduler()
         realScheduler.cancelScheduledAlarm()
@@ -146,6 +146,9 @@ class PrayerAlarmRearmDeviceTest {
             } catch (expected: SecurityException) {
                 assertTrue(expected.message.orEmpty().contains("synthetic failure"))
             }
+            // FLAG_NO_CREATE proves token identity survived, not that an AlarmManager
+            // operation remains queued. The SDK28/33 Robolectric tests additionally
+            // assert ShadowAlarmManager's registered trigger and old payload survive.
             assertNotNull(pendingFor(PrayerAlarmScheduler.REQUEST_CODE_YATSI))
         } finally {
             realScheduler.cancelScheduledAlarm()
