@@ -103,7 +103,13 @@ internal object PrayerTimesRefreshExecution {
         alarmEnabled: Boolean,
     ): ListenableWorker.Result {
         val refresh = runCatching {
-            repository.refreshIfNeeded(districtId = districtId, force = false)
+            // The worker owns the scheduling result so it can request retry on failure.
+            // Do not let the repository schedule once more while refreshing API data.
+            repository.refreshIfNeeded(
+                districtId = districtId,
+                force = false,
+                scheduleAlarmAfterRefresh = false,
+            )
         }.getOrElse { error ->
             // Preserve cancellation and fatal errors: retry only recoverable exceptions.
             if (error is CancellationException || error !is Exception) throw error
