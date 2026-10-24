@@ -24,6 +24,10 @@
     <string name="counter_add_zikir_meaning">Bedeutung</string>
     <string name="counter_add_zikir_target">Zielanzahl</string>
     <string name="counter_cancel">Abbrechen</string>
+    <string name="counter_delete_confirm_title">Dhikr löschen?</string>
+    <string name="counter_delete_confirm_message">Dieser Dhikr wird aus der Liste entfernt. Fortfahren?</string>
+    <string name="counter_delete_confirm_active">Beim Löschen dieses Dhikr gehen %1$d nicht abgeschlossene Zählungen verloren. Fortfahren?</string>
+    <string name="counter_delete_named">%1$s löschen</string>
     <string name="counter_delete">Löschen</string>
     <plurals name="counter_recommended_target">
         <item quantity="one">Empfohlen: %d Wiederholung</item>

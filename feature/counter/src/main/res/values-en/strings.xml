@@ -24,6 +24,10 @@
     <string name="counter_add_zikir_meaning">Meaning</string>
     <string name="counter_add_zikir_target">Target count</string>
     <string name="counter_cancel">Cancel</string>
+    <string name="counter_delete_confirm_title">Delete zikr?</string>
+    <string name="counter_delete_confirm_message">This zikr will be removed from the list. Continue?</string>
+    <string name="counter_delete_confirm_active">Deleting the selected zikr will discard %1$d unfinished counts. Continue?</string>
+    <string name="counter_delete_named">Delete %1$s</string>
     <string name="counter_delete">Delete</string>
     <plurals name="counter_recommended_target">
         <item quantity="one">Recommended: %d repetition</item>

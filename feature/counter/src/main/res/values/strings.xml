@@ -24,6 +24,10 @@
     <string name="counter_add_zikir_meaning">Anlam</string>
     <string name="counter_add_zikir_target">Hedef tekrar</string>
     <string name="counter_cancel">İptal</string>
+    <string name="counter_delete_confirm_title">Zikri sil?</string>
+    <string name="counter_delete_confirm_message">Bu zikir listeden silinecek. Devam etmek istiyor musunuz?</string>
+    <string name="counter_delete_confirm_active">Seçili zikir silinirse tamamlanmamış %1$d sayım kaybolacak. Silmek istiyor musunuz?</string>
+    <string name="counter_delete_named">%1$s zikrini sil</string>
     <string name="counter_delete">Sil</string>
     <plurals name="counter_recommended_target">
         <item quantity="one">Önerilen: %d tekrar</item>
