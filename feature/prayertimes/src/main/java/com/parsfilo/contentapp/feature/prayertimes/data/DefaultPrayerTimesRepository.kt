@@ -87,6 +87,7 @@ class DefaultPrayerTimesRepository @Inject constructor(
     override suspend fun refreshIfNeeded(
         districtId: Int,
         force: Boolean,
+        scheduleAlarmAfterRefresh: Boolean,
     ): RefreshResult = withContext(ioDispatcher) {
         val now = System.currentTimeMillis()
         val todayIso = PrayerDateTime.todayIso()
@@ -155,8 +156,10 @@ class DefaultPrayerTimesRepository @Inject constructor(
 
             prayerPreferencesDataSource.setLastSuccessfulRefreshAt(now)
             pruneCacheByLru(activeDistrictId = districtId)
-            runCatching { prayerAlarmScheduler.scheduleNextForCurrentFlavor() }
-                .onFailure { Timber.w(it, "Unable to reschedule prayer alarm after refresh") }
+            if (scheduleAlarmAfterRefresh) {
+                runCatching { prayerAlarmScheduler.scheduleNextForCurrentFlavor() }
+                    .onFailure { Timber.w(it, "Unable to reschedule prayer alarm after refresh") }
+            }
             RefreshResult.Refreshed
         } catch (e: IOException) {
             handleRefreshFailure(error = e, districtId = districtId, hasToday = hasToday)

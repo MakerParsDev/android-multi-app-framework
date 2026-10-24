@@ -24,6 +24,8 @@ interface PrayerTimesRepository {
     suspend fun refreshIfNeeded(
         districtId: Int,
         force: Boolean = false,
+        // Background worker schedules once after inspecting the refresh outcome.
+        scheduleAlarmAfterRefresh: Boolean = true,
     ): RefreshResult
 
     /** Resolve a suggestion without changing the accepted location or alarm registration. */

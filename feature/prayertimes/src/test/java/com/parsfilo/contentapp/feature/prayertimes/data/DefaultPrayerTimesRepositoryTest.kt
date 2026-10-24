@@ -271,12 +271,22 @@ class DefaultPrayerTimesRepositoryTest {
         coEvery { prayerTimesDao.deletePrayerTimesByDistrict(any()) } just Runs
         coEvery { prayerTimesDao.deleteSyncStateByDistrict(any()) } just Runs
 
-        val result = repository.refreshIfNeeded(districtId = DISTRICT_ID, force = false)
+        val result = repository.refreshIfNeeded(
+            districtId = DISTRICT_ID,
+            force = false,
+            scheduleAlarmAfterRefresh = false,
+        )
 
         assertThat(result).isEqualTo(RefreshResult.Refreshed)
+        coVerify(exactly = 0) { prayerAlarmScheduler.scheduleNextForCurrentFlavor() }
         coVerify(exactly = 1) { prayerTimesDao.upsertPrayerTimes(match { it.size == 2 }) }
         coVerify { prayerTimesDao.deletePrayerTimesByDistrict(31) }
         coVerify { prayerTimesDao.deleteSyncStateByDistrict(31) }
+
+        // A foreground refresh must still reschedule; only the worker suppresses it.
+        assertThat(repository.refreshIfNeeded(districtId = DISTRICT_ID, force = true))
+            .isEqualTo(RefreshResult.Refreshed)
+        coVerify(exactly = 1) { prayerAlarmScheduler.scheduleNextForCurrentFlavor() }
     }
 
     private companion object {
