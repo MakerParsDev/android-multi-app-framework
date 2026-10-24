@@ -2,11 +2,14 @@ package com.parsfilo.contentapp.feature.counter.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.parsfilo.contentapp.core.common.network.AppDispatchers
+import com.parsfilo.contentapp.core.common.network.Dispatcher
 import com.parsfilo.contentapp.core.datastore.PreferencesDataSource
 import com.parsfilo.contentapp.feature.counter.alarm.ReminderScheduleMode
 import com.parsfilo.contentapp.feature.counter.alarm.ZikirReminderNotifier
 import com.parsfilo.contentapp.feature.counter.alarm.ZikirReminderScheduler
 import com.parsfilo.contentapp.feature.counter.data.ZikirRepository
+import com.parsfilo.contentapp.feature.counter.model.CompletionPersistenceStatus
 import com.parsfilo.contentapp.feature.counter.model.CounterHapticEvent
 import com.parsfilo.contentapp.feature.counter.model.CounterUiState
 import com.parsfilo.contentapp.feature.counter.model.ReminderSettings
@@ -15,7 +18,7 @@ import com.parsfilo.contentapp.feature.counter.model.ZikirSession
 import com.parsfilo.contentapp.feature.counter.sharing.ZikirShareHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,6 +40,7 @@ import org.json.JSONObject
 import timber.log.Timber
 import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
@@ -46,6 +50,7 @@ class CounterViewModel @Inject constructor(
     private val zikirReminderScheduler: ZikirReminderScheduler,
     private val zikirReminderNotifier: ZikirReminderNotifier,
     private val zikirShareHelper: ZikirShareHelper,
+    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CounterUiState())
@@ -75,7 +80,7 @@ class CounterViewModel @Inject constructor(
     }
 
     private fun loadInitialData() {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             val deletedDefaultKeys = parseDeletedZikirKeys(preferencesDataSource.deletedZikirKeysJson.first())
             val baseZikirList = zikirRepository.getZikirList()
                 .filterNot { it.key in deletedDefaultKeys }
@@ -198,6 +203,8 @@ class CounterViewModel @Inject constructor(
 
     fun onCounterTapped() {
         val state = _uiState.value
+        // A reached target is one logical session until its durable save resolves.
+        if (state.completionPersistenceStatus != CompletionPersistenceStatus.NONE) return
         val selected = state.selectedZikir ?: return
         val now = System.currentTimeMillis()
 
@@ -214,6 +221,8 @@ class CounterViewModel @Inject constructor(
         if (newCount >= state.targetCount) {
             val durationSeconds = ((now - sessionStart) / 1000L).coerceAtLeast(0L)
             val session = ZikirSession(
+                // The ID is kept for every retry; Room INSERT IGNORE handles a prior commit.
+                id = (UUID.randomUUID().mostSignificantBits and Long.MAX_VALUE).coerceAtLeast(1L),
                 zikirKey = selected.key,
                 arabicText = selected.arabicText,
                 latinText = selected.latinText,
@@ -229,28 +238,10 @@ class CounterViewModel @Inject constructor(
                 isSessionActive = true,
                 sessionStartTime = sessionStart,
                 showSessionComplete = true,
+                completionPersistenceStatus = CompletionPersistenceStatus.SAVING,
                 lastCompletedSession = session,
             )
-
-            viewModelScope.launch(Dispatchers.IO) {
-                zikirRepository.saveSession(session)
-                zikirRepository.updateStreakAfterSession()
-
-                val completedSessionsToday = zikirRepository.getTodayCompletedSessionCount().first()
-                if (completedSessionsToday == 1) {
-                    val reminderEnabled = preferencesDataSource.zikirReminderEnabled.first()
-                    if (!reminderEnabled) {
-                        _uiState.value = _uiState.value.copy(showFirstSessionReminderHint = true)
-                    }
-                }
-
-                val previousToday = state.todayTotalCount
-                val dailyGoal = _uiState.value.dailyGoal
-                val afterToday = previousToday + session.completedCount
-                if (previousToday < dailyGoal && afterToday >= dailyGoal) {
-                    zikirReminderNotifier.showGoalCompleted(dailyGoal)
-                }
-            }
+            persistCompletedSession(session = session, previousToday = state.todayTotalCount)
         } else {
             _uiState.value = state.copy(
                 currentCount = newCount,
@@ -260,7 +251,54 @@ class CounterViewModel @Inject constructor(
         }
     }
 
+    @Suppress("TooGenericExceptionCaught") // Room, IO and provider failures must not silently discard counted progress.
+    private fun persistCompletedSession(session: ZikirSession, previousToday: Int) {
+        viewModelScope.launch {
+            val inserted = try {
+                withContext(ioDispatcher) { zikirRepository.saveSession(session) }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                Timber.e(error, "Unable to persist completed zikir session")
+                _uiState.value = _uiState.value.copy(
+                    completionPersistenceStatus = CompletionPersistenceStatus.FAILED,
+                )
+                return@launch
+            }
+            // History and streak are now committed in a single Room transaction.
+            _uiState.value = _uiState.value.copy(
+                completionPersistenceStatus = CompletionPersistenceStatus.SAVED,
+            )
+            if (!inserted) return@launch // Retry confirmed a previously committed session.
+
+            // Noncritical notifications must never turn a durable success into failure.
+            try {
+                val completedSessionsToday = zikirRepository.getTodayCompletedSessionCount().first()
+                if (completedSessionsToday == 1 && !preferencesDataSource.zikirReminderEnabled.first()) {
+                    _uiState.value = _uiState.value.copy(showFirstSessionReminderHint = true)
+                }
+                val goal = _uiState.value.dailyGoal
+                if (previousToday < goal && previousToday + session.completedCount >= goal) {
+                    zikirReminderNotifier.showGoalCompleted(goal)
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                Timber.w(error, "Completed session persisted but reminder delivery failed")
+            }
+        }
+    }
+
+    fun retryCompletedSessionSave() {
+        val state = _uiState.value
+        if (state.completionPersistenceStatus != CompletionPersistenceStatus.FAILED) return
+        val session = state.lastCompletedSession ?: return
+        _uiState.value = state.copy(completionPersistenceStatus = CompletionPersistenceStatus.SAVING)
+        persistCompletedSession(session, state.todayTotalCount)
+    }
+
     fun onZikirSelected(item: ZikirItem) {
+        if (_uiState.value.completionPersistenceStatus != CompletionPersistenceStatus.NONE) return
         _uiState.value = _uiState.value.copy(
             selectedZikir = item,
             targetCount = item.defaultTarget,
@@ -280,6 +318,7 @@ class CounterViewModel @Inject constructor(
         turkishMeaning: String,
         defaultTarget: Int,
     ) {
+        if (_uiState.value.completionPersistenceStatus != CompletionPersistenceStatus.NONE) return
         val arabic = arabicText.trim()
         val latin = latinText.trim()
         val meaning = turkishMeaning.trim()
@@ -312,20 +351,21 @@ class CounterViewModel @Inject constructor(
             showZikirSelector = false,
         )
 
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             preferencesDataSource.setCustomZikirItemsJson(serializeCustomZikirItems(updatedList))
             preferencesDataSource.setLastSelectedZikirKey(item.key)
         }
     }
 
     fun onDeleteZikir(item: ZikirItem) {
+        if (_uiState.value.completionPersistenceStatus != CompletionPersistenceStatus.NONE) return
         val state = _uiState.value
         val newState = state.afterZikirDeletion(item) ?: return
         _uiState.value = newState
 
         viewModelScope.launch {
             deletePersistenceMutex.withLock {
-                withContext(Dispatchers.IO) {
+                withContext(ioDispatcher) {
                     if (item.key.startsWith(CUSTOM_ZIKIR_KEY_PREFIX)) {
                         preferencesDataSource.setCustomZikirItemsJson(
                             serializeCustomZikirItems(newState.zikirList),
@@ -349,6 +389,7 @@ class CounterViewModel @Inject constructor(
     }
 
     fun onResetCurrentCount() {
+        if (_uiState.value.completionPersistenceStatus != CompletionPersistenceStatus.NONE) return
         _uiState.value = _uiState.value.copy(
             currentCount = 0,
             isSessionActive = false,
@@ -357,6 +398,7 @@ class CounterViewModel @Inject constructor(
     }
 
     fun onTargetChanged(newTarget: Int) {
+        if (_uiState.value.completionPersistenceStatus != CompletionPersistenceStatus.NONE) return
         _uiState.value = _uiState.value.copy(targetCount = newTarget.coerceAtLeast(1))
     }
 
@@ -365,9 +407,11 @@ class CounterViewModel @Inject constructor(
     }
 
     fun onDismissSessionComplete() {
+        if (_uiState.value.completionPersistenceStatus != CompletionPersistenceStatus.SAVED) return
         val isPremium = _uiState.value.isPremium
         _uiState.value = _uiState.value.copy(
             showSessionComplete = false,
+            completionPersistenceStatus = CompletionPersistenceStatus.NONE,
             currentCount = 0,
             isSessionActive = false,
             sessionStartTime = 0L,
@@ -511,7 +555,7 @@ class CounterViewModel @Inject constructor(
     private suspend fun reportUnavailableReminder() {
         // Never wait for WorkManager persistence before showing a truthful failure message.
         _reminderUiEvents.emit(reminderFeedbackFor(ReminderScheduleMode.UNAVAILABLE))
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             try {
                 withTimeout(1_500L) {
                     zikirReminderScheduler.enqueueUnavailableRecovery()
@@ -534,6 +578,11 @@ class CounterViewModel @Inject constructor(
 
     fun onShareSession() {
         val state = _uiState.value
+        if (state.completionPersistenceStatus == CompletionPersistenceStatus.SAVING ||
+            state.completionPersistenceStatus == CompletionPersistenceStatus.FAILED
+        ) {
+            return
+        }
         val session = state.lastCompletedSession
         val selectedZikir = state.selectedZikir ?: state.zikirList.firstOrNull() ?: return
         val latinText = session?.latinText ?: selectedZikir.latinText

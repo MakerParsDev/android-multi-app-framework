@@ -1,6 +1,8 @@
 package com.parsfilo.contentapp.feature.counter.data
 
 import android.content.Context
+import androidx.room.withTransaction
+import com.parsfilo.contentapp.core.database.AppDatabase
 import com.parsfilo.contentapp.core.database.dao.zikir.ZikirSessionDao
 import com.parsfilo.contentapp.core.database.dao.zikir.ZikirStreakDao
 import com.parsfilo.contentapp.core.database.model.zikir.ZikirSessionEntity
@@ -29,6 +31,7 @@ import kotlin.math.max
 class ZikirRepositoryImpl @Inject constructor(
     private val zikirSessionDao: ZikirSessionDao,
     private val zikirStreakDao: ZikirStreakDao,
+    private val database: AppDatabase,
     @ApplicationContext private val context: Context,
 ) : ZikirRepository {
 
@@ -64,8 +67,15 @@ class ZikirRepositoryImpl @Inject constructor(
         return parsed
     }
 
-    override suspend fun saveSession(session: ZikirSession) {
-        zikirSessionDao.insert(session.toEntity())
+    override suspend fun saveSession(session: ZikirSession): Boolean = database.withTransaction {
+        require(session.id != 0L) { "Completed sessions require a stable nonzero ID" }
+        val insertedId = zikirSessionDao.insert(session.toEntity())
+        if (insertedId == -1L) {
+            // Retrying a save that already committed is a success, not a new session.
+            return@withTransaction false
+        }
+        updateStreakAfterSession()
+        true
     }
 
     override fun getRecentSessions(limit: Int): Flow<List<ZikirSession>> {
@@ -92,7 +102,7 @@ class ZikirRepositoryImpl @Inject constructor(
         return zikirStreakDao.observeStreak().map { it ?: ZikirStreakEntity() }
     }
 
-    override suspend fun updateStreakAfterSession() {
+    private suspend fun updateStreakAfterSession() {
         val today = todayKey()
         val yesterday = yesterdayKey()
         val current = getOrCreateStreak()
