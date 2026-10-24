@@ -61,6 +61,9 @@
     <string name="prayertimes_step_country">⅓ Land</string>
     <string name="prayertimes_step_city">⅔ Stadt</string>
     <string name="prayertimes_step_district">3/3 Bezirk</string>
+    <string name="prayertimes_no_locations_available">Für diesen Schritt sind keine Orte verfügbar. Gehen Sie zurück und versuchen Sie es erneut.</string>
+    <string name="prayertimes_no_search_results">Keine Treffer. Versuchen Sie einen anderen Suchbegriff.</string>
+    <string name="prayertimes_clear_search">Suche löschen</string>
     <string name="prayertimes_search_label">Suchen</string>
     <string name="prayertimes_previous_day">Vorheriger Tag</string>
     <string name="prayertimes_next_day">Nächster Tag</string>

@@ -470,22 +470,9 @@ class PrayerLocationPickerViewModel @Inject constructor(
         pickerBaseState,
         pickerSearchQuery,
     ) { state, query ->
-        val normalized = query.trim()
-        val filteredCountries = if (normalized.isBlank()) {
-            state.countries
-        } else {
-            state.countries.filter { it.nameTr.contains(normalized, ignoreCase = true) }
-        }
-        val filteredCities = if (normalized.isBlank()) {
-            state.cities
-        } else {
-            state.cities.filter { it.nameTr.contains(normalized, ignoreCase = true) }
-        }
-        val filteredDistricts = if (normalized.isBlank()) {
-            state.districts
-        } else {
-            state.districts.filter { it.nameTr.contains(normalized, ignoreCase = true) }
-        }
+        val filteredCountries = PrayerLocationSearch.filter(state.countries, query) { it.nameTr }
+        val filteredCities = PrayerLocationSearch.filter(state.cities, query) { it.nameTr }
+        val filteredDistricts = PrayerLocationSearch.filter(state.districts, query) { it.nameTr }
         state.copy(
             searchQuery = query,
             filteredCountries = filteredCountries,
