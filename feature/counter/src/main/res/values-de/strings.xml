@@ -118,4 +118,7 @@
         <item quantity="other">%d Dhikr gezählt. Zum Zählen tippen.</item>
     </plurals>
     <string name="counter_copy">Kopieren</string>
+    <string name="counter_checkpoint_saved">Gespeichert: %1$d</string>
+    <string name="counter_checkpoint_saving">Wird gespeichert… Zuletzt sicher gespeichert: %1$d</string>
+    <string name="counter_checkpoint_failed">Nicht gespeichert! Zuletzt sicher gespeichert: %1$d</string>
 </resources>

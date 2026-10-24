@@ -118,5 +118,8 @@
         <item quantity="other">%d dhikr counted. Tap to count.</item>
     </plurals>
     <string name="counter_copy">Copy</string>
+    <string name="counter_checkpoint_saved">Saved: %1$d</string>
+    <string name="counter_checkpoint_saving">Saving… Last safely saved: %1$d</string>
+    <string name="counter_checkpoint_failed">Not saved! Last safely saved: %1$d</string>
 </resources>
 
