@@ -31,6 +31,7 @@ dependencies {
     implementation(project(":core:designsystem"))
     implementation(project(":core:datastore"))
     implementation(project(":core:database"))
+    implementation(libs.androidx.room.runtime)
     implementation(project(":feature:ads"))
 
     implementation(libs.timber)

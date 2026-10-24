@@ -56,6 +56,7 @@ fun CounterRoute(
         onAddCustomZikir = viewModel::onAddCustomZikir,
         onDeleteZikir = viewModel::onDeleteZikir,
         onDismissSessionComplete = viewModel::onDismissSessionComplete,
+        onRetrySessionSave = viewModel::retryCompletedSessionSave,
         onShareConfirmed = viewModel::onShareConfirmed,
         onShareDismissed = viewModel::onShareDismissed,
         onShareTextCopied = viewModel::onShareTextCopied,

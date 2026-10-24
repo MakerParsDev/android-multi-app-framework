@@ -6,6 +6,13 @@ enum class CounterHapticEvent {
     TARGET,
 }
 
+enum class CompletionPersistenceStatus {
+    NONE,
+    SAVING,
+    SAVED,
+    FAILED,
+}
+
 data class CounterUiState(
     val isLoading: Boolean = true,
     val zikirList: List<ZikirItem> = emptyList(),
@@ -23,6 +30,7 @@ data class CounterUiState(
     val recentSessions: List<ZikirSession> = emptyList(),
     val showZikirSelector: Boolean = false,
     val showSessionComplete: Boolean = false,
+    val completionPersistenceStatus: CompletionPersistenceStatus = CompletionPersistenceStatus.NONE,
     val showReminderSettings: Boolean = false,
     val showSessionHistory: Boolean = false,
     val showSharePreview: Boolean = false,

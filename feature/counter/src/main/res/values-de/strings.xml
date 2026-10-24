@@ -34,6 +34,11 @@
         <item quantity="other">Empfohlen: %d Wiederholungen</item>
     </plurals>
 
+    <string name="counter_session_saving">Wird gespeichert…</string>
+    <string name="counter_session_save_failed">Sitzung konnte nicht gespeichert werden</string>
+    <string name="counter_session_save_retry_description">Die Zählung bleibt erhalten. Bitte erneut speichern.</string>
+    <string name="counter_session_save_pending_description">Die Zählung bleibt erhalten, während die Sitzung gespeichert wird.</string>
+    <string name="counter_session_retry_save">Erneut speichern</string>
     <string name="counter_session_done_title">🤲 MashaAllah!</string>
     <string name="counter_session_done_body">%1$d %2$s abgeschlossen</string>
     <string name="counter_session_duration">Dauer: %s</string>
