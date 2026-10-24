@@ -83,17 +83,35 @@ class PrayerAlarmScheduler @Inject constructor(
             return@withContext false
         }
 
-        // Ensure any previous alarm (possibly scheduled for a different prayer key) is removed.
-        cancelScheduledAlarm()
-
-        val pendingIntent = buildPendingIntent(
+        // Keep the prior alarm until Android confirms the replacement was armed.
+        // A failed setAndAllowWhileIdle must not erase the only working notification.
+        // Reuse the old token without changing its extras until setAlarm succeeds.
+        // FLAG_UPDATE_CURRENT before a failing set would corrupt an older pending
+        // alarm's notification payload even though its trigger remains unchanged.
+        val existingIntent = buildPendingIntent(
+            variant = null,
+            payload = null,
+            prayerKey = nextAlarm.prayerKey,
+            flags = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_NO_CREATE,
+        )
+        val pendingIntent = existingIntent ?: buildPendingIntent(
             variant = variant,
             payload = nextAlarm,
             flags = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         ) ?: return@withContext false
 
-        alarmManager.cancel(pendingIntent)
+        // Android replaces an existing alarm with the same PendingIntent identity.
         setAlarm(alarmManager, nextAlarm.triggerAtMillis, pendingIntent)
+        if (existingIntent != null) {
+            // Update the notification extras only once the new trigger is accepted.
+            buildPendingIntent(
+                variant = variant,
+                payload = nextAlarm,
+                flags = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+        }
+        // Only after successful arming, drop alarms belonging to other prayer keys.
+        cancelScheduledAlarm(exceptPrayerKey = nextAlarm.prayerKey)
         Timber.d(
             "Prayer alarm scheduled variant=%s prayerKey=%s localDate=%s timeHm=%s triggerAt=%d",
             variant.name,
@@ -116,11 +134,12 @@ class PrayerAlarmScheduler @Inject constructor(
         true
     }
 
-    fun cancelScheduledAlarm() {
+    fun cancelScheduledAlarm(exceptPrayerKey: String? = null) {
         val alarmManager = context.getSystemService(AlarmManager::class.java) ?: return
         Timber.d("Cancelling all scheduled prayer alarms")
 
         ALL_PRAYER_KEYS.forEach { prayerKey ->
+            if (prayerKey == exceptPrayerKey) return@forEach
             val pendingIntent = buildPendingIntent(
                 variant = null,
                 payload = null,
@@ -135,15 +154,19 @@ class PrayerAlarmScheduler @Inject constructor(
         val legacyIntent = Intent(context, PrayerAlarmReceiver::class.java).apply {
             action = ACTION_FIRE_ALARM
         }
-        val legacyPendingIntent = PendingIntent.getBroadcast(
-            context,
-            LEGACY_REQUEST_CODE_ALARM,
-            legacyIntent,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_NO_CREATE,
-        )
-        legacyPendingIntent?.let {
-            alarmManager.cancel(it)
-            it.cancel()
+        // The legacy requestCode/Intent identity is identical to modern IMSAK.
+        // Never cancel that identity immediately after scheduling a new IMSAK alarm.
+        if (exceptPrayerKey != PRAYER_IMSAK) {
+            val legacyPendingIntent = PendingIntent.getBroadcast(
+                context,
+                LEGACY_REQUEST_CODE_ALARM,
+                legacyIntent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_NO_CREATE,
+            )
+            legacyPendingIntent?.let {
+                alarmManager.cancel(it)
+                it.cancel()
+            }
         }
         Timber.d("Prayer alarm cancellation completed")
     }
