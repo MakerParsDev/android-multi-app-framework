@@ -95,6 +95,14 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
                     }
                     if (!scheduled) {
                         Timber.w("Prayer next-alarm schedule unavailable variant=%s", variant.name)
+                        // A legitimate user disable or unselected district is not an error.
+                        // Missing future cache while alarms are enabled requires durable recovery.
+                        val preferences = withTimeout(RECOVERY_ENQUEUE_TIMEOUT_MS) {
+                            dependencies.preferences.preferences.first()
+                        }
+                        if (preferences.alarmEnabled && preferences.selectedDistrictId != null) {
+                            queueRecovery(dependencies, variant)
+                        }
                     }
                 } catch (_: TimeoutCancellationException) {
                     Timber.w("Prayer next-alarm scheduling timed out variant=%s", variant.name)

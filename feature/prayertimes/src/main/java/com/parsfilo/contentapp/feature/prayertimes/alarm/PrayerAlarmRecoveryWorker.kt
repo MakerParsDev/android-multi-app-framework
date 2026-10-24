@@ -4,22 +4,25 @@ import android.content.Context
 import androidx.work.BackoffPolicy
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
+import androidx.work.ListenableWorker
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.await
 import androidx.work.workDataOf
+import com.parsfilo.contentapp.core.datastore.PrayerPreferencesDataSource
 import com.parsfilo.contentapp.feature.prayertimes.model.PrayerAppVariant
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.first
 import timber.log.Timber
 import java.util.concurrent.TimeUnit
 
 /**
- * Durable, unique follow-up only when the receiver's next-alarm scheduling throws/times out.
+ * Durable, unique follow-up when the receiver cannot schedule the next alarm.
  * Does not display notifications, alter user preferences or bypass scheduler permission checks.
  */
 class PrayerAlarmRecoveryWorker(
@@ -37,10 +40,14 @@ class PrayerAlarmRecoveryWorker(
                 applicationContext,
                 PrayerAlarmRecoveryEntryPoint::class.java,
             )
-            // false may legitimately mean disabled reminders or unavailable prayer cache.
+            val prefs = entry.recoveryPrayerPreferencesDataSource().preferences.first()
+            // Do not retry when the user deliberately disabled alarms or selected no district.
+            if (!prefs.alarmEnabled || prefs.selectedDistrictId == null) return Result.success()
             val scheduled = entry.recoveryPrayerAlarmScheduler().scheduleNext(variant)
-            if (!scheduled) Timber.w("Prayer recovery did not find a schedulable next alarm variant=%s", variant.name)
-            Result.success()
+            if (!scheduled) {
+                Timber.w("Prayer recovery did not find a schedulable next alarm variant=%s", variant.name)
+            }
+            scheduleOutcome(scheduled, runAttemptCount)
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
@@ -51,6 +58,14 @@ class PrayerAlarmRecoveryWorker(
 
     companion object {
         internal const val MAX_RETRIES = 2
+
+        internal fun scheduleOutcome(scheduled: Boolean, runAttemptCount: Int): ListenableWorker.Result =
+            when {
+                scheduled -> Result.success()
+                runAttemptCount < MAX_RETRIES -> Result.retry()
+                else -> Result.failure()
+            }
+
         private const val KEY_VARIANT = "prayer_alarm_recovery_variant"
         private const val WORK_PREFIX = "prayer_alarm_recovery_"
         private const val INITIAL_DELAY_MINUTES = 5L
@@ -76,4 +91,6 @@ class PrayerAlarmRecoveryWorker(
 @InstallIn(SingletonComponent::class)
 interface PrayerAlarmRecoveryEntryPoint {
     fun recoveryPrayerAlarmScheduler(): PrayerAlarmScheduler
+
+    fun recoveryPrayerPreferencesDataSource(): PrayerPreferencesDataSource
 }
