@@ -333,6 +333,47 @@ class PrayerTimesViewModelTest {
     }
 
     @Test
+    fun `location picker filters all three steps without losing canonical IDs`() = runTest(testDispatcher) {
+        val turkey = PrayerCountry(id = 90, nameTr = "TÜRKİYE", nameEn = "Turkey")
+        val germany = PrayerCountry(id = 49, nameTr = "ALMANYA", nameEn = "Germany")
+        val city = PrayerCity(id = 18, countryId = 90, nameTr = "ÇANKIRI", nameEn = "Cankiri")
+        val district = PrayerDistrict(id = 181, cityId = 18, nameTr = "ŞABANÖZÜ", nameEn = "Sabanozu")
+        val repository = FakePrayerTimesRepository().apply {
+            countries = listOf(turkey, germany)
+            citiesByCountry[turkey.id] = listOf(city)
+            districtsByCity[city.id] = listOf(district)
+        }
+        val viewModel = PrayerLocationPickerViewModel(repository)
+        val collector = backgroundScope.launch { viewModel.uiState.collect {} }
+        runCurrent()
+
+        viewModel.onSearchQueryChanged("turkiye")
+        runCurrent()
+        assertThat(viewModel.uiState.value.filteredCountries).containsExactly(turkey)
+
+        viewModel.onCountrySelected(turkey)
+        runCurrent()
+        viewModel.onSearchQueryChanged("cankiri")
+        runCurrent()
+        assertThat(viewModel.uiState.value.filteredCities).containsExactly(city)
+
+        viewModel.onCitySelected(city)
+        runCurrent()
+        viewModel.onSearchQueryChanged("sabanozu")
+        runCurrent()
+        assertThat(viewModel.uiState.value.filteredDistricts).containsExactly(district)
+        assertThat(viewModel.uiState.value.filteredDistricts.single().id).isEqualTo(181)
+
+        viewModel.onSearchQueryChanged("unknown")
+        runCurrent()
+        assertThat(viewModel.uiState.value.filteredDistricts).isEmpty()
+        viewModel.onSearchQueryChanged("")
+        runCurrent()
+        assertThat(viewModel.uiState.value.filteredDistricts).containsExactly(district)
+        collector.cancel()
+    }
+
+    @Test
     fun `location picker preselects suggested country and city`() = runTest(testDispatcher) {
         val repository = FakePrayerTimesRepository().apply {
             countries = listOf(

@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -32,6 +33,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -188,6 +190,16 @@ fun PrayerLocationPickerScreen(
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text(text = stringResource(R.string.prayertimes_search_label)) },
                         singleLine = true,
+                        trailingIcon = {
+                            if (uiState.searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { onSearchQueryChanged("") }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = stringResource(R.string.prayertimes_clear_search),
+                                    )
+                                }
+                            }
+                        },
                         shape = RoundedCornerShape(16.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = PrayerTimesDesignTokens.GlassSurface.copy(alpha = 0.65f),
@@ -206,38 +218,75 @@ fun PrayerLocationPickerScreen(
                         CircularProgressIndicator()
                     }
                 } else {
-                    when (uiState.step) {
-                        LocationStep.COUNTRY -> {
-                            WizardList(
-                                modifier = Modifier.weight(1f),
-                                items = uiState.filteredCountries,
-                                selectedId = uiState.selectedCountry?.id,
-                                itemLabel = { it.nameTr },
-                                itemId = { it.id },
-                                onSelect = onCountrySelected,
+                    val locationsAvailable = when (uiState.step) {
+                        LocationStep.COUNTRY -> uiState.countries.isNotEmpty()
+                        LocationStep.CITY -> uiState.cities.isNotEmpty()
+                        LocationStep.DISTRICT -> uiState.districts.isNotEmpty()
+                    }
+                    val emptySearchResults = when (uiState.step) {
+                        LocationStep.COUNTRY -> uiState.filteredCountries.isEmpty()
+                        LocationStep.CITY -> uiState.filteredCities.isEmpty()
+                        LocationStep.DISTRICT -> uiState.filteredDistricts.isEmpty()
+                    }
+                    val noSearchMatches = uiState.searchQuery.isNotBlank() && emptySearchResults
+                    if (!locationsAvailable) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().weight(1f),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = stringResource(R.string.prayertimes_no_locations_available),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-
-                        LocationStep.CITY -> {
-                            WizardList(
-                                modifier = Modifier.weight(1f),
-                                items = uiState.filteredCities,
-                                selectedId = uiState.selectedCity?.id,
-                                itemLabel = { it.nameTr },
-                                itemId = { it.id },
-                                onSelect = onCitySelected,
+                    } else if (noSearchMatches) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().weight(1f),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                        ) {
+                            Text(
+                                text = stringResource(R.string.prayertimes_no_search_results),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
+                            TextButton(onClick = { onSearchQueryChanged("") }) {
+                                Text(stringResource(R.string.prayertimes_clear_search))
+                            }
                         }
+                    } else {
+                        when (uiState.step) {
+                            LocationStep.COUNTRY -> {
+                                WizardList(
+                                    modifier = Modifier.weight(1f),
+                                    items = uiState.filteredCountries,
+                                    selectedId = uiState.selectedCountry?.id,
+                                    itemLabel = { it.nameTr },
+                                    itemId = { it.id },
+                                    onSelect = onCountrySelected,
+                                )
+                            }
 
-                        LocationStep.DISTRICT -> {
-                            WizardList(
-                                modifier = Modifier.weight(1f),
-                                items = uiState.filteredDistricts,
-                                selectedId = uiState.selectedDistrict?.id,
-                                itemLabel = { it.nameTr },
-                                itemId = { it.id },
-                                onSelect = onDistrictSelected,
-                            )
+                            LocationStep.CITY -> {
+                                WizardList(
+                                    modifier = Modifier.weight(1f),
+                                    items = uiState.filteredCities,
+                                    selectedId = uiState.selectedCity?.id,
+                                    itemLabel = { it.nameTr },
+                                    itemId = { it.id },
+                                    onSelect = onCitySelected,
+                                )
+                            }
+
+                            LocationStep.DISTRICT -> {
+                                WizardList(
+                                    modifier = Modifier.weight(1f),
+                                    items = uiState.filteredDistricts,
+                                    selectedId = uiState.selectedDistrict?.id,
+                                    itemLabel = { it.nameTr },
+                                    itemId = { it.id },
+                                    onSelect = onDistrictSelected,
+                                )
+                            }
                         }
                     }
                 }
