@@ -10,6 +10,7 @@ import com.parsfilo.contentapp.feature.counter.alarm.ZikirReminderNotifier
 import com.parsfilo.contentapp.feature.counter.alarm.ZikirReminderScheduler
 import com.parsfilo.contentapp.feature.counter.data.ZikirRepository
 import com.parsfilo.contentapp.feature.counter.model.CompletionPersistenceStatus
+import com.parsfilo.contentapp.feature.counter.model.CounterCheckpointStatus
 import com.parsfilo.contentapp.feature.counter.model.ZikirItem
 import com.parsfilo.contentapp.feature.counter.model.ZikirSession
 import com.parsfilo.contentapp.feature.counter.sharing.ZikirShareHelper
@@ -111,6 +112,184 @@ class CounterCompletionPersistenceTest {
         zikirShareHelper = share,
         ioDispatcher = dispatcher,
     )
+
+    @Test
+    fun optimisticTapIsNotAcknowledgedUntilSnapshotCompletes() = runTest(dispatcher) {
+        every { repository.getZikirList() } returns listOf(item.copy(defaultTarget = 33))
+        val write = CompletableDeferred<Unit>()
+        coEvery { prefs.setActiveZikirSessionSnapshot(any()) } coAnswers {
+            val requested = firstArg<ActiveZikirSessionSnapshot?>()
+            write.await()
+            snapshots.value = requested
+        }
+        val vm = viewModel()
+        runCurrent()
+        vm.onCounterTapped()
+        runCurrent()
+
+        assertThat(vm.uiState.value.currentCount).isEqualTo(1)
+        assertThat(vm.uiState.value.savedCount).isEqualTo(0)
+        assertThat(vm.uiState.value.checkpointStatus).isEqualTo(CounterCheckpointStatus.SAVING)
+        assertThat(snapshots.value).isNull()
+
+        write.complete(Unit)
+        runCurrent()
+        assertThat(vm.uiState.value.savedCount).isEqualTo(1)
+        assertThat(vm.uiState.value.checkpointStatus).isEqualTo(CounterCheckpointStatus.SAVED)
+        assertThat(snapshots.value?.count).isEqualTo(1)
+    }
+
+    @Test
+    fun rapidTapsCheckpointLatestCountWithoutWritingEveryTap() = runTest(dispatcher) {
+        every { repository.getZikirList() } returns listOf(item.copy(defaultTarget = 33))
+        val vm = viewModel()
+        runCurrent()
+        repeat(17) { vm.onCounterTapped() }
+        assertThat(vm.uiState.value.currentCount).isEqualTo(17)
+        assertThat(vm.uiState.value.savedCount).isEqualTo(0)
+        assertThat(vm.uiState.value.checkpointStatus).isEqualTo(CounterCheckpointStatus.SAVING)
+
+        runCurrent()
+        assertThat(vm.uiState.value.currentCount).isEqualTo(17)
+        assertThat(vm.uiState.value.savedCount).isEqualTo(17)
+        assertThat(vm.uiState.value.checkpointStatus).isEqualTo(CounterCheckpointStatus.SAVED)
+        coVerify(exactly = 1) { prefs.setActiveZikirSessionSnapshot(match { it.count == 17 }) }
+    }
+
+    @Test
+    fun failedWriteCannotBeReportedAsSavedAndNextTapRetries() = runTest(dispatcher) {
+        every { repository.getZikirList() } returns listOf(item.copy(defaultTarget = 33))
+        coEvery { prefs.setActiveZikirSessionSnapshot(any()) } throws IOException("synthetic full disk")
+        val vm = viewModel()
+        runCurrent()
+        vm.onCounterTapped()
+        runCurrent()
+        assertThat(vm.uiState.value.currentCount).isEqualTo(1)
+        assertThat(vm.uiState.value.savedCount).isEqualTo(0)
+        assertThat(vm.uiState.value.checkpointStatus).isEqualTo(CounterCheckpointStatus.FAILED)
+
+        coEvery { prefs.setActiveZikirSessionSnapshot(any()) } coAnswers {
+            snapshots.value = firstArg()
+        }
+        vm.onCounterTapped()
+        runCurrent()
+        assertThat(vm.uiState.value.currentCount).isEqualTo(2)
+        assertThat(vm.uiState.value.savedCount).isEqualTo(2)
+        assertThat(vm.uiState.value.checkpointStatus).isEqualTo(CounterCheckpointStatus.SAVED)
+    }
+
+    @Test
+    fun olderSuccessfulWriteRemainsAcknowledgedWhenNewestCheckpointFails() = runTest(dispatcher) {
+        every { repository.getZikirList() } returns listOf(item.copy(defaultTarget = 33))
+        val firstWrite = CompletableDeferred<Unit>()
+        coEvery { prefs.setActiveZikirSessionSnapshot(any()) } coAnswers {
+            val requested = firstArg<ActiveZikirSessionSnapshot>()
+            if (requested.count == 1) {
+                firstWrite.await()
+                snapshots.value = requested
+            } else {
+                throw IOException("synthetic newer write failed")
+            }
+        }
+        val vm = viewModel()
+        runCurrent()
+        vm.onCounterTapped()
+        runCurrent()
+        vm.onCounterTapped()
+        assertThat(vm.uiState.value.currentCount).isEqualTo(2)
+        assertThat(vm.uiState.value.savedCount).isEqualTo(0)
+
+        firstWrite.complete(Unit)
+        runCurrent()
+        assertThat(snapshots.value?.count).isEqualTo(1)
+        assertThat(vm.uiState.value.currentCount).isEqualTo(2)
+        assertThat(vm.uiState.value.savedCount).isEqualTo(1)
+        assertThat(vm.uiState.value.checkpointStatus).isEqualTo(CounterCheckpointStatus.FAILED)
+    }
+
+    @Test
+    fun resetDuringOlderBlockedWriteNeverAcknowledgesStaleProgress() = runTest(dispatcher) {
+        every { repository.getZikirList() } returns listOf(item.copy(defaultTarget = 33))
+        val gate = CompletableDeferred<Unit>()
+        coEvery { prefs.setActiveZikirSessionSnapshot(any()) } coAnswers {
+            val requested = firstArg<ActiveZikirSessionSnapshot?>()
+            if (requested != null) gate.await()
+            snapshots.value = requested
+        }
+        val vm = viewModel()
+        runCurrent()
+        vm.onCounterTapped()
+        runCurrent()
+        vm.onResetCurrentCount()
+        assertThat(vm.uiState.value.currentCount).isEqualTo(0)
+        assertThat(vm.uiState.value.checkpointStatus).isEqualTo(CounterCheckpointStatus.SAVING)
+
+        gate.complete(Unit)
+        runCurrent()
+        assertThat(snapshots.value).isNull()
+        assertThat(vm.uiState.value.savedCount).isEqualTo(0)
+        assertThat(vm.uiState.value.checkpointStatus).isEqualTo(CounterCheckpointStatus.SAVED)
+    }
+
+    @Test
+    fun switchingZikirDoesNotShowPreviousSessionsSavedCount() = runTest(dispatcher) {
+        val firstZikir = item.copy(defaultTarget = 33)
+        val other = item.copy(key = "other", defaultTarget = 33)
+        every { repository.getZikirList() } returns listOf(firstZikir, other)
+        val vm = viewModel()
+        runCurrent()
+        repeat(3) { vm.onCounterTapped() }
+        runCurrent()
+        assertThat(vm.uiState.value.savedCount).isEqualTo(3)
+
+        vm.onZikirSelected(other)
+        assertThat(vm.uiState.value.currentCount).isEqualTo(0)
+        assertThat(vm.uiState.value.savedCount).isEqualTo(0)
+        assertThat(vm.uiState.value.checkpointStatus).isEqualTo(CounterCheckpointStatus.SAVING)
+        runCurrent()
+        assertThat(vm.uiState.value.checkpointStatus).isEqualTo(CounterCheckpointStatus.SAVED)
+        vm.onCounterTapped()
+        runCurrent()
+        assertThat(vm.uiState.value.savedCount).isEqualTo(1)
+    }
+
+    @Test
+    fun resettingThenImmediatelyTappingStartsNewSafelySavedSession() = runTest(dispatcher) {
+        every { repository.getZikirList() } returns listOf(item.copy(defaultTarget = 33))
+        val vm = viewModel()
+        runCurrent()
+        repeat(3) { vm.onCounterTapped() }
+        runCurrent()
+        val oldSession = snapshots.value!!.sessionId
+        vm.onResetCurrentCount()
+        vm.onCounterTapped()
+        assertThat(vm.uiState.value.savedCount).isEqualTo(0)
+        runCurrent()
+        assertThat(snapshots.value?.sessionId).isNotEqualTo(oldSession)
+        assertThat(vm.uiState.value.currentCount).isEqualTo(1)
+        assertThat(vm.uiState.value.savedCount).isEqualTo(1)
+        assertThat(vm.uiState.value.checkpointStatus).isEqualTo(CounterCheckpointStatus.SAVED)
+        vm.viewModelScope.cancel()
+        val restored = viewModel()
+        runCurrent()
+        assertThat(restored.uiState.value.currentCount).isEqualTo(1)
+    }
+
+    @Test
+    fun newTargetRemainsPendingUntilMatchingSnapshotIsDurable() = runTest(dispatcher) {
+        every { repository.getZikirList() } returns listOf(item.copy(defaultTarget = 33))
+        val vm = viewModel()
+        runCurrent()
+        repeat(2) { vm.onCounterTapped() }
+        runCurrent()
+        assertThat(vm.uiState.value.savedCount).isEqualTo(2)
+        vm.onTargetChanged(99)
+        assertThat(vm.uiState.value.checkpointStatus).isEqualTo(CounterCheckpointStatus.SAVING)
+        runCurrent()
+        assertThat(vm.uiState.value.targetCount).isEqualTo(99)
+        assertThat(snapshots.value?.target).isEqualTo(99)
+        assertThat(vm.uiState.value.checkpointStatus).isEqualTo(CounterCheckpointStatus.SAVED)
+    }
 
     @Test
     fun partialCountSurvivesNewViewModelAndTargetRemains33() = runTest(dispatcher) {
@@ -228,6 +407,8 @@ class CounterCompletionPersistenceTest {
         assertThat(vm.uiState.value.currentCount).isEqualTo(1)
         assertThat(vm.uiState.value.completionPersistenceStatus)
             .isEqualTo(CompletionPersistenceStatus.SAVING)
+        assertThat(vm.uiState.value.savedCount).isEqualTo(1)
+        assertThat(vm.uiState.value.checkpointStatus).isEqualTo(CounterCheckpointStatus.SAVED)
         assertThat(vm.uiState.value.showSessionComplete).isTrue()
         val stableId = vm.uiState.value.lastCompletedSession!!.id
         assertThat(stableId).isGreaterThan(0L)
@@ -259,6 +440,8 @@ class CounterCompletionPersistenceTest {
         runCurrent()
         assertThat(vm.uiState.value.completionPersistenceStatus)
             .isEqualTo(CompletionPersistenceStatus.FAILED)
+        assertThat(vm.uiState.value.savedCount).isEqualTo(1)
+        assertThat(vm.uiState.value.checkpointStatus).isEqualTo(CounterCheckpointStatus.SAVED)
         vm.onDismissSessionComplete()
         assertThat(vm.uiState.value.currentCount).isEqualTo(1)
 
@@ -269,6 +452,48 @@ class CounterCompletionPersistenceTest {
         assertThat(ids[0]).isEqualTo(ids[1])
         assertThat(vm.uiState.value.completionPersistenceStatus)
             .isEqualTo(CompletionPersistenceStatus.SAVED)
+        coVerify(exactly = 2) { repository.saveSession(any()) }
+    }
+
+    @Test
+    fun completionCheckpointFailureNeverAcknowledgesAnUnsavedFinalTap() = runTest(dispatcher) {
+        coEvery { prefs.setActiveZikirSessionSnapshot(any()) } throws IOException("synthetic disk unavailable")
+        val vm = viewModel()
+        runCurrent()
+        vm.onCounterTapped()
+        runCurrent()
+        assertThat(vm.uiState.value.currentCount).isEqualTo(1)
+        assertThat(vm.uiState.value.savedCount).isEqualTo(0)
+        assertThat(vm.uiState.value.checkpointStatus).isEqualTo(CounterCheckpointStatus.FAILED)
+        assertThat(vm.uiState.value.completionPersistenceStatus)
+            .isEqualTo(CompletionPersistenceStatus.FAILED)
+        coVerify(exactly = 0) { repository.saveSession(any()) }
+    }
+
+    @Test
+    fun committedRoomHistoryWithFailedSnapshotCleanupStillAcknowledgesSavedCount() = runTest(dispatcher) {
+        coEvery { repository.saveSession(any()) } returnsMany listOf(true, false)
+        coEvery { prefs.clearActiveZikirSessionIfId(any()) } throws IOException("synthetic cleanup failure")
+        val vm = viewModel()
+        runCurrent()
+        vm.onCounterTapped()
+        runCurrent()
+        assertThat(vm.uiState.value.currentCount).isEqualTo(1)
+        assertThat(vm.uiState.value.savedCount).isEqualTo(1)
+        assertThat(vm.uiState.value.checkpointStatus).isEqualTo(CounterCheckpointStatus.SAVED)
+        assertThat(vm.uiState.value.completionPersistenceStatus)
+            .isEqualTo(CompletionPersistenceStatus.FAILED)
+
+        coEvery { prefs.clearActiveZikirSessionIfId(any()) } coAnswers {
+            if (snapshots.value?.sessionId == firstArg<Long>()) snapshots.value = null
+        }
+        vm.retryCompletedSessionSave()
+        runCurrent()
+        assertThat(vm.uiState.value.completionPersistenceStatus)
+            .isEqualTo(CompletionPersistenceStatus.SAVED)
+        assertThat(vm.uiState.value.checkpointStatus).isEqualTo(CounterCheckpointStatus.SAVED)
+        assertThat(vm.uiState.value.savedCount).isEqualTo(1)
+        assertThat(snapshots.value).isNull()
         coVerify(exactly = 2) { repository.saveSession(any()) }
     }
 

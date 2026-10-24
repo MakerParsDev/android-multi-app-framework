@@ -118,6 +118,9 @@
         <item quantity="other">%d zikir sayıldı. Dokunarak say.</item>
     </plurals>
     <string name="counter_copy">Kopyala</string>
+    <string name="counter_checkpoint_saved">Kaydedildi: %1$d</string>
+    <string name="counter_checkpoint_saving">Kaydediliyor… Son güvenli sayım: %1$d</string>
+    <string name="counter_checkpoint_failed">Kaydedilemedi! Son güvenli sayım: %1$d</string>
 </resources>
 
 
