@@ -34,6 +34,11 @@
         <item quantity="other">Recommended: %d repetitions</item>
     </plurals>
 
+    <string name="counter_session_saving">Saving…</string>
+    <string name="counter_session_save_failed">Session could not be saved</string>
+    <string name="counter_session_save_retry_description">Your count is preserved. Retry saving the session.</string>
+    <string name="counter_session_save_pending_description">Your count is protected while the session is saved to history.</string>
+    <string name="counter_session_retry_save">Retry Save</string>
     <string name="counter_session_done_title">🤲 MashaAllah!</string>
     <string name="counter_session_done_body">%1$d %2$s completed</string>
     <string name="counter_session_duration">Duration: %s</string>

@@ -98,6 +98,7 @@ fun CounterScreen(
     onFirstSessionReminderConsumed: () -> Unit,
     bannerAdContent: (@Composable () -> Unit)? = null,
     nativeAdContent: (@Composable () -> Unit)? = null,
+    onRetrySessionSave: () -> Unit = {},
 ) {
     val d = LocalDimens.current
     val scrollState = rememberScrollState()
@@ -353,6 +354,8 @@ fun CounterScreen(
     if (uiState.showSessionComplete && completedSession != null) {
         SessionCompleteDialog(
             session = completedSession,
+            persistenceStatus = uiState.completionPersistenceStatus,
+            onRetrySave = onRetrySessionSave,
             currentStreak = uiState.currentStreak,
             todayTotalCount = uiState.todayTotalCount,
             onShareClick = onShareSession,

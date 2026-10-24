@@ -2,13 +2,15 @@ package com.parsfilo.contentapp.core.database.dao.zikir
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.parsfilo.contentapp.core.database.model.zikir.ZikirSessionEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ZikirSessionDao {
-    @Insert
+    /** Explicit positive IDs let a failed or repeated save be safely retried. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(session: ZikirSessionEntity): Long
 
     @Query("SELECT * FROM zikir_sessions ORDER BY completedAt DESC")

@@ -8,7 +8,8 @@ import kotlinx.coroutines.flow.Flow
 interface ZikirRepository {
     fun getZikirList(): List<ZikirItem>
 
-    suspend fun saveSession(session: ZikirSession)
+    /** Save history and streak atomically. True only for the first successful insert. */
+    suspend fun saveSession(session: ZikirSession): Boolean
 
     fun getRecentSessions(limit: Int = 30): Flow<List<ZikirSession>>
 
@@ -19,6 +20,4 @@ interface ZikirRepository {
     suspend fun getOrCreateStreak(): ZikirStreakEntity
 
     fun observeStreak(): Flow<ZikirStreakEntity>
-
-    suspend fun updateStreakAfterSession()
 }
