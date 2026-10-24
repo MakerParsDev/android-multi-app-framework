@@ -11,7 +11,9 @@ import androidx.work.WorkerParameters
 import androidx.work.await
 import androidx.work.workDataOf
 import com.parsfilo.contentapp.core.datastore.PrayerPreferencesDataSource
+import com.parsfilo.contentapp.feature.prayertimes.data.PrayerTimesRepository
 import com.parsfilo.contentapp.feature.prayertimes.model.PrayerAppVariant
+import com.parsfilo.contentapp.feature.prayertimes.model.RefreshResult
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -42,12 +44,15 @@ class PrayerAlarmRecoveryWorker(
             )
             val prefs = entry.recoveryPrayerPreferencesDataSource().preferences.first()
             // Do not retry when the user deliberately disabled alarms or selected no district.
-            if (!prefs.alarmEnabled || prefs.selectedDistrictId == null) return Result.success()
-            val scheduled = entry.recoveryPrayerAlarmScheduler().scheduleNext(variant)
-            if (!scheduled) {
-                Timber.w("Prayer recovery did not find a schedulable next alarm variant=%s", variant.name)
-            }
-            scheduleOutcome(scheduled, runAttemptCount)
+            val districtId = prefs.selectedDistrictId
+            if (!prefs.alarmEnabled || districtId == null) return Result.success()
+            PrayerAlarmRecoveryExecution.run(
+                scheduler = entry.recoveryPrayerAlarmScheduler(),
+                repository = entry.recoveryPrayerTimesRepository(),
+                variant = variant,
+                districtId = districtId,
+                runAttemptCount = runAttemptCount,
+            )
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
@@ -93,4 +98,54 @@ interface PrayerAlarmRecoveryEntryPoint {
     fun recoveryPrayerAlarmScheduler(): PrayerAlarmScheduler
 
     fun recoveryPrayerPreferencesDataSource(): PrayerPreferencesDataSource
+
+    fun recoveryPrayerTimesRepository(): PrayerTimesRepository
+}
+
+/**
+ * First try cached future times (works offline). Only if there is no next
+ * schedulable alarm, attempt a single cache refill and re-arm on this run.
+ * The worker's existing bounded backoff handles subsequent transient failures.
+ */
+internal object PrayerAlarmRecoveryExecution {
+    suspend fun run(
+        scheduler: PrayerAlarmScheduler,
+        repository: PrayerTimesRepository,
+        variant: PrayerAppVariant,
+        districtId: Int,
+        runAttemptCount: Int,
+    ): ListenableWorker.Result {
+        // Do not churn valid alarms or hit the network when the cached future alarm is already usable.
+        if (scheduler.scheduleNext(variant)) return ListenableWorker.Result.success()
+
+        // Force a refill: stale sync metadata may claim coverage even when the
+        // particular next-day row required by the scheduler has disappeared.
+        when (
+            val refresh = repository.refreshIfNeeded(
+                districtId = districtId,
+                force = true,
+                scheduleAlarmAfterRefresh = false,
+            )
+        ) {
+            is RefreshResult.Failed -> {
+                if (refresh.throwable is CancellationException || refresh.throwable !is Exception) {
+                    throw refresh.throwable
+                }
+                Timber.w("Prayer recovery cache refill failed (%s)", refresh.throwable.javaClass.simpleName)
+                return PrayerAlarmRecoveryWorker.scheduleOutcome(false, runAttemptCount)
+            }
+            RefreshResult.InvalidSelection -> {
+                // User must choose a valid location; bounded retries cannot correct it.
+                Timber.w("Prayer recovery cache refill rejected an invalid selection")
+                return ListenableWorker.Result.failure()
+            }
+            RefreshResult.Refreshed,
+            RefreshResult.SkippedFresh,
+            RefreshResult.ServedFromCache -> Unit
+        }
+
+        val scheduled = scheduler.scheduleNext(variant)
+        if (!scheduled) Timber.w("Prayer recovery cache refill left no future alarm variant=%s", variant.name)
+        return PrayerAlarmRecoveryWorker.scheduleOutcome(scheduled, runAttemptCount)
+    }
 }
