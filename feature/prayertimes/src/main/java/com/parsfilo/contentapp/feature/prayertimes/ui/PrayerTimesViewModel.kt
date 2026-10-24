@@ -56,7 +56,8 @@ class PrayerTimesViewModel @Inject constructor(
 
     // Status responses from older async calls cannot overwrite newer user intent.
     private var alarmScheduleGeneration: Long = 0L
-    private val pendingResolvedLocationNameState = MutableStateFlow<String?>(null)
+    private var locationResolveGeneration = 0L
+    private val pendingResolvedSelectionState = MutableStateFlow<PrayerLocationSelection?>(null)
     private val _events = MutableSharedFlow<PrayerTimesUiEvent>(extraBufferCapacity = 1)
 
     val snackBarMessage: StateFlow<UiText?> = _snackBarMessage
@@ -137,14 +138,14 @@ class PrayerTimesViewModel @Inject constructor(
         repository.observeCurrentSelection(),
         repository.observeAlarmSettings(),
         resolvingLocationState,
-        pendingResolvedLocationNameState,
-    ) { mode, selection, alarmSettings, isResolvingLocation, pendingResolvedLocationName ->
+        pendingResolvedSelectionState,
+    ) { mode, selection, alarmSettings, isResolvingLocation, pendingResolvedSelection ->
         CoreUiInputs(
             mode = mode,
             selection = selection,
             alarmSettings = alarmSettings,
             isResolvingLocation = isResolvingLocation,
-            pendingResolvedLocationName = pendingResolvedLocationName,
+            pendingResolvedLocationName = pendingResolvedSelection?.displayName,
         )
     }
 
@@ -211,12 +212,14 @@ class PrayerTimesViewModel @Inject constructor(
 
     fun onModeChanged(mode: PrayerTimesMode) {
         viewModelScope.launch {
-            repository.setMode(mode)
-            if (mode == PrayerTimesMode.MANUAL) {
-                pendingResolvedLocationNameState.value = null
-            }
             if (mode == PrayerTimesMode.AUTO) {
+                // AUTO is not durable until the proposed district is accepted.
                 resolveByDeviceLocation(openPickerOnFailure = false)
+            } else {
+                locationResolveGeneration++
+                resolvingLocationState.value = false
+                pendingResolvedSelectionState.value = null
+                repository.setMode(mode)
             }
         }
     }
@@ -329,11 +332,15 @@ class PrayerTimesViewModel @Inject constructor(
     }
 
     private fun resolveByDeviceLocation(openPickerOnFailure: Boolean) {
+        val generation = ++locationResolveGeneration
+        resolvingLocationState.value = true
+        pendingResolvedSelectionState.value = null
         viewModelScope.launch {
             val previousDistrictId = repository.observeCurrentSelection().first()?.districtId
-            resolvingLocationState.value = true
             try {
-                when (val result = repository.resolveAndSelectByDeviceLocation()) {
+                val result = repository.resolveDeviceLocationProposal()
+                if (generation != locationResolveGeneration) return@launch
+                when (result) {
                     ResolveResult.PermissionDenied -> {
                         _snackBarMessage.value = UiText.StringResource(
                             R.string.prayertimes_permission_needed,
@@ -356,28 +363,56 @@ class PrayerTimesViewModel @Inject constructor(
                     }
 
                     is ResolveResult.Success -> {
-                        _snackBarMessage.value = UiText.StringResource(
-                            R.string.prayertimes_location_found,
-                            listOf(result.selection.displayName),
-                        )
                         if (result.selection.districtId != previousDistrictId) {
-                            pendingResolvedLocationNameState.value = result.selection.displayName
+                            // Hold pending GPS result only in memory until explicit confirmation.
+                            pendingResolvedSelectionState.value = result.selection
+                        } else {
+                            // No district change: re-affirm the user's existing accepted choice.
+                            repository.commitResolvedAutoSelection(result.selection)
+                            _snackBarMessage.value = UiText.StringResource(
+                                R.string.prayertimes_location_found,
+                                listOf(result.selection.displayName),
+                            )
                         }
-                        repository.refreshIfNeeded(result.selection.districtId, force = false)
                     }
                 }
             } finally {
-                resolvingLocationState.value = false
+                if (generation == locationResolveGeneration) {
+                    resolvingLocationState.value = false
+                }
             }
         }
     }
 
+    @Suppress("TooGenericExceptionCaught") // Persistence failures are user-visible; cancellation propagates.
     fun confirmResolvedLocationSuggestion() {
-        pendingResolvedLocationNameState.value = null
+        val proposed = pendingResolvedSelectionState.value ?: return
+        locationResolveGeneration++
+        // Consume synchronously: multiple taps cannot create duplicate commits.
+        pendingResolvedSelectionState.value = null
+        viewModelScope.launch {
+            try {
+                repository.commitResolvedAutoSelection(proposed)
+                _snackBarMessage.value = UiText.StringResource(
+                    R.string.prayertimes_location_found,
+                    listOf(proposed.displayName),
+                )
+            } catch (error: kotlinx.coroutines.CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                Timber.w(error, "Failed to commit accepted location")
+                _snackBarMessage.value = UiText.StringResource(
+                    R.string.prayertimes_resolve_failed,
+                )
+            }
+        }
     }
 
     fun rejectResolvedLocationSuggestion() {
-        pendingResolvedLocationNameState.value = null
+        locationResolveGeneration++
+        resolvingLocationState.value = false
+        // Neither the stored district nor mode, cached times, or alarms changed.
+        pendingResolvedSelectionState.value = null
         viewModelScope.launch {
             _events.emit(PrayerTimesUiEvent.OpenLocationPicker)
         }
