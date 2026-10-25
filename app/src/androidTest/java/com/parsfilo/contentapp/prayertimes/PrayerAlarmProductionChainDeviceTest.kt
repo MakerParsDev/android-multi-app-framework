@@ -39,6 +39,8 @@ import java.util.concurrent.TimeUnit
  * Emulator CI-smoke acceptance remains unchanged. A separate explicit
  * -e amf497PhysicalDevice true flag allows only the dedicated Samsung SM-G611F
  * running API28, to verify two actual hardware-delivered alarm broadcasts.
+ * Physical tests also require Total Silence (DND filter NONE) to prevent
+ * the production alarm sound player from audibly ringing during acceptance.
  * The host must confirm the dedicated test phone/app state before install.
  * Never enable physical-device testing on a personal phone.
  */
@@ -138,7 +140,9 @@ class PrayerAlarmProductionChainDeviceTest {
                 // Hardware-only extended acceptance: the second *scheduled*
                 // alarm must actually fire, then production must arm a third.
                 // A direct broadcast would not prove AlarmManager delivery.
-                awaitNotification(notificationManager, SECOND_NOTIFICATION_ID, TimeUnit.MINUTES.toMillis(16))
+                // setAndAllowWhileIdle is inexact: a short second-alarm deadline
+                // could misclassify platform scheduling latency as app failure.
+                awaitNotification(notificationManager, SECOND_NOTIFICATION_ID, TimeUnit.MINUTES.toMillis(30))
                 awaitRearmedPendingIntent(
                     context,
                     41_034,
@@ -257,6 +261,13 @@ class PrayerAlarmProductionChainDeviceTest {
                 Build.MODEL == "SM-G611F" &&
                 Build.VERSION.SDK_INT == 28 &&
                 Build.FINGERPRINT.contains("/on7xreflte"),
+        )
+        val manager = InstrumentationRegistry.getInstrumentation().targetContext
+            .getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        assertEquals(
+            "Physical production-chain test requires Total Silence: do not play audible alarms",
+            NotificationManager.INTERRUPTION_FILTER_NONE,
+            manager.currentInterruptionFilter,
         )
     }
 
