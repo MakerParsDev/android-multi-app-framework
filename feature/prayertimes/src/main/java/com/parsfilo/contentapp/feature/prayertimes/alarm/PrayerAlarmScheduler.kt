@@ -4,6 +4,7 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import com.parsfilo.contentapp.core.common.network.AppDispatchers
 import com.parsfilo.contentapp.core.common.network.Dispatcher
@@ -280,7 +281,23 @@ class PrayerAlarmScheduler @Inject constructor(
         triggerAtMillis: Long,
         pendingIntent: PendingIntent,
     ) {
-        Timber.d("Setting prayer alarm with setAndAllowWhileIdle triggerAt=%d", triggerAtMillis)
+        val exactAllowed = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+            alarmManager.canScheduleExactAlarms()
+        if (exactAllowed) {
+            try {
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerAtMillis,
+                    pendingIntent,
+                )
+                Timber.d("Precise prayer alarm armed triggerAt=%d", triggerAtMillis)
+                return
+            } catch (denied: SecurityException) {
+                // Special access can be revoked between the capability check and scheduling.
+                Timber.w(denied, "Exact alarm denied; retaining inexact reminder delivery")
+            }
+        }
+        Timber.d("Prayer alarm uses best-effort delivery triggerAt=%d", triggerAtMillis)
         alarmManager.setAndAllowWhileIdle(
             AlarmManager.RTC_WAKEUP,
             triggerAtMillis,

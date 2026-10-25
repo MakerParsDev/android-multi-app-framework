@@ -52,6 +52,10 @@
     <string name="prayertimes_alarm_enabled">Hatırlatıcı tercihi açık</string>
     <string name="prayertimes_alarm_disabled">Alarm kapalı</string>
     <string name="prayertimes_alarm_scheduled">Sonraki hatırlatma planlandı.</string>
+    <string name="prayertimes_alarm_exact_enabled">Dakikaya yakın zamanlama etkin. Pil kısıtlamaları bildirimlerin teslimini yine etkileyebilir.</string>
+    <string name="prayertimes_alarm_exact_unavailable">Hatırlatıcı yaklaşık zamanda çalışır; pil tasarrufu ve Doze nedeniyle gecikebilir. Daha hassas zamanlama için isteğe bağlı özel alarm erişimini açabilirsiniz.</string>
+    <string name="prayertimes_alarm_exact_settings">Hassas alarm izni ayarlarını aç</string>
+
     <string name="prayertimes_alarm_schedule_unavailable">Hatırlatıcı tercihi kaydedildi fakat alarm planlanamadı. Vakit verilerini yenileyin.</string>
     <string name="prayertimes_alarm_choose_location">Hatırlatıcı tercihi kaydedildi fakat alarm planlanamadı. Önce ilçe seçin.</string>
     <string name="prayertimes_alarm_unverified">Hatırlatıcı tercihi açık; alarm planı henüz doğrulanmadı.</string>
