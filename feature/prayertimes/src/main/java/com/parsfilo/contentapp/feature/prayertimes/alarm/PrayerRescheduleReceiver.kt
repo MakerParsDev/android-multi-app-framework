@@ -1,5 +1,6 @@
 package com.parsfilo.contentapp.feature.prayertimes.alarm
 
+import android.app.AlarmManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -26,7 +27,12 @@ class PrayerRescheduleReceiver : BroadcastReceiver() {
     @Suppress("TooGenericExceptionCaught") // Receiver boundary must always finish pendingResult.
     override fun onReceive(context: Context, intent: Intent?) {
         val action = intent?.action
-        if (!SystemBroadcastRescheduleActions.supports(action)) return
+        if (
+            !SystemBroadcastRescheduleActions.supports(action) &&
+            action != AlarmManager.ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED
+        ) {
+            return
+        }
 
         val dependencies = dependenciesProvider(context.applicationContext)
         val pendingResult = goAsync()

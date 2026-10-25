@@ -1,5 +1,6 @@
 package com.parsfilo.contentapp.feature.prayertimes.alarm
 
+import android.app.AlarmManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -57,6 +58,21 @@ class PrayerRescheduleReceiverTest {
             coVerify(exactly = 1) { scheduler.scheduleNextForCurrentFlavor() }
             assertThat(shadowOf(shadow.originalPendingResult).future.isDone).isTrue()
         }
+    }
+
+    @Test
+    @Config(sdk = [36])
+    fun `exact alarm access grant triggers a reschedule and finishes`() = runTest {
+        val scheduler = mockk<PrayerAlarmScheduler>(relaxed = true)
+        val receiver = receiver(scheduler, this)
+        val shadow = dispatch(
+            receiver,
+            Intent(AlarmManager.ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED),
+        )
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { scheduler.scheduleNextForCurrentFlavor() }
+        assertThat(shadowOf(shadow.originalPendingResult).future.isDone).isTrue()
     }
 
     @Test
