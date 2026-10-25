@@ -1,6 +1,12 @@
 package com.parsfilo.contentapp.feature.prayertimes.ui.components
 
+import android.app.AlarmManager
+import android.content.Intent
 import android.media.RingtoneManager
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -19,6 +25,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,6 +36,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.parsfilo.contentapp.core.designsystem.component.AppButton
 import com.parsfilo.contentapp.feature.prayertimes.R
 import com.parsfilo.contentapp.feature.prayertimes.model.PrayerAlarmScheduleStatus
@@ -55,6 +65,20 @@ internal fun AlarmSettingsBottomSheet(
     onSoundSelected: (String?) -> Unit,
     onTestSound: (String?) -> Unit,
 ) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val alarmManager = remember(context) { context.getSystemService(AlarmManager::class.java) }
+
+    fun hasExactAccess(): Boolean = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+        alarmManager?.canScheduleExactAlarms() == true
+    var exactAccess by remember { mutableStateOf(hasExactAccess()) }
+    DisposableEffect(lifecycleOwner, alarmManager) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) exactAccess = hasExactAccess()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     val defaultSoundTitle = stringResource(R.string.prayertimes_alarm_sound_default)
     val soundOptions = rememberSystemAlarmSounds(defaultSoundTitle)
     val allOptions = prayerItemsForVariant(variant)
@@ -133,6 +157,47 @@ internal fun AlarmSettingsBottomSheet(
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
+                Text(
+                    text = stringResource(
+                        if (exactAccess) {
+                            R.string.prayertimes_alarm_exact_enabled
+                        } else {
+                            R.string.prayertimes_alarm_exact_unavailable
+                        },
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (!exactAccess && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    AppButton(
+                        text = stringResource(R.string.prayertimes_alarm_exact_settings),
+                        onClick = {
+                            // Opens only on explicit user intent. Permission remains optional.
+                            val packageUri = Uri.parse("package:${context.packageName}")
+                            runCatching {
+                                context.startActivity(
+                                    Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                                        data = packageUri
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    },
+                                )
+                            }.recoverCatching {
+                                context.startActivity(
+                                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, packageUri)
+                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                                )
+                            }.onFailure {
+                                Toast.makeText(
+                                    context,
+                                    R.string.prayertimes_alarm_exact_settings_unavailable,
+                                    Toast.LENGTH_LONG,
+                                ).show()
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+
                 Text(
                     text = stringResource(
                         R.string.prayertimes_alarm_offset_value, settings.offsetMinutes

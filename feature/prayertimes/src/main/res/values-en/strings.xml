@@ -49,6 +49,10 @@
     <string name="prayertimes_alarm_desc">Schedule local notifications for prayer times</string>
     <string name="prayertimes_alarm_enabled">Reminders requested</string>
     <string name="prayertimes_alarm_disabled">Alarm off</string>
+    <string name="prayertimes_alarm_exact_enabled">More precise scheduling is enabled. Battery restrictions may still delay notifications.</string>
+    <string name="prayertimes_alarm_exact_unavailable">Reminders use approximate timing and may be delayed by battery saver or Doze. You can optionally allow Alarms &amp; reminders access for more precise scheduling.</string>
+    <string name="prayertimes_alarm_exact_settings">Open precise alarm permission settings</string>
+    <string name="prayertimes_alarm_exact_settings_unavailable">Alarm permission settings could not be opened. Check Alarms &amp; reminders access in your device settings.</string>
     <string name="prayertimes_alarm_scheduled">Next reminder scheduled.</string>
     <string name="prayertimes_alarm_schedule_unavailable">Reminder preference saved but no alarm scheduled. Refresh prayer times.</string>
     <string name="prayertimes_alarm_choose_location">Reminder preference saved but no alarm scheduled. Select a district first.</string>

@@ -4,6 +4,7 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.ContextWrapper
+import android.os.Build
 import com.google.common.truth.Truth.assertThat
 import com.parsfilo.contentapp.core.database.dao.prayer.PrayerTimesDao
 import com.parsfilo.contentapp.core.database.model.prayer.PrayerTimeEntity
@@ -122,7 +123,12 @@ class PrayerAlarmRearmSafetyTest {
         val original = scheduled().single()
 
         val failingManager = mockk<AlarmManager>(relaxed = true)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            every { failingManager.canScheduleExactAlarms() } returns true
+        }
         every { failingManager.setAndAllowWhileIdle(any(), any(), any()) } throws
+            SecurityException("synthetic fallback refusal")
+        every { failingManager.setExactAndAllowWhileIdle(any(), any(), any()) } throws
             SecurityException("synthetic alarm service failure")
         every { failingManager.cancel(any<PendingIntent>()) } answers {
             originalAlarmManager.cancel(firstArg<PendingIntent>())
@@ -136,7 +142,7 @@ class PrayerAlarmRearmSafetyTest {
             scheduler(failedContext).scheduleNext(PrayerAppVariant.NAMAZ_VAKITLERI)
             throw AssertionError("Synthetic platform failure was not propagated")
         } catch (expected: SecurityException) {
-            assertThat(expected.message).contains("synthetic alarm")
+            assertThat(expected.message).contains("synthetic fallback refusal")
         }
         assertThat(scheduled()).hasSize(1)
         assertThat(scheduled().single().operation).isEqualTo(original.operation)
@@ -153,7 +159,12 @@ class PrayerAlarmRearmSafetyTest {
         assertThat(originalPayload).isEqualTo(original.triggerAtTime)
 
         val failingManager = mockk<AlarmManager>(relaxed = true)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            every { failingManager.canScheduleExactAlarms() } returns true
+        }
         every { failingManager.setAndAllowWhileIdle(any(), any(), any()) } throws
+            SecurityException("synthetic fallback refusal")
+        every { failingManager.setExactAndAllowWhileIdle(any(), any(), any()) } throws
             SecurityException("synthetic replacement refused")
         every { failingManager.cancel(any<PendingIntent>()) } answers {
             originalAlarmManager.cancel(firstArg<PendingIntent>())
@@ -167,7 +178,7 @@ class PrayerAlarmRearmSafetyTest {
             scheduler(failedContext).scheduleNext(PrayerAppVariant.NAMAZ_VAKITLERI)
             throw AssertionError("Expected synthetic failure")
         } catch (expected: SecurityException) {
-            assertThat(expected.message).contains("replacement refused")
+            assertThat(expected.message).contains("synthetic fallback refusal")
         }
         assertThat(scheduled()).hasSize(1)
         assertThat(scheduled().single().triggerAtTime).isEqualTo(original.triggerAtTime)
