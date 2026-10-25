@@ -101,7 +101,10 @@ class PrayerAlarmProductionChainDeviceTest {
                 // API33 setAndAllowWhileIdle is inexact; leave a long gap to
                 // avoid treating Android's minimum idle-alarm interval as a bug.
                 val second = (first.clone() as Calendar).apply { add(Calendar.MINUTE, 10) }
-                val third = (first.clone() as Calendar).apply { add(Calendar.MINUTE, 20) }
+                // Keep the third prayer comfortably after the 30-minute
+                // inexact second-alarm delivery window; otherwise a late OGLE
+                // can be delivered correctly but IKINDI is already in the past.
+                val third = (first.clone() as Calendar).apply { add(Calendar.MINUTE, 60) }
                 val day = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(first.time)
                 // Fails clearly if crossing midnight; do not alter system time/time zone.
                 assertEquals(day, SimpleDateFormat("yyyy-MM-dd", Locale.US).format(third.time))
