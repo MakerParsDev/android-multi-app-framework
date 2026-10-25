@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.PackageManager
+import android.media.AudioManager
 import android.os.Build
 import android.os.SystemClock
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -36,11 +37,24 @@ import java.util.concurrent.TimeUnit
  * A normal androidTest run has no side effects. Opt in with:
  *   -e amf497ProductionE2e true -e class <this test class>
  *
- * The host must preflight the EXACT AVD and ensure the production package was
- * absent before installing the disposable debug APK. Never run on a real phone.
+ * Emulator CI-smoke acceptance remains unchanged. A separate explicit
+ * -e amf497PhysicalDevice true flag allows only the dedicated Samsung SM-G611F
+ * running API28, to verify two actual hardware-delivered alarm broadcasts.
+ * Physical tests also require verifiably muted alarm and media streams
+ * and active Do Not Disturb; Samsung Android 9 may use PRIORITY mode
+ * with no alarm/media exceptions instead of reporting filter NONE.
+ * The host must confirm the dedicated test phone/app state before install.
+ * Never enable physical-device testing on a personal phone.
  */
 @RunWith(AndroidJUnit4::class)
 class PrayerAlarmProductionChainDeviceTest {
+    /** Non-audible guard preflight; does not broadcast or arm an alarm. */
+    @Test
+    fun dedicatedPhoneHasSafeMutedAlarmAndMediaStreams() {
+        if (InstrumentationRegistry.getArguments().getString("amf497PhysicalGuard") != "true") return
+        assertApprovedTestDevice()
+    }
+
     @Test
     fun installedPrayerAppDeliversTimedAlarmAndRearmsUsingHiltRoom() {
         val args = InstrumentationRegistry.getArguments()
@@ -48,14 +62,18 @@ class PrayerAlarmProductionChainDeviceTest {
 
         val context = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext
         assertEquals("com.parsfilo.namazvakitleri", context.packageName)
-        assertTrue("Must be an Android emulator", isEmulator())
+        assertApprovedTestDevice()
         assertTrue("No remote app startup or ad/analytics initialization", BuildConfig.CI_SMOKE)
-        assertTrue("Modern-API acceptance only", Build.VERSION.SDK_INT >= 33)
-        assertEquals(
-            "POST_NOTIFICATIONS must be granted on isolated device",
-            PackageManager.PERMISSION_GRANTED,
-            context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS),
-        )
+        if (isEmulator()) {
+            assertTrue("Modern-API emulator acceptance only", Build.VERSION.SDK_INT >= 33)
+        }
+        if (Build.VERSION.SDK_INT >= 33) {
+            assertEquals(
+                "POST_NOTIFICATIONS must be granted on isolated device",
+                PackageManager.PERMISSION_GRANTED,
+                context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS),
+            )
+        }
 
         val entry = EntryPointAccessors.fromApplication(
             context,
@@ -65,6 +83,7 @@ class PrayerAlarmProductionChainDeviceTest {
         val preferences = entry.prayerPreferencesDataSource()
         val notificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        assertTrue("Notifications must be enabled for the dedicated QA package", notificationManager.areNotificationsEnabled())
 
         // Same singleton Hilt graph and Room DAO used by the production scheduler.
         val dao = entry.prayerTimesDao()
@@ -126,6 +145,20 @@ class PrayerAlarmProductionChainDeviceTest {
                 PrayerAlarmScheduler.PRAYER_OGLE,
                 10_000L,
             )
+            if (!isEmulator()) {
+                // Hardware-only extended acceptance: the second *scheduled*
+                // alarm must actually fire, then production must arm a third.
+                // A direct broadcast would not prove AlarmManager delivery.
+                // setAndAllowWhileIdle is inexact: a short second-alarm deadline
+                // could misclassify platform scheduling latency as app failure.
+                awaitNotification(notificationManager, SECOND_NOTIFICATION_ID, TimeUnit.MINUTES.toMillis(30))
+                awaitRearmedPendingIntent(
+                    context,
+                    41_034,
+                    PrayerAlarmScheduler.PRAYER_IKINDI,
+                    10_000L,
+                )
+            }
         } finally {
             runBlocking {
                 preferences.setAlarmEnabled(false)
@@ -150,9 +183,14 @@ class PrayerAlarmProductionChainDeviceTest {
         if (InstrumentationRegistry.getArguments().getString("amf497ProductionDirect") != "true") return
         val context = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext
         assertEquals("com.parsfilo.namazvakitleri", context.packageName)
-        assertTrue(isEmulator())
+        assertApprovedTestDevice()
         assertTrue(BuildConfig.CI_SMOKE)
-        assertEquals(PackageManager.PERMISSION_GRANTED, context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS))
+        if (Build.VERSION.SDK_INT >= 33) {
+            assertEquals(
+                PackageManager.PERMISSION_GRANTED,
+                context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS),
+            )
+        }
         val entry = EntryPointAccessors.fromApplication(
             context,
             PrayerAlarmReceiverEntryPoint::class.java,
@@ -160,6 +198,7 @@ class PrayerAlarmProductionChainDeviceTest {
         val prefs = entry.prayerPreferencesDataSource()
         val dao = entry.prayerTimesDao()
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        assertTrue("Notifications must be enabled", nm.areNotificationsEnabled())
         // Do not enter the destructive cleanup block with a preexisting selection.
         requireFreshPrayerState(prefs)
         try {
@@ -216,6 +255,35 @@ class PrayerAlarmProductionChainDeviceTest {
             nm.cancel(SECOND_NOTIFICATION_ID)
             nm.cancel(41_099)
         }
+    }
+
+    private fun assertApprovedTestDevice() {
+        if (isEmulator()) return
+        val args = InstrumentationRegistry.getArguments()
+        assertTrue(
+            "Physical acceptance requires explicit dedicated-device opt-in",
+            args.getString("amf497PhysicalDevice") == "true",
+        )
+        assertTrue(
+            "Only the approved Android 9 Samsung SM-G611F test phone is allowed",
+            Build.MANUFACTURER.equals("samsung", ignoreCase = true) &&
+                Build.MODEL == "SM-G611F" &&
+                Build.VERSION.SDK_INT == 28 &&
+                Build.FINGERPRINT.contains("/on7xreflte"),
+        )
+        val manager = InstrumentationRegistry.getInstrumentation().targetContext
+            .getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val audio = InstrumentationRegistry.getInstrumentation().targetContext
+            .getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        assertTrue(
+            "Physical QA must have active Do Not Disturb and muted alarm/media audio",
+            manager.currentInterruptionFilter == NotificationManager.INTERRUPTION_FILTER_NONE ||
+                (
+                    manager.currentInterruptionFilter == NotificationManager.INTERRUPTION_FILTER_PRIORITY &&
+                        audio.isStreamMute(AudioManager.STREAM_ALARM) &&
+                        audio.isStreamMute(AudioManager.STREAM_MUSIC)
+                ),
+        )
     }
 
     private fun requireFreshPrayerState(preferences: PrayerPreferencesDataSource) {
