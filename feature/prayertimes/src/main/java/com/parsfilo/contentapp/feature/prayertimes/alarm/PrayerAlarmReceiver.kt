@@ -3,6 +3,7 @@ package com.parsfilo.contentapp.feature.prayertimes.alarm
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import com.parsfilo.contentapp.core.database.dao.prayer.PrayerTimesDao
 import com.parsfilo.contentapp.core.datastore.PrayerPreferencesDataSource
 import com.parsfilo.contentapp.feature.prayertimes.model.PrayerAppVariant
 import dagger.hilt.EntryPoint
@@ -163,4 +164,7 @@ interface PrayerAlarmReceiverEntryPoint {
     fun prayerAlarmNotifier(): PrayerAlarmNotifier
 
     fun prayerPreferencesDataSource(): PrayerPreferencesDataSource
+
+    // Expose the same production Room DAO used by the scheduler for isolated APK E2E acceptance.
+    fun prayerTimesDao(): PrayerTimesDao
 }
