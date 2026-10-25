@@ -87,7 +87,10 @@ class QuranReaderContentIntegrityTest(unittest.TestCase):
                     [v["ayetID"] for v in verses],
                 )
                 self.assertTrue(all(
-                    all(str(v.get(field, "")).strip() for field in ("ayetAR", "ayetLAT", "ayetTR", "ayetEN"))
+                    all(
+                        isinstance(v.get(field), str) and v[field].strip()
+                        for field in ("ayetAR", "ayetLAT", "ayetTR", "ayetEN")
+                    )
                     for v in verses
                 ))
                 actual = hashlib.sha256(
