@@ -49,6 +49,10 @@
     <string name="prayertimes_alarm_desc">Lokale Benachrichtigungen für Gebetszeiten planen</string>
     <string name="prayertimes_alarm_enabled">Erinnerungen gewünscht</string>
     <string name="prayertimes_alarm_disabled">Alarm aus</string>
+    <string name="prayertimes_alarm_exact_enabled">Genauere Zeitplanung ist aktiviert. Akkubeschränkungen können Benachrichtigungen dennoch verzögern.</string>
+    <string name="prayertimes_alarm_exact_unavailable">Erinnerungen können durch Energiesparmodus oder Doze verspätet eintreffen. Für genauere Zeitplanung kannst du optional den Zugriff auf Alarme und Erinnerungen erlauben.</string>
+    <string name="prayertimes_alarm_exact_settings">Einstellungen für genaue Alarme öffnen</string>
+    <string name="prayertimes_alarm_exact_settings_unavailable">Die Einstellungen für Alarmberechtigungen konnten nicht geöffnet werden. Prüfe den Zugriff auf Alarme und Erinnerungen in den Geräteeinstellungen.</string>
     <string name="prayertimes_alarm_scheduled">Nächste Erinnerung geplant.</string>
     <string name="prayertimes_alarm_schedule_unavailable">Erinnerung gespeichert, aber kein Alarm geplant. Bitte Gebetszeiten aktualisieren.</string>
     <string name="prayertimes_alarm_choose_location">Erinnerung gespeichert, aber kein Alarm geplant. Bitte zuerst einen Bezirk wählen.</string>
