@@ -65,6 +65,10 @@
     <string name="prayertimes_alarm_sound_title">Alarm sesi</string>
     <string name="prayertimes_alarm_sound_default">Sistem varsayılanı</string>
     <string name="prayertimes_alarm_sound_test">Sesi test et</string>
+    <string name="prayertimes_alarm_sound_android_channel">Android bildirim kanalı alarm sesini yönetir. Ses ve sessiz modunu sistem ayarlarından değiştirebilirsiniz.</string>
+    <string name="prayertimes_alarm_sound_prior_saved">Önceden seçtiğiniz uygulama sesi korundu; Android 8 ve sonrası hatırlatmalarda sistem bildirim kanalı sesi geçerlidir.</string>
+    <string name="prayertimes_alarm_sound_open_system">Bildirim kanalı ses ayarlarını aç</string>
+    <string name="prayertimes_alarm_sound_settings_unavailable">Bildirim sesi ayarları açılamadı. Uygulama bildirim ayarlarını cihazınızdan açın.</string>
 
     <string name="prayertimes_step_country">⅓ Ülke seçimi</string>
     <string name="prayertimes_step_city">⅔ Şehir seçimi</string>
