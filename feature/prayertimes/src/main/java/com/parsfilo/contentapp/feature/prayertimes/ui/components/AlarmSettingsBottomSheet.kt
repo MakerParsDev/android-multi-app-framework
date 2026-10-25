@@ -1,6 +1,7 @@
 package com.parsfilo.contentapp.feature.prayertimes.ui.components
 
 import android.app.AlarmManager
+import android.app.NotificationManager
 import android.content.Intent
 import android.media.RingtoneManager
 import android.net.Uri
@@ -41,6 +42,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.parsfilo.contentapp.core.designsystem.component.AppButton
 import com.parsfilo.contentapp.feature.prayertimes.R
+import com.parsfilo.contentapp.feature.prayertimes.alarm.PrayerAlarmNotifier
 import com.parsfilo.contentapp.feature.prayertimes.model.PrayerAlarmScheduleStatus
 import com.parsfilo.contentapp.feature.prayertimes.model.PrayerAlarmSettings
 import com.parsfilo.contentapp.feature.prayertimes.model.PrayerAppVariant
@@ -80,7 +82,11 @@ internal fun AlarmSettingsBottomSheet(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     val defaultSoundTitle = stringResource(R.string.prayertimes_alarm_sound_default)
-    val soundOptions = rememberSystemAlarmSounds(defaultSoundTitle)
+    val soundOptions = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+        rememberSystemAlarmSounds(defaultSoundTitle)
+    } else {
+        emptyList()
+    }
     val allOptions = prayerItemsForVariant(variant)
     val selectedKeys = settings.selectedPrayerKeys.ifEmpty {
         allOptions.map { it.key }.toSet()
@@ -245,46 +251,89 @@ internal fun AlarmSettingsBottomSheet(
                     }
                 }
 
-                ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = { expanded = !expanded },
-                ) {
-                    OutlinedTextField(
-                        value = selectedSound?.title.orEmpty(),
-                        onValueChange = {},
-                        label = { Text(text = stringResource(R.string.prayertimes_alarm_sound_title)) },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                        readOnly = true,
-                        modifier = Modifier
-                            .menuAnchor(
-                                type = ExposedDropdownMenuAnchorType.PrimaryNotEditable,
-                                enabled = true
-                            )
-                            .fillMaxWidth(),
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    Text(
+                        text = stringResource(R.string.prayertimes_alarm_sound_android_channel),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-
-                    ExposedDropdownMenu(
+                    if (!settings.soundUri.isNullOrBlank()) {
+                        Text(
+                            text = stringResource(R.string.prayertimes_alarm_sound_prior_saved),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    AppButton(
+                        text = stringResource(R.string.prayertimes_alarm_sound_open_system),
+                        onClick = {
+                            val manager = context.getSystemService(NotificationManager::class.java)
+                            manager?.let { PrayerAlarmNotifier.ensureChannel(context, it) }
+                            val intent = Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).apply {
+                                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                putExtra(Settings.EXTRA_CHANNEL_ID, PrayerAlarmNotifier.CHANNEL_ID)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            runCatching { context.startActivity(intent) }
+                                .recoverCatching {
+                                    context.startActivity(
+                                        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        },
+                                    )
+                                }.onFailure {
+                                    Toast.makeText(
+                                        context,
+                                        R.string.prayertimes_alarm_sound_settings_unavailable,
+                                        Toast.LENGTH_LONG,
+                                    ).show()
+                                }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                } else {
+                    ExposedDropdownMenuBox(
                         expanded = expanded,
-                        onDismissRequest = { expanded = false },
+                        onExpandedChange = { expanded = !expanded },
                     ) {
-                        soundOptions.forEach { sound ->
-                            DropdownMenuItem(
-                                text = { Text(sound.title) },
-                                onClick = {
-                                    selectedSoundUri = sound.uri
-                                    onSoundSelected(sound.uri)
-                                    expanded = false
-                                },
-                            )
+                        OutlinedTextField(
+                            value = selectedSound?.title.orEmpty(),
+                            onValueChange = {},
+                            label = { Text(text = stringResource(R.string.prayertimes_alarm_sound_title)) },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                            readOnly = true,
+                            modifier = Modifier
+                                .menuAnchor(
+                                    type = ExposedDropdownMenuAnchorType.PrimaryNotEditable,
+                                    enabled = true
+                                )
+                                .fillMaxWidth(),
+                        )
+
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false },
+                        ) {
+                            soundOptions.forEach { sound ->
+                                DropdownMenuItem(
+                                    text = { Text(sound.title) },
+                                    onClick = {
+                                        selectedSoundUri = sound.uri
+                                        onSoundSelected(sound.uri)
+                                        expanded = false
+                                    },
+                                )
+                            }
                         }
                     }
-                }
 
-                AppButton(
-                    text = stringResource(R.string.prayertimes_alarm_sound_test),
-                    onClick = { onTestSound(selectedSoundUri) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                    AppButton(
+                        text = stringResource(R.string.prayertimes_alarm_sound_test),
+                        onClick = { onTestSound(selectedSoundUri) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
         }
     }

@@ -62,6 +62,10 @@
     <string name="prayertimes_alarm_sound_title">Alarmton</string>
     <string name="prayertimes_alarm_sound_default">Systemstandard</string>
     <string name="prayertimes_alarm_sound_test">Ton testen</string>
+    <string name="prayertimes_alarm_sound_android_channel">Android steuert den Gebetsalarmton über den Benachrichtigungskanal. Ton und Stummschaltung können in den Systemeinstellungen geändert werden.</string>
+    <string name="prayertimes_alarm_sound_prior_saved">Dein bisheriger App-Alarmton bleibt gespeichert. Ab Android 8 steuert jedoch der Benachrichtigungskanal den Ton.</string>
+    <string name="prayertimes_alarm_sound_open_system">Benachrichtigungston-Einstellungen öffnen</string>
+    <string name="prayertimes_alarm_sound_settings_unavailable">Toneinstellungen konnten nicht geöffnet werden. Öffne die Benachrichtigungseinstellungen der App am Gerät.</string>
     <string name="prayertimes_step_country">⅓ Land</string>
     <string name="prayertimes_step_city">⅔ Stadt</string>
     <string name="prayertimes_step_district">3/3 Bezirk</string>
