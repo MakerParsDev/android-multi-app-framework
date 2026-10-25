@@ -62,6 +62,10 @@
     <string name="prayertimes_alarm_sound_title">Alarm sound</string>
     <string name="prayertimes_alarm_sound_default">System default</string>
     <string name="prayertimes_alarm_sound_test">Test sound</string>
+    <string name="prayertimes_alarm_sound_android_channel">Android controls prayer alert sounds through its notification channel. Change the tone or mute it in system settings.</string>
+    <string name="prayertimes_alarm_sound_prior_saved">Your previously selected app tone is preserved, but on Android 8 and later the notification channel controls reminder sounds.</string>
+    <string name="prayertimes_alarm_sound_open_system">Open notification sound settings</string>
+    <string name="prayertimes_alarm_sound_settings_unavailable">Could not open notification sound settings. Open the app notification settings on your device.</string>
     <string name="prayertimes_step_country">⅓ Country</string>
     <string name="prayertimes_step_city">⅔ City</string>
     <string name="prayertimes_step_district">3/3 District</string>
