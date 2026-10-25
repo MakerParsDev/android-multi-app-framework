@@ -10,6 +10,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.parsfilo.contentapp.BuildConfig
 import com.parsfilo.contentapp.core.database.model.prayer.PrayerTimeEntity
+import com.parsfilo.contentapp.core.datastore.PrayerPreferencesDataSource
 import com.parsfilo.contentapp.feature.prayertimes.alarm.PrayerAlarmReceiverEntryPoint
 import com.parsfilo.contentapp.feature.prayertimes.alarm.PrayerAlarmScheduler
 import com.parsfilo.contentapp.feature.prayertimes.model.PrayerAppVariant
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -67,9 +69,11 @@ class PrayerAlarmProductionChainDeviceTest {
         // Same singleton Hilt graph and Room DAO used by the production scheduler.
         val dao = entry.prayerTimesDao()
 
+        // Reject reused app state *before* cleanup can clear user selections.
+        requireFreshPrayerState(preferences)
+
         try {
             runBlocking {
-                assertFalse("Disposable app must have no selected district", preferences.preferences.first().alarmEnabled)
                 val first = Calendar.getInstance().apply {
                     add(Calendar.MINUTE, 2)
                     set(Calendar.SECOND, 0)
@@ -116,18 +120,11 @@ class PrayerAlarmProductionChainDeviceTest {
             // platform delivery window. A three-minute watchdog was too
             // aggressive when the first prayer is nearly two minutes ahead.
             awaitNotification(notificationManager, FIRST_NOTIFICATION_ID, TimeUnit.MINUTES.toMillis(5))
-            assertTrue(
-                "Receiver must arm subsequent OGLE PendingIntent after actual first delivery",
-                android.app.PendingIntent.getBroadcast(
-                    context,
-                    41_033,
-                    android.content.Intent(context, com.parsfilo.contentapp.feature.prayertimes.alarm.PrayerAlarmReceiver::class.java)
-                        .apply {
-                            action = PrayerAlarmScheduler.ACTION_FIRE_ALARM
-                            putExtra(PrayerAlarmScheduler.EXTRA_PRAYER_KEY, PrayerAlarmScheduler.PRAYER_OGLE)
-                        },
-                    android.app.PendingIntent.FLAG_NO_CREATE or android.app.PendingIntent.FLAG_IMMUTABLE,
-                ) != null,
+            awaitRearmedPendingIntent(
+                context,
+                41_033,
+                PrayerAlarmScheduler.PRAYER_OGLE,
+                10_000L,
             )
         } finally {
             runBlocking {
@@ -163,6 +160,8 @@ class PrayerAlarmProductionChainDeviceTest {
         val prefs = entry.prayerPreferencesDataSource()
         val dao = entry.prayerTimesDao()
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        // Do not enter the destructive cleanup block with a preexisting selection.
+        requireFreshPrayerState(prefs)
         try {
             runBlocking {
                 val next = Calendar.getInstance().apply { add(Calendar.MINUTE, 10) }
@@ -200,18 +199,11 @@ class PrayerAlarmProductionChainDeviceTest {
                     },
             )
             awaitNotification(nm, SECOND_NOTIFICATION_ID, 25_000L)
-            assertTrue(
-                "Real receiver must arm a subsequent PendingIntent",
-                android.app.PendingIntent.getBroadcast(
-                    context,
-                    41_031,
-                    android.content.Intent(context, com.parsfilo.contentapp.feature.prayertimes.alarm.PrayerAlarmReceiver::class.java)
-                        .apply {
-                            action = PrayerAlarmScheduler.ACTION_FIRE_ALARM
-                            putExtra(PrayerAlarmScheduler.EXTRA_PRAYER_KEY, PrayerAlarmScheduler.PRAYER_IMSAK)
-                        },
-                    android.app.PendingIntent.FLAG_NO_CREATE or android.app.PendingIntent.FLAG_IMMUTABLE,
-                ) != null,
+            awaitRearmedPendingIntent(
+                context,
+                41_031,
+                PrayerAlarmScheduler.PRAYER_IMSAK,
+                10_000L,
             )
         } finally {
             runBlocking {
@@ -224,6 +216,43 @@ class PrayerAlarmProductionChainDeviceTest {
             nm.cancel(SECOND_NOTIFICATION_ID)
             nm.cancel(41_099)
         }
+    }
+
+    private fun requireFreshPrayerState(preferences: PrayerPreferencesDataSource) {
+        val initial = runBlocking { preferences.preferences.first() }
+        assertFalse("Disposable app cannot have an enabled alarm", initial.alarmEnabled)
+        assertNull("Disposable app cannot have a selected country", initial.selectedCountryId)
+        assertNull("Disposable app cannot have a selected city", initial.selectedCityId)
+        assertNull("Disposable app cannot have a selected district", initial.selectedDistrictId)
+        assertTrue("Disposable app cannot have selected prayer alerts", initial.selectedAlarmPrayerKeys.isEmpty())
+        assertEquals("Disposable app cannot have a saved alarm offset", 0, initial.alarmOffsetMinutes)
+    }
+
+    private fun awaitRearmedPendingIntent(
+        context: Context,
+        requestCode: Int,
+        prayerKey: String,
+        timeoutMs: Long,
+    ) {
+        val intent = android.content.Intent(
+            context,
+            com.parsfilo.contentapp.feature.prayertimes.alarm.PrayerAlarmReceiver::class.java,
+        ).apply {
+            action = PrayerAlarmScheduler.ACTION_FIRE_ALARM
+            putExtra(PrayerAlarmScheduler.EXTRA_PRAYER_KEY, prayerKey)
+        }
+        val deadline = SystemClock.elapsedRealtime() + timeoutMs
+        do {
+            val rearmed = android.app.PendingIntent.getBroadcast(
+                context,
+                requestCode,
+                intent,
+                android.app.PendingIntent.FLAG_NO_CREATE or android.app.PendingIntent.FLAG_IMMUTABLE,
+            )
+            if (rearmed != null) return
+            SystemClock.sleep(250L)
+        } while (SystemClock.elapsedRealtime() < deadline)
+        throw AssertionError("Production receiver did not rearm $prayerKey before timeout")
     }
 
     private fun awaitNotification(manager: NotificationManager, notificationId: Int, timeoutMs: Long) {
