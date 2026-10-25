@@ -10,6 +10,7 @@ import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.parsfilo.contentapp.core.datastore.PreferencesDataSource
 import com.parsfilo.contentapp.feature.prayertimes.R
@@ -39,7 +40,7 @@ class PrayerAlarmNotifier @Inject constructor(
             context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
                 ?: return
 
-        ensureChannel(notificationManager)
+        ensureChannel(context, notificationManager)
 
         val openAppIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or
@@ -67,6 +68,7 @@ class PrayerAlarmNotifier @Inject constructor(
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)
             .setGroup(NOTIFICATION_GROUP)
+            .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
             .addAction(
                 R.drawable.ic_stat_prayer,
                 context.getString(R.string.prayer_alarm_action_open),
@@ -77,20 +79,26 @@ class PrayerAlarmNotifier @Inject constructor(
 
         notificationManager.notify(notificationId(payload.prayerKey), notification)
         notificationManager.notify(SUMMARY_NOTIFICATION_ID, buildSummary(notificationManager, contentIntent))
-        prayerAlarmSoundPlayer.play(soundUri)
+        // Android 8+: the existing user-controlled channel owns the alert sound.
+        // Never bypass channel silence or play a second app ringtone.
+        // On older Android versions there is no channel, so the app owns playback.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            prayerAlarmSoundPlayer.play(soundUri)
+        }
     }
 
     private fun buildSummary(
         notificationManager: NotificationManager,
         contentIntent: PendingIntent?,
     ): android.app.Notification {
-        ensureChannel(notificationManager)
+        ensureChannel(context, notificationManager)
         return NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_prayer)
             .setContentTitle(context.getString(R.string.prayer_alarm_summary_title))
             .setContentText(context.getString(R.string.prayer_alarm_summary_desc))
             .setGroup(NOTIFICATION_GROUP)
             .setGroupSummary(true)
+            .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .apply { contentIntent?.let { setContentIntent(it) } }
@@ -99,24 +107,12 @@ class PrayerAlarmNotifier @Inject constructor(
 
     private suspend fun shouldShowNotification(): Boolean {
         if (!preferencesDataSource.userData.first().notificationsEnabled) return false
+        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return false
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
         return ContextCompat.checkSelfPermission(
             context,
             Manifest.permission.POST_NOTIFICATIONS,
         ) == PackageManager.PERMISSION_GRANTED
-    }
-
-    private fun ensureChannel(notificationManager: NotificationManager) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            context.getString(R.string.prayer_alarm_channel_name),
-            NotificationManager.IMPORTANCE_HIGH,
-        ).apply {
-            description = context.getString(R.string.prayer_alarm_channel_description)
-        }
-        notificationManager.createNotificationChannel(channel)
     }
 
     private fun notificationContent(
@@ -170,8 +166,23 @@ class PrayerAlarmNotifier @Inject constructor(
         else -> R.drawable.ic_stat_prayer
     }
 
-    private companion object {
-        private const val CHANNEL_ID = "prayer_times_alerts"
+    internal companion object {
+        const val CHANNEL_ID = "prayer_times_alerts"
+
+        fun ensureChannel(context: Context, manager: NotificationManager) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+            // Android keeps the original channel sound and any user changes.
+            // Recreating this ID does not override mute, importance, or a custom tone.
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                context.getString(R.string.prayer_alarm_channel_name),
+                NotificationManager.IMPORTANCE_HIGH,
+            ).apply {
+                description = context.getString(R.string.prayer_alarm_channel_description)
+            }
+            manager.createNotificationChannel(channel)
+        }
+
         private const val REQUEST_CODE_OPEN_APP = 41_032
         private const val NOTIFICATION_GROUP = "prayer_alarms"
         private const val SUMMARY_NOTIFICATION_ID = 41_099
