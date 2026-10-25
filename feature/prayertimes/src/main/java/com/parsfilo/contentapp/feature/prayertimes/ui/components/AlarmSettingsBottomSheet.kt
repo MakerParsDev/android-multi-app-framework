@@ -6,6 +6,7 @@ import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -172,13 +173,25 @@ internal fun AlarmSettingsBottomSheet(
                         text = stringResource(R.string.prayertimes_alarm_exact_settings),
                         onClick = {
                             // Opens only on explicit user intent. Permission remains optional.
+                            val packageUri = Uri.parse("package:${context.packageName}")
                             runCatching {
                                 context.startActivity(
                                     Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
-                                        data = Uri.parse("package:${context.packageName}")
+                                        data = packageUri
                                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                     },
                                 )
+                            }.recoverCatching {
+                                context.startActivity(
+                                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, packageUri)
+                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                                )
+                            }.onFailure {
+                                Toast.makeText(
+                                    context,
+                                    R.string.prayertimes_alarm_exact_settings_unavailable,
+                                    Toast.LENGTH_LONG,
+                                ).show()
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
