@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.PackageManager
+import android.media.AudioManager
 import android.os.Build
 import android.os.SystemClock
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -39,13 +40,21 @@ import java.util.concurrent.TimeUnit
  * Emulator CI-smoke acceptance remains unchanged. A separate explicit
  * -e amf497PhysicalDevice true flag allows only the dedicated Samsung SM-G611F
  * running API28, to verify two actual hardware-delivered alarm broadcasts.
- * Physical tests also require Total Silence (DND filter NONE) to prevent
- * the production alarm sound player from audibly ringing during acceptance.
+ * Physical tests also require verifiably muted alarm and media streams
+ * and active Do Not Disturb; Samsung Android 9 may use PRIORITY mode
+ * with no alarm/media exceptions instead of reporting filter NONE.
  * The host must confirm the dedicated test phone/app state before install.
  * Never enable physical-device testing on a personal phone.
  */
 @RunWith(AndroidJUnit4::class)
 class PrayerAlarmProductionChainDeviceTest {
+    /** Non-audible guard preflight; does not broadcast or arm an alarm. */
+    @Test
+    fun dedicatedPhoneHasSafeMutedAlarmAndMediaStreams() {
+        if (InstrumentationRegistry.getArguments().getString("amf497PhysicalGuard") != "true") return
+        assertApprovedTestDevice()
+    }
+
     @Test
     fun installedPrayerAppDeliversTimedAlarmAndRearmsUsingHiltRoom() {
         val args = InstrumentationRegistry.getArguments()
@@ -264,10 +273,16 @@ class PrayerAlarmProductionChainDeviceTest {
         )
         val manager = InstrumentationRegistry.getInstrumentation().targetContext
             .getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        assertEquals(
-            "Physical production-chain test requires Total Silence: do not play audible alarms",
-            NotificationManager.INTERRUPTION_FILTER_NONE,
-            manager.currentInterruptionFilter,
+        val audio = InstrumentationRegistry.getInstrumentation().targetContext
+            .getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        assertTrue(
+            "Physical QA must have active Do Not Disturb and muted alarm/media audio",
+            manager.currentInterruptionFilter == NotificationManager.INTERRUPTION_FILTER_NONE ||
+                (
+                    manager.currentInterruptionFilter == NotificationManager.INTERRUPTION_FILTER_PRIORITY &&
+                        audio.isStreamMute(AudioManager.STREAM_ALARM) &&
+                        audio.isStreamMute(AudioManager.STREAM_MUSIC)
+                ),
         )
     }
 
