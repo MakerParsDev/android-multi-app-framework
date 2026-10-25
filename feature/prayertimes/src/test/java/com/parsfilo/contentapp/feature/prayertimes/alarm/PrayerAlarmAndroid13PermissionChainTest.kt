@@ -116,7 +116,8 @@ class PrayerAlarmAndroid13PermissionChainTest {
         val userData = mockk<UserPreferencesData>()
         every { userData.notificationsEnabled } returns true
         every { userPrefs.userData } returns flowOf(userData)
-        val notifier = PrayerAlarmNotifier(context, userPrefs, mockk(relaxed = true))
+        val sound = mockk<PrayerAlarmSoundPlayer>(relaxed = true)
+        val notifier = PrayerAlarmNotifier(context, userPrefs, sound)
         val receiver = PrayerAlarmReceiver().apply {
             dependenciesProvider = { PrayerAlarmDependencies(scheduler, notifier, prayerPrefs) }
             ioDispatcher = StandardTestDispatcher(testScheduler)
@@ -135,6 +136,8 @@ class PrayerAlarmAndroid13PermissionChainTest {
             assertThat(receiverShadow.wentAsync()).isTrue()
             assertThat(shadowOf(receiverShadow.originalPendingResult).future.isDone).isTrue()
 
+            // Both permission states must avoid the second, channel-bypassing app player.
+            io.mockk.verify(exactly = 0) { sound.play(any()) }
             val notificationIds = notifications.activeNotifications.map { it.id }
             if (permissionGranted) {
                 assertThat(notificationIds).contains(41_106)
