@@ -681,8 +681,10 @@ subprojects {
             ignoreFailures.set(false)
 
             reporters {
+                // The SARIF reporter intermittently crashes during CI report generation
+                // (ZipFile closed), even after lint itself passes. HTML + console
+                // keep formatting violations blocking; security SARIF comes from CodeQL.
                 reporter(org.jlleitschuh.gradle.ktlint.reporter.ReporterType.HTML)
-                reporter(org.jlleitschuh.gradle.ktlint.reporter.ReporterType.SARIF)
             }
         }
 
