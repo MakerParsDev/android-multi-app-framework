@@ -18,4 +18,8 @@
     <string name="miracles_section_arabic">@string/content_mode_arabic</string>
     <string name="miracles_section_latin_pronunciation">Latince Okunuş</string>
     <string name="miracles_play_all_audio">Tümünü Dinle</string>
+    <string name="content_open_settings">Ayarları aç</string>
+    <string name="content_open_rewards">Ödülleri aç</string>
+    <string name="content_translation_turkish_fallback">Türkçe meal (seçili dilde çeviri bulunamadı)</string>
+    <string name="content_copy_turkish_translation">Türkçe meali kopyala</string>
 </resources>

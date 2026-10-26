@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -63,19 +64,12 @@ fun VerseItem(
     val badgeBg = if (isLightTheme) colorScheme.primary.copy(alpha = 0.82f) else colorScheme.primaryContainer.copy(alpha = 0.85f)
     val badgeText = if (isLightTheme) colorScheme.onPrimary else colorScheme.onPrimaryContainer
 
-    fun pickTranslation(): String {
-        // Prefer app language translation if present, otherwise fall back to TR.
-        return when {
-            language.startsWith("de") && verse.german.isNotBlank() -> verse.german
-            language.startsWith("en") && verse.english.isNotBlank() -> verse.english
-            else -> verse.turkish
-        }
-    }
+    val translation = selectVerseTranslation(verse, language)
 
     val verseText = when (displayMode) {
         DisplayMode.ARABIC -> verse.arabic
         DisplayMode.LATIN -> verse.latin
-        DisplayMode.TURKISH -> pickTranslation()
+        DisplayMode.TURKISH -> translation.text
     }
 
     val copySuccessMessage = stringResource(R.string.content_verse_copied)
@@ -83,7 +77,11 @@ fun VerseItem(
         when (displayMode) {
             DisplayMode.ARABIC -> R.string.content_copy_arabic
             DisplayMode.LATIN -> R.string.content_copy_latin
-            DisplayMode.TURKISH -> R.string.content_copy_translation
+            DisplayMode.TURKISH -> if (translation.isTurkishFallback) {
+                R.string.content_copy_turkish_translation
+            } else {
+                R.string.content_copy_translation
+            }
         }
     )
 
@@ -137,17 +135,25 @@ fun VerseItem(
 
                 Spacer(modifier = Modifier.width(dimens.space10))
 
-                Text(
-                    text = verseText,
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontSize = fontSize.sp,
-                        lineHeight = (fontSize * 1.6).sp,
-                        fontWeight = FontWeight.Normal
-                    ),
-                    textAlign = textAlignment,
-                    color = colorScheme.onSurface,
-                    modifier = Modifier.weight(1f)
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    if (displayMode == DisplayMode.TURKISH && translation.isTurkishFallback) {
+                        Text(
+                            text = stringResource(R.string.content_translation_turkish_fallback),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Text(
+                        text = verseText,
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontSize = fontSize.sp,
+                            lineHeight = (fontSize * 1.6).sp,
+                            fontWeight = FontWeight.Normal
+                        ),
+                        textAlign = textAlignment,
+                        color = colorScheme.onSurface
+                    )
+                }
 
                 IconButton(
                     onClick = {
