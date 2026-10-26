@@ -57,6 +57,25 @@ class QuranReadingVisibilityTest {
     }
 
     @Test
+    fun nativeAdsGetSeparateRowsAndNeverMapToAnAyah() {
+        val rows = quranLazyRowAyahIndices(
+            ayahCount = 8,
+            includeNativeAds = true,
+            shouldInsertAdAfter = { index, _ -> index == 4 },
+        )
+        assertEquals(listOf(0, 1, 2, 3, 4, null, 5, 6, 7), rows)
+        // An ad is fully on screen while the preceding verse is completely
+        // offscreen. Only ayah rows are eligible to become reading markers.
+        val visibleRows = listOf(QuranVisibleItem(index = 5, offset = 0, size = 1100))
+        val visibleAyahs = visibleRows.mapNotNull { row ->
+            rows.getOrNull(row.index)?.let { row.copy(index = it) }
+        }
+        assertNull(firstMeaningfullyVisibleAyahIndex(visibleAyahs, 0, 1000))
+        assertEquals(7, rows.indexOf(6))
+        assertEquals(listOf(0, 1, 2, 3, 4, 5, 6, 7), quranLazyRowAyahIndices(8, false) { _, _ -> true })
+    }
+
+    @Test
     fun noScrollInitialVerseIsVisibleAndNoLayoutMeansNoProgress() {
         assertEquals(
             0,
