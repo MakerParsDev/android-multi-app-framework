@@ -66,6 +66,35 @@ class QuranReadingResumeDeviceTest {
     }
 
     @Test
+    fun noScrollNeverReportsPrefetchedVersesAsRead() {
+        verifyTestHost()
+        val reported = mutableListOf<Int>()
+        rule.setContent {
+            AppTheme(flavorName = "kuran_kerim") {
+                QuranSuraDetailScreen(
+                    state = syntheticState(30),
+                    onBack = {},
+                    onRetry = {},
+                    onDisplayModeSelected = {},
+                    onFontSizeChange = {},
+                    onReciterSelected = {},
+                    onPlayPauseAyah = { _, _ -> },
+                    onDownloadAyah = {},
+                    onToggleBookmark = {},
+                    onAyahVisible = { reported.add(it.ayahNumber) },
+                )
+            }
+        }
+        rule.waitForIdle()
+        rule.onNodeWithText("Synthetic verse 1").assertIsDisplayed()
+        assertEquals(
+            "Only the first actually visible reading position may be saved without any scroll",
+            listOf(1),
+            reported.distinct(),
+        )
+    }
+
+    @Test
     fun lastReadTwoFiveTargetsFifthVerseWithoutRegressingToStart() {
         verifyTestHost()
         val reported = mutableListOf<Int>()
