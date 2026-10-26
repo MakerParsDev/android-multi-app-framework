@@ -183,6 +183,33 @@ class QuranReadingResumeDeviceTest {
     }
 
     @Test
+    fun bookmarkJumpAccountsForNativeAdRowsBeforeTarget() {
+        verifyTestHost()
+        val reported = mutableListOf<Int>()
+        rule.setContent {
+            AppTheme(flavorName = "kuran_kerim") {
+                QuranSuraDetailScreen(
+                    state = syntheticState().copy(shouldShowAds = true),
+                    initialAyahNumber = 8,
+                    onBack = {},
+                    onRetry = {},
+                    onDisplayModeSelected = {},
+                    onFontSizeChange = {},
+                    onReciterSelected = {},
+                    onPlayPauseAyah = { _, _ -> },
+                    onDownloadAyah = {},
+                    onToggleBookmark = {},
+                    onAyahVisible = { reported.add(it.ayahNumber) },
+                    nativeAdContent = { androidx.compose.material3.Text("Synthetic Native Ad") },
+                )
+            }
+        }
+        rule.waitForIdle()
+        rule.onNodeWithText("Synthetic verse 8").assertIsDisplayed()
+        assertEquals(listOf(8), reported.distinct())
+    }
+
+    @Test
     fun bookmarkToVerseEightSurvivesDisplayModeChange() {
         verifyTestHost()
         val reported = mutableListOf<Int>()
