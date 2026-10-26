@@ -1,8 +1,10 @@
 package com.parsfilo.contentapp.monetization
 
+import android.content.Context
 import com.parsfilo.contentapp.R
 import com.parsfilo.contentapp.feature.ads.AdFormat
 import com.parsfilo.contentapp.feature.ads.AdPlacement
+import io.mockk.mockk
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -17,6 +19,20 @@ class AppAdUnitIdsTest {
             rewardedInterstitial = "rewarded-inter-default",
             appOpen = "app-open-default",
         )
+
+    @Test
+    fun `debug placements use only Google demo ids even when flavor has production ids`() {
+        val context = mockk<Context>()
+        AdPlacement.entries.forEach { placement ->
+            val selected = AppAdUnitIds.resolvePlacement(context, placement, useTestAds = true)
+            val expected = AppAdUnitIds.defaultIdForFormat(
+                AppAdUnitIds.resolve(context, useTestAds = true),
+                placement.format,
+            )
+            assertEquals("Debug placement $placement must not use a production ID", expected, selected)
+            org.junit.Assert.assertTrue(selected.startsWith(AppAdUnitIds.GOOGLE_TEST_PUBLISHER_PREFIX))
+        }
+    }
 
     @Test
     fun `placement value wins when present`() {

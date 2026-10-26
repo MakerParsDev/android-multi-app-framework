@@ -72,6 +72,9 @@ object AppAdUnitIds {
         useTestAds: Boolean,
     ): String {
         val ids = resolve(context, useTestAds)
+        // Debug must use Google's demo units for *all* placements, even if
+        // flavor resources configure dedicated production placement IDs.
+        if (useTestAds) return defaultIdForFormat(ids, placement.format)
         val placementValue =
             resourceIdForPlacement(placement)
                 ?.let(context::getString)
