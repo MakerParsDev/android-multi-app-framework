@@ -21,6 +21,20 @@ class QuranProgressWriterTest {
     }
 
     @Test
+    fun failedRoomWriteDoesNotDisableLaterProgressUpdates() = runTest {
+        val saved = mutableListOf<Int>()
+        val writer = QuranProgressWriter(backgroundScope) { verse ->
+            if (verse == 3) throw IllegalStateException("synthetic write failure")
+            saved.add(verse)
+        }
+        writer.record(3)
+        runCurrent()
+        writer.record(4)
+        runCurrent()
+        assertEquals(listOf(4), saved)
+    }
+
+    @Test
     fun blockedOlderWriteCannotFinishAfterNewerWrite() = runTest {
         val entered = CompletableDeferred<Unit>()
         val release = CompletableDeferred<Unit>()
