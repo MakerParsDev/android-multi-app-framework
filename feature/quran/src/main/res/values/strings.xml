@@ -34,4 +34,12 @@
     <string name="quran_loading">Yükleniyor…</string>
     <string name="quran_toggle_search">Arama</string>
     <string name="quran_more_options">Daha fazla seçenek</string>
+    <string name="quran_back">Geri</string>
+    <string name="quran_ayah_open_actions">%1$d. ayetin işlemleri</string>
+    <string name="quran_ayah_bookmark_add">%1$d. ayete yer imi ekle</string>
+    <string name="quran_ayah_bookmark_remove">%1$d. ayetin yer imini kaldır</string>
+    <string name="quran_ayah_play">%1$d. ayeti oynat</string>
+    <string name="quran_ayah_pause">%1$d. ayeti duraklat</string>
+    <string name="quran_ayah_download">%1$d. ayetin sesini indir</string>
+    <string name="quran_ayah_downloaded">%1$d. ayetin sesi indirildi</string>
 </resources>

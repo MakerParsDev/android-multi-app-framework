@@ -34,4 +34,12 @@
     <string name="quran_loading">Loading…</string>
     <string name="quran_toggle_search">Search</string>
     <string name="quran_more_options">More options</string>
+    <string name="quran_back">Back</string>
+    <string name="quran_ayah_open_actions">Actions for ayah %1$d</string>
+    <string name="quran_ayah_bookmark_add">Bookmark ayah %1$d</string>
+    <string name="quran_ayah_bookmark_remove">Remove bookmark for ayah %1$d</string>
+    <string name="quran_ayah_play">Play ayah %1$d</string>
+    <string name="quran_ayah_pause">Pause ayah %1$d</string>
+    <string name="quran_ayah_download">Download audio for ayah %1$d</string>
+    <string name="quran_ayah_downloaded">Audio downloaded for ayah %1$d</string>
 </resources>

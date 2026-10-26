@@ -24,12 +24,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.parsfilo.contentapp.core.model.QuranAyah
 import com.parsfilo.contentapp.core.model.QuranDisplayMode
+import com.parsfilo.contentapp.feature.quran.R
 import com.parsfilo.contentapp.feature.quran.ui.suradetail.AyahDisplayState
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -45,12 +48,30 @@ fun AyahItem(
     onLongClick: (QuranAyah) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val ayahNumber = state.ayah.ayahNumber
+    val actionsLabel = stringResource(R.string.quran_ayah_open_actions, ayahNumber)
+    val bookmarkLabel = stringResource(
+        if (state.isBookmarked) R.string.quran_ayah_bookmark_remove else R.string.quran_ayah_bookmark_add,
+        ayahNumber,
+    )
+    val playbackLabel = stringResource(
+        if (state.isCurrentlyPlaying) R.string.quran_ayah_pause else R.string.quran_ayah_play,
+        ayahNumber,
+    )
+    val downloadLabel = stringResource(
+        if (state.isAudioDownloaded) R.string.quran_ayah_downloaded else R.string.quran_ayah_download,
+        ayahNumber,
+    )
+
     Surface(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 6.dp)
+            .testTag("quran_ayah_${ayahNumber}_card")
             .combinedClickable(
-                onClick = {},
+                onClickLabel = actionsLabel,
+                onLongClickLabel = actionsLabel,
+                onClick = { onLongClick(state.ayah) },
                 onLongClick = { onLongClick(state.ayah) },
             ),
         shape = MaterialTheme.shapes.medium,
@@ -72,10 +93,13 @@ fun AyahItem(
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.secondary,
                 )
-                IconButton(onClick = { onBookmarkClick(state.ayah) }) {
+                IconButton(
+                    onClick = { onBookmarkClick(state.ayah) },
+                    modifier = Modifier.testTag("quran_ayah_${ayahNumber}_bookmark"),
+                ) {
                     Icon(
                         imageVector = if (state.isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                        contentDescription = null,
+                        contentDescription = bookmarkLabel,
                     )
                 }
             }
@@ -105,20 +129,26 @@ fun AyahItem(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(onClick = { onPlayPauseClick(state.ayah) }) {
+                IconButton(
+                    onClick = { onPlayPauseClick(state.ayah) },
+                    modifier = Modifier.testTag("quran_ayah_${ayahNumber}_play"),
+                ) {
                     Icon(
                         imageVector = if (state.isCurrentlyPlaying) Icons.Default.PauseCircle else Icons.Default.PlayCircle,
-                        contentDescription = null,
+                        contentDescription = playbackLabel,
                         modifier = Modifier.size(24.dp),
                     )
                 }
-                IconButton(onClick = { onDownloadClick(state.ayah) }) {
+                IconButton(
+                    onClick = { onDownloadClick(state.ayah) },
+                    modifier = Modifier.testTag("quran_ayah_${ayahNumber}_download"),
+                ) {
                     Icon(
                         imageVector = when {
                             state.isAudioDownloaded -> Icons.Default.TaskAlt
                             else -> Icons.Default.Download
                         },
-                        contentDescription = null,
+                        contentDescription = downloadLabel,
                         modifier = Modifier.size(22.dp),
                         tint = if (state.isAudioDownloaded) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface,
                     )
