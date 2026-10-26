@@ -175,10 +175,13 @@ fun QuranSuraDetailScreen(
         if (!initialPositionReady) return@LaunchedEffect
         snapshotFlow {
             val layout = listState.layoutInfo
-            val visibleIndex = layout.visibleItemsInfo.firstOrNull { item ->
-                item.offset + item.size > layout.viewportStartOffset &&
-                    item.offset < layout.viewportEndOffset
-            }?.index
+            val visibleIndex = firstMeaningfullyVisibleAyahIndex(
+                items = layout.visibleItemsInfo.map { item ->
+                    QuranVisibleItem(index = item.index, offset = item.offset, size = item.size)
+                },
+                viewportStart = layout.viewportStartOffset,
+                viewportEnd = layout.viewportEndOffset,
+            )
             visibleIndex to listState.isScrollInProgress
         }.distinctUntilChanged().collect { (index, scrolling) ->
             // isScrollInProgress also becomes true for programmatic scrolls.
