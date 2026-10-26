@@ -64,6 +64,8 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -459,7 +461,9 @@ fun SettingsScreen(
                                 Text(stringResource(R.string.settings_notifications_desc))
                             },
                             trailingContent = {
+                                val accessibleName = stringResource(R.string.settings_notifications)
                                 Switch(
+                                    modifier = Modifier.semantics { contentDescription = accessibleName },
                                     checked = notificationsChecked,
                                     onCheckedChange = { enabled ->
                                         if (!enabled) {
@@ -597,7 +601,9 @@ fun SettingsScreen(
                                 Text(stringResource(R.string.settings_dark_mode))
                             },
                             trailingContent = {
+                                val accessibleName = stringResource(R.string.settings_dark_mode)
                                 Switch(
+                                    modifier = Modifier.semantics { contentDescription = accessibleName },
                                     checked = preferences.darkMode,
                                     onCheckedChange = onDarkModeChanged,
                                     colors = switchColors,

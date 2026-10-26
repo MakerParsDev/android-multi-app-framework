@@ -31,7 +31,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -55,11 +58,12 @@ fun InlineAudioPlayer(
     val accent = colorScheme.secondary
     val content = colorScheme.onSurface
     val subdued = colorScheme.onSurfaceVariant
+    val seekAccessibleName = stringResource(R.string.audio_seek)
 
     // Show loading state while asset pack is being prepared
     if (state.assetLoading) {
         AssetLoadingBar(
-            message = state.assetError ?: "Ses dosyası hazırlanıyor...",
+            message = state.assetError ?: stringResource(R.string.audio_asset_preparing),
             accent = accent,
             textColor = subdued,
             modifier = modifier
@@ -70,7 +74,7 @@ fun InlineAudioPlayer(
     // Show error state if asset is not ready
     if (!state.assetReady) {
         AssetErrorBar(
-            message = state.assetError ?: "Ses dosyası bulunamadı",
+            message = state.assetError ?: stringResource(R.string.audio_asset_missing),
             onRetry = onRetry,
             accent = accent,
             textColor = subdued,
@@ -116,7 +120,7 @@ fun InlineAudioPlayer(
                 } else {
                     Icons.Filled.PlayArrow
                 },
-                contentDescription = if (state.isPlaying) "Pause" else "Play",
+                contentDescription = stringResource(if (state.isPlaying) R.string.audio_pause else R.string.audio_play),
                 tint = accent,
                 modifier = Modifier.size(dimens.iconMd + dimens.space2)
             )
@@ -129,7 +133,7 @@ fun InlineAudioPlayer(
         ) {
             Icon(
                 imageVector = Icons.Filled.Stop,
-                contentDescription = "Stop",
+                contentDescription = stringResource(R.string.audio_stop),
                 tint = accent,
                 modifier = Modifier.size(dimens.iconSm + dimens.space2)
             )
@@ -150,7 +154,8 @@ fun InlineAudioPlayer(
             },
             modifier = Modifier
                 .weight(1f)
-                .height(dimens.space32),
+                .height(dimens.space32)
+                .semantics { contentDescription = seekAccessibleName },
             colors = SliderDefaults.colors(
                 thumbColor = accent,
                 activeTrackColor = accent,
@@ -243,10 +248,15 @@ private fun AssetErrorBar(
                 modifier = Modifier.weight(1f),
                 textAlign = TextAlign.Center
             )
-            AppTextButton(text = "", onClick = onRetry) {
+            val retryAccessibleName = stringResource(R.string.audio_retry)
+            AppTextButton(
+                text = "",
+                onClick = onRetry,
+                modifier = Modifier.semantics { contentDescription = retryAccessibleName },
+            ) {
                 Icon(
                     imageVector = Icons.Filled.Refresh,
-                    contentDescription = "Tekrar Dene",
+                    contentDescription = null,
                     tint = accent,
                     modifier = Modifier.size(dimens.space20 - dimens.space2)
                 )

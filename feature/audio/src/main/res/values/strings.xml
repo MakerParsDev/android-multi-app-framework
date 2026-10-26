@@ -1,0 +1,9 @@
+<resources>
+    <string name="audio_play">Oynat</string>
+    <string name="audio_pause">Duraklat</string>
+    <string name="audio_stop">Durdur</string>
+    <string name="audio_seek">Ses kaydında ilerleme</string>
+    <string name="audio_retry">Tekrar dene</string>
+    <string name="audio_asset_preparing">Ses dosyası hazırlanıyor…</string>
+    <string name="audio_asset_missing">Ses dosyası bulunamadı</string>
+</resources>
