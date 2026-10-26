@@ -18,4 +18,8 @@
     <string name="miracles_section_arabic">@string/content_mode_arabic</string>
     <string name="miracles_section_latin_pronunciation">Lateinische Lesung</string>
     <string name="miracles_play_all_audio">Alles anhören</string>
+    <string name="content_open_settings">Einstellungen öffnen</string>
+    <string name="content_open_rewards">Belohnungen öffnen</string>
+    <string name="content_translation_turkish_fallback">Türkische Übersetzung (in dieser Sprache nicht verfügbar)</string>
+    <string name="content_copy_turkish_translation">Türkische Übersetzung kopieren</string>
 </resources>
