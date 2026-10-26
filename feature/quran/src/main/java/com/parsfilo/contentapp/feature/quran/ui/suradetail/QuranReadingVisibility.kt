@@ -31,3 +31,20 @@ internal fun firstMeaningfullyVisibleAyahIndex(
         visibleHeight * 2 >= thresholdHeight
     }?.index
 }
+
+/**
+ * Align LazyColumn row offsets with Quran ayahs when native ad slots are added
+ * as separate rows. Null means an ad-only row which must never count as read.
+ */
+internal fun quranLazyRowAyahIndices(
+    ayahCount: Int,
+    includeNativeAds: Boolean,
+    shouldInsertAdAfter: (Int, Int) -> Boolean,
+): List<Int?> = buildList {
+    repeat(ayahCount) { ayahIndex ->
+        add(ayahIndex)
+        if (includeNativeAds && shouldInsertAdAfter(ayahIndex, ayahCount)) {
+            add(null)
+        }
+    }
+}
