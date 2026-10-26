@@ -34,4 +34,12 @@
     <string name="quran_loading">Wird geladen…</string>
     <string name="quran_toggle_search">Suche</string>
     <string name="quran_more_options">Weitere Optionen</string>
+    <string name="quran_back">Zurück</string>
+    <string name="quran_ayah_open_actions">Aktionen für Vers %1$d</string>
+    <string name="quran_ayah_bookmark_add">Lesezeichen für Vers %1$d hinzufügen</string>
+    <string name="quran_ayah_bookmark_remove">Lesezeichen für Vers %1$d entfernen</string>
+    <string name="quran_ayah_play">Vers %1$d abspielen</string>
+    <string name="quran_ayah_pause">Vers %1$d pausieren</string>
+    <string name="quran_ayah_download">Audio für Vers %1$d herunterladen</string>
+    <string name="quran_ayah_downloaded">Audio für Vers %1$d heruntergeladen</string>
 </resources>

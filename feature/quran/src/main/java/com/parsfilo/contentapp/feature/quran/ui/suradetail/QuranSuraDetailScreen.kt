@@ -1,6 +1,7 @@
 package com.parsfilo.contentapp.feature.quran.ui.suradetail
 
 import android.content.ClipData
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -219,6 +220,7 @@ fun QuranSuraDetailScreen(
     }
 
     Scaffold(
+        modifier = Modifier.focusGroup(),
         contentWindowInsets = WindowInsets.safeDrawing.only(
             WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
         ),
@@ -398,7 +400,7 @@ private fun QuranSuraDetailHeader(
         IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.quran_back),
                 tint = MaterialTheme.colorScheme.onSurface,
             )
         }
