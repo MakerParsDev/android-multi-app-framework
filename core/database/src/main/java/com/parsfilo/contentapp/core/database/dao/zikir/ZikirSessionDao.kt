@@ -19,11 +19,11 @@ interface ZikirSessionDao {
     @Query("SELECT * FROM zikir_sessions ORDER BY completedAt DESC LIMIT :limit")
     fun getRecentSessions(limit: Int): Flow<List<ZikirSessionEntity>>
 
-    @Query("SELECT SUM(completedCount) FROM zikir_sessions WHERE completedAt >= :sinceMs")
-    fun getTotalCountSince(sinceMs: Long): Flow<Int?>
+    @Query("SELECT SUM(completedCount) FROM zikir_sessions WHERE completedAt >= :sinceMs AND completedAt < :beforeMs")
+    fun getTotalCountBetween(sinceMs: Long, beforeMs: Long): Flow<Int?>
 
-    @Query("SELECT COUNT(*) FROM zikir_sessions WHERE completedAt >= :sinceMs AND isComplete = 1")
-    fun getCompletedSessionCountSince(sinceMs: Long): Flow<Int>
+    @Query("SELECT COUNT(*) FROM zikir_sessions WHERE completedAt >= :sinceMs AND completedAt < :beforeMs AND isComplete = 1")
+    fun getCompletedSessionCountBetween(sinceMs: Long, beforeMs: Long): Flow<Int>
 
     @Query("SELECT SUM(completedCount) FROM zikir_sessions WHERE completedAt >= :sinceMs AND zikirKey = :key")
     fun getTotalForKeyToday(key: String, sinceMs: Long): Flow<Int?>
