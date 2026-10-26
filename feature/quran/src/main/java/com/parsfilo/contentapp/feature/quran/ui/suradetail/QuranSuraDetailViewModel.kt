@@ -75,6 +75,10 @@ class QuranSuraDetailViewModel @Inject constructor(
 
     private val suraNumber: Int = checkNotNull(savedStateHandle["suraNumber"])
 
+    private val progressWriter = QuranProgressWriter(viewModelScope) { ayahNumber ->
+        repository.saveLastRead(suraNumber = suraNumber, ayahNumber = ayahNumber)
+    }
+
     private val localState = MutableStateFlow(
         QuranSuraDetailUiState(
             availableReciters = allReciters,
@@ -242,9 +246,7 @@ class QuranSuraDetailViewModel @Inject constructor(
     }
 
     fun onAyahVisible(ayahNumber: Int) {
-        viewModelScope.launch {
-            repository.saveLastRead(suraNumber = suraNumber, ayahNumber = ayahNumber)
-        }
+        progressWriter.record(ayahNumber)
     }
 
     private fun syncIfNeeded(force: Boolean = false) {
