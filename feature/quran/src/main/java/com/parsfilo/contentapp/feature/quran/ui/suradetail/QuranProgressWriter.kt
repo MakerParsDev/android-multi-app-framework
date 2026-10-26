@@ -11,6 +11,7 @@ import timber.log.Timber
  * changes so an older, slower IO write cannot finish after a newer marker.
  * A deliberate backward swipe remains valid: this is order, not max(ayah).
  */
+@Suppress("TooGenericExceptionCaught")
 internal class QuranProgressWriter(
     scope: CoroutineScope,
     private val save: suspend (Int) -> Unit,
