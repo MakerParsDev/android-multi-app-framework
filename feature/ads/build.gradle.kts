@@ -36,6 +36,12 @@ android {
     defaultConfig {
         minSdk = requiredToolchainInt("toolchain.android.minSdk")
 
+        // Performance/Baseline Profile plugins create synthetic build types such as
+        // nonMinifiedRelease. Default to no QA identifiers or debug-only overrides
+        // for every variant; explicit debug build-type fields override these values.
+        buildConfigField("String", "UMP_TEST_DEVICE_HASH", "\"\"")
+        buildConfigField("boolean", "ADS_DEMAND_AWARE_DEBUG_OVERRIDE", "false")
+
         // AdMob IDs — injected from local.properties (not hardcoded in source)
         fun adMobField(
             name: String,
