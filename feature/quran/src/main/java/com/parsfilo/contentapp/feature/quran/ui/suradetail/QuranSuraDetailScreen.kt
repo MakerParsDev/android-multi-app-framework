@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -136,6 +135,13 @@ fun QuranSuraDetailScreen(
     var fontSliderValue by remember(state.fontSize) { mutableIntStateOf(state.fontSize) }
     val language = LocalLocale.current.platformLocale.language.lowercase(Locale.ROOT)
     val listState = rememberLazyListState()
+    val lazyRowAyahIndices = remember(state.ayahs.size, state.shouldShowAds, nativeAdContent) {
+        quranLazyRowAyahIndices(
+            ayahCount = state.ayahs.size,
+            includeNativeAds = state.shouldShowAds && nativeAdContent != null,
+            shouldInsertAdAfter = ::shouldInsertNativeAdAfterAyah,
+        )
+    }
     var initialPositionReady by rememberSaveable(initialAyahNumber) {
         mutableStateOf(initialAyahNumber == null)
     }
@@ -147,7 +153,7 @@ fun QuranSuraDetailScreen(
     }
     var lastReportedAyahNumber by remember(initialAyahNumber) { mutableIntStateOf(-1) }
 
-    LaunchedEffect(initialAyahNumber, state.ayahs.size) {
+    LaunchedEffect(initialAyahNumber, state.ayahs.size, lazyRowAyahIndices) {
         if (!initialPositionReady && state.ayahs.isNotEmpty()) {
             val index = initialQuranAyahIndex(
                 state.ayahs.map { it.ayah.ayahNumber },
@@ -156,28 +162,33 @@ fun QuranSuraDetailScreen(
             if (index != null) {
                 // Jump before enabling progress tracking: otherwise the initially
                 // composed first verses overwrite the saved Last Read marker.
-                listState.scrollToItem(index)
+                listState.scrollToItem(lazyRowAyahIndices.indexOf(index))
                 val restoredAyah = state.ayahs[index].ayah
                 lastReportedAyahNumber = restoredAyah.ayahNumber
                 onAyahVisible(restoredAyah)
-                restoredFirstVisibleIndex = listState.firstVisibleItemIndex
+                restoredFirstVisibleIndex =
+                    lazyRowAyahIndices.getOrNull(listState.firstVisibleItemIndex) ?: index
                 initialPositionReady = true
             } else if (!state.isLoading) {
                 // Keep the old marker if this edition lacks the target, but
                 // resume visible-ayah tracking once the reader actually scrolls.
-                restoredFirstVisibleIndex = listState.firstVisibleItemIndex
+                restoredFirstVisibleIndex =
+                    lazyRowAyahIndices.getOrNull(listState.firstVisibleItemIndex) ?: 0
                 initialPositionReady = true
             }
         }
     }
 
-    LaunchedEffect(listState, initialPositionReady, state.ayahs.size) {
+    LaunchedEffect(listState, initialPositionReady, state.ayahs.size, lazyRowAyahIndices) {
         if (!initialPositionReady) return@LaunchedEffect
         snapshotFlow {
             val layout = listState.layoutInfo
             val visibleIndex = firstMeaningfullyVisibleAyahIndex(
-                items = layout.visibleItemsInfo.map { item ->
-                    QuranVisibleItem(index = item.index, offset = item.offset, size = item.size)
+                items = layout.visibleItemsInfo.mapNotNull { item ->
+                    // Native ad rows are layout-visible, but no ayah is visible
+                    // in them. Do not treat an ad's pixels as reading progress.
+                    val ayahIndex = lazyRowAyahIndices.getOrNull(item.index) ?: return@mapNotNull null
+                    QuranVisibleItem(index = ayahIndex, offset = item.offset, size = item.size)
                 },
                 viewportStart = layout.viewportStartOffset,
                 viewportEnd = layout.viewportEndOffset,
@@ -290,32 +301,35 @@ fun QuranSuraDetailScreen(
                     .weight(1f),
                 contentPadding = PaddingValues(bottom = 0.dp),
             ) {
-                itemsIndexed(
-                    items = state.ayahs,
-                    key = { _, ayahState -> "${ayahState.ayah.suraNumber}_${ayahState.ayah.ayahNumber}" },
-                ) { index, ayahState ->
-                    val translatedText = when (state.displayMode) {
-                        QuranDisplayMode.ARABIC -> ""
-                        QuranDisplayMode.LATIN -> ayahState.ayah.latin
-                        QuranDisplayMode.TRANSLATION -> resolveTranslation(
-                            language = language,
-                            ayah = ayahState.ayah,
+                state.ayahs.forEachIndexed { index, ayahState ->
+                    item(key = "${ayahState.ayah.suraNumber}_${ayahState.ayah.ayahNumber}") {
+                        val translatedText = when (state.displayMode) {
+                            QuranDisplayMode.ARABIC -> ""
+                            QuranDisplayMode.LATIN -> ayahState.ayah.latin
+                            QuranDisplayMode.TRANSLATION -> resolveTranslation(
+                                language = language,
+                                ayah = ayahState.ayah,
+                            )
+                        }
+
+                        AyahItem(
+                            state = ayahState,
+                            displayMode = state.displayMode,
+                            translatedText = translatedText,
+                            fontSize = state.fontSize,
+                            onPlayPauseClick = { ayah -> onPlayPauseAyah(ayah, ayahState.isCurrentlyPlaying) },
+                            onDownloadClick = onDownloadAyah,
+                            onBookmarkClick = onToggleBookmark,
+                            onLongClick = { ayah -> actionAyah = ayah },
                         )
                     }
 
-                    AyahItem(
-                        state = ayahState,
-                        displayMode = state.displayMode,
-                        translatedText = translatedText,
-                        fontSize = state.fontSize,
-                        onPlayPauseClick = { ayah -> onPlayPauseAyah(ayah, ayahState.isCurrentlyPlaying) },
-                        onDownloadClick = onDownloadAyah,
-                        onBookmarkClick = onToggleBookmark,
-                        onLongClick = { ayah -> actionAyah = ayah },
-                    )
-
                     if (state.shouldShowAds && nativeAdContent != null && shouldInsertNativeAdAfterAyah(index, state.ayahs.size)) {
-                        nativeAdContent()
+                        // A separate LazyColumn row makes ad-only scroll offsets
+                        // incapable of being mistaken for Quran verse visibility.
+                        item(key = "native_after_${ayahState.ayah.suraNumber}_${ayahState.ayah.ayahNumber}") {
+                            nativeAdContent()
+                        }
                     }
                 }
             }
