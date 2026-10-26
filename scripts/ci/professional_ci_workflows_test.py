@@ -237,6 +237,12 @@ def test_managed_device_is_pinned_and_scheduled() -> None:
     event = workflow.get("on", workflow.get(True))
     assert event["schedule"] == [{"cron": "41 2 * * *"}]
     assert "workflow_dispatch" in event
+    manual_input = event["workflow_dispatch"]["inputs"]["quran_e2e_only"]
+    assert manual_input["type"] == "boolean"
+    assert manual_input["default"] is False
+    assert manual_input["required"] is False
+    # Dedicated and shared runs must not cancel each other.
+    assert "dedicated-quran-e2e" in workflow["concurrency"]["group"]
 
     gradle = (ROOT / "app/build.gradle.kts").read_text(encoding="utf-8")
     for value in (
@@ -262,6 +268,13 @@ def test_managed_device_is_pinned_and_scheduled() -> None:
     assert "-PciSmoke=true" in command
     assert "swiftshader_indirect" in command
     assert "--no-configuration-cache" in command
+    # Shared daily smoke excludes destructive Quran fixtures; explicit manual
+    # dispatch runs that test alone on an isolated fresh managed device.
+    assert "QURAN_E2E_ONLY" in command
+    assert "android.testInstrumentationRunnerArguments.notClass=com.parsfilo.contentapp.quran.QuranLastReadInstalledAppE2ETest" in command
+    assert "android.testInstrumentationRunnerArguments.class=com.parsfilo.contentapp.quran.QuranLastReadInstalledAppE2ETest" in command
+    assert 'if [[ "$QURAN_E2E_ONLY" == "true" ]]' in command
+    assert '"$test_filter"' in command
     dependency_policy = load("config/dependency-policy.json")
     allowlist = {
         entry["coordinate"]

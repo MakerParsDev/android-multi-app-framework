@@ -4,12 +4,18 @@ on:
   schedule:
     - cron: '41 2 * * *'
   workflow_dispatch:
+    inputs:
+      quran_e2e_only:
+        description: "Run dedicated fresh-install Quran Last Read E2E only (disposable emulator)"
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: device-smoke-${{ github.ref }}
+  group: device-smoke-${{ github.ref }}-${{ inputs.quran_e2e_only && 'dedicated-quran-e2e' || 'shared' }}
   cancel-in-progress: true
 
 jobs:
@@ -60,14 +66,22 @@ jobs:
           python3 scripts/ci/generate_ci_google_services.py --flavors kuran_kerim
 
       - name: Run managed-device smoke tests
+        env:
+          QURAN_E2E_ONLY: ${{ inputs.quran_e2e_only || false }}
         run: |
           set -euo pipefail
           chmod +x ./gradlew
+          # The E2E inserts Quran fixtures and requires an untouched app database.
+          # Run it alone on a fresh Gradle-managed emulator, never in the shared suite.
+          test_filter="-Pandroid.testInstrumentationRunnerArguments.notClass=com.parsfilo.contentapp.quran.QuranLastReadInstalledAppE2ETest"
+          if [[ "$QURAN_E2E_ONLY" == "true" ]]; then
+            test_filter="-Pandroid.testInstrumentationRunnerArguments.class=com.parsfilo.contentapp.quran.QuranLastReadInstalledAppE2ETest"
+          fi
           ./gradlew \
             ciPixel2Api30Kuran_kerimDebugAndroidTest \
             -PciSmoke=true \
             -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect \
-            -Pandroid.testInstrumentationRunnerArguments.notClass=com.parsfilo.contentapp.quran.QuranLastReadInstalledAppE2ETest \
+            "$test_filter" \
             --no-daemon \
             --no-configuration-cache \
             --stacktrace \
