@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -237,5 +238,82 @@ class QuranReadingResumeDeviceTest {
         rule.waitForIdle()
         assertTrue("Bookmark target should remain the visible reading position", reported.contains(8))
         assertFalse("Mode change must not save the first verse", reported.contains(1))
+    }
+
+    @Test
+    fun dialogOverlayDoesNotAdvanceSavedMarkerWithoutReaderMovement() {
+        verifyTestHost()
+        val reported = mutableListOf<Int>()
+        var overlayVisible by mutableStateOf(false)
+        rule.setContent {
+            AppTheme(flavorName = "kuran_kerim") {
+                QuranSuraDetailScreen(
+                    state = syntheticState(30),
+                    initialAyahNumber = 8,
+                    onBack = {},
+                    onRetry = {},
+                    onDisplayModeSelected = {},
+                    onFontSizeChange = {},
+                    onReciterSelected = {},
+                    onPlayPauseAyah = { _, _ -> },
+                    onDownloadAyah = {},
+                    onToggleBookmark = {},
+                    onAyahVisible = { reported.add(it.ayahNumber) },
+                )
+                if (overlayVisible) {
+                    androidx.compose.ui.window.Dialog(
+                        onDismissRequest = { overlayVisible = false },
+                    ) {
+                        androidx.compose.material3.Surface {
+                            androidx.compose.material3.Text("Synthetic dialog overlay")
+                        }
+                    }
+                }
+            }
+        }
+        rule.waitForIdle()
+        assertEquals(listOf(8), reported.distinct())
+        rule.runOnIdle { overlayVisible = true }
+        rule.onNodeWithText("Synthetic dialog overlay").assertIsDisplayed()
+        rule.waitForIdle()
+        assertEquals("Overlay may not advance a stationary Last Read marker", listOf(8), reported.distinct())
+        rule.runOnIdle { overlayVisible = false }
+        rule.waitForIdle()
+        assertEquals("Dismissing overlay may not report prefetched neighbors", listOf(8), reported.distinct())
+    }
+
+    @Test
+    fun savedStateRestoreKeepsDeepLinkMarkerBeforeAnyReaderScroll() {
+        verifyTestHost()
+        val reported = mutableListOf<Int>()
+        val restoration = StateRestorationTester(rule)
+        restoration.setContent {
+            AppTheme(flavorName = "kuran_kerim") {
+                QuranSuraDetailScreen(
+                    state = syntheticState(30),
+                    initialAyahNumber = 8,
+                    onBack = {},
+                    onRetry = {},
+                    onDisplayModeSelected = {},
+                    onFontSizeChange = {},
+                    onReciterSelected = {},
+                    onPlayPauseAyah = { _, _ -> },
+                    onDownloadAyah = {},
+                    onToggleBookmark = {},
+                    onAyahVisible = { reported.add(it.ayahNumber) },
+                )
+            }
+        }
+        rule.waitForIdle()
+        rule.onNodeWithText("Synthetic verse 8").assertIsDisplayed()
+        assertEquals(listOf(8), reported.distinct())
+        restoration.emulateSavedInstanceStateRestore()
+        rule.waitForIdle()
+        rule.onNodeWithText("Synthetic verse 8").assertIsDisplayed()
+        assertEquals(
+            "Saved-state recreation must not persist an unrelated or prefetched ayah",
+            listOf(8),
+            reported.distinct(),
+        )
     }
 }
