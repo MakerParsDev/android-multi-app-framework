@@ -28,6 +28,10 @@ object AppModule {
     fun provideUseAssetPackAudio(): Boolean = AppProductDefinition.current.useAssetPackAudio
 
     @Provides
+    @Named("audioStartupEnabled")
+    fun provideAudioStartupEnabled(): Boolean = !BuildConfig.CI_SMOKE
+
+    @Provides
     @Named(PUSH_REGISTRATION_URL)
     fun providePushRegistrationUrl(): String = BuildConfig.PUSH_REGISTRATION_URL
 
