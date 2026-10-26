@@ -142,6 +142,9 @@ fun QuranSuraDetailScreen(
     var userScrolledAfterRestore by rememberSaveable(initialAyahNumber) {
         mutableStateOf(initialAyahNumber == null)
     }
+    var restoredFirstVisibleIndex by rememberSaveable(initialAyahNumber) {
+        mutableStateOf<Int?>(null)
+    }
     var lastReportedAyahNumber by remember(initialAyahNumber) { mutableIntStateOf(-1) }
 
     LaunchedEffect(initialAyahNumber, state.ayahs.size) {
@@ -157,6 +160,12 @@ fun QuranSuraDetailScreen(
                 val restoredAyah = state.ayahs[index].ayah
                 lastReportedAyahNumber = restoredAyah.ayahNumber
                 onAyahVisible(restoredAyah)
+                restoredFirstVisibleIndex = listState.firstVisibleItemIndex
+                initialPositionReady = true
+            } else if (!state.isLoading) {
+                // Keep the old marker if this edition lacks the target, but
+                // resume visible-ayah tracking once the reader actually scrolls.
+                restoredFirstVisibleIndex = listState.firstVisibleItemIndex
                 initialPositionReady = true
             }
         }
@@ -172,7 +181,12 @@ fun QuranSuraDetailScreen(
             }?.index
             visibleIndex to listState.isScrollInProgress
         }.distinctUntilChanged().collect { (index, scrolling) ->
-            if (scrolling) userScrolledAfterRestore = true
+            // isScrollInProgress also becomes true for programmatic scrolls.
+            // A changed visible index after restoration is stronger evidence of
+            // intentional reader movement than the scroll flag alone.
+            if (scrolling && index != null && index != restoredFirstVisibleIndex) {
+                userScrolledAfterRestore = true
+            }
             val ayah = index?.let { state.ayahs.getOrNull(it)?.ayah } ?: return@collect
             // Near the last verse, scrollToItem may be clamped and leave an
             // earlier verse at the viewport edge. Do not regress the saved

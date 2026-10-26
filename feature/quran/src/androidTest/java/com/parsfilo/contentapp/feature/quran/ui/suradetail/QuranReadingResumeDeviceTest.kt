@@ -5,7 +5,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.parsfilo.contentapp.core.designsystem.AppTheme
@@ -90,6 +93,34 @@ class QuranReadingResumeDeviceTest {
     }
 
     @Test
+    fun missingTargetRetainsMarkerUntilReaderScrolls() {
+        verifyTestHost()
+        val reported = mutableListOf<Int>()
+        rule.setContent {
+            AppTheme(flavorName = "kuran_kerim") {
+                QuranSuraDetailScreen(
+                    state = syntheticState(15),
+                    initialAyahNumber = 99,
+                    onBack = {},
+                    onRetry = {},
+                    onDisplayModeSelected = {},
+                    onFontSizeChange = {},
+                    onReciterSelected = {},
+                    onPlayPauseAyah = { _, _ -> },
+                    onDownloadAyah = {},
+                    onToggleBookmark = {},
+                    onAyahVisible = { reported.add(it.ayahNumber) },
+                )
+            }
+        }
+        rule.waitForIdle()
+        assertTrue("Missing target must not overwrite the saved ayah", reported.isEmpty())
+        rule.onNodeWithTag("quran_detail").performTouchInput { swipeUp() }
+        rule.waitUntil(timeoutMillis = 10_000) { reported.isNotEmpty() }
+        assertFalse("Reader's scroll should not reset to the first ayah", reported.contains(1))
+    }
+
+    @Test
     fun asyncLongSuraWaitsForTargetBeforeReportingProgress() {
         verifyTestHost()
         val reported = mutableListOf<Int>()
@@ -119,6 +150,7 @@ class QuranReadingResumeDeviceTest {
         rule.waitUntil(timeoutMillis = 10_000) { reported.contains(285) }
         assertTrue("Loaded target must be visible, got $reported", reported.contains(285))
         assertFalse("First ayah must not overwrite the late-loaded target", reported.contains(1))
+        assertEquals("Programmatic jump must not be classified as a reader scroll", listOf(285), reported.distinct())
     }
 
     @Test
