@@ -66,6 +66,35 @@ class QuranReadingResumeDeviceTest {
     }
 
     @Test
+    fun noScrollNeverReportsPrefetchedVersesAsRead() {
+        verifyTestHost()
+        val reported = mutableListOf<Int>()
+        rule.setContent {
+            AppTheme(flavorName = "kuran_kerim") {
+                QuranSuraDetailScreen(
+                    state = syntheticState(30),
+                    onBack = {},
+                    onRetry = {},
+                    onDisplayModeSelected = {},
+                    onFontSizeChange = {},
+                    onReciterSelected = {},
+                    onPlayPauseAyah = { _, _ -> },
+                    onDownloadAyah = {},
+                    onToggleBookmark = {},
+                    onAyahVisible = { reported.add(it.ayahNumber) },
+                )
+            }
+        }
+        rule.waitForIdle()
+        rule.onNodeWithText("Synthetic verse 1").assertIsDisplayed()
+        assertEquals(
+            "Only the first actually visible reading position may be saved without any scroll",
+            listOf(1),
+            reported.distinct(),
+        )
+    }
+
+    @Test
     fun lastReadTwoFiveTargetsFifthVerseWithoutRegressingToStart() {
         verifyTestHost()
         val reported = mutableListOf<Int>()
@@ -151,6 +180,33 @@ class QuranReadingResumeDeviceTest {
         assertTrue("Loaded target must be visible, got $reported", reported.contains(285))
         assertFalse("First ayah must not overwrite the late-loaded target", reported.contains(1))
         assertEquals("Programmatic jump must not be classified as a reader scroll", listOf(285), reported.distinct())
+    }
+
+    @Test
+    fun bookmarkJumpAccountsForNativeAdRowsBeforeTarget() {
+        verifyTestHost()
+        val reported = mutableListOf<Int>()
+        rule.setContent {
+            AppTheme(flavorName = "kuran_kerim") {
+                QuranSuraDetailScreen(
+                    state = syntheticState().copy(shouldShowAds = true),
+                    initialAyahNumber = 8,
+                    onBack = {},
+                    onRetry = {},
+                    onDisplayModeSelected = {},
+                    onFontSizeChange = {},
+                    onReciterSelected = {},
+                    onPlayPauseAyah = { _, _ -> },
+                    onDownloadAyah = {},
+                    onToggleBookmark = {},
+                    onAyahVisible = { reported.add(it.ayahNumber) },
+                    nativeAdContent = { androidx.compose.material3.Text("Synthetic Native Ad") },
+                )
+            }
+        }
+        rule.waitForIdle()
+        rule.onNodeWithText("Synthetic verse 8").assertIsDisplayed()
+        assertEquals(listOf(8), reported.distinct())
     }
 
     @Test
