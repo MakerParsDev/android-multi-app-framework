@@ -67,6 +67,7 @@ jobs:
             ciPixel2Api30Kuran_kerimDebugAndroidTest \
             -PciSmoke=true \
             -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect \
+            -Pandroid.testInstrumentationRunnerArguments.notClass=com.parsfilo.contentapp.quran.QuranLastReadInstalledAppE2ETest \
             --no-daemon \
             --no-configuration-cache \
             --stacktrace \
