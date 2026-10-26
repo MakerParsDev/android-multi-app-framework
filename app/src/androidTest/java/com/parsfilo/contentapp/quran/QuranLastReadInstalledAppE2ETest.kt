@@ -50,6 +50,22 @@ class QuranLastReadInstalledAppE2ETest {
                 Build.PRODUCT.contains("sdk", ignoreCase = true),
         )
 
+        // The external ADB runner must reject installed packages before installation.
+        // Verify this is a newly installed emulator app, not a reused data-bearing app.
+        val installedAt = context.packageManager.getPackageInfo(context.packageName, 0).firstInstallTime
+        val installAgeMs = System.currentTimeMillis() - installedAt
+        assertTrue(
+            "Refuse stale installation: original app may contain other user data",
+            installAgeMs in 0..(15 * 60 * 1_000L),
+        )
+        val databasePath = context.getDatabasePath(AppDatabase.DATABASE_NAME)
+        assertTrue(
+            "Refuse pre-existing Room database, even if Quran tables happen to be empty",
+            !databasePath.exists() &&
+                !java.io.File(databasePath.path + "-wal").exists() &&
+                !java.io.File(databasePath.path + "-shm").exists(),
+        )
+
         val database = Room.databaseBuilder(context, AppDatabase::class.java, AppDatabase.DATABASE_NAME)
             .build()
         runBlocking {
@@ -127,6 +143,7 @@ class QuranLastReadInstalledAppE2ETest {
             Log.i("QURAN_482_E2E", "cold_restart_launched")
             val resumeLabel = context.getString(R.string.quran_last_read_format, 2, 8)
             waitFor(resumeLabel)
+            rule.onNodeWithText(resumeLabel).assertIsDisplayed()
             assertEquals(8, readMarker(context))
             Log.i("QURAN_482_E2E", "cold_restart_retained_8")
         }
