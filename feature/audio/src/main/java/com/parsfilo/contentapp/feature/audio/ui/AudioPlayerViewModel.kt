@@ -66,6 +66,7 @@ class AudioPlayerViewModel @Inject constructor(
     private val okHttpClient: OkHttpClient,
     @javax.inject.Named("audioFileName") private val audioFileName: String,
     @javax.inject.Named("useAssetPackAudio") private val useAssetPackAudio: Boolean,
+    @javax.inject.Named("audioStartupEnabled") private val audioStartupEnabled: Boolean,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -82,25 +83,29 @@ class AudioPlayerViewModel @Inject constructor(
     private var overrideAudioFileName: String? = null
 
     init {
-        val sessionToken = SessionToken(context, ComponentName(context, AudioService::class.java))
-        val controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
-        this.controllerFuture = controllerFuture
+        if (audioStartupEnabled) {
+            val sessionToken = SessionToken(context, ComponentName(context, AudioService::class.java))
+            val controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
+            this.controllerFuture = controllerFuture
 
-        controllerFuture.addListener({
-            try {
-                player = controllerFuture.get()
-                checkAndLoadAudio()
-            } catch (e: CancellationException) {
-                Timber.w(e, "AudioService controller init cancelled")
-            } catch (e: ExecutionException) {
-                Timber.e(e, "Failed to connect to AudioService")
-            } catch (e: InterruptedException) {
-                Thread.currentThread().interrupt()
-                Timber.e(e, "AudioService controller init interrupted")
-            } catch (e: IllegalStateException) {
-                Timber.e(e, "Failed to connect to AudioService")
-            }
-        }, ContextCompat.getMainExecutor(context))
+            controllerFuture.addListener({
+                try {
+                    player = controllerFuture.get()
+                    checkAndLoadAudio()
+                } catch (e: CancellationException) {
+                    Timber.w(e, "AudioService controller init cancelled")
+                } catch (e: ExecutionException) {
+                    Timber.e(e, "Failed to connect to AudioService")
+                } catch (e: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    Timber.e(e, "AudioService controller init interrupted")
+                } catch (e: IllegalStateException) {
+                    Timber.e(e, "Failed to connect to AudioService")
+                }
+            }, ContextCompat.getMainExecutor(context))
+        } else {
+            Timber.i("Audio auto-load disabled for isolated smoke build")
+        }
     }
 
     /**
