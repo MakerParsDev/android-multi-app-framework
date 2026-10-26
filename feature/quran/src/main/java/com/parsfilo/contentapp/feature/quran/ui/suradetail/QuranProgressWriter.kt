@@ -1,8 +1,10 @@
 package com.parsfilo.contentapp.feature.quran.ui.suradetail
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
 /**
  * Serialize Room marker writes in observation order. Conflate rapid viewport
@@ -18,7 +20,15 @@ internal class QuranProgressWriter(
     init {
         scope.launch {
             for (ayahNumber in pendingAyah) {
-                save(ayahNumber)
+                try {
+                    save(ayahNumber)
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Exception) {
+                    // A transient Room failure must not kill every subsequent
+                    // progress write or crash the host Activity.
+                    Timber.e(error, "Failed to save Quran last-read ayah %d", ayahNumber)
+                }
             }
         }
     }
