@@ -46,10 +46,18 @@ sealed class AppRoute(
     data object QuranBookmarks : AppRoute("quran_bookmarks")
 
     data object QuranSuraDetail : AppRoute(
-        route = "quran_sura_detail/{suraNumber}",
-        arguments = listOf(navArgument("suraNumber") { type = NavType.IntType }),
+        route = "quran_sura_detail/{suraNumber}?ayahNumber={ayahNumber}",
+        arguments = listOf(
+            navArgument("suraNumber") { type = NavType.IntType },
+            navArgument("ayahNumber") {
+                type = NavType.IntType
+                defaultValue = -1
+            },
+        ),
     ) {
-        fun createRoute(suraNumber: Int) = "quran_sura_detail/$suraNumber"
+        fun createRoute(suraNumber: Int, ayahNumber: Int? = null): String =
+            "quran_sura_detail/$suraNumber" +
+                (ayahNumber?.takeIf { it > 0 }?.let { "?ayahNumber=$it" } ?: "")
     }
 
     data object QuranReciterSettings : AppRoute("quran_reciter_settings")

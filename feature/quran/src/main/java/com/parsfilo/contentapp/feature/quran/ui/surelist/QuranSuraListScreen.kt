@@ -64,6 +64,7 @@ import com.parsfilo.contentapp.feature.quran.ui.component.SuraListItem
 @Composable
 fun QuranSuraListRoute(
     onSuraClick: (Int) -> Unit,
+    onLastReadClick: (Int, Int) -> Unit,
     onBookmarksClick: () -> Unit,
     onSettingsClick: () -> Unit = {},
     onRewardsClick: () -> Unit = {},
@@ -75,6 +76,7 @@ fun QuranSuraListRoute(
     QuranSuraListScreen(
         state = uiState,
         onSuraClick = onSuraClick,
+        onLastReadClick = onLastReadClick,
         onBookmarksClick = onBookmarksClick,
         onSettingsClick = onSettingsClick,
         onRewardsClick = onRewardsClick,
@@ -89,6 +91,7 @@ fun QuranSuraListRoute(
 fun QuranSuraListScreen(
     state: SuraListViewModelState,
     onSuraClick: (Int) -> Unit,
+    onLastReadClick: (Int, Int) -> Unit,
     onBookmarksClick: () -> Unit,
     onSettingsClick: () -> Unit = {},
     onRewardsClick: () -> Unit = {},
@@ -149,7 +152,7 @@ fun QuranSuraListScreen(
                     modifier = Modifier
                         .padding(horizontal = 12.dp)
                         .fillMaxWidth()
-                        .clickable { onSuraClick(lastRead.suraNumber) },
+                        .clickable { onLastReadClick(lastRead.suraNumber, lastRead.ayahNumber) },
                 ) {
                     Row(
                         modifier = Modifier
