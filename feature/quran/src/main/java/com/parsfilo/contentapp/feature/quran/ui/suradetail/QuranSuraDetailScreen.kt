@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
@@ -39,7 +40,9 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ClipEntry
@@ -60,11 +63,13 @@ import com.parsfilo.contentapp.feature.quran.R
 import com.parsfilo.contentapp.feature.quran.ui.component.AyahItem
 import com.parsfilo.contentapp.feature.quran.ui.component.DisplayModeSelector
 import com.parsfilo.contentapp.feature.quran.ui.component.ReciterSelectionSheet
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import java.util.Locale
 
 @Composable
 fun QuranSuraDetailRoute(
+    initialAyahNumber: Int? = null,
     onBack: () -> Unit,
     onBookmarksClick: () -> Unit = {},
     onPlayAudioUrl: (String) -> Unit,
@@ -78,6 +83,7 @@ fun QuranSuraDetailRoute(
 
     QuranSuraDetailScreen(
         state = uiState,
+        initialAyahNumber = initialAyahNumber,
         onBack = onBack,
         onBookmarksClick = onBookmarksClick,
         onRetry = viewModel::retrySync,
@@ -109,6 +115,7 @@ fun QuranSuraDetailRoute(
 @Composable
 fun QuranSuraDetailScreen(
     state: QuranSuraDetailUiState,
+    initialAyahNumber: Int? = null,
     onBack: () -> Unit,
     onBookmarksClick: () -> Unit = {},
     onRetry: () -> Unit,
@@ -128,6 +135,74 @@ fun QuranSuraDetailScreen(
     var actionAyah by remember { mutableStateOf<QuranAyah?>(null) }
     var fontSliderValue by remember(state.fontSize) { mutableIntStateOf(state.fontSize) }
     val language = LocalLocale.current.platformLocale.language.lowercase(Locale.ROOT)
+    val listState = rememberLazyListState()
+    var initialPositionReady by rememberSaveable(initialAyahNumber) {
+        mutableStateOf(initialAyahNumber == null)
+    }
+    var userScrolledAfterRestore by rememberSaveable(initialAyahNumber) {
+        mutableStateOf(initialAyahNumber == null)
+    }
+    var restoredFirstVisibleIndex by rememberSaveable(initialAyahNumber) {
+        mutableStateOf<Int?>(null)
+    }
+    var lastReportedAyahNumber by remember(initialAyahNumber) { mutableIntStateOf(-1) }
+
+    LaunchedEffect(initialAyahNumber, state.ayahs.size) {
+        if (!initialPositionReady && state.ayahs.isNotEmpty()) {
+            val index = initialQuranAyahIndex(
+                state.ayahs.map { it.ayah.ayahNumber },
+                initialAyahNumber,
+            )
+            if (index != null) {
+                // Jump before enabling progress tracking: otherwise the initially
+                // composed first verses overwrite the saved Last Read marker.
+                listState.scrollToItem(index)
+                val restoredAyah = state.ayahs[index].ayah
+                lastReportedAyahNumber = restoredAyah.ayahNumber
+                onAyahVisible(restoredAyah)
+                restoredFirstVisibleIndex = listState.firstVisibleItemIndex
+                initialPositionReady = true
+            } else if (!state.isLoading) {
+                // Keep the old marker if this edition lacks the target, but
+                // resume visible-ayah tracking once the reader actually scrolls.
+                restoredFirstVisibleIndex = listState.firstVisibleItemIndex
+                initialPositionReady = true
+            }
+        }
+    }
+
+    LaunchedEffect(listState, initialPositionReady, state.ayahs.size) {
+        if (!initialPositionReady) return@LaunchedEffect
+        snapshotFlow {
+            val layout = listState.layoutInfo
+            val visibleIndex = layout.visibleItemsInfo.firstOrNull { item ->
+                item.offset + item.size > layout.viewportStartOffset &&
+                    item.offset < layout.viewportEndOffset
+            }?.index
+            visibleIndex to listState.isScrollInProgress
+        }.distinctUntilChanged().collect { (index, scrolling) ->
+            // isScrollInProgress also becomes true for programmatic scrolls.
+            // A changed visible index after restoration is stronger evidence of
+            // intentional reader movement than the scroll flag alone.
+            if (scrolling && index != null && index != restoredFirstVisibleIndex) {
+                userScrolledAfterRestore = true
+            }
+            val ayah = index?.let { state.ayahs.getOrNull(it)?.ayah } ?: return@collect
+            // Near the last verse, scrollToItem may be clamped and leave an
+            // earlier verse at the viewport edge. Do not regress the saved
+            // deep-link target unless the reader subsequently scrolls.
+            if (!userScrolledAfterRestore &&
+                initialAyahNumber != null &&
+                ayah.ayahNumber < initialAyahNumber
+            ) {
+                return@collect
+            }
+            if (ayah.ayahNumber != lastReportedAyahNumber) {
+                lastReportedAyahNumber = ayah.ayahNumber
+                onAyahVisible(ayah)
+            }
+        }
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets.safeDrawing.only(
@@ -205,6 +280,7 @@ fun QuranSuraDetailScreen(
             }
 
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .testTag("quran_detail")
                     .fillMaxWidth()
@@ -215,10 +291,6 @@ fun QuranSuraDetailScreen(
                     items = state.ayahs,
                     key = { _, ayahState -> "${ayahState.ayah.suraNumber}_${ayahState.ayah.ayahNumber}" },
                 ) { index, ayahState ->
-                    LaunchedEffect(ayahState.ayah.ayahNumber) {
-                        onAyahVisible(ayahState.ayah)
-                    }
-
                     val translatedText = when (state.displayMode) {
                         QuranDisplayMode.ARABIC -> ""
                         QuranDisplayMode.LATIN -> ayahState.ayah.latin
