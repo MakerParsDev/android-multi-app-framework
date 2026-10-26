@@ -324,6 +324,24 @@ fun AppNavHost(
                                 )
                             }
                         },
+                        onLastReadClick = { suraNumber, ayahNumber ->
+                            if (hostActivity == null) {
+                                navController.navigate(
+                                    AppRoute.QuranSuraDetail.createRoute(suraNumber, ayahNumber),
+                                )
+                            } else {
+                                requestInterstitialAd(
+                                    placement = AdPlacement.INTERSTITIAL_NAV_BREAK,
+                                    route = AppRoute.QuranSuraList.route,
+                                    triggerKind = InterstitialTriggerKind.NAV_BREAK,
+                                    onAdDismissed = {
+                                        navController.navigate(
+                                            AppRoute.QuranSuraDetail.createRoute(suraNumber, ayahNumber),
+                                        )
+                                    },
+                                )
+                            }
+                        },
                         onBookmarksClick = {
                             navController.navigate(
                                 AppRoute.QuranBookmarks.route,
@@ -357,12 +375,13 @@ fun AppNavHost(
                 composable(
                     route = AppRoute.QuranSuraDetail.route,
                     arguments = AppRoute.QuranSuraDetail.arguments,
-                ) {
+                ) { entry ->
                     LaunchedEffect(Unit) {
                         nativeAdViewModel.setPlacement(AdPlacement.NATIVE_FEED_CONTENT)
                     }
                     val seenAyahsInSession = remember { mutableSetOf<Int>() }
                     QuranSuraDetailRoute(
+                        initialAyahNumber = entry.arguments?.getInt("ayahNumber")?.takeIf { it > 0 },
                         onBack = { navController.popBackStack() },
                         onBookmarksClick = {
                             navController.navigate(
@@ -408,8 +427,8 @@ fun AppNavHost(
                         nativeAdViewModel.setPlacement(AdPlacement.NATIVE_FEED_CONTENT)
                     }
                     QuranBookmarksRoute(
-                        onAyahClick = { sura, _ ->
-                            navController.navigate(AppRoute.QuranSuraDetail.createRoute(sura))
+                        onAyahClick = { sura, ayah ->
+                            navController.navigate(AppRoute.QuranSuraDetail.createRoute(sura, ayah))
                         },
                         onBack = { navController.popBackStack() },
                         bannerAdContent = {
