@@ -10,22 +10,25 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,8 +42,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -299,7 +304,7 @@ fun AppHeader(
             ) {
                 Icon(
                     imageVector = Icons.Filled.Settings,
-                    contentDescription = "Ayarlar",
+                    contentDescription = stringResource(R.string.content_open_settings),
                     tint = colorScheme.onPrimaryContainer,
                     modifier = Modifier.size(dimens.iconMd)
                 )
@@ -331,7 +336,7 @@ fun AppHeader(
             ) {
                 Icon(
                     imageVector = Icons.Filled.CardGiftcard,
-                    contentDescription = "Ödüller",
+                    contentDescription = stringResource(R.string.content_open_rewards),
                     tint = colorScheme.onPrimaryContainer,
                     modifier = Modifier.size(dimens.iconMd)
                 )
@@ -346,33 +351,66 @@ fun BottomModeSelector(
     onModeSelected: (DisplayMode) -> Unit
 ) {
     val dimens = LocalDimens.current
-
-    Row(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = dimens.space6, vertical = dimens.space2),
-        horizontalArrangement = Arrangement.spacedBy(dimens.space8)
+            .padding(horizontal = dimens.space6, vertical = dimens.space2)
     ) {
-        ModeButton(
-            text = stringResource(R.string.content_mode_arabic),
-            isSelected = currentMode == DisplayMode.ARABIC,
-            onClick = { onModeSelected(DisplayMode.ARABIC) },
-            modifier = Modifier.weight(1f)
-        )
-        ModeButton(
-            text = stringResource(R.string.content_mode_latin),
-            isSelected = currentMode == DisplayMode.LATIN,
-            onClick = { onModeSelected(DisplayMode.LATIN) },
-            modifier = Modifier.weight(1f)
-        )
-        ModeButton(
-            text = stringResource(R.string.content_mode_turkish),
-            isSelected = currentMode == DisplayMode.TURKISH,
-            onClick = { onModeSelected(DisplayMode.TURKISH) },
-            modifier = Modifier.weight(1f)
-        )
+        val stack = shouldStackReaderModes(maxWidth.value, LocalDensity.current.fontScale)
+        if (stack) {
+            Column(
+                modifier = Modifier.fillMaxWidth().selectableGroup(),
+                verticalArrangement = Arrangement.spacedBy(dimens.space8)
+            ) {
+                ModeButton(
+                    text = stringResource(R.string.content_mode_arabic),
+                    isSelected = currentMode == DisplayMode.ARABIC,
+                    onClick = { onModeSelected(DisplayMode.ARABIC) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                ModeButton(
+                    text = stringResource(R.string.content_mode_latin),
+                    isSelected = currentMode == DisplayMode.LATIN,
+                    onClick = { onModeSelected(DisplayMode.LATIN) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                ModeButton(
+                    text = stringResource(R.string.content_mode_turkish),
+                    isSelected = currentMode == DisplayMode.TURKISH,
+                    onClick = { onModeSelected(DisplayMode.TURKISH) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth().selectableGroup(),
+                horizontalArrangement = Arrangement.spacedBy(dimens.space8)
+            ) {
+                ModeButton(
+                    text = stringResource(R.string.content_mode_arabic),
+                    isSelected = currentMode == DisplayMode.ARABIC,
+                    onClick = { onModeSelected(DisplayMode.ARABIC) },
+                    modifier = Modifier.weight(1f)
+                )
+                ModeButton(
+                    text = stringResource(R.string.content_mode_latin),
+                    isSelected = currentMode == DisplayMode.LATIN,
+                    onClick = { onModeSelected(DisplayMode.LATIN) },
+                    modifier = Modifier.weight(1f)
+                )
+                ModeButton(
+                    text = stringResource(R.string.content_mode_turkish),
+                    isSelected = currentMode == DisplayMode.TURKISH,
+                    onClick = { onModeSelected(DisplayMode.TURKISH) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
     }
 }
+
+internal fun shouldStackReaderModes(widthDp: Float, fontScale: Float): Boolean =
+    widthDp < 360f || fontScale >= 1.3f
 
 @Composable
 private fun ContentLoadingSkeleton(appName: String) {
@@ -482,36 +520,47 @@ fun ModeButton(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val dimens = LocalDimens.current
+    val shape = RoundedCornerShape(dimens.radiusXLarge)
 
-    AppButton(
-        text = text,
-        onClick = onClick,
+    Surface(
         modifier = modifier
-            .height(dimens.buttonHeight)
+            .defaultMinSize(minHeight = 48.dp)
+            .selectable(
+                selected = isSelected,
+                onClick = onClick,
+                role = Role.RadioButton
+            )
             .then(
                 if (isSelected) {
                     Modifier.border(
                         width = dimens.stroke + dimens.strokeThin,
                         color = colorScheme.outline.copy(alpha = 0.7f),
-                        shape = RoundedCornerShape(dimens.radiusXLarge)
+                        shape = shape
                     )
                 } else {
                     Modifier
                 }
             ),
-        shape = RoundedCornerShape(dimens.radiusXLarge),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = if (isSelected) colorScheme.primary else colorScheme.surfaceVariant
-        ),
-        contentPadding = PaddingValues(horizontal = dimens.space6),
-        elevation = if (isSelected) ButtonDefaults.buttonElevation(defaultElevation = dimens.space4) else ButtonDefaults.buttonElevation(defaultElevation = dimens.elevationNone)
+        shape = shape,
+        color = if (isSelected) colorScheme.primary else colorScheme.surfaceVariant,
+        contentColor = if (isSelected) colorScheme.onPrimary else colorScheme.onSurfaceVariant,
+        shadowElevation = if (isSelected) dimens.space4 else dimens.elevationNone
     ) {
-        Text(
-            text = text,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-            fontSize = 13.sp,
-            color = if (isSelected) colorScheme.onPrimary else colorScheme.onSurfaceVariant
-        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = 48.dp)
+                .padding(horizontal = dimens.space6, vertical = dimens.space4),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = text,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                fontSize = 13.sp,
+                textAlign = TextAlign.Center,
+                maxLines = 2
+            )
+        }
     }
 }
 
