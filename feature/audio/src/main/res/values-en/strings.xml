@@ -1,0 +1,9 @@
+<resources>
+    <string name="audio_play">Play</string>
+    <string name="audio_pause">Pause</string>
+    <string name="audio_stop">Stop</string>
+    <string name="audio_seek">Audio playback position</string>
+    <string name="audio_retry">Retry</string>
+    <string name="audio_asset_preparing">Preparing audio file…</string>
+    <string name="audio_asset_missing">Audio file not found</string>
+</resources>
