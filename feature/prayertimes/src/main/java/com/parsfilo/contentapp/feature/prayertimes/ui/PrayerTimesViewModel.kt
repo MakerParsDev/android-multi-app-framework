@@ -493,6 +493,9 @@ internal fun NextPrayerInfo.asUi(): NextPrayerUi {
     )
 }
 
+// Network/provider and persistence implementations can throw different exceptions.
+// Deliberately show recoverable UI feedback for all, but propagate cancellation.
+@Suppress("TooGenericExceptionCaught")
 @HiltViewModel
 class PrayerLocationPickerViewModel @Inject constructor(
     private val repository: PrayerTimesRepository,
