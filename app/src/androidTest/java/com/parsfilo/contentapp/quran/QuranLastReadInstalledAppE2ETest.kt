@@ -132,6 +132,18 @@ class QuranLastReadInstalledAppE2ETest {
             rule.onNodeWithText("QA Ayah 5").assertIsDisplayed()
             assertEquals(5, readMarker(context))
             Log.i("QURAN_482_E2E", "marker_5_retained_after_recreation")
+
+            // Opening and dismissing a modal without reader movement must not
+            // advance or regress the persisted Last Read marker.
+            rule.onNodeWithContentDescription(context.getString(R.string.quran_select_reciter)).performClick()
+            rule.waitUntil(timeoutMillis = 10_000) {
+                rule.onAllNodesWithText("✓", substring = true).fetchSemanticsNodes().isNotEmpty()
+            }
+            assertEquals(5, readMarker(context))
+            Log.i("QURAN_482_E2E", "reciter_overlay_marker_5_stable")
+            Espresso.pressBack()
+            rule.onNodeWithText("QA Ayah 5").assertIsDisplayed()
+            assertEquals(5, readMarker(context))
             Espresso.pressBack()
             Log.i("QURAN_482_E2E", "back_from_5")
             waitFor(recentLabel)
