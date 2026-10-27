@@ -30,4 +30,8 @@
     <string name="content_verse_not_found">Bu numarada ayet veya bölüm bulunamadı.</string>
     <string name="content_jump_action">Git</string>
     <string name="content_jump_cancel">Vazgeç</string>
+    <string name="content_save_reading_place">Burayı kaydet</string>
+    <string name="content_resume_at_verse">%1$d. ayetten devam et</string>
+    <string name="content_clear_saved_place">Kaydı sil</string>
+    <string name="content_saved_verse_missing">Kaydedilen ayet bu içerikte bulunamadı.</string>
 </resources>

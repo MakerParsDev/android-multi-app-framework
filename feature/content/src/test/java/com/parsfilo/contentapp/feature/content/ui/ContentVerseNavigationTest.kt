@@ -47,4 +47,37 @@ class ContentVerseNavigationTest {
         assertThat(canonicalVerseId("0")).isNull()
         assertThat(canonicalVerseId("")).isNull()
     }
+
+    @Test fun savingPlacePicksMeasuredMostVisibleVerseNotPrefetchOrAd() {
+        val visible = listOf(
+            VisibleContentItem("native_ad_9", 0, 150),
+            VisibleContentItem("verse_11", 150, 700),
+            VisibleContentItem("verse_12", 850, 450),
+        )
+        assertThat(visibleVerseToSave(visible, 0, 1000)).isEqualTo(11)
+        assertThat(visibleVerseToSave(visible, 900, 1000)).isEqualTo(12)
+    }
+
+    @Test fun outsideViewportAndAdOnlyCannotAdvanceAnySavedPlace() {
+        val prefetch = listOf(VisibleContentItem("verse_99", 1300, 600))
+        assertThat(visibleVerseToSave(prefetch, 0, 1000)).isNull()
+        assertThat(
+            visibleVerseToSave(
+                listOf(VisibleContentItem("native_ad_9", 0, 1000)), 0, 1000
+            )
+        ).isNull()
+        assertThat(visibleVerseToSave(emptyList(), 0, 1000)).isNull()
+        assertThat(
+            visibleVerseToSave(
+                listOf(VisibleContentItem("verse_5", 0, 1000)), 500, 500
+            )
+        ).isNull()
+    }
+
+    @Test fun savedCanonicalIdStillMapsWithAdSlotsAndIdGaps() {
+        val list = (1..40).map { Verse(it * 2, "", "", "") }
+        assertThat(contentLazyItemIndexForVerse(list, 2, true)).isEqualTo(0)
+        assertThat(contentLazyItemIndexForVerse(list, 80, true)).isEqualTo(42)
+        assertThat(contentLazyItemIndexForVerse(list, 41, true)).isNull()
+    }
 }

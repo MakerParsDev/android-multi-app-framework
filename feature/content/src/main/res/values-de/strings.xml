@@ -30,4 +30,8 @@
     <string name="content_verse_not_found">Zu dieser Nummer gibt es keinen Vers oder Abschnitt.</string>
     <string name="content_jump_action">Springen</string>
     <string name="content_jump_cancel">Abbrechen</string>
+    <string name="content_save_reading_place">Lesestelle speichern</string>
+    <string name="content_resume_at_verse">Bei Vers %1$d weiterlesen</string>
+    <string name="content_clear_saved_place">Markierung löschen</string>
+    <string name="content_saved_verse_missing">Der gespeicherte Vers ist nicht mehr in diesem Inhalt.</string>
 </resources>
