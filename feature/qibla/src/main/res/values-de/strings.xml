@@ -2,7 +2,7 @@
     <string name="qibla_heading_value">Qibla-Winkel: %1$d°</string>
     <string name="qibla_compass_value">Kompass: %1$d°</string>
     <string name="qibla_instruction">Halten Sie das Telefon möglichst flach und bewegen Sie es in einer Acht zur Kalibrierung.</string>
-    <string name="qibla_location_fallback">Standort nicht verfügbar, Standardregion wird verwendet.</string>
+    <string name="qibla_location_fallback">Standort nicht bestätigt; die Standardregion wird nicht zur Richtungsanzeige verwendet.</string>
     <string name="qibla_location_format">Standort: %1$s, %2$s</string>
     <string name="qibla_location_accuracy_format">Standortgenauigkeit: ±%1$d m</string>
     <string name="qibla_sensor_format">Sensor: %1$s</string>
@@ -11,7 +11,7 @@
     <string name="qibla_sensor_accel_magnetometer">Beschleunigung + Magnetometer</string>
     <string name="qibla_sensor_unavailable">Kein kompatibler Sensor auf dem Gerät</string>
     <string name="qibla_refresh_location">Standort aktualisieren</string>
-    <string name="qibla_location_unavailable">Aktueller Standort nicht verfügbar; Fallback aktiv.</string>
+    <string name="qibla_location_unavailable">Aktueller Standort nicht verfügbar; genaue Gebetsrichtung ausgeblendet.</string>
     <string name="qibla_calibration_hint">Kompassgenauigkeit niedrig. Bewegen Sie das Telefon in einer Acht.</string>
     <string name="qibla_aligned">Sie sind zur Qibla ausgerichtet</string>
     <string name="qibla_turn_right_format">Drehen Sie %1$d° nach rechts</string>
@@ -25,4 +25,11 @@
     <string name="qibla_kaaba_image_desc">Kaaba-Bild</string>
     <string name="qibla_settings">Einstellungen</string>
     <string name="qibla_rewards">Belohnungen</string>
+    <string name="qibla_direction_unverified">Gebetsrichtung noch nicht bestätigt</string>
+    <string name="qibla_permission_required_hint">Der Gerätestandort ist nicht bestätigt. Die Richtung der Standardregion gilt nicht für Ihren aktuellen Standort. Sie können den Standortzugriff freiwillig erlauben.</string>
+    <string name="qibla_waiting_for_location_hint">Während der Standortprüfung werden keine geschätzten Drehanweisungen angezeigt.</string>
+    <string name="qibla_location_unverified_hint">Der aktuelle Standort konnte nicht ermittelt werden. Eine Richtung für die Standardregion wäre irreführend. Prüfen Sie die Verbindung und versuchen Sie es erneut.</string>
+    <string name="qibla_sensor_unverified_hint">Standort verfügbar, aber die Kompassausrichtung ist noch unzuverlässig. Kalibrieren Sie den Sensor; Drehanweisungen bleiben ausgeblendet.</string>
+    <string name="qibla_request_location_permission">Standortzugriff erlauben</string>
+    <string name="qibla_compass_hidden_hint">Ohne bestätigten Standort und nutzbaren Kompass wird kein Richtungspfeil angezeigt.</string>
 </resources>

@@ -2,7 +2,7 @@
     <string name="qibla_heading_value">Kıble Açısı: %1$d°</string>
     <string name="qibla_compass_value">Pusula: %1$d°</string>
     <string name="qibla_instruction">Telefonu yataya yakın tutun ve manyetik alan kalibrasyonu için 8 çizerek hareket ettirin.</string>
-    <string name="qibla_location_fallback">Konum alınamadı, varsayılan bölge kullanılıyor.</string>
+    <string name="qibla_location_fallback">Konum doğrulanmadı; varsayılan bölge yönlendirme için kullanılmıyor.</string>
     <string name="qibla_location_format">Konum: %1$s, %2$s</string>
     <string name="qibla_location_accuracy_format">Konum doğruluğu: ±%1$d m</string>
     <string name="qibla_sensor_format">Sensör: %1$s</string>
@@ -11,7 +11,7 @@
     <string name="qibla_sensor_accel_magnetometer">Accelerometer + Magnetometer</string>
     <string name="qibla_sensor_unavailable">Cihazda uygun sensör yok</string>
     <string name="qibla_refresh_location">Konumu yenile</string>
-    <string name="qibla_location_unavailable">Anlık konum alınamadı, son bilinen/veri yok.</string>
+    <string name="qibla_location_unavailable">Güncel konum alınamadı; kesin kıble yönü gösterilmiyor.</string>
     <string name="qibla_calibration_hint">Pusula doğruluğu düşük. Telefonu 8 çizerek kalibre edin.</string>
     <string name="qibla_aligned">Kıble ile hizalısınız</string>
     <string name="qibla_turn_right_format">Sağa %1$d° çevirin</string>
@@ -25,4 +25,11 @@
     <string name="qibla_kaaba_image_desc">Kabe görseli</string>
     <string name="qibla_settings">Ayarlar</string>
     <string name="qibla_rewards">Ödüller</string>
+    <string name="qibla_direction_unverified">Kıble yönü henüz doğrulanmadı</string>
+    <string name="qibla_permission_required_hint">Bu cihazın konumu doğrulanmadı. Varsayılan koordinatlardan hesaplanan yön, bulunduğunuz yerin kıble yönü değildir. İsterseniz konuma izin verin.</string>
+    <string name="qibla_waiting_for_location_hint">Konum doğrulanırken tahmini yönlendirme gösterilmez.</string>
+    <string name="qibla_location_unverified_hint">Güncel konum alınamadı. Varsayılan bölgeye göre bir açı göstermek yanıltıcı olabilir. Bağlantınızı kontrol edip yeniden deneyebilirsiniz.</string>
+    <string name="qibla_sensor_unverified_hint">Konum alındı ancak pusula sensörü henüz güvenilir değil. Sensörü kalibre edin; dönüş talimatı şimdilik gizlendi.</string>
+    <string name="qibla_request_location_permission">Konum izni ver</string>
+    <string name="qibla_compass_hidden_hint">Doğrulanmış konum ve kullanılabilir pusula olmadan yön oku gösterilmez.</string>
 </resources>

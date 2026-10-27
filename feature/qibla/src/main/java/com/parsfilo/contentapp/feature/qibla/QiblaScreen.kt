@@ -52,6 +52,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -68,12 +69,17 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.android.gms.location.CurrentLocationRequest
 import com.google.android.gms.location.LocationServices
@@ -124,6 +130,19 @@ fun QiblaRoute(
                 ),
             )
         }
+    }
+
+    // Android Settings can revoke or grant location permission while this route
+    // stays composed. Re-check only after the initial resume (handled above) so
+    // we do not launch a duplicate initial permission request.
+    var hasResumedOnce by remember { mutableStateOf(false) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        if (hasResumedOnce) {
+            val permissionNowGranted = hasLocationPermission(context)
+            viewModel.onPermissionStateChanged(permissionNowGranted)
+            if (permissionNowGranted) viewModel.requestLocationRefresh()
+        }
+        hasResumedOnce = true
     }
 
     LaunchedEffect(uiState.hasLocationPermission, uiState.refreshRequestNonce) {
@@ -334,7 +353,13 @@ private fun QiblaScreenContent(
     bannerAdContent: @Composable () -> Unit,
     nativeAdContent: @Composable () -> Unit,
 ) {
-    val alignmentText = buildAlignmentText(resources, uiState.signedDeltaToQibla)
+    val guidanceStatus = uiState.guidanceStatus()
+    val directionReady = guidanceStatus == QiblaGuidanceStatus.READY
+    val alignmentText = if (directionReady) {
+        buildAlignmentText(resources, uiState.signedDeltaToQibla)
+    } else {
+        resources.getString(R.string.qibla_direction_unverified)
+    }
     val sensorLabel = stringResource(
         when (uiState.sensorSource) {
             OrientationSensorSource.ROTATION_VECTOR -> R.string.qibla_sensor_rotation_vector
@@ -352,11 +377,25 @@ private fun QiblaScreenContent(
         },
     )
     val locationLabel = when (uiState.locationStatus) {
-        QiblaLocationStatus.LIVE -> stringResource(
-            R.string.qibla_location_format,
-            String.format(Locale.US, "%.4f", uiState.latitude ?: DEFAULT_LAT),
-            String.format(Locale.US, "%.4f", uiState.longitude ?: DEFAULT_LON),
-        )
+        QiblaLocationStatus.LIVE -> {
+            val latitude = uiState.latitude
+            val longitude = uiState.longitude
+            if (latitude != null &&
+                longitude != null &&
+                latitude.isFinite() &&
+                longitude.isFinite() &&
+                latitude in -90.0..90.0 &&
+                longitude in -180.0..180.0
+            ) {
+                stringResource(
+                    R.string.qibla_location_format,
+                    String.format(Locale.US, "%.4f", latitude),
+                    String.format(Locale.US, "%.4f", longitude),
+                )
+            } else {
+                stringResource(R.string.qibla_location_unavailable)
+            }
+        }
 
         QiblaLocationStatus.UNAVAILABLE -> stringResource(R.string.qibla_location_unavailable)
         QiblaLocationStatus.FALLBACK_DEFAULT -> stringResource(R.string.qibla_location_fallback)
@@ -422,33 +461,80 @@ private fun QiblaScreenContent(
                     ) {
                         Text(
                             text = alignmentText,
+                            modifier = if (directionReady) {
+                                Modifier
+                            } else {
+                                Modifier.semantics {
+                                    liveRegion = LiveRegionMode.Polite
+                                }
+                            },
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface,
+                            color = if (directionReady) {
+                                MaterialTheme.colorScheme.onSurface
+                            } else {
+                                MaterialTheme.colorScheme.error
+                            },
                         )
-                        Text(
-                            text = stringResource(
-                                R.string.qibla_heading_value, uiState.qiblaBearing.roundToInt()
-                            ),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = stringResource(
-                                R.string.qibla_confidence_format,
-                                uiState.confidenceScore,
-                                confidenceLabel,
-                            ),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = confidenceColor,
-                            fontWeight = FontWeight.Medium,
-                        )
-                        LinearProgressIndicator(
-                            progress = { uiState.confidenceScore / 100f },
-                            modifier = Modifier.fillMaxWidth(),
-                            color = confidenceColor,
-                            trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                        )
+                        if (directionReady) {
+                            Text(
+                                text = stringResource(
+                                    R.string.qibla_heading_value,
+                                    uiState.qiblaBearing.roundToInt(),
+                                ),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(
+                                text = stringResource(
+                                    R.string.qibla_confidence_format,
+                                    uiState.confidenceScore,
+                                    confidenceLabel,
+                                ),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = confidenceColor,
+                                fontWeight = FontWeight.Medium,
+                            )
+                            LinearProgressIndicator(
+                                progress = { uiState.confidenceScore / 100f },
+                                modifier = Modifier.fillMaxWidth(),
+                                color = confidenceColor,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                            )
+                        } else {
+                            Text(
+                                text = stringResource(
+                                    when (guidanceStatus) {
+                                        QiblaGuidanceStatus.PERMISSION_REQUIRED ->
+                                            R.string.qibla_permission_required_hint
+                                        QiblaGuidanceStatus.REFRESHING_LOCATION ->
+                                            R.string.qibla_waiting_for_location_hint
+                                        QiblaGuidanceStatus.LOCATION_UNVERIFIED ->
+                                            R.string.qibla_location_unverified_hint
+                                        QiblaGuidanceStatus.SENSOR_UNAVAILABLE ->
+                                            R.string.qibla_sensor_unverified_hint
+                                        QiblaGuidanceStatus.READY -> error("Handled by directionReady")
+                                    },
+                                ),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            if (guidanceStatus == QiblaGuidanceStatus.PERMISSION_REQUIRED ||
+                                guidanceStatus == QiblaGuidanceStatus.LOCATION_UNVERIFIED
+                            ) {
+                                Button(onClick = onRefreshLocation) {
+                                    Text(
+                                        text = stringResource(
+                                            if (guidanceStatus == QiblaGuidanceStatus.PERMISSION_REQUIRED) {
+                                                R.string.qibla_request_location_permission
+                                            } else {
+                                                R.string.qibla_refresh_location
+                                            },
+                                        ),
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -467,25 +553,37 @@ private fun QiblaScreenContent(
                             .padding(horizontal = 8.dp, vertical = 14.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        CompassCanvas(
-                            modifier = Modifier.size(320.dp),
-                            relativeToQibla = uiState.relativeToQibla,
-                        )
-                        Box(
-                            modifier = Modifier
-                                .size(72.dp)
-                                .background(
-                                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
-                                    shape = CircleShape,
+                        if (directionReady) {
+                            CompassCanvas(
+                                modifier = Modifier.size(320.dp),
+                                relativeToQibla = uiState.relativeToQibla,
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(72.dp)
+                                    .background(
+                                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
+                                        shape = CircleShape,
+                                    )
+                                    .padding(10.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.kabe),
+                                    contentDescription = stringResource(R.string.qibla_kaaba_image_desc),
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Fit,
                                 )
-                                .padding(10.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.kabe),
-                                contentDescription = stringResource(R.string.qibla_kaaba_image_desc),
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Fit,
+                            }
+                        } else {
+                            Text(
+                                text = stringResource(R.string.qibla_compass_hidden_hint),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(20.dp),
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -544,10 +642,12 @@ private fun QiblaScreenContent(
                     }
                 }
             }
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Button(onClick = onRefreshLocation) {
-                        Text(text = stringResource(R.string.qibla_refresh_location))
+            if (directionReady || guidanceStatus == QiblaGuidanceStatus.SENSOR_UNAVAILABLE) {
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Button(onClick = onRefreshLocation) {
+                            Text(text = stringResource(R.string.qibla_refresh_location))
+                        }
                     }
                 }
             }
