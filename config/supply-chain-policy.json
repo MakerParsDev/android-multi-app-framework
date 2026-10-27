@@ -67,8 +67,8 @@
     },
     {
       "coordinate": "com.google.guava:guava",
-      "version": "33.7.1-jre",
-      "reason": "Reviewed Guava JRE floor above historical temporary-directory and information-disclosure advisories; 33.7.1 also fixes the Java 9/10 manifest regression introduced in 33.7.0."
+      "version": "33.7.2-jre",
+      "reason": "Reviewed Guava JRE security floor for CVE-2026-102554 / GHSA-xxph-c9ww-hj94 (uncontrolled memory allocation during deserialization), fixed in 33.7.2; retains the Java 9/10 manifest fix and earlier security floors."
     }
   ],
   "schema_version": 1
