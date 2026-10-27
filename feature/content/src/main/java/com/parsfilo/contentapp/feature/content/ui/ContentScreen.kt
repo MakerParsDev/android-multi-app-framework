@@ -22,21 +22,30 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,6 +57,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -63,6 +73,7 @@ import com.parsfilo.contentapp.core.model.Verse
 import com.parsfilo.contentapp.feature.ads.AdPlacement
 import com.parsfilo.contentapp.feature.ads.ui.BannerAd
 import com.parsfilo.contentapp.feature.content.R
+import kotlinx.coroutines.launch
 
 @Composable
 fun ContentRoute(
@@ -144,6 +155,11 @@ fun ContentScreen(
         is ContentUiState.Success -> {
             val colorScheme = MaterialTheme.colorScheme
             val verses = uiState.verses
+            val listState = rememberLazyListState()
+            val scope = rememberCoroutineScope()
+            var showVerseJump by rememberSaveable { mutableStateOf(false) }
+            var verseQuery by rememberSaveable { mutableStateOf("") }
+            val hasLongContent = verses.size >= 15
             val showTopBanner = uiState.shouldShowAds && shouldShowTopBannerForScrollableContent(verses.size)
             val showInlineFeedAds = uiState.shouldShowAds && shouldPreferInlineFeedAds(verses.size)
             Column(
@@ -221,8 +237,23 @@ fun ContentScreen(
 
                     Spacer(modifier = Modifier.height(dimens.space4))
 
+                    if (hasLongContent) {
+                        TextButton(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("content_go_to_verse"),
+                            onClick = {
+                                verseQuery = ""
+                                showVerseJump = true
+                            },
+                        ) {
+                            Text(stringResource(R.string.content_jump_to_verse))
+                        }
+                    }
+
                     // Verse Cards + Native Ads (her 5 ayetten sonra)
                     LazyColumn(
+                        state = listState,
                         modifier = Modifier
                             .testTag("content_list")
                             .weight(1f)
@@ -251,6 +282,54 @@ fun ContentScreen(
                             }
                         }
                     }
+                    if (showVerseJump && hasLongContent) {
+                        val number = verseQuery.toIntOrNull()
+                        val destination = number?.let {
+                            contentLazyItemIndexForVerse(verses, it, showInlineFeedAds)
+                        }
+                        AlertDialog(
+                            onDismissRequest = { showVerseJump = false },
+                            title = { Text(stringResource(R.string.content_jump_to_verse)) },
+                            text = {
+                                Column {
+                                    OutlinedTextField(
+                                        value = verseQuery,
+                                        onValueChange = { verseQuery = it.filter(Char::isDigit).take(6) },
+                                        label = { Text(stringResource(R.string.content_verse_number)) },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        singleLine = true,
+                                        isError = verseQuery.isNotEmpty() && destination == null,
+                                        modifier = Modifier.testTag("content_verse_number"),
+                                    )
+                                    if (verseQuery.isNotEmpty() && destination == null) {
+                                        Text(
+                                            stringResource(R.string.content_verse_not_found),
+                                            color = colorScheme.error,
+                                            style = MaterialTheme.typography.bodySmall,
+                                        )
+                                    }
+                                }
+                            },
+                            confirmButton = {
+                                TextButton(
+                                    enabled = destination != null,
+                                    onClick = {
+                                        val target = destination ?: return@TextButton
+                                        showVerseJump = false
+                                        scope.launch { listState.scrollToItem(target) }
+                                    },
+                                ) {
+                                    Text(stringResource(R.string.content_jump_action))
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showVerseJump = false }) {
+                                    Text(stringResource(R.string.content_jump_cancel))
+                                }
+                            },
+                        )
+                    }
+
                     // Bottom Mode Selector
                     BottomModeSelector(
                         currentMode = uiState.displayMode,

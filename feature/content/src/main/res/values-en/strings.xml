@@ -25,4 +25,9 @@
     <string name="esma_search_label">Search by name or number</string>
     <string name="esma_search_clear">Clear search</string>
     <string name="esma_search_no_results">No names match. Try another name or number.</string>
+    <string name="content_jump_to_verse">Go to verse / section</string>
+    <string name="content_verse_number">Verse / section number</string>
+    <string name="content_verse_not_found">No verse or section exists with this number.</string>
+    <string name="content_jump_action">Go</string>
+    <string name="content_jump_cancel">Cancel</string>
 </resources>
