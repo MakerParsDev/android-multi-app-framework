@@ -45,6 +45,7 @@ data class QiblaUiState(
     val geomagneticDeclination: Float = 0f,
     val sensorSource: OrientationSensorSource = OrientationSensorSource.UNAVAILABLE,
     val sensorAccuracy: Int = SensorManager.SENSOR_STATUS_UNRELIABLE,
+    val hasHeadingSample: Boolean = false,
     val confidenceScore: Int = 25,
     val confidenceLevel: QiblaConfidenceLevel = QiblaConfidenceLevel.LOW,
     val refreshRequestNonce: Int = 0,
@@ -69,6 +70,7 @@ internal fun QiblaUiState.guidanceStatus(): QiblaGuidanceStatus = when {
         longitude !in -180.0..180.0 ->
         QiblaGuidanceStatus.LOCATION_UNVERIFIED
     sensorSource == OrientationSensorSource.UNAVAILABLE ||
+        !hasHeadingSample ||
         sensorAccuracy == SensorManager.SENSOR_STATUS_UNRELIABLE ->
         QiblaGuidanceStatus.SENSOR_UNAVAILABLE
     else -> QiblaGuidanceStatus.READY

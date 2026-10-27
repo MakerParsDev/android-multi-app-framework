@@ -82,7 +82,11 @@ class QiblaViewModel @Inject constructor() : ViewModel() {
     }
 
     fun onSensorSourceResolved(source: OrientationSensorSource) {
-        _uiState.update { current -> recalculateDerived(current.copy(sensorSource = source)) }
+        // Each new listener registration requires a real heading sample before
+        // any degree instruction is actionable, even with high sensor accuracy.
+        _uiState.update { current ->
+            recalculateDerived(current.copy(sensorSource = source, hasHeadingSample = false))
+        }
     }
 
     fun onSensorAccuracyChanged(accuracy: Int) {
@@ -92,7 +96,12 @@ class QiblaViewModel @Inject constructor() : ViewModel() {
     fun onHeadingUpdated(headingTrueNorth: Float) {
         if (!headingTrueNorth.isFinite()) return
         _uiState.update { current ->
-            recalculateDerived(current.copy(headingTrueNorth = QiblaMath.normalize360(headingTrueNorth)))
+            recalculateDerived(
+                current.copy(
+                    headingTrueNorth = QiblaMath.normalize360(headingTrueNorth),
+                    hasHeadingSample = true,
+                ),
+            )
         }
     }
 

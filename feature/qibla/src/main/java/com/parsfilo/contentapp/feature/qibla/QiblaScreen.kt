@@ -11,6 +11,7 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.hardware.display.DisplayManager
 import android.location.Location
+import android.os.SystemClock
 import android.view.Display
 import android.view.Surface
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -603,13 +604,16 @@ private fun QiblaScreenContent(
                             .padding(horizontal = 14.dp, vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
-                        InfoRow(
-                            icon = Icons.Default.Navigation,
-                            label = stringResource(
-                                R.string.qibla_compass_value,
-                                uiState.headingTrueNorth.roundToInt(),
-                            ),
-                        )
+                        // A placeholder 0° heading is not a verified compass measurement.
+                        if (directionReady) {
+                            InfoRow(
+                                icon = Icons.Default.Navigation,
+                                label = stringResource(
+                                    R.string.qibla_compass_value,
+                                    uiState.headingTrueNorth.roundToInt(),
+                                ),
+                            )
+                        }
                         InfoRow(
                             icon = Icons.Default.Sensors,
                             label = stringResource(R.string.qibla_sensor_format, sensorLabel),
@@ -882,14 +886,29 @@ private suspend fun resolveBestLocation(context: Context): Location? {
         null
     }
 
-    if (current != null) return current
+    if (current != null && isRecentLocationFix(current.elapsedRealtimeNanos, SystemClock.elapsedRealtimeNanos())) {
+        return current
+    }
 
-    return try {
+    val cached = try {
         withTimeoutOrNull(2_000L) { fused.lastLocation.await() }
     } catch (_: SecurityException) {
         null
     }
+    // A last-known fix can refer to an arbitrarily old device position.
+    // It must not be presented as an authenticated current-location direction.
+    return cached?.takeIf {
+        isRecentLocationFix(it.elapsedRealtimeNanos, SystemClock.elapsedRealtimeNanos())
+    }
 }
+
+/** Both timestamps are on Android's monotonic elapsed-realtime clock. */
+internal fun isRecentLocationFix(sampleElapsedNanos: Long, nowElapsedNanos: Long): Boolean =
+    sampleElapsedNanos > 0L &&
+        nowElapsedNanos >= sampleElapsedNanos &&
+        nowElapsedNanos - sampleElapsedNanos <= MAX_VERIFIED_LOCATION_AGE_NANOS
+
+private const val MAX_VERIFIED_LOCATION_AGE_NANOS = 60_000_000_000L
 
 private fun remapForDisplay(
     source: FloatArray,

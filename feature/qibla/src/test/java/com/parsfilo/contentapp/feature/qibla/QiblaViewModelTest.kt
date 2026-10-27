@@ -46,6 +46,8 @@ class QiblaViewModelTest {
 
         vm.onSensorSourceResolved(OrientationSensorSource.ROTATION_VECTOR)
         vm.onSensorAccuracyChanged(SensorManager.SENSOR_STATUS_ACCURACY_HIGH)
+        assertThat(vm.uiState.value.guidanceStatus()).isEqualTo(QiblaGuidanceStatus.SENSOR_UNAVAILABLE)
+        vm.onHeadingUpdated(152f)
         assertThat(vm.uiState.value.guidanceStatus()).isEqualTo(QiblaGuidanceStatus.READY)
 
         vm.onSensorAccuracyChanged(SensorManager.SENSOR_STATUS_UNRELIABLE)
@@ -61,6 +63,7 @@ class QiblaViewModelTest {
         vm.onLocationResolved(41.0082, 28.9784, 8f, 5f)
         vm.onSensorSourceResolved(OrientationSensorSource.ROTATION_VECTOR)
         vm.onSensorAccuracyChanged(SensorManager.SENSOR_STATUS_ACCURACY_HIGH)
+        vm.onHeadingUpdated(157f)
         assertThat(vm.uiState.value.guidanceStatus()).isEqualTo(QiblaGuidanceStatus.READY)
 
         vm.onLocationUnavailable()
@@ -84,6 +87,7 @@ class QiblaViewModelTest {
             longitude = 29.0,
             sensorSource = OrientationSensorSource.ROTATION_VECTOR,
             sensorAccuracy = SensorManager.SENSOR_STATUS_ACCURACY_HIGH,
+            hasHeadingSample = true,
         )
         assertThat(valid.guidanceStatus()).isEqualTo(QiblaGuidanceStatus.READY)
         assertThat(valid.copy(latitude = null).guidanceStatus())
@@ -94,6 +98,39 @@ class QiblaViewModelTest {
             .isEqualTo(QiblaGuidanceStatus.LOCATION_UNVERIFIED)
         assertThat(valid.copy(isLocationRefreshing = true).guidanceStatus())
             .isEqualTo(QiblaGuidanceStatus.REFRESHING_LOCATION)
+    }
+
+    @Test
+    fun highAccuracyCallbackDoesNotUnlockGuidanceBeforeHeadingSample() {
+        val vm = QiblaViewModel()
+        vm.onPermissionStateChanged(true)
+        vm.onLocationResolved(41.0, 29.0, 5f, 0f)
+        vm.onSensorSourceResolved(OrientationSensorSource.ACCELEROMETER_MAGNETOMETER)
+        vm.onSensorAccuracyChanged(SensorManager.SENSOR_STATUS_ACCURACY_HIGH)
+        assertThat(vm.uiState.value.hasHeadingSample).isFalse()
+        assertThat(vm.uiState.value.guidanceStatus()).isEqualTo(QiblaGuidanceStatus.SENSOR_UNAVAILABLE)
+
+        vm.onHeadingUpdated(0f)
+        assertThat(vm.uiState.value.hasHeadingSample).isTrue()
+        assertThat(vm.uiState.value.guidanceStatus()).isEqualTo(QiblaGuidanceStatus.READY)
+
+        vm.onSensorSourceResolved(OrientationSensorSource.ROTATION_VECTOR)
+        assertThat(vm.uiState.value.hasHeadingSample).isFalse()
+        assertThat(vm.uiState.value.guidanceStatus()).isEqualTo(QiblaGuidanceStatus.SENSOR_UNAVAILABLE)
+        vm.onHeadingUpdated(Float.NaN)
+        assertThat(vm.uiState.value.guidanceStatus()).isEqualTo(QiblaGuidanceStatus.SENSOR_UNAVAILABLE)
+        vm.onHeadingUpdated(91f)
+        assertThat(vm.uiState.value.guidanceStatus()).isEqualTo(QiblaGuidanceStatus.READY)
+    }
+
+    @Test
+    fun staleLocationAndFutureTimestampDoNotCountAsFreshFix() {
+        val now = 2_000_000_000_000L
+        assertThat(isRecentLocationFix(now - 1_000_000_000L, now)).isTrue()
+        assertThat(isRecentLocationFix(now - 60_000_000_000L, now)).isTrue()
+        assertThat(isRecentLocationFix(now - 60_000_000_001L, now)).isFalse()
+        assertThat(isRecentLocationFix(0L, now)).isFalse()
+        assertThat(isRecentLocationFix(now + 1L, now)).isFalse()
     }
 
     @Test
