@@ -16,3 +16,9 @@ internal fun contentLazyItemIndexForVerse(
     }
     return index + adsBefore
 }
+
+/** Never silently rewrite pasted malformed text into a different canonical verse ID. */
+internal fun canonicalVerseId(raw: String): Int? {
+    if (raw.isEmpty() || raw.length > 6 || raw.any { it !in '0'..'9' }) return null
+    return raw.toIntOrNull()?.takeIf { it > 0 }
+}
