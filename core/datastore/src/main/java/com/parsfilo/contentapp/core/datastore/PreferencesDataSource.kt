@@ -113,6 +113,22 @@ class PreferencesDataSource @Inject constructor(
         it[PreferencesKeys.QURAN_FONT_SIZE] ?: 28
     }
 
+    /** Stored in each installed app package's own user_preferences DataStore. */
+    val contentSavedVerseId: Flow<Int?> = userPreferences.data.map { preferences ->
+        preferences[PreferencesKeys.CONTENT_SAVED_VERSE_ID]?.takeIf { it > 0 }
+    }
+
+    /** Only explicit Save/Clear UI actions may update this marker, never lazy prefetch. */
+    suspend fun setContentSavedVerseId(verseId: Int?) {
+        userPreferences.edit { preferences ->
+            if (verseId != null && verseId > 0) {
+                preferences[PreferencesKeys.CONTENT_SAVED_VERSE_ID] = verseId
+            } else {
+                preferences.remove(PreferencesKeys.CONTENT_SAVED_VERSE_ID)
+            }
+        }
+    }
+
     val userData: Flow<UserPreferencesData> = userPreferences.data.map { preferences ->
         UserPreferencesData(
             darkMode = preferences[PreferencesKeys.DARK_MODE] ?: false,
@@ -500,6 +516,7 @@ class PreferencesDataSource @Inject constructor(
         val QURAN_SELECTED_RECITER = stringPreferencesKey("quran_selected_reciter")
         val QURAN_DISPLAY_MODE = stringPreferencesKey("quran_display_mode")
         val QURAN_FONT_SIZE = intPreferencesKey("quran_font_size")
+        val CONTENT_SAVED_VERSE_ID = intPreferencesKey("content_saved_verse_id")
     }
 }
 

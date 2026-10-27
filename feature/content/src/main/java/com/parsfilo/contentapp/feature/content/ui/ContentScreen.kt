@@ -102,6 +102,8 @@ fun ContentRoute(
         },
         onSettingsClick = onSettingsClick,
         onRewardsClick = onRewardsClick,
+        onSavePlace = viewModel::saveReadingPlace,
+        onClearPlace = viewModel::clearReadingPlace,
         audioPlayerContent = audioPlayerContent,
         nativeAdContent = nativeAdContent,
         bannerAdUnitId = bannerAdUnitId,
@@ -122,7 +124,9 @@ fun ContentScreen(
     audioPlayerContent: @Composable () -> Unit = {},
     nativeAdContent: @Composable () -> Unit = {},
     bannerAdUnitId: String,
-    onRetry: () -> Unit = {}
+    onRetry: () -> Unit = {},
+    onSavePlace: (Int) -> Unit = {},
+    onClearPlace: () -> Unit = {},
 ) {
     val dimens = LocalDimens.current
     val motion = LocalMotion.current
@@ -238,16 +242,85 @@ fun ContentScreen(
                     Spacer(modifier = Modifier.height(dimens.space4))
 
                     if (hasLongContent) {
-                        TextButton(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("content_go_to_verse"),
-                            onClick = {
-                                verseQuery = ""
-                                showVerseJump = true
-                            },
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(dimens.space4),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(stringResource(R.string.content_jump_to_verse))
+                            TextButton(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("content_go_to_verse"),
+                                onClick = {
+                                    verseQuery = ""
+                                    showVerseJump = true
+                                },
+                            ) {
+                                Text(
+                                    stringResource(R.string.content_jump_to_verse),
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
+                            TextButton(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("content_save_current_verse"),
+                                onClick = {
+                                    val layout = listState.layoutInfo
+                                    val visible = layout.visibleItemsInfo.map { item ->
+                                        VisibleContentItem(item.key, item.offset, item.size)
+                                    }
+                                    val id = visibleVerseToSave(
+                                        visible, layout.viewportStartOffset, layout.viewportEndOffset
+                                    )
+                                    if (id != null && verses.any { it.id == id }) onSavePlace(id)
+                                },
+                            ) {
+                                Text(
+                                    stringResource(R.string.content_save_reading_place),
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
+                        }
+                        val savedId = uiState.savedVerseId
+                        val savedDestination = savedId?.let { id ->
+                            contentLazyItemIndexForVerse(verses, id, showInlineFeedAds)
+                        }
+                        if (savedId != null) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(dimens.space4),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                if (savedDestination != null) {
+                                    TextButton(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .testTag("content_resume_reading"),
+                                        onClick = {
+                                            scope.launch { listState.scrollToItem(savedDestination) }
+                                        },
+                                    ) {
+                                        Text(
+                                            stringResource(R.string.content_resume_at_verse, savedId),
+                                            textAlign = TextAlign.Center,
+                                        )
+                                    }
+                                } else {
+                                    Text(
+                                        stringResource(R.string.content_saved_verse_missing),
+                                        modifier = Modifier.weight(1f),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                TextButton(
+                                    onClick = onClearPlace,
+                                    modifier = Modifier.testTag("content_clear_saved_place")
+                                ) {
+                                    Text(stringResource(R.string.content_clear_saved_place))
+                                }
+                            }
                         }
                     }
 
