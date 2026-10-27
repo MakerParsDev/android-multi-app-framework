@@ -25,4 +25,9 @@
     <string name="esma_search_label">Nach Name oder Nummer suchen</string>
     <string name="esma_search_clear">Suche löschen</string>
     <string name="esma_search_no_results">Keine passenden Namen gefunden. Versuche einen anderen Namen oder eine Nummer.</string>
+    <string name="content_jump_to_verse">Zu Vers / Abschnitt springen</string>
+    <string name="content_verse_number">Vers- / Abschnittsnummer</string>
+    <string name="content_verse_not_found">Zu dieser Nummer gibt es keinen Vers oder Abschnitt.</string>
+    <string name="content_jump_action">Springen</string>
+    <string name="content_jump_cancel">Abbrechen</string>
 </resources>
