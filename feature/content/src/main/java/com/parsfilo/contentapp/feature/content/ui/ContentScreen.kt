@@ -283,7 +283,7 @@ fun ContentScreen(
                         }
                     }
                     if (showVerseJump && hasLongContent) {
-                        val number = verseQuery.toIntOrNull()
+                        val number = canonicalVerseId(verseQuery)
                         val destination = number?.let {
                             contentLazyItemIndexForVerse(verses, it, showInlineFeedAds)
                         }
@@ -294,7 +294,7 @@ fun ContentScreen(
                                 Column {
                                     OutlinedTextField(
                                         value = verseQuery,
-                                        onValueChange = { verseQuery = it.filter(Char::isDigit).take(6) },
+                                        onValueChange = { verseQuery = it },
                                         label = { Text(stringResource(R.string.content_verse_number)) },
                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                         singleLine = true,
