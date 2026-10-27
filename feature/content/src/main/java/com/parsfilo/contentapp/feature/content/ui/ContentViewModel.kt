@@ -42,8 +42,9 @@ class ContentViewModel @Inject constructor(
     val uiState: StateFlow<ContentUiState> = combine(
         versesFlow,
         preferencesDataSource.userData,
-        adGateChecker.shouldShowAds
-    ) { verses, userData, shouldShowAds ->
+        adGateChecker.shouldShowAds,
+        preferencesDataSource.contentSavedVerseId,
+    ) { verses, userData, shouldShowAds, savedVerseId ->
         val mode = try {
             DisplayMode.valueOf(userData.displayMode)
         } catch (_: Exception) {
@@ -54,7 +55,8 @@ class ContentViewModel @Inject constructor(
             verses = verses,
             displayMode = mode,
             fontSize = userData.fontSize,
-            shouldShowAds = shouldShowAds
+            shouldShowAds = shouldShowAds,
+            savedVerseId = savedVerseId,
         ) as ContentUiState
     }
         .catch { emit(ContentUiState.Error(it)) }
@@ -66,6 +68,15 @@ class ContentViewModel @Inject constructor(
 
     fun reload() {
         reloadSignal.update { it + 1 }
+    }
+
+    fun saveReadingPlace(verseId: Int) {
+        // Only the explicit on-screen Save action may invoke this method.
+        viewModelScope.launch { preferencesDataSource.setContentSavedVerseId(verseId) }
+    }
+
+    fun clearReadingPlace() {
+        viewModelScope.launch { preferencesDataSource.setContentSavedVerseId(null) }
     }
 
     fun updateDisplayMode(mode: DisplayMode) {
@@ -89,7 +100,8 @@ sealed interface ContentUiState {
         val verses: List<Verse>,
         val displayMode: DisplayMode,
         val fontSize: Int,
-        val shouldShowAds: Boolean = true
+        val shouldShowAds: Boolean = true,
+        val savedVerseId: Int? = null,
     ) : ContentUiState
 
     data class Error(val throwable: Throwable) : ContentUiState

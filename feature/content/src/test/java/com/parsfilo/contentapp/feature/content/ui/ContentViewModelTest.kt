@@ -63,6 +63,7 @@ class ContentViewModelTest {
         Dispatchers.setMain(testDispatcher)
         contentRepository = mockk()
         preferencesDataSource = mockk(relaxed = true)
+        every { preferencesDataSource.contentSavedVerseId } returns flowOf(null)
         adGateChecker = mockk()
 
         // ✅ EKLENDİ (relaxed: true -> çağrılsa bile exception fırlatmaz)
@@ -228,5 +229,36 @@ class ContentViewModelTest {
             assertThat(error.throwable.message).isEqualTo(exception.message)
             cancelAndIgnoreRemainingEvents()
         }
+    }
+
+    @Test
+    fun savedPositionExposesOnlyPersistedPreference() = runTest(testDispatcher) {
+        coEvery { contentRepository.getVerses() } returns Result.Success(testVerses)
+        every { preferencesDataSource.userData } returns flowOf(defaultPrefs)
+        every { adGateChecker.shouldShowAds } returns flowOf(false)
+        every { preferencesDataSource.contentSavedVerseId } returns flowOf(2)
+
+        createViewModel().uiState.test {
+            skipItems(1)
+            val success = awaitItem() as ContentUiState.Success
+            assertThat(success.savedVerseId).isEqualTo(2)
+            cancelAndIgnoreRemainingEvents()
+        }
+        coVerify(exactly = 0) { preferencesDataSource.setContentSavedVerseId(any()) }
+    }
+
+    @Test
+    fun onlyExplicitSaveOrClearWritesBookmarkPreference() = runTest(testDispatcher) {
+        coEvery { contentRepository.getVerses() } returns Result.Success(testVerses)
+        every { preferencesDataSource.userData } returns flowOf(defaultPrefs)
+        every { adGateChecker.shouldShowAds } returns flowOf(false)
+
+        val viewModel = createViewModel()
+        viewModel.saveReadingPlace(2)
+        advanceUntilIdle()
+        coVerify(exactly = 1) { preferencesDataSource.setContentSavedVerseId(2) }
+        viewModel.clearReadingPlace()
+        advanceUntilIdle()
+        coVerify(exactly = 1) { preferencesDataSource.setContentSavedVerseId(null) }
     }
 }
