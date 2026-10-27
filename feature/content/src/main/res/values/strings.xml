@@ -22,4 +22,7 @@
     <string name="content_open_rewards">Ödülleri aç</string>
     <string name="content_translation_turkish_fallback">Türkçe meal (seçili dilde çeviri bulunamadı)</string>
     <string name="content_copy_turkish_translation">Türkçe meali kopyala</string>
+    <string name="esma_search_label">Esma ismi veya numarası ara</string>
+    <string name="esma_search_clear">Aramayı temizle</string>
+    <string name="esma_search_no_results">Eşleşen isim bulunamadı. Başka bir isim veya numara deneyin.</string>
 </resources>

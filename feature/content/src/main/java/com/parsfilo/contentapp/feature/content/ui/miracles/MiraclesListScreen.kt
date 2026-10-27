@@ -22,19 +22,29 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,6 +70,7 @@ import com.parsfilo.contentapp.feature.content.R
 import com.parsfilo.contentapp.feature.content.ui.shouldInsertInlineFeedAdAfterItem
 import com.parsfilo.contentapp.feature.content.ui.shouldPreferInlineFeedAds
 import com.parsfilo.contentapp.feature.content.ui.shouldShowTopBannerForScrollableContent
+import kotlinx.coroutines.launch
 
 @Composable
 fun MiraclesListRoute(
@@ -123,6 +134,18 @@ fun MiraclesListScreen(
         }
         is MiraclesListUiState.Success -> {
             val prayers = uiState.prayers
+            var searchExpanded by rememberSaveable { mutableStateOf(false) }
+            var searchQuery by rememberSaveable { mutableStateOf("") }
+            val listState = rememberLazyListState()
+            val scope = rememberCoroutineScope()
+            val isEsmaSearchOpen = variant == MiraclesContentVariant.ESMAUL_HUSNA && searchExpanded
+            val visible = remember(prayers, isEsmaSearchOpen, searchQuery) {
+                if (isEsmaSearchOpen) {
+                    findEsmaNames(prayers, searchQuery)
+                } else {
+                    prayers.withIndex().toList()
+                }
+            }
             val showTopBanner = uiState.shouldShowAds && shouldShowTopBannerForScrollableContent(prayers.size)
             val showInlineFeedAds = uiState.shouldShowAds && shouldPreferInlineFeedAds(prayers.size)
             Column(
@@ -139,7 +162,9 @@ fun MiraclesListScreen(
                 MiraclesListHeader(
                     title = headerTitle.ifBlank { stringResource(R.string.miracles_default_title) },
                     onSettingsClick = onSettingsClick,
-                    onRewardsClick = onRewardsClick
+                    onRewardsClick = onRewardsClick,
+                    showSearch = variant == MiraclesContentVariant.ESMAUL_HUSNA,
+                    onSearchClick = { searchExpanded = !searchExpanded },
                 )
 
                 HorizontalDivider(
@@ -147,6 +172,35 @@ fun MiraclesListScreen(
                     color = colorScheme.outline.copy(alpha = 0.35f),
                     modifier = Modifier.padding(horizontal = dimens.space24)
                 )
+
+                if (isEsmaSearchOpen) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { value ->
+                            searchQuery = value
+                            scope.launch { listState.scrollToItem(0) }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = dimens.space12, vertical = dimens.space8)
+                            .testTag("esma_search_input"),
+                        singleLine = true,
+                        label = { Text(stringResource(R.string.esma_search_label)) },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = {
+                                    searchQuery = ""
+                                    scope.launch { listState.scrollToItem(0) }
+                                }) {
+                                    Icon(
+                                        Icons.Filled.Close,
+                                        contentDescription = stringResource(R.string.esma_search_clear),
+                                    )
+                                }
+                            }
+                        },
+                    )
+                }
 
                 if (showTopBanner) {
                     BannerAd(
@@ -178,6 +232,7 @@ fun MiraclesListScreen(
                 }
 
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier
                         .testTag("miracles_list")
                         .weight(1f)
@@ -185,7 +240,27 @@ fun MiraclesListScreen(
                     contentPadding = PaddingValues(start = dimens.space12, top = dimens.space16, end = dimens.space12, bottom = dimens.space8),
                     verticalArrangement = Arrangement.spacedBy(dimens.space8)
                 ) {
-                    prayers.forEachIndexed { index, prayer ->
+                    if (isEsmaSearchOpen && visible.isEmpty()) {
+                        item(key = "esma_no_search_results") {
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(dimens.space24),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(dimens.space8),
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.esma_search_no_results),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center,
+                                )
+                                TextButton(onClick = {
+                                    searchQuery = ""
+                                    scope.launch { listState.scrollToItem(0) }
+                                }) { Text(stringResource(R.string.esma_search_clear)) }
+                            }
+                        }
+                    }
+                    visible.forEach { (index, prayer) ->
                         item(key = "miracle_$index") {
                             MiraclesListItem(
                                 prayer = prayer,
@@ -201,7 +276,10 @@ fun MiraclesListScreen(
                             )
                         }
 
-                        if (showInlineFeedAds && shouldInsertInlineFeedAdAfterItem(index, prayers.size)) {
+                        if ((!isEsmaSearchOpen || searchQuery.isBlank()) &&
+                            showInlineFeedAds &&
+                            shouldInsertInlineFeedAdAfterItem(index, prayers.size)
+                        ) {
                             item(key = "miracles_native_ad_$index") {
                                 nativeAdContent()
                             }
@@ -294,7 +372,9 @@ private fun rememberMiraclesListSkeletonBrush(): Brush {
 fun MiraclesListHeader(
     title: String,
     onSettingsClick: () -> Unit = {},
-    onRewardsClick: () -> Unit = {}
+    onRewardsClick: () -> Unit = {},
+    showSearch: Boolean = false,
+    onSearchClick: () -> Unit = {},
 ) {
     val dimens = LocalDimens.current
     val colorScheme = MaterialTheme.colorScheme
@@ -327,8 +407,24 @@ fun MiraclesListHeader(
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
+
+        if (showSearch) {
+            IconButton(
+                onClick = onSearchClick,
+                modifier = Modifier.size(dimens.iconXl).testTag("esma_search_toggle")
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Search,
+                    contentDescription = stringResource(R.string.esma_search_label),
+                    tint = colorScheme.secondary,
+                    modifier = Modifier.size(dimens.iconMd),
+                )
+            }
+        }
 
         IconButton(
             onClick = onRewardsClick,
