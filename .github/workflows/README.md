@@ -14,7 +14,6 @@ and must not be re-enabled by copying or renaming them.
 | Device Smoke | nightly, manual | two instrumentation smoke tests on a Gradle Managed Device | one flavor, one ATD |
 | Baseline Profiles | weekly, manual | generate variant-scoped profiles for all 17 flavors and update one automation PR | full-speed managed-device matrix |
 | Physical Performance | manual | serial startup/frame benchmarks on one dedicated Android device | self-hosted `android-performance` runner |
-| CodSpeed Benchmarks | PR, `main` push, manual | JMH walltime benchmarks of pure Kotlin/JVM logic in `benchmarks/`, reported to CodSpeed via OIDC | standalone JVM build, no Android SDK; `id-token: write` only on the benchmark job |
 | Attested Release Artifact | manual | signed AAB, checksum, upload, provenance | protected `production` environment |
 
 Human pull requests and `main` pushes resolve the complete flavor matrix from
