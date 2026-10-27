@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -67,6 +68,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
@@ -540,55 +542,63 @@ fun SettingsScreen(
                             )
                         }
 
-                        ListItem(
-                            headlineContent = {
-                                Text(
-                                    stringResource(R.string.settings_ads_age_gate_title),
-                                )
-                            },
-                            supportingContent = {
-                                Text(stringResource(R.string.settings_ads_age_gate_desc))
-                            },
-                            trailingContent = {
-                                Box {
-                                    TextButton(onClick = { ageGateMenuExpanded = true }) {
-                                        Text(
-                                            text =
-                                                stringResource(
-                                                    ageGateOptions
-                                                        .firstOrNull {
-                                                            it.first == currentAgeGateStatus
-                                                        }?.second
-                                                        ?: R.string.settings_ads_age_unknown,
-                                                ),
+                        // Keep the privacy disclosure readable even with 200% font scale.
+                        // A trailing ListItem button squeezed the explanatory copy to
+                        // single-character columns on narrow phones.
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.settings_ads_age_gate_title),
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                            Text(
+                                text = stringResource(R.string.settings_ads_age_gate_desc),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                            Box(modifier = Modifier.fillMaxWidth()) {
+                                TextButton(
+                                    onClick = { ageGateMenuExpanded = true },
+                                    modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp),
+                                ) {
+                                    Text(
+                                        text =
+                                            stringResource(
+                                                ageGateOptions
+                                                    .firstOrNull {
+                                                        it.first == currentAgeGateStatus
+                                                    }?.second
+                                                    ?: R.string.settings_ads_age_unknown,
+                                            ),
+                                    )
+                                }
+                                DropdownMenu(
+                                    expanded = ageGateMenuExpanded,
+                                    onDismissRequest = { ageGateMenuExpanded = false },
+                                ) {
+                                    ageGateOptions.forEach { (status, labelRes) ->
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(labelRes)) },
+                                            onClick = {
+                                                ageGateMenuExpanded = false
+                                                onAdsAgeGateChanged(status)
+                                                if (activity != null) {
+                                                    adManager.onAdsConfigChanged(activity) { _ ->
+                                                        onPrivacyOptionsUpdated()
+                                                        showMessage(adsConfigUpdatedText)
+                                                        isPrivacyOptionsRequired =
+                                                            adManager.privacyOptionsRequired.value
+                                                    }
+                                                }
+                                            },
                                         )
                                     }
-                                    DropdownMenu(
-                                        expanded = ageGateMenuExpanded,
-                                        onDismissRequest = { ageGateMenuExpanded = false },
-                                    ) {
-                                        ageGateOptions.forEach { (status, labelRes) ->
-                                            DropdownMenuItem(
-                                                text = { Text(stringResource(labelRes)) },
-                                                onClick = {
-                                                    ageGateMenuExpanded = false
-                                                    onAdsAgeGateChanged(status)
-                                                    if (activity != null) {
-                                                        adManager.onAdsConfigChanged(activity) { _ ->
-                                                            onPrivacyOptionsUpdated()
-                                                            showMessage(adsConfigUpdatedText)
-                                                            isPrivacyOptionsRequired =
-                                                                adManager.privacyOptionsRequired.value
-                                                        }
-                                                    }
-                                                },
-                                            )
-                                        }
-                                    }
                                 }
-                            },
-                            colors = listItemColors,
-                        )
+                            }
+                        }
 
                         HorizontalDivider(
                             color = colorScheme.outline.copy(alpha = 0.3f),
