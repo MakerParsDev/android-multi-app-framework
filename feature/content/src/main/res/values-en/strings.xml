@@ -34,4 +34,6 @@
     <string name="content_resume_at_verse">Continue at verse %1$d</string>
     <string name="content_clear_saved_place">Clear saved place</string>
     <string name="content_saved_verse_missing">The saved verse is no longer in this content.</string>
+    <string name="content_reader_tools">Reading tools and audio</string>
+    <string name="content_back_to_reading">Return to reading</string>
 </resources>

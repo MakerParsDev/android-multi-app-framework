@@ -23,13 +23,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
@@ -52,6 +55,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -160,12 +164,17 @@ fun ContentScreen(
             val colorScheme = MaterialTheme.colorScheme
             val verses = uiState.verses
             val listState = rememberLazyListState()
+            val readerScrollState = rememberScrollState()
             val scope = rememberCoroutineScope()
             var showVerseJump by rememberSaveable { mutableStateOf(false) }
             var verseQuery by rememberSaveable { mutableStateOf("") }
             val hasLongContent = verses.size >= 15
             val showTopBanner = uiState.shouldShowAds && shouldShowTopBannerForScrollableContent(verses.size)
             val showInlineFeedAds = uiState.shouldShowAds && shouldPreferInlineFeedAds(verses.size)
+            // A short window must not let audio and actions consume the entire verse viewport.
+            val compactHeight = shouldUseCompactReader(
+                with(LocalDensity.current) { LocalWindowInfo.current.containerSize.height.toDp().value }
+            )
             Column(
                 modifier = Modifier
                     .testTag("content_detail")
@@ -177,12 +186,19 @@ fun ContentScreen(
                             easing = motion.emphasizedEasing
                         )
                     )
+                    .then(if (compactHeight) Modifier.verticalScroll(readerScrollState) else Modifier)
             ) {
                 // Header with App Name and action icons
                 AppHeader(
                     appName = appName,
                     onSettingsClick = onSettingsClick,
                     onRewardsClick = onRewardsClick,
+                    onReaderToolsClick =
+                        if (compactHeight) {
+                            { scope.launch { readerScrollState.animateScrollTo(readerScrollState.maxValue) } }
+                        } else {
+                            null
+                        },
                 )
 
                 if (showTopBanner) {
@@ -237,9 +253,10 @@ fun ContentScreen(
                     }
                 } else {
                     // Audio Player
-                    audioPlayerContent()
-
-                    Spacer(modifier = Modifier.height(dimens.space4))
+                    if (!compactHeight) {
+                        audioPlayerContent()
+                        Spacer(modifier = Modifier.height(dimens.space4))
+                    }
 
                     if (hasLongContent) {
                         Row(
@@ -329,7 +346,7 @@ fun ContentScreen(
                         state = listState,
                         modifier = Modifier
                             .testTag("content_list")
-                            .weight(1f)
+                            .then(if (compactHeight) Modifier.height(260.dp) else Modifier.weight(1f))
                             .fillMaxWidth(),
                         contentPadding = PaddingValues(horizontal = dimens.space6, vertical = dimens.space2)
                     ) {
@@ -408,6 +425,15 @@ fun ContentScreen(
                         currentMode = uiState.displayMode,
                         onModeSelected = onModeSelected
                     )
+                    if (compactHeight) {
+                        audioPlayerContent()
+                        TextButton(
+                            modifier = Modifier.fillMaxWidth().testTag("content_back_to_reading"),
+                            onClick = { scope.launch { readerScrollState.animateScrollTo(0) } },
+                        ) {
+                            Text(stringResource(R.string.content_back_to_reading))
+                        }
+                    }
                 }
             }
         }
@@ -418,7 +444,8 @@ fun ContentScreen(
 fun AppHeader(
     appName: String,
     onSettingsClick: () -> Unit = {},
-    onRewardsClick: () -> Unit = {}
+    onRewardsClick: () -> Unit = {},
+    onReaderToolsClick: (() -> Unit)? = null,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val dimens = LocalDimens.current
@@ -473,6 +500,19 @@ fun AppHeader(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.weight(1f)
             )
+
+            if (onReaderToolsClick != null) {
+                IconButton(
+                    onClick = onReaderToolsClick,
+                    modifier = Modifier.size(dimens.iconXl).testTag("content_reader_tools")
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = stringResource(R.string.content_reader_tools),
+                        tint = colorScheme.onPrimaryContainer,
+                    )
+                }
+            }
 
             // Sağ: Ödüller ikonu
             IconButton(
@@ -561,8 +601,10 @@ fun BottomModeSelector(
     }
 }
 
+internal fun shouldUseCompactReader(heightDp: Float): Boolean = heightDp < 420f
+
 internal fun shouldStackReaderModes(widthDp: Float, fontScale: Float): Boolean =
-    widthDp < 360f || fontScale >= 1.3f
+    widthDp < 360f || (fontScale >= 1.3f && widthDp < 600f)
 
 @Composable
 private fun ContentLoadingSkeleton(appName: String) {
