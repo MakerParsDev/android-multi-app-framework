@@ -13,9 +13,11 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import org.json.JSONArray
 import timber.log.Timber
@@ -85,22 +87,33 @@ class ZikirRepositoryImpl @Inject constructor(
     }
 
     override fun getTodayTotalCount(): Flow<Int> =
-        queryCurrentLocalDay { cutoff ->
-            zikirSessionDao.getTotalCountSince(cutoff).map { it ?: 0 }
+        queryCurrentLocalDayWindow { since, before ->
+            zikirSessionDao.getTotalCountBetween(since, before).map { it ?: 0 }
         }
 
     override fun getTodayCompletedSessionCount(): Flow<Int> =
-        queryCurrentLocalDay { cutoff ->
-            zikirSessionDao.getCompletedSessionCountSince(cutoff)
+        queryCurrentLocalDayWindow { since, before ->
+            zikirSessionDao.getCompletedSessionCountBetween(since, before)
         }
 
     override suspend fun getOrCreateStreak(): ZikirStreakEntity {
         return zikirStreakDao.getStreak() ?: ZikirStreakEntity().also { zikirStreakDao.upsert(it) }
     }
 
-    override fun observeStreak(): Flow<ZikirStreakEntity> {
-        return zikirStreakDao.observeStreak().map { it ?: ZikirStreakEntity() }
-    }
+    override fun observeStreak(): Flow<ZikirStreakEntity> =
+        combine(
+            zikirStreakDao.observeStreak(),
+            queryCurrentLocalDay { cutoff -> flowOf(cutoff) },
+        ) { persisted, dayStart ->
+            val streak = persisted ?: ZikirStreakEntity()
+            streak.copy(
+                currentStreak = effectiveActiveStreak(
+                    streak = streak,
+                    nowMillis = dayStart,
+                    zone = TimeZone.getDefault(),
+                ),
+            )
+        }.distinctUntilChanged()
 
     private suspend fun updateStreakAfterSession() {
         val today = todayKey()
@@ -176,15 +189,22 @@ internal fun <T> queryCurrentLocalDay(
     nowMillis: () -> Long = System::currentTimeMillis,
     timeZone: () -> TimeZone = TimeZone::getDefault,
     query: (Long) -> Flow<T>,
+): Flow<T> = queryCurrentLocalDayWindow(nowMillis, timeZone) { since, _ -> query(since) }
+
+/** A bounded [start, nextMidnight) SQL window prevents future-dated rows entering today's totals. */
+@OptIn(ExperimentalCoroutinesApi::class)
+internal fun <T> queryCurrentLocalDayWindow(
+    nowMillis: () -> Long = System::currentTimeMillis,
+    timeZone: () -> TimeZone = TimeZone::getDefault,
+    query: (Long, Long) -> Flow<T>,
 ): Flow<T> = flow {
     while (true) {
         val now = nowMillis()
-        val zone = timeZone()
-        val (startOfDay, nextMidnight) = localDayBounds(now, zone)
-        emit(startOfDay)
+        val (startOfDay, nextMidnight) = localDayBounds(now, timeZone())
+        emit(startOfDay to nextMidnight)
         delay((nextMidnight - now).coerceIn(1L, 60_000L))
     }
-}.distinctUntilChanged().flatMapLatest(query)
+}.distinctUntilChanged().flatMapLatest { (since, before) -> query(since, before) }
 
 /** Correct across leap days, DST changes and non-hour time-zone offsets. */
 internal fun localDayBounds(nowMillis: Long, timeZone: TimeZone): Pair<Long, Long> {
@@ -198,4 +218,27 @@ internal fun localDayBounds(nowMillis: Long, timeZone: TimeZone): Pair<Long, Lon
     val start = calendar.timeInMillis
     calendar.add(Calendar.DAY_OF_MONTH, 1)
     return start to calendar.timeInMillis
+}
+
+/**
+ * A recorded streak is still active today when completed today or yesterday.
+ * A missed full local calendar day breaks the active streak, but never erases
+ * persisted history or the longest-streak record.
+ */
+internal fun effectiveActiveStreak(
+    streak: ZikirStreakEntity,
+    nowMillis: Long = System.currentTimeMillis(),
+    zone: TimeZone = TimeZone.getDefault(),
+): Int {
+    if (streak.currentStreak <= 0 || streak.lastActivityDate.isBlank()) return 0
+    val calendar = Calendar.getInstance(zone).apply { timeInMillis = nowMillis }
+    val format = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply { timeZone = zone }
+    val today = format.format(calendar.time)
+    calendar.add(Calendar.DAY_OF_MONTH, -1)
+    val yesterday = format.format(calendar.time)
+    return if (streak.lastActivityDate == today || streak.lastActivityDate == yesterday) {
+        streak.currentStreak
+    } else {
+        0
+    }
 }
