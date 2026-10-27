@@ -35,11 +35,13 @@ class SubscriptionViewModel @Inject constructor(
         billingManager.subscriptionState,
         billingManager.productDetails,
         authManager.authState,
-    ) { subState, products, isSignedIn ->
+        billingManager.availabilityError,
+    ) { subState, products, isSignedIn, availabilityError ->
         SubscriptionUiState(
             subscriptionState = subState,
             productDetails = products,
             isSignedIn = isSignedIn,
+            availabilityError = availabilityError,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -52,4 +54,5 @@ data class SubscriptionUiState(
     val subscriptionState: SubscriptionState = SubscriptionState.Loading,
     val productDetails: List<BillingProduct> = emptyList(),
     val isSignedIn: Boolean = false,
+    val availabilityError: String? = null,
 )
