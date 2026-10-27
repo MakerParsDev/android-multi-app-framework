@@ -52,6 +52,13 @@ plugins {
 // This covers application/test/tooling dependencies (for example Benchmark,
 // Robolectric, and ktlint) that are outside the root plugin classpath.
 allprojects {
+    // Plugin buildscript classpaths are separate from project configurations.
+    // The app's Play Publisher plugin otherwise resolves vulnerable Guava 32.1.3-jre.
+    buildscript {
+        configurations.classpath {
+            resolutionStrategy.force("com.google.guava:guava:33.7.2-jre")
+        }
+    }
     configurations.configureEach {
         resolutionStrategy {
             force("org.bouncycastle:bcprov-jdk18on:1.86")

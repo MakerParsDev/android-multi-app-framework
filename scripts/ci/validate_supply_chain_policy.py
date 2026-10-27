@@ -177,6 +177,27 @@ def validate_transitive_security_overrides(root: Path, overrides: Any) -> List[s
                 f"{coordinate} must be forced to policy version {version} in both "
                 "the root plugin classpath and all project configurations in build.gradle.kts"
             )
+        if coordinate == "com.google.guava:guava":
+            # Gradle Play Publisher is loaded from the app project's plugin classpath,
+            # which the root buildscript and normal project configurations do not govern.
+            app_plugin_scope = build_text.split("allprojects {", 1)
+            if (
+                len(app_plugin_scope) != 2
+                or expected
+                not in app_plugin_scope[1].split("configurations.configureEach", 1)[0]
+            ):
+                errors.append(
+                    f"{coordinate} must also be forced to {version} in "
+                    "allprojects buildscript configurations.classpath"
+                )
+            catalog = root / "gradle/libs.versions.toml"
+            catalog_text = catalog.read_text(encoding="utf-8") if catalog.is_file() else ""
+            if not re.search(
+                rf'^guava\s*=\s*"{re.escape(version)}"\s*$',
+                catalog_text,
+                re.MULTILINE,
+            ):
+                errors.append(f"gradle/libs.versions.toml Guava must match policy {version}")
 
     return errors
 
