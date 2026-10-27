@@ -102,4 +102,7 @@
     <string name="prayertimes_widget_desc">Sıradaki namaz vaktini gösterir.</string>
     <item type="string" name="prayertimes_widget_title">@string/prayertimes_title</item>
     <string name="prayertimes_widget_no_next">Sıradaki vakit yok</string>
+    <string name="prayertimes_picker_retry">Yeniden dene</string>
+    <string name="prayertimes_picker_load_failed">Konum listesi yüklenemedi. Bağlantıyı kontrol edip yeniden deneyin.</string>
+    <string name="prayertimes_picker_save_failed">Konum kaydedilemedi. Seçiminiz korundu; yeniden deneyin.</string>
 </resources>

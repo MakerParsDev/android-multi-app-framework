@@ -48,6 +48,20 @@ interface PrayerTimesRepository {
         forceRefresh: Boolean = false,
     ): List<PrayerDistrict>
 
+    /** The picker can distinguish failed remote fetches from valid empty results. */
+    suspend fun getCountriesForPicker(forceRefresh: Boolean = false): LocationLoadResult<PrayerCountry> =
+        LocationLoadResult(getCountries(forceRefresh))
+
+    suspend fun getCitiesForPicker(
+        countryId: Int,
+        forceRefresh: Boolean = false,
+    ): LocationLoadResult<PrayerCity> = LocationLoadResult(getCities(countryId, forceRefresh))
+
+    suspend fun getDistrictsForPicker(
+        cityId: Int,
+        forceRefresh: Boolean = false,
+    ): LocationLoadResult<PrayerDistrict> = LocationLoadResult(getDistricts(cityId, forceRefresh))
+
     suspend fun setMode(mode: PrayerTimesMode)
 
     suspend fun setAlarmEnabled(enabled: Boolean): Boolean
@@ -65,3 +79,6 @@ interface PrayerTimesRepository {
         districtId: Int,
     )
 }
+
+/** Failed remote fetch does not discard potentially useful cached items. */
+data class LocationLoadResult<T>(val items: List<T>, val failed: Boolean = false)

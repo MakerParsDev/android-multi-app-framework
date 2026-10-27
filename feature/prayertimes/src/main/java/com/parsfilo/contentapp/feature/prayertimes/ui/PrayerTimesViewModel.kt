@@ -493,6 +493,9 @@ internal fun NextPrayerInfo.asUi(): NextPrayerUi {
     )
 }
 
+// Network/provider and persistence implementations can throw different exceptions.
+// Deliberately show recoverable UI feedback for all, but propagate cancellation.
+@Suppress("TooGenericExceptionCaught")
 @HiltViewModel
 class PrayerLocationPickerViewModel @Inject constructor(
     private val repository: PrayerTimesRepository,
@@ -522,7 +525,17 @@ class PrayerLocationPickerViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            loadInitialState()
+            try {
+                loadInitialState()
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                Timber.w(error, "Failed to load initial location list")
+                pickerBaseState.value = pickerBaseState.value.copy(
+                    isLoading = false,
+                    loadErrorRes = R.string.prayertimes_picker_load_failed,
+                )
+            }
         }
     }
 
@@ -532,7 +545,8 @@ class PrayerLocationPickerViewModel @Inject constructor(
 
     private suspend fun loadInitialState() {
         pickerBaseState.value = pickerBaseState.value.copy(isLoading = true)
-        val countries = repository.getCountries(forceRefresh = false)
+        val countryLoad = repository.getCountriesForPicker(forceRefresh = false)
+        val countries = countryLoad.items
         val currentSelection = repository.observeCurrentSelection().first()
         val suggestion: PrayerLocationSuggestion? = if (currentSelection == null) {
             repository.suggestManualSelectionByDeviceLocation()
@@ -547,12 +561,14 @@ class PrayerLocationPickerViewModel @Inject constructor(
                 countries = countries,
                 filteredCountries = countries,
                 step = LocationStep.COUNTRY,
+                loadErrorRes = if (countryLoad.failed) R.string.prayertimes_picker_load_failed else null,
                 isLoading = false,
             )
             return
         }
 
-        val cities = repository.getCities(selectedCountry.id, forceRefresh = false)
+        val cityLoad = repository.getCitiesForPicker(selectedCountry.id, forceRefresh = false)
+        val cities = cityLoad.items
         val selectedCityId = currentSelection?.cityId ?: suggestion?.cityId
         val selectedCity = cities.firstOrNull { it.id == selectedCityId }
         if (selectedCity == null) {
@@ -563,12 +579,14 @@ class PrayerLocationPickerViewModel @Inject constructor(
                 filteredCountries = countries,
                 filteredCities = cities,
                 step = LocationStep.CITY,
+                loadErrorRes = if (cityLoad.failed) R.string.prayertimes_picker_load_failed else null,
                 isLoading = false,
             )
             return
         }
 
-        val districts = repository.getDistricts(selectedCity.id, forceRefresh = false)
+        val districtLoad = repository.getDistrictsForPicker(selectedCity.id, forceRefresh = false)
+        val districts = districtLoad.items
         val selectedDistrict = currentSelection?.let { selection ->
             districts.firstOrNull { it.id == selection.districtId }
         }
@@ -583,42 +601,128 @@ class PrayerLocationPickerViewModel @Inject constructor(
             filteredCities = cities,
             filteredDistricts = districts,
             step = if (selectedDistrict != null) LocationStep.DISTRICT else LocationStep.CITY,
+            loadErrorRes = if (districtLoad.failed) R.string.prayertimes_picker_load_failed else null,
             isLoading = false,
         )
     }
 
+    /** Retry the current picker level without discarding the selected parents or search text. */
+    fun retryCurrentStep() {
+        viewModelScope.launch {
+            val state = pickerBaseState.value
+            val parentAvailable = when (state.step) {
+                LocationStep.COUNTRY -> true
+                LocationStep.CITY -> state.selectedCountry != null
+                LocationStep.DISTRICT -> state.selectedCity != null
+            }
+            if (!parentAvailable) return@launch
+            pickerBaseState.value = state.copy(isLoading = true, loadErrorRes = null)
+            try {
+                val refreshed = when (state.step) {
+                    LocationStep.COUNTRY -> {
+                        val result = repository.getCountriesForPicker(forceRefresh = true)
+                        state.copy(
+                            countries = result.items,
+                            loadErrorRes = if (result.failed) R.string.prayertimes_picker_load_failed else null,
+                        )
+                    }
+                    LocationStep.CITY -> {
+                        val result = repository.getCitiesForPicker(
+                            countryId = requireNotNull(state.selectedCountry).id,
+                            forceRefresh = true,
+                        )
+                        state.copy(
+                            cities = result.items,
+                            loadErrorRes = if (result.failed) R.string.prayertimes_picker_load_failed else null,
+                        )
+                    }
+                    LocationStep.DISTRICT -> {
+                        val result = repository.getDistrictsForPicker(
+                            cityId = requireNotNull(state.selectedCity).id,
+                            forceRefresh = true,
+                        )
+                        state.copy(
+                            districts = result.items,
+                            loadErrorRes = if (result.failed) R.string.prayertimes_picker_load_failed else null,
+                        )
+                    }
+                }
+                pickerBaseState.value = refreshed.copy(isLoading = false)
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                Timber.w(error, "Failed to retry location list")
+                pickerBaseState.value = state.copy(
+                    isLoading = false,
+                    loadErrorRes = R.string.prayertimes_picker_load_failed,
+                )
+            }
+        }
+    }
+
     fun onCountrySelected(country: PrayerCountry) {
         viewModelScope.launch {
-            pickerBaseState.value = pickerBaseState.value.copy(isLoading = true)
-            val cities = repository.getCities(country.id, forceRefresh = false)
             pickerSearchQuery.value = ""
-            pickerBaseState.value = pickerBaseState.value.copy(
+            val next = pickerBaseState.value.copy(
                 selectedCountry = country,
                 selectedCity = null,
                 selectedDistrict = null,
-                cities = cities,
+                cities = emptyList(),
                 districts = emptyList(),
-                filteredCities = cities,
-                filteredDistricts = emptyList(),
                 step = LocationStep.CITY,
-                isLoading = false,
+                isLoading = true,
+                loadErrorRes = null,
+                saveErrorRes = null,
             )
+            pickerBaseState.value = next
+            try {
+                val result = repository.getCitiesForPicker(country.id, forceRefresh = false)
+                pickerBaseState.value = next.copy(
+                    cities = result.items,
+                    loadErrorRes = if (result.failed) R.string.prayertimes_picker_load_failed else null,
+                    isLoading = false,
+                )
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                Timber.w(error, "Failed to load cities")
+                pickerBaseState.value = next.copy(
+                    isLoading = false,
+                    loadErrorRes = R.string.prayertimes_picker_load_failed,
+                )
+            }
         }
     }
 
     fun onCitySelected(city: PrayerCity) {
         viewModelScope.launch {
-            pickerBaseState.value = pickerBaseState.value.copy(isLoading = true)
-            val districts = repository.getDistricts(city.id, forceRefresh = false)
             pickerSearchQuery.value = ""
-            pickerBaseState.value = pickerBaseState.value.copy(
+            val next = pickerBaseState.value.copy(
                 selectedCity = city,
                 selectedDistrict = null,
-                districts = districts,
-                filteredDistricts = districts,
+                districts = emptyList(),
                 step = LocationStep.DISTRICT,
-                isLoading = false,
+                isLoading = true,
+                loadErrorRes = null,
+                saveErrorRes = null,
             )
+            pickerBaseState.value = next
+            try {
+                val result = repository.getDistrictsForPicker(city.id, forceRefresh = false)
+                pickerBaseState.value = next.copy(
+                    districts = result.items,
+                    loadErrorRes = if (result.failed) R.string.prayertimes_picker_load_failed else null,
+                    isLoading = false,
+                )
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                Timber.w(error, "Failed to load districts")
+                pickerBaseState.value = next.copy(
+                    isLoading = false,
+                    loadErrorRes = R.string.prayertimes_picker_load_failed,
+                )
+            }
         }
     }
 
@@ -648,16 +752,21 @@ class PrayerLocationPickerViewModel @Inject constructor(
             val city = state.selectedCity ?: return@launch
             val district = state.selectedDistrict ?: return@launch
 
-            runCatching {
+            pickerBaseState.value = state.copy(saveErrorRes = null)
+            try {
                 repository.setManualSelection(
                     countryId = country.id,
                     cityId = city.id,
                     districtId = district.id,
                 )
-            }.onSuccess {
                 onSaved()
-            }.onFailure {
-                Timber.w(it, "Failed to save prayer location selection")
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                Timber.w(error, "Failed to save prayer location selection")
+                pickerBaseState.value = pickerBaseState.value.copy(
+                    saveErrorRes = R.string.prayertimes_picker_save_failed,
+                )
             }
         }
     }
@@ -682,6 +791,8 @@ data class PrayerLocationPickerUiState(
     val step: LocationStep = LocationStep.COUNTRY,
     val searchQuery: String = "",
     val isLoading: Boolean = false,
+    val loadErrorRes: Int? = null,
+    val saveErrorRes: Int? = null,
 )
 
 private data class UiInputs(
