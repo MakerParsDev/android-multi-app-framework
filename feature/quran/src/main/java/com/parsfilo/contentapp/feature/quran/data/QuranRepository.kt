@@ -25,11 +25,13 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import org.json.JSONException
 import org.json.JSONObject
 import timber.log.Timber
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -111,10 +113,10 @@ class QuranRepository @Inject constructor(
             return@withContext runCatching {
                 coroutineScope {
                     val arabicDeferred = async { fetchEditionMap(QuranApiConfig.ARABIC_EDITION, suraNumber) }
-                    val latinDeferred = async { fetchEditionMap(QuranApiConfig.LATIN_EDITION, suraNumber) }
+                    val latinDeferred = async { fetchOptionalEditionMap(QuranApiConfig.LATIN_EDITION, suraNumber) }
                     val turkishDeferred = async { fetchEditionMap(QuranApiConfig.TURKISH_EDITION, suraNumber) }
-                    val englishDeferred = async { fetchEditionMap(QuranApiConfig.ENGLISH_EDITION, suraNumber) }
-                    val germanDeferred = async { fetchEditionMap(QuranApiConfig.GERMAN_EDITION, suraNumber) }
+                    val englishDeferred = async { fetchOptionalEditionMap(QuranApiConfig.ENGLISH_EDITION, suraNumber) }
+                    val germanDeferred = async { fetchOptionalEditionMap(QuranApiConfig.GERMAN_EDITION, suraNumber) }
 
                     val arabic = arabicDeferred.await()
                     val latin = latinDeferred.await()
@@ -289,6 +291,9 @@ class QuranRepository @Inject constructor(
         }
     }
 
+    private suspend fun fetchOptionalEditionMap(edition: String, suraNumber: Int): Map<Int, String> =
+        loadOptionalQuranEdition(edition, suraNumber) { fetchEditionMap(edition, suraNumber) }
+
     private fun fetchEditionMap(edition: String, suraNumber: Int): Map<Int, String> {
         val url = QuranApiConfig.suraEditionUrl(edition, suraNumber)
         val request = Request.Builder()
@@ -356,6 +361,23 @@ class QuranRepository @Inject constructor(
             }
         }
     }
+}
+
+/** A slow optional translation must not block complete Arabic and Turkish verse content. */
+internal suspend fun loadOptionalQuranEdition(
+    edition: String,
+    suraNumber: Int,
+    fetch: suspend () -> Map<Int, String>,
+): Map<Int, String> = try {
+    fetch()
+} catch (failure: IOException) {
+    // Network failures in optional editions must not discard validated core content.
+    Timber.w(failure, "Optional Quran edition request failed: edition=%s sura=%d", edition, suraNumber)
+    emptyMap()
+} catch (failure: JSONException) {
+    // Malformed optional payloads must not overwrite or misalign core ayahs.
+    Timber.w(failure, "Optional Quran edition parse failed: edition=%s sura=%d", edition, suraNumber)
+    emptyMap()
 }
 
 internal fun buildValidatedSuraAyahEntities(
