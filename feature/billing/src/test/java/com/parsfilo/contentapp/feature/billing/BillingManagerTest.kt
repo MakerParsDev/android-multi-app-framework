@@ -48,6 +48,54 @@ class BillingManagerTest {
     )
 
     @Test
+    fun catalogErrorSurvivesSuccessfulEmptyPurchaseQuery() = runBlocking {
+        val response = slot<ProductDetailsResponseListener>()
+        every { billingClient.queryProductDetailsAsync(any(), capture(response)) } just Runs
+        manager.queryProductDetails()
+        response.captured.onProductDetailsResponse(
+            BillingResult.newBuilder()
+                .setResponseCode(BillingClient.BillingResponseCode.NETWORK_ERROR)
+                .build(),
+            mockk(relaxed = true)
+        )
+        val processed = CompletableDeferred<Unit>()
+        manager.onPurchaseResultProcessed = { processed.complete(Unit) }
+        manager.handlePurchases(emptyList())
+        withTimeout(5_000) { processed.await() }
+        assertThat(manager.subscriptionState.value).isEqualTo(SubscriptionState.Inactive)
+        assertThat(manager.availabilityError.value).isEqualTo(BillingErrorKeys.UNAVAILABLE)
+    }
+
+    @Test
+    fun retryInvalidatesEarlierCatalogCallbackEvenOnSameReadyClient() {
+        val responses = mutableListOf<ProductDetailsResponseListener>()
+        every { billingClient.isReady } returns true
+        every { billingClient.queryProductDetailsAsync(any(), capture(responses)) } just Runs
+        manager.queryProductDetails()
+        manager.retryConnection()
+        assertThat(responses).hasSize(2)
+
+        responses[0].onProductDetailsResponse(
+            BillingResult.newBuilder()
+                .setResponseCode(BillingClient.BillingResponseCode.NETWORK_ERROR)
+                .build(),
+            mockk(relaxed = true)
+        )
+        assertThat(manager.availabilityError.value).isNull()
+        val catalog = mockk<QueryProductDetailsResult> {
+            every { productDetailsList } returns emptyList()
+            every { unfetchedProductList } returns emptyList()
+        }
+        responses[1].onProductDetailsResponse(
+            BillingResult.newBuilder()
+                .setResponseCode(BillingClient.BillingResponseCode.OK)
+                .build(),
+            catalog
+        )
+        assertThat(manager.availabilityError.value).isEqualTo(BillingErrorKeys.NO_PRODUCTS)
+    }
+
+    @Test
     fun activeVerifiedEntitlementSurvivesPlayCatalogFailure() = runBlocking {
         val purchase = mockk<Purchase> {
             every { purchaseState } returns Purchase.PurchaseState.PURCHASED
@@ -108,6 +156,7 @@ class BillingManagerTest {
             mockk(relaxed = true)
         )
         assertThat(refreshedManager.subscriptionState.value).isEqualTo(SubscriptionState.Loading)
+        assertThat(refreshedManager.availabilityError.value).isNull()
     }
 
     @Test
@@ -124,8 +173,7 @@ class BillingManagerTest {
                 .build()
         )
 
-        assertThat(manager.subscriptionState.value)
-            .isEqualTo(SubscriptionState.Error(BillingErrorKeys.UNAVAILABLE))
+        assertThat(manager.availabilityError.value).isEqualTo(BillingErrorKeys.UNAVAILABLE)
         coVerify(exactly = 0) { preferencesDataSource.setPremium(false) }
     }
 
@@ -138,8 +186,7 @@ class BillingManagerTest {
         manager.startConnection()
         setup.captured.onBillingServiceDisconnected()
 
-        assertThat(manager.subscriptionState.value)
-            .isEqualTo(SubscriptionState.Error(BillingErrorKeys.RECONNECTING))
+        assertThat(manager.availabilityError.value).isEqualTo(BillingErrorKeys.RECONNECTING)
     }
 
     @Test
@@ -159,8 +206,7 @@ class BillingManagerTest {
             result,
         )
 
-        assertThat(manager.subscriptionState.value)
-            .isEqualTo(SubscriptionState.Error(BillingErrorKeys.NO_PRODUCTS))
+        assertThat(manager.availabilityError.value).isEqualTo(BillingErrorKeys.NO_PRODUCTS)
         assertThat(manager.productDetails.value).isEmpty()
     }
 
@@ -178,8 +224,7 @@ class BillingManagerTest {
             mockk(relaxed = true),
         )
 
-        assertThat(manager.subscriptionState.value)
-            .isEqualTo(SubscriptionState.Error(BillingErrorKeys.UNAVAILABLE))
+        assertThat(manager.availabilityError.value).isEqualTo(BillingErrorKeys.UNAVAILABLE)
     }
 
     @Test
