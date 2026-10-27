@@ -123,7 +123,8 @@ fun SubscriptionScreen(
         }
     }
     val contentMode = resolveSubscriptionContent(
-        uiState.subscriptionState, uiState.productDetails.isNotEmpty(), didTimeOut
+        uiState.subscriptionState, uiState.productDetails.isNotEmpty(),
+        didTimeOut, uiState.availabilityError
     )
     val retry = {
         retryAttempt++
@@ -233,7 +234,12 @@ fun SubscriptionScreen(
                 }
 
                 is SubscriptionState.Loading -> {
-                    if (contentMode == SubscriptionContent.TIMED_OUT) {
+                    if (contentMode == SubscriptionContent.AVAILABILITY_ERROR) {
+                        BillingUnavailable(
+                            billingAvailabilityDescription(uiState.availabilityError),
+                            retry
+                        )
+                    } else if (contentMode == SubscriptionContent.TIMED_OUT) {
                         BillingUnavailable(stringResource(R.string.billing_error_timeout), retry)
                     } else {
                         SubscriptionLoadingSkeleton()
@@ -265,9 +271,11 @@ fun SubscriptionScreen(
 
                 else -> {
                     when (contentMode) {
+                        SubscriptionContent.AVAILABILITY_ERROR ->
+                            BillingUnavailable(billingAvailabilityDescription(uiState.availabilityError), retry)
                         SubscriptionContent.LOADING -> SubscriptionLoadingSkeleton()
-                        SubscriptionContent.NO_PRODUCTS ->
-                            BillingUnavailable(stringResource(R.string.billing_error_no_products), retry)
+                        SubscriptionContent.TIMED_OUT ->
+                            BillingUnavailable(stringResource(R.string.billing_error_timeout), retry)
                         else -> PlansList(uiState.productDetails, onPlanSelected)
                     }
                 }
@@ -283,21 +291,28 @@ fun SubscriptionScreen(
 
 internal const val BILLING_LOADING_TIMEOUT_MS = 15_000L
 
-internal enum class SubscriptionContent { ACTIVE, LOADING, PLANS, ERROR, TIMED_OUT, NO_PRODUCTS }
+internal enum class SubscriptionContent { ACTIVE, LOADING, PLANS, ERROR, TIMED_OUT, AVAILABILITY_ERROR }
 
 internal fun resolveSubscriptionContent(
     state: SubscriptionState,
     hasProducts: Boolean,
-    didTimeOut: Boolean
-): SubscriptionContent = when (state) {
-    is SubscriptionState.Active -> SubscriptionContent.ACTIVE
-    is SubscriptionState.Error -> SubscriptionContent.ERROR
-    SubscriptionState.Loading -> if (didTimeOut) SubscriptionContent.TIMED_OUT else SubscriptionContent.LOADING
-    else -> when {
-        hasProducts -> SubscriptionContent.PLANS
-        didTimeOut -> SubscriptionContent.NO_PRODUCTS
-        else -> SubscriptionContent.LOADING
-    }
+    didTimeOut: Boolean,
+    availabilityError: String? = null,
+): SubscriptionContent = when {
+    state is SubscriptionState.Active -> SubscriptionContent.ACTIVE
+    state is SubscriptionState.Error -> SubscriptionContent.ERROR
+    availabilityError != null -> SubscriptionContent.AVAILABILITY_ERROR
+    state is SubscriptionState.Loading -> if (didTimeOut) SubscriptionContent.TIMED_OUT else SubscriptionContent.LOADING
+    hasProducts -> SubscriptionContent.PLANS
+    didTimeOut -> SubscriptionContent.TIMED_OUT
+    else -> SubscriptionContent.LOADING
+}
+
+@Composable
+private fun billingAvailabilityDescription(key: String?): String = when (key) {
+    BillingErrorKeys.RECONNECTING -> stringResource(R.string.billing_error_reconnecting)
+    BillingErrorKeys.NO_PRODUCTS -> stringResource(R.string.billing_error_no_products)
+    else -> stringResource(R.string.billing_error_unavailable)
 }
 
 @Composable
