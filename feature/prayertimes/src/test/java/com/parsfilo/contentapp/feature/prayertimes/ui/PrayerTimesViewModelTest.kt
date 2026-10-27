@@ -526,6 +526,128 @@ class PrayerTimesViewModelTest {
         assertThat(viewModel.uiState.value.selectedCity?.id).isEqualTo(34)
         collector.cancel()
     }
+
+    @Test
+    fun pickerEmptyCountryListCanRetryWithoutChangingSearch() = runTest(testDispatcher) {
+        val country = PrayerCountry(id = 90, nameTr = "TÜRKİYE", nameEn = "Turkey")
+        val repository = FakePrayerTimesRepository()
+        val vm = PrayerLocationPickerViewModel(repository)
+        val collector = backgroundScope.launch { vm.uiState.collect {} }
+        runCurrent()
+        assertThat(vm.uiState.value.countries).isEmpty()
+        vm.onSearchQueryChanged("turkiye")
+        repository.countries = listOf(country)
+        vm.retryCurrentStep()
+        runCurrent()
+        assertThat(repository.forcedCountryLoads).isEqualTo(1)
+        assertThat(vm.uiState.value.searchQuery).isEqualTo("turkiye")
+        assertThat(vm.uiState.value.filteredCountries).containsExactly(country)
+        collector.cancel()
+    }
+
+    @Test
+    fun pickerShowsRetryableLoadingErrorAndClearsItAfterRecovery() = runTest(testDispatcher) {
+        val repository = FakePrayerTimesRepository().apply { failCountryLoad = true }
+        val vm = PrayerLocationPickerViewModel(repository)
+        val collector = backgroundScope.launch { vm.uiState.collect {} }
+        runCurrent()
+        assertThat(vm.uiState.value.isLoading).isFalse()
+        assertThat(vm.uiState.value.loadErrorRes)
+            .isEqualTo(R.string.prayertimes_picker_load_failed)
+        repository.failCountryLoad = false
+        repository.countries = listOf(PrayerCountry(90, "TÜRKİYE", "Turkey"))
+        vm.retryCurrentStep()
+        runCurrent()
+        assertThat(vm.uiState.value.loadErrorRes).isNull()
+        assertThat(vm.uiState.value.filteredCountries).hasSize(1)
+        collector.cancel()
+    }
+
+    @Test
+    fun pickerEmptyOfflineFallbackSignalsErrorAndRetryRecovers() = runTest(testDispatcher) {
+        val country = PrayerCountry(id = 90, nameTr = "TÜRKİYE", nameEn = "Turkey")
+        val repository = FakePrayerTimesRepository().apply { countryLoadFailed = true }
+        val vm = PrayerLocationPickerViewModel(repository)
+        val collector = backgroundScope.launch { vm.uiState.collect {} }
+        runCurrent()
+        assertThat(vm.uiState.value.countries).isEmpty()
+        assertThat(vm.uiState.value.loadErrorRes)
+            .isEqualTo(R.string.prayertimes_picker_load_failed)
+        vm.retryCurrentStep()
+        runCurrent()
+        assertThat(vm.uiState.value.loadErrorRes)
+            .isEqualTo(R.string.prayertimes_picker_load_failed)
+        repository.countryLoadFailed = false
+        repository.countries = listOf(country)
+        vm.retryCurrentStep()
+        runCurrent()
+        assertThat(vm.uiState.value.loadErrorRes).isNull()
+        assertThat(vm.uiState.value.filteredCountries).containsExactly(country)
+        collector.cancel()
+    }
+
+    @Test
+    fun pickerFailedCityFetchPreservesParentAndRetryWorks() = runTest(testDispatcher) {
+        val country = PrayerCountry(90, "TÜRKİYE", "Turkey")
+        val city = PrayerCity(18, 90, "ÇANKIRI", "Cankiri")
+        val repo = FakePrayerTimesRepository().apply {
+            countries = listOf(country)
+            failCityLoad = true
+        }
+        val vm = PrayerLocationPickerViewModel(repo)
+        val collector = backgroundScope.launch { vm.uiState.collect {} }
+        runCurrent()
+        vm.onCountrySelected(country)
+        runCurrent()
+        assertThat(vm.uiState.value.step).isEqualTo(LocationStep.CITY)
+        assertThat(vm.uiState.value.selectedCountry).isEqualTo(country)
+        assertThat(vm.uiState.value.isLoading).isFalse()
+        assertThat(vm.uiState.value.loadErrorRes)
+            .isEqualTo(R.string.prayertimes_picker_load_failed)
+        repo.failCityLoad = false
+        repo.citiesByCountry[country.id] = listOf(city)
+        vm.retryCurrentStep()
+        runCurrent()
+        assertThat(vm.uiState.value.cities).containsExactly(city)
+        assertThat(vm.uiState.value.selectedCountry).isEqualTo(country)
+        assertThat(vm.uiState.value.loadErrorRes).isNull()
+        collector.cancel()
+    }
+
+    @Test
+    fun pickerSaveFailureRetainsSelectedDistrictAndRetrySucceeds() = runTest(testDispatcher) {
+        val country = PrayerCountry(90, "TÜRKİYE", "Turkey")
+        val city = PrayerCity(34, 90, "İSTANBUL", "Istanbul")
+        val district = PrayerDistrict(341, 34, "KADIKÖY", "Kadikoy")
+        val repo = FakePrayerTimesRepository().apply {
+            countries = listOf(country)
+            citiesByCountry[90] = listOf(city)
+            districtsByCity[34] = listOf(district)
+            failManualSave = true
+        }
+        val vm = PrayerLocationPickerViewModel(repo)
+        val collector = backgroundScope.launch { vm.uiState.collect {} }
+        runCurrent()
+        vm.onCountrySelected(country)
+        runCurrent()
+        vm.onCitySelected(city)
+        runCurrent()
+        vm.onDistrictSelected(district)
+        var savedCount = 0
+        vm.saveSelection { savedCount++ }
+        runCurrent()
+        assertThat(savedCount).isEqualTo(0)
+        assertThat(vm.uiState.value.selectedDistrict).isEqualTo(district)
+        assertThat(vm.uiState.value.saveErrorRes)
+            .isEqualTo(R.string.prayertimes_picker_save_failed)
+        repo.failManualSave = false
+        vm.saveSelection { savedCount++ }
+        runCurrent()
+        assertThat(savedCount).isEqualTo(1)
+        assertThat(vm.uiState.value.saveErrorRes).isNull()
+        assertThat(repo.selectionFlow.value?.districtId).isEqualTo(district.id)
+        collector.cancel()
+    }
 }
 
 private data class RefreshCall(
@@ -546,6 +668,12 @@ private class FakePrayerTimesRepository : PrayerTimesRepository {
     var resolveCalls: Int = 0
     var resolveBarrier: CompletableDeferred<ResolveResult>? = null
     var countries: List<PrayerCountry> = emptyList()
+    var countryLoadFailed = false
+    var failCountryLoad = false
+    var failCityLoad = false
+    var failDistrictLoad = false
+    var failManualSave = false
+    var forcedCountryLoads = 0
     val citiesByCountry: MutableMap<Int, List<PrayerCity>> = mutableMapOf()
     val districtsByCity: MutableMap<Int, List<PrayerDistrict>> = mutableMapOf()
 
@@ -585,13 +713,26 @@ private class FakePrayerTimesRepository : PrayerTimesRepository {
     override suspend fun suggestManualSelectionByDeviceLocation(): PrayerLocationSuggestion? =
         suggestion
 
-    override suspend fun getCountries(forceRefresh: Boolean): List<PrayerCountry> = countries
+    override suspend fun getCountries(forceRefresh: Boolean): List<PrayerCountry> {
+        if (forceRefresh) forcedCountryLoads++
+        if (failCountryLoad) throw java.io.IOException("synthetic offline fixture")
+        return countries
+    }
+
+    override suspend fun getCountriesForPicker(
+        forceRefresh: Boolean,
+    ): com.parsfilo.contentapp.feature.prayertimes.data.LocationLoadResult<PrayerCountry> {
+        val result = getCountries(forceRefresh)
+        return com.parsfilo.contentapp.feature.prayertimes.data.LocationLoadResult(result, countryLoadFailed)
+    }
 
     override suspend fun getCities(countryId: Int, forceRefresh: Boolean): List<PrayerCity> {
+        if (failCityLoad) throw java.io.IOException("synthetic city offline")
         return citiesByCountry[countryId].orEmpty()
     }
 
     override suspend fun getDistricts(cityId: Int, forceRefresh: Boolean): List<PrayerDistrict> {
+        if (failDistrictLoad) throw java.io.IOException("synthetic district offline")
         return districtsByCity[cityId].orEmpty()
     }
 
@@ -625,6 +766,7 @@ private class FakePrayerTimesRepository : PrayerTimesRepository {
     }
 
     override suspend fun setManualSelection(countryId: Int, cityId: Int, districtId: Int) {
+        if (failManualSave) throw java.io.IOException("synthetic persistence failure")
         selectionFlow.value = PrayerLocationSelection(
             countryId = countryId,
             cityId = cityId,

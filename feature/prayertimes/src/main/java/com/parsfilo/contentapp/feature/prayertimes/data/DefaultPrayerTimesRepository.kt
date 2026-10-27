@@ -320,106 +320,128 @@ class DefaultPrayerTimesRepository @Inject constructor(
             }
         }
 
-    override suspend fun getCountries(forceRefresh: Boolean): List<PrayerCountry> = withContext(ioDispatcher) {
-        val now = System.currentTimeMillis()
-        val cached = prayerTimesDao.getCountries()
-        val minFetchedAt = prayerTimesDao.getMinCountryFetchedAt()
-        val isFresh = cached.isNotEmpty() && minFetchedAt != null && now - minFetchedAt <= LIST_TTL_MS
+    override suspend fun getCountries(forceRefresh: Boolean): List<PrayerCountry> =
+        readCountries(forceRefresh).items
 
-        if (!forceRefresh && isFresh) {
-            return@withContext cached.map { it.asExternalModel() }
+    override suspend fun getCountriesForPicker(forceRefresh: Boolean): LocationLoadResult<PrayerCountry> =
+        readCountries(forceRefresh)
+
+    @Suppress("TooGenericExceptionCaught")
+    private suspend fun readCountries(forceRefresh: Boolean): LocationLoadResult<PrayerCountry> =
+        withContext(ioDispatcher) {
+            val now = System.currentTimeMillis()
+            val cached = prayerTimesDao.getCountries()
+            val minFetchedAt = prayerTimesDao.getMinCountryFetchedAt()
+            val isFresh = cached.isNotEmpty() && minFetchedAt != null && now - minFetchedAt <= LIST_TTL_MS
+            val fallback = cached.map { it.asExternalModel() }
+            if (!forceRefresh && isFresh) return@withContext LocationLoadResult(fallback)
+
+            try {
+                val remote = apiClient.getCountries().map {
+                    PrayerCountryEntity(
+                        countryId = it.id,
+                        nameTr = it.nameTr,
+                        nameEn = it.nameEn,
+                        fetchedAt = now,
+                    )
+                }
+                if (remote.isNotEmpty()) {
+                    prayerTimesDao.deleteCountries()
+                    prayerTimesDao.upsertCountries(remote)
+                    return@withContext LocationLoadResult(remote.map { it.asExternalModel() })
+                }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                Timber.w(error, "Failed to refresh countries")
+                return@withContext LocationLoadResult(fallback, failed = true)
+            }
+            LocationLoadResult(fallback)
         }
 
-        runCatching {
-            val remote = apiClient.getCountries().map {
-                PrayerCountryEntity(
-                    countryId = it.id,
-                    nameTr = it.nameTr,
-                    nameEn = it.nameEn,
-                    fetchedAt = now,
-                )
-            }
-            if (remote.isNotEmpty()) {
-                prayerTimesDao.deleteCountries()
-                prayerTimesDao.upsertCountries(remote)
-                return@withContext remote.map { it.asExternalModel() }
-            }
-        }.onFailure {
-            Timber.w(it, "Failed to refresh countries")
-        }
+    override suspend fun getCities(countryId: Int, forceRefresh: Boolean): List<PrayerCity> =
+        readCities(countryId, forceRefresh).items
 
-        cached.map { it.asExternalModel() }
-    }
-
-    override suspend fun getCities(
+    override suspend fun getCitiesForPicker(
         countryId: Int,
         forceRefresh: Boolean,
-    ): List<PrayerCity> = withContext(ioDispatcher) {
-        val now = System.currentTimeMillis()
-        val cached = prayerTimesDao.getCities(countryId)
-        val minFetchedAt = prayerTimesDao.getMinCityFetchedAt(countryId)
-        val isFresh = cached.isNotEmpty() && minFetchedAt != null && now - minFetchedAt <= LIST_TTL_MS
+    ): LocationLoadResult<PrayerCity> = readCities(countryId, forceRefresh)
 
-        if (!forceRefresh && isFresh) {
-            return@withContext cached.map { it.asExternalModel() }
+    @Suppress("TooGenericExceptionCaught")
+    private suspend fun readCities(countryId: Int, forceRefresh: Boolean): LocationLoadResult<PrayerCity> =
+        withContext(ioDispatcher) {
+            val now = System.currentTimeMillis()
+            val cached = prayerTimesDao.getCities(countryId)
+            val minFetchedAt = prayerTimesDao.getMinCityFetchedAt(countryId)
+            val isFresh = cached.isNotEmpty() && minFetchedAt != null && now - minFetchedAt <= LIST_TTL_MS
+            val fallback = cached.map { it.asExternalModel() }
+            if (!forceRefresh && isFresh) return@withContext LocationLoadResult(fallback)
+
+            try {
+                val remote = apiClient.getCities(countryId).map {
+                    PrayerCityEntity(
+                        cityId = it.id,
+                        countryId = countryId,
+                        nameTr = it.nameTr,
+                        nameEn = it.nameEn,
+                        fetchedAt = now,
+                    )
+                }
+                if (remote.isNotEmpty()) {
+                    prayerTimesDao.deleteCitiesByCountry(countryId)
+                    prayerTimesDao.upsertCities(remote)
+                    return@withContext LocationLoadResult(remote.map { it.asExternalModel() })
+                }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                Timber.w(error, "Failed to refresh cities")
+                return@withContext LocationLoadResult(fallback, failed = true)
+            }
+            LocationLoadResult(fallback)
         }
 
-        runCatching {
-            val remote = apiClient.getCities(countryId).map {
-                PrayerCityEntity(
-                    cityId = it.id,
-                    countryId = countryId,
-                    nameTr = it.nameTr,
-                    nameEn = it.nameEn,
-                    fetchedAt = now,
-                )
-            }
-            if (remote.isNotEmpty()) {
-                prayerTimesDao.deleteCitiesByCountry(countryId)
-                prayerTimesDao.upsertCities(remote)
-                return@withContext remote.map { it.asExternalModel() }
-            }
-        }.onFailure {
-            Timber.w(it, "Failed to refresh cities")
-        }
+    override suspend fun getDistricts(cityId: Int, forceRefresh: Boolean): List<PrayerDistrict> =
+        readDistricts(cityId, forceRefresh).items
 
-        cached.map { it.asExternalModel() }
-    }
-
-    override suspend fun getDistricts(
+    override suspend fun getDistrictsForPicker(
         cityId: Int,
         forceRefresh: Boolean,
-    ): List<PrayerDistrict> = withContext(ioDispatcher) {
-        val now = System.currentTimeMillis()
-        val cached = prayerTimesDao.getDistricts(cityId)
-        val minFetchedAt = prayerTimesDao.getMinDistrictFetchedAt(cityId)
-        val isFresh = cached.isNotEmpty() && minFetchedAt != null && now - minFetchedAt <= LIST_TTL_MS
+    ): LocationLoadResult<PrayerDistrict> = readDistricts(cityId, forceRefresh)
 
-        if (!forceRefresh && isFresh) {
-            return@withContext cached.map { it.asExternalModel() }
-        }
+    @Suppress("TooGenericExceptionCaught")
+    private suspend fun readDistricts(cityId: Int, forceRefresh: Boolean): LocationLoadResult<PrayerDistrict> =
+        withContext(ioDispatcher) {
+            val now = System.currentTimeMillis()
+            val cached = prayerTimesDao.getDistricts(cityId)
+            val minFetchedAt = prayerTimesDao.getMinDistrictFetchedAt(cityId)
+            val isFresh = cached.isNotEmpty() && minFetchedAt != null && now - minFetchedAt <= LIST_TTL_MS
+            val fallback = cached.map { it.asExternalModel() }
+            if (!forceRefresh && isFresh) return@withContext LocationLoadResult(fallback)
 
-        runCatching {
-            val remote = apiClient.getDistricts(cityId).map {
-                PrayerDistrictEntity(
-                    districtId = it.id,
-                    cityId = cityId,
-                    nameTr = it.nameTr,
-                    nameEn = it.nameEn,
-                    fetchedAt = now,
-                )
+            try {
+                val remote = apiClient.getDistricts(cityId).map {
+                    PrayerDistrictEntity(
+                        districtId = it.id,
+                        cityId = cityId,
+                        nameTr = it.nameTr,
+                        nameEn = it.nameEn,
+                        fetchedAt = now,
+                    )
+                }
+                if (remote.isNotEmpty()) {
+                    prayerTimesDao.deleteDistrictsByCity(cityId)
+                    prayerTimesDao.upsertDistricts(remote)
+                    return@withContext LocationLoadResult(remote.map { it.asExternalModel() })
+                }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                Timber.w(error, "Failed to refresh districts")
+                return@withContext LocationLoadResult(fallback, failed = true)
             }
-            if (remote.isNotEmpty()) {
-                prayerTimesDao.deleteDistrictsByCity(cityId)
-                prayerTimesDao.upsertDistricts(remote)
-                return@withContext remote.map { it.asExternalModel() }
-            }
-        }.onFailure {
-            Timber.w(it, "Failed to refresh districts")
+            LocationLoadResult(fallback)
         }
-
-        cached.map { it.asExternalModel() }
-    }
 
     override suspend fun setMode(mode: PrayerTimesMode): Unit = withContext(ioDispatcher) {
         prayerPreferencesDataSource.setMode(

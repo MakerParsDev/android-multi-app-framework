@@ -75,6 +75,7 @@ fun PrayerLocationPickerRoute(
         onSave = { viewModel.saveSelection(onSaved = onBackClick) },
         onStepSelected = viewModel::onStepSelected,
         onSearchQueryChanged = viewModel::onSearchQueryChanged,
+        onRetry = viewModel::retryCurrentStep,
         content = content,
     )
 }
@@ -91,6 +92,7 @@ fun PrayerLocationPickerScreen(
     onSave: () -> Unit,
     onStepSelected: (LocationStep) -> Unit,
     onSearchQueryChanged: (String) -> Unit,
+    onRetry: () -> Unit = {},
     content: (@Composable () -> Unit)? = null,
 ) {
     val canSave = uiState.selectedCountry != null &&
@@ -229,15 +231,30 @@ fun PrayerLocationPickerScreen(
                         LocationStep.DISTRICT -> uiState.filteredDistricts.isEmpty()
                     }
                     val noSearchMatches = uiState.searchQuery.isNotBlank() && emptySearchResults
+                    if (locationsAvailable && uiState.loadErrorRes != null) {
+                        Text(
+                            text = stringResource(uiState.loadErrorRes),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                        TextButton(onClick = onRetry) {
+                            Text(stringResource(R.string.prayertimes_picker_retry))
+                        }
+                    }
                     if (!locationsAvailable) {
-                        Box(
+                        Column(
                             modifier = Modifier.fillMaxWidth().weight(1f),
-                            contentAlignment = Alignment.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
                         ) {
                             Text(
-                                text = stringResource(R.string.prayertimes_no_locations_available),
+                                text = stringResource(
+                                    uiState.loadErrorRes ?: R.string.prayertimes_no_locations_available,
+                                ),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
+                            TextButton(onClick = onRetry) {
+                                Text(stringResource(R.string.prayertimes_picker_retry))
+                            }
                         }
                     } else if (noSearchMatches) {
                         Column(
@@ -289,6 +306,13 @@ fun PrayerLocationPickerScreen(
                             }
                         }
                     }
+                }
+
+                uiState.saveErrorRes?.let { errorRes ->
+                    Text(
+                        text = stringResource(errorRes),
+                        color = MaterialTheme.colorScheme.error,
+                    )
                 }
 
                 AppButton(

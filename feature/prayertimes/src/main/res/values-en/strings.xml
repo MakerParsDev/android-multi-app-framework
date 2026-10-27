@@ -95,4 +95,7 @@
     <string name="prayertimes_widget_desc">Shows the next prayer time.</string>
     <item type="string" name="prayertimes_widget_title">@string/prayertimes_title</item>
     <string name="prayertimes_widget_no_next">No upcoming prayer</string>
+    <string name="prayertimes_picker_retry">Retry</string>
+    <string name="prayertimes_picker_load_failed">Unable to load locations. Check the connection and retry.</string>
+    <string name="prayertimes_picker_save_failed">Location could not be saved. Your choice is preserved; retry.</string>
 </resources>

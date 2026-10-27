@@ -145,6 +145,55 @@ class DefaultPrayerTimesRepositoryTest {
         }
 
     @Test
+    fun noCacheOfflineCountryLoadReportsFailure() = runTest(testDispatcher) {
+        coEvery { prayerTimesDao.getCountries() } returns emptyList()
+        coEvery { prayerTimesDao.getMinCountryFetchedAt() } returns null
+        every { apiClient.getCountries() } throws IOException("offline")
+
+        val result = repository.getCountriesForPicker()
+        assertThat(result.items).isEmpty()
+        assertThat(result.failed).isTrue()
+        assertThat(repository.getCountries()).isEmpty()
+        coVerify(exactly = 0) { prayerTimesDao.deleteCountries() }
+    }
+
+    @Test
+    fun staleCachedCountriesAreKeptOnRemoteFailure() = runTest(testDispatcher) {
+        val country = PrayerCountryEntity(90, "TÜRKİYE", "Turkey", 0)
+        coEvery { prayerTimesDao.getCountries() } returns listOf(country)
+        coEvery { prayerTimesDao.getMinCountryFetchedAt() } returns 0L
+        every { apiClient.getCountries() } throws IOException("offline")
+        val result = repository.getCountriesForPicker(forceRefresh = true)
+        assertThat(result.failed).isTrue()
+        assertThat(result.items.single().id).isEqualTo(90)
+        assertThat(result.items.single().nameTr).isEqualTo("TÜRKİYE")
+        coVerify(exactly = 0) { prayerTimesDao.deleteCountries() }
+    }
+
+    @Test
+    fun emptyCitiesAndDistrictsReportOfflineFailure() = runTest(testDispatcher) {
+        coEvery { prayerTimesDao.getCities(90) } returns emptyList()
+        coEvery { prayerTimesDao.getMinCityFetchedAt(90) } returns null
+        coEvery { prayerTimesDao.getDistricts(34) } returns emptyList()
+        coEvery { prayerTimesDao.getMinDistrictFetchedAt(34) } returns null
+        every { apiClient.getCities(90) } throws IOException("city offline")
+        every { apiClient.getDistricts(34) } throws IOException("district offline")
+        assertThat(repository.getCitiesForPicker(90).failed).isTrue()
+        assertThat(repository.getDistrictsForPicker(34).failed).isTrue()
+        coVerify(exactly = 0) { prayerTimesDao.deleteCitiesByCountry(any()) }
+        coVerify(exactly = 0) { prayerTimesDao.deleteDistrictsByCity(any()) }
+    }
+
+    @Test
+    fun cancelledCountryFetchIsPropagatedInsteadOfSwallowed() = runTest(testDispatcher) {
+        coEvery { prayerTimesDao.getCountries() } returns emptyList()
+        coEvery { prayerTimesDao.getMinCountryFetchedAt() } returns null
+        every { apiClient.getCountries() } throws CancellationException("cancelled")
+        val result = runCatching { repository.getCountriesForPicker() }
+        assertThat(result.exceptionOrNull()).isInstanceOf(CancellationException::class.java)
+    }
+
+    @Test
     fun enabledPreferencePreservesIntentWhileFalseAlarmResultIsObservable() = runTest(testDispatcher) {
         coEvery { prayerAlarmScheduler.scheduleNextForCurrentFlavor() } returns false
         val scheduled = repository.setAlarmEnabled(true)
