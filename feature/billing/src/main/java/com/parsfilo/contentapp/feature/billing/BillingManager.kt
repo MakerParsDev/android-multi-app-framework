@@ -61,6 +61,10 @@ class BillingManager @Inject constructor(
     private val _productDetails = MutableStateFlow<List<BillingProduct>>(emptyList())
     val productDetails: StateFlow<List<BillingProduct>> = _productDetails.asStateFlow()
 
+    // Catalog availability is distinct from verified purchase entitlement state.
+    private val _availabilityError = MutableStateFlow<String?>(null)
+    val availabilityError: StateFlow<String?> = _availabilityError.asStateFlow()
+
     private val purchasesUpdatedListener = PurchasesUpdatedListener { billingResult, purchases ->
         onPurchasesUpdated(billingResult, purchases.orEmpty())
     }
@@ -69,6 +73,8 @@ class BillingManager @Inject constructor(
 
     private val isConnecting = AtomicBoolean(false)
     private val purchaseResultVersion = AtomicLong(0L)
+    private val catalogRequestVersion = AtomicLong(0L)
+    private val purchaseQueryVersion = AtomicLong(0L)
     private val purchaseResultMutex = Mutex()
 
     @VisibleForTesting
@@ -122,7 +128,7 @@ class BillingManager @Inject constructor(
                         billingResult = billingResult,
                         updateUiState = false,
                     )
-                    showAvailabilityError(BillingErrorKeys.UNAVAILABLE)
+                    _availabilityError.value = BillingErrorKeys.UNAVAILABLE
                 }
             }
 
@@ -134,7 +140,7 @@ class BillingManager @Inject constructor(
                 isConnecting.set(false)
                 Timber.w("Billing service disconnected")
                 replaceBillingClient(closeCurrent = false, resetScope = false)
-                showAvailabilityError(BillingErrorKeys.RECONNECTING)
+                _availabilityError.value = BillingErrorKeys.RECONNECTING
             }
         })
     }
@@ -142,6 +148,11 @@ class BillingManager @Inject constructor(
     /** Explicit retry must not revoke verified entitlements. */
     fun retryConnection() {
         if (_subscriptionState.value is SubscriptionState.Active) return
+        // A previous query can still finish on the same connected client.
+        catalogRequestVersion.incrementAndGet()
+        purchaseQueryVersion.incrementAndGet()
+        purchaseResultVersion.incrementAndGet()
+        _availabilityError.value = null
         if (isConnecting.get()) {
             runCatching { billingClient.endConnection() }
                 .onFailure { Timber.w(it, "Could not close stalled billing connection") }
@@ -149,13 +160,6 @@ class BillingManager @Inject constructor(
         }
         _subscriptionState.value = SubscriptionState.Loading
         startConnection()
-    }
-
-    private fun showAvailabilityError(key: String) {
-        // Billing service availability does not prove that an entitlement expired.
-        if (_subscriptionState.value !is SubscriptionState.Active) {
-            _subscriptionState.value = SubscriptionState.Error(key)
-        }
     }
 
     fun endConnection() {
@@ -248,8 +252,9 @@ class BillingManager @Inject constructor(
             .build()
 
         val client = billingClient
+        val requestVersion = catalogRequestVersion.incrementAndGet()
         client.queryProductDetailsAsync(params) { billingResult, productDetailsResult ->
-            if (client !== billingClient) {
+            if (client !== billingClient || requestVersion != catalogRequestVersion.get()) {
                 Timber.d("Ignoring product query response from stale billing client")
                 return@queryProductDetailsAsync
             }
@@ -259,7 +264,7 @@ class BillingManager @Inject constructor(
                     billingResult = billingResult,
                     updateUiState = false,
                 )
-                showAvailabilityError(BillingErrorKeys.UNAVAILABLE)
+                _availabilityError.value = BillingErrorKeys.UNAVAILABLE
                 return@queryProductDetailsAsync
             }
 
@@ -294,9 +299,11 @@ class BillingManager @Inject constructor(
             )
 
             _productDetails.value = mapped
-            if (mapped.isEmpty()) {
+            _availabilityError.value = if (mapped.isEmpty()) {
                 Timber.w("Billing products are empty (no eligible offers)")
-                showAvailabilityError(BillingErrorKeys.NO_PRODUCTS)
+                BillingErrorKeys.NO_PRODUCTS
+            } else {
+                null
             }
         }
     }
@@ -346,8 +353,9 @@ class BillingManager @Inject constructor(
             .build()
 
         val client = billingClient
+        val requestVersion = purchaseQueryVersion.incrementAndGet()
         client.queryPurchasesAsync(params) { billingResult, purchases ->
-            if (client !== billingClient) {
+            if (client !== billingClient || requestVersion != purchaseQueryVersion.get()) {
                 Timber.d("Ignoring purchase query response from stale billing client")
                 return@queryPurchasesAsync
             }
@@ -359,7 +367,7 @@ class BillingManager @Inject constructor(
                     billingResult = billingResult,
                     updateUiState = false,
                 )
-                showAvailabilityError(BillingErrorKeys.UNAVAILABLE)
+                _availabilityError.value = BillingErrorKeys.UNAVAILABLE
             }
         }
     }
@@ -526,6 +534,8 @@ class BillingManager @Inject constructor(
 
         billingClient = createBillingClient()
         isConnecting.set(false)
+        catalogRequestVersion.incrementAndGet()
+        purchaseQueryVersion.incrementAndGet()
 
         if (resetScope) {
             purchaseResultVersion.incrementAndGet()
