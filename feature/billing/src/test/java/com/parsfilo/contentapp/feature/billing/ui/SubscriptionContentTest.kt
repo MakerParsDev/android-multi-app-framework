@@ -2,6 +2,7 @@ package com.parsfilo.contentapp.feature.billing.ui
 
 import com.google.common.truth.Truth.assertThat
 import com.parsfilo.contentapp.core.model.SubscriptionState
+import com.parsfilo.contentapp.feature.billing.BillingErrorKeys
 import org.junit.Test
 
 class SubscriptionContentTest {
@@ -18,7 +19,16 @@ class SubscriptionContentTest {
         assertThat(resolveSubscriptionContent(SubscriptionState.Inactive, false, false))
             .isEqualTo(SubscriptionContent.LOADING)
         assertThat(resolveSubscriptionContent(SubscriptionState.Inactive, false, true))
-            .isEqualTo(SubscriptionContent.NO_PRODUCTS)
+            .isEqualTo(SubscriptionContent.TIMED_OUT)
+    }
+
+    @Test
+    fun explicitNoPlansResultOverridesTimeoutWithoutChangingOwnership() {
+        assertThat(
+            resolveSubscriptionContent(
+                SubscriptionState.Inactive, false, true, BillingErrorKeys.NO_PRODUCTS
+            )
+        ).isEqualTo(SubscriptionContent.AVAILABILITY_ERROR)
     }
 
     @Test
