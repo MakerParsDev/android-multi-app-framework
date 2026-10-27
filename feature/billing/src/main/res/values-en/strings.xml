@@ -33,4 +33,9 @@
     <string name="billing_plan_yearly">Yearly</string>
     <string name="billing_plan_generic">Plan</string>
     <string name="billing_back">Back</string>
+    <string name="billing_error_timeout">The billing service is taking too long. Check Google Play and your connection, then try again.</string>
+    <string name="billing_error_no_products">Google Play returned no subscription plans for this installation. A Play Store test-track installation may be required.</string>
+    <string name="billing_error_unavailable">Billing is currently unavailable. Check Google Play and your connection, then try again.</string>
+    <string name="billing_retry">Try again</string>
+    <string name="billing_continue_free">You can continue using the app without a subscription. Use Back to return.</string>
 </resources>

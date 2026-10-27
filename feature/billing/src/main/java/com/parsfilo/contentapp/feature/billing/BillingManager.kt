@@ -41,6 +41,8 @@ object BillingErrorKeys {
     const val UNSUPPORTED = "BILLING_UNSUPPORTED"
     const val AUTH_REQUIRED = "BILLING_AUTH_REQUIRED"
     const val VERIFICATION_UNAVAILABLE = "BILLING_VERIFICATION_UNAVAILABLE"
+    const val UNAVAILABLE = "BILLING_UNAVAILABLE"
+    const val NO_PRODUCTS = "BILLING_NO_PRODUCTS"
 }
 
 @Singleton
@@ -120,6 +122,7 @@ class BillingManager @Inject constructor(
                         billingResult = billingResult,
                         updateUiState = false,
                     )
+                    showAvailabilityError(BillingErrorKeys.UNAVAILABLE)
                 }
             }
 
@@ -131,8 +134,28 @@ class BillingManager @Inject constructor(
                 isConnecting.set(false)
                 Timber.w("Billing service disconnected")
                 replaceBillingClient(closeCurrent = false, resetScope = false)
+                showAvailabilityError(BillingErrorKeys.RECONNECTING)
             }
         })
+    }
+
+    /** Explicit retry must not revoke verified entitlements. */
+    fun retryConnection() {
+        if (_subscriptionState.value is SubscriptionState.Active) return
+        if (isConnecting.get()) {
+            runCatching { billingClient.endConnection() }
+                .onFailure { Timber.w(it, "Could not close stalled billing connection") }
+            replaceBillingClient(closeCurrent = false, resetScope = false)
+        }
+        _subscriptionState.value = SubscriptionState.Loading
+        startConnection()
+    }
+
+    private fun showAvailabilityError(key: String) {
+        // Billing service availability does not prove that an entitlement expired.
+        if (_subscriptionState.value !is SubscriptionState.Active) {
+            _subscriptionState.value = SubscriptionState.Error(key)
+        }
     }
 
     fun endConnection() {
@@ -224,13 +247,19 @@ class BillingManager @Inject constructor(
             .setProductList(products)
             .build()
 
-        billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsResult ->
+        val client = billingClient
+        client.queryProductDetailsAsync(params) { billingResult, productDetailsResult ->
+            if (client !== billingClient) {
+                Timber.d("Ignoring product query response from stale billing client")
+                return@queryProductDetailsAsync
+            }
             if (billingResult.responseCode != BillingClient.BillingResponseCode.OK) {
                 handleBillingFailure(
                     operation = "Planlar alınamadı",
                     billingResult = billingResult,
                     updateUiState = false,
                 )
+                showAvailabilityError(BillingErrorKeys.UNAVAILABLE)
                 return@queryProductDetailsAsync
             }
 
@@ -266,7 +295,8 @@ class BillingManager @Inject constructor(
 
             _productDetails.value = mapped
             if (mapped.isEmpty()) {
-                Timber.w("Billing products are empty")
+                Timber.w("Billing products are empty (no eligible offers)")
+                showAvailabilityError(BillingErrorKeys.NO_PRODUCTS)
             }
         }
     }
@@ -315,7 +345,12 @@ class BillingManager @Inject constructor(
             .setProductType(BillingClient.ProductType.SUBS)
             .build()
 
-        billingClient.queryPurchasesAsync(params) { billingResult, purchases ->
+        val client = billingClient
+        client.queryPurchasesAsync(params) { billingResult, purchases ->
+            if (client !== billingClient) {
+                Timber.d("Ignoring purchase query response from stale billing client")
+                return@queryPurchasesAsync
+            }
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
                 handlePurchases(purchases)
             } else {
@@ -324,6 +359,7 @@ class BillingManager @Inject constructor(
                     billingResult = billingResult,
                     updateUiState = false,
                 )
+                showAvailabilityError(BillingErrorKeys.UNAVAILABLE)
             }
         }
     }

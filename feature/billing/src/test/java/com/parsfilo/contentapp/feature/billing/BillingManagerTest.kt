@@ -3,16 +3,23 @@ package com.parsfilo.contentapp.feature.billing
 import android.app.Activity
 import android.content.Context
 import com.android.billingclient.api.BillingClient
+import com.android.billingclient.api.BillingClientStateListener
+import com.android.billingclient.api.BillingResult
+import com.android.billingclient.api.ProductDetailsResponseListener
 import com.android.billingclient.api.Purchase
+import com.android.billingclient.api.QueryProductDetailsResult
 import com.google.common.truth.Truth.assertThat
 import com.parsfilo.contentapp.core.datastore.PreferencesDataSource
 import com.parsfilo.contentapp.core.model.SubscriptionState
 import com.parsfilo.contentapp.feature.billing.model.BillingProduct
+import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.coVerifyOrder
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -39,6 +46,156 @@ class BillingManagerTest {
         billingPurchaseVerifier = purchaseVerifier,
         billingClientFactory = billingClientFactory,
     )
+
+    @Test
+    fun activeVerifiedEntitlementSurvivesPlayCatalogFailure() = runBlocking {
+        val purchase = mockk<Purchase> {
+            every { purchaseState } returns Purchase.PurchaseState.PURCHASED
+            every { isAcknowledged } returns true
+            every { products } returns listOf("monthly_sub")
+        }
+        coEvery { purchaseVerifier.verify(any(), purchase) } returns VerificationResult(
+            verified = true,
+            expiryTimeMillis = 4102444800000L,
+            isAutoRenewing = true,
+            purchaseState = "ACTIVE",
+            acknowledgementState = "ACKNOWLEDGED",
+            error = null,
+        )
+        val processed = CompletableDeferred<Unit>()
+        manager.onPurchaseResultProcessed = { processed.complete(Unit) }
+        manager.handlePurchases(listOf(purchase))
+        withTimeout(5_000) { processed.await() }
+
+        val response = slot<ProductDetailsResponseListener>()
+        every { billingClient.queryProductDetailsAsync(any(), capture(response)) } just Runs
+        manager.queryProductDetails()
+        response.captured.onProductDetailsResponse(
+            BillingResult.newBuilder()
+                .setResponseCode(BillingClient.BillingResponseCode.NETWORK_ERROR)
+                .setDebugMessage("Offline")
+                .build(),
+            mockk(relaxed = true),
+        )
+
+        assertThat(manager.subscriptionState.value).isInstanceOf(SubscriptionState.Active::class.java)
+        manager.retryConnection()
+        assertThat(manager.subscriptionState.value).isInstanceOf(SubscriptionState.Active::class.java)
+        coVerify(exactly = 0) { preferencesDataSource.setPremium(false) }
+    }
+
+    @Test
+    fun staleCatalogCallbackCannotReplaceNewRetryState() {
+        val oldClient = mockk<BillingClient>(relaxed = true)
+        val newClient = mockk<BillingClient>(relaxed = true)
+        // A connection retry rotates away from the stale client.
+        var count = 0
+        val factory = BillingClientFactory { _, _ ->
+            if (++count == 1) oldClient else newClient
+        }
+        val refreshedManager = BillingManager(
+            context, preferencesDataSource, purchaseVerifier, factory
+        )
+        val response = slot<ProductDetailsResponseListener>()
+        every { oldClient.queryProductDetailsAsync(any(), capture(response)) } just Runs
+        refreshedManager.queryProductDetails()
+        refreshedManager.replaceBillingClient(closeCurrent = false, resetScope = false)
+
+        response.captured.onProductDetailsResponse(
+            BillingResult.newBuilder()
+                .setResponseCode(BillingClient.BillingResponseCode.NETWORK_ERROR)
+                .build(),
+            mockk(relaxed = true)
+        )
+        assertThat(refreshedManager.subscriptionState.value).isEqualTo(SubscriptionState.Loading)
+    }
+
+    @Test
+    fun setupFailureExitsLoadingWithLocalizedAvailabilityKey() {
+        val setup = slot<BillingClientStateListener>()
+        every { billingClient.isReady } returns false
+        every { billingClient.startConnection(capture(setup)) } just Runs
+
+        manager.startConnection()
+        setup.captured.onBillingSetupFinished(
+            BillingResult.newBuilder()
+                .setResponseCode(BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE)
+                .setDebugMessage("Service unavailable")
+                .build()
+        )
+
+        assertThat(manager.subscriptionState.value)
+            .isEqualTo(SubscriptionState.Error(BillingErrorKeys.UNAVAILABLE))
+        coVerify(exactly = 0) { preferencesDataSource.setPremium(false) }
+    }
+
+    @Test
+    fun disconnectExitsLoadingWithReconnectingKey() {
+        val setup = slot<BillingClientStateListener>()
+        every { billingClient.isReady } returns false
+        every { billingClient.startConnection(capture(setup)) } just Runs
+
+        manager.startConnection()
+        setup.captured.onBillingServiceDisconnected()
+
+        assertThat(manager.subscriptionState.value)
+            .isEqualTo(SubscriptionState.Error(BillingErrorKeys.RECONNECTING))
+    }
+
+    @Test
+    fun emptyPlayCatalogSurfacesNoEligiblePlans() {
+        val response = slot<ProductDetailsResponseListener>()
+        every { billingClient.queryProductDetailsAsync(any(), capture(response)) } just Runs
+        val result = mockk<QueryProductDetailsResult> {
+            every { productDetailsList } returns emptyList()
+            every { unfetchedProductList } returns emptyList()
+        }
+
+        manager.queryProductDetails()
+        response.captured.onProductDetailsResponse(
+            BillingResult.newBuilder()
+                .setResponseCode(BillingClient.BillingResponseCode.OK)
+                .build(),
+            result,
+        )
+
+        assertThat(manager.subscriptionState.value)
+            .isEqualTo(SubscriptionState.Error(BillingErrorKeys.NO_PRODUCTS))
+        assertThat(manager.productDetails.value).isEmpty()
+    }
+
+    @Test
+    fun productQueryFailureSurfacesUnavailable() {
+        val response = slot<ProductDetailsResponseListener>()
+        every { billingClient.queryProductDetailsAsync(any(), capture(response)) } just Runs
+
+        manager.queryProductDetails()
+        response.captured.onProductDetailsResponse(
+            BillingResult.newBuilder()
+                .setResponseCode(BillingClient.BillingResponseCode.NETWORK_ERROR)
+                .setDebugMessage("Offline")
+                .build(),
+            mockk(relaxed = true),
+        )
+
+        assertThat(manager.subscriptionState.value)
+            .isEqualTo(SubscriptionState.Error(BillingErrorKeys.UNAVAILABLE))
+    }
+
+    @Test
+    fun retryResetsErrorAndReplacesStalledConnection() {
+        val setup = slot<BillingClientStateListener>()
+        every { billingClient.isReady } returns false
+        every { billingClient.startConnection(capture(setup)) } just Runs
+
+        manager.startConnection()
+        manager.retryConnection()
+
+        assertThat(manager.subscriptionState.value).isEqualTo(SubscriptionState.Loading)
+        verify(exactly = 2) { billingClient.startConnection(any()) }
+        verify(exactly = 1) { billingClient.endConnection() }
+        coVerify(exactly = 0) { preferencesDataSource.setPremium(false) }
+    }
 
     @Test
     fun `signed out buyer cannot open Google Play checkout`() {
