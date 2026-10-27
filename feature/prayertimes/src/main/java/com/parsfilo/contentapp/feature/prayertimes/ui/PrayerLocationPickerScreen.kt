@@ -231,6 +231,15 @@ fun PrayerLocationPickerScreen(
                         LocationStep.DISTRICT -> uiState.filteredDistricts.isEmpty()
                     }
                     val noSearchMatches = uiState.searchQuery.isNotBlank() && emptySearchResults
+                    if (locationsAvailable && uiState.loadErrorRes != null) {
+                        Text(
+                            text = stringResource(uiState.loadErrorRes),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                        TextButton(onClick = onRetry) {
+                            Text(stringResource(R.string.prayertimes_picker_retry))
+                        }
+                    }
                     if (!locationsAvailable) {
                         Column(
                             modifier = Modifier.fillMaxWidth().weight(1f),

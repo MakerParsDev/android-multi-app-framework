@@ -564,6 +564,29 @@ class PrayerTimesViewModelTest {
     }
 
     @Test
+    fun pickerEmptyOfflineFallbackSignalsErrorAndRetryRecovers() = runTest(testDispatcher) {
+        val country = PrayerCountry(id = 90, nameTr = "TÜRKİYE", nameEn = "Turkey")
+        val repository = FakePrayerTimesRepository().apply { countryLoadFailed = true }
+        val vm = PrayerLocationPickerViewModel(repository)
+        val collector = backgroundScope.launch { vm.uiState.collect {} }
+        runCurrent()
+        assertThat(vm.uiState.value.countries).isEmpty()
+        assertThat(vm.uiState.value.loadErrorRes)
+            .isEqualTo(R.string.prayertimes_picker_load_failed)
+        vm.retryCurrentStep()
+        runCurrent()
+        assertThat(vm.uiState.value.loadErrorRes)
+            .isEqualTo(R.string.prayertimes_picker_load_failed)
+        repository.countryLoadFailed = false
+        repository.countries = listOf(country)
+        vm.retryCurrentStep()
+        runCurrent()
+        assertThat(vm.uiState.value.loadErrorRes).isNull()
+        assertThat(vm.uiState.value.filteredCountries).containsExactly(country)
+        collector.cancel()
+    }
+
+    @Test
     fun pickerFailedCityFetchPreservesParentAndRetryWorks() = runTest(testDispatcher) {
         val country = PrayerCountry(90, "TÜRKİYE", "Turkey")
         val city = PrayerCity(18, 90, "ÇANKIRI", "Cankiri")
@@ -645,6 +668,7 @@ private class FakePrayerTimesRepository : PrayerTimesRepository {
     var resolveCalls: Int = 0
     var resolveBarrier: CompletableDeferred<ResolveResult>? = null
     var countries: List<PrayerCountry> = emptyList()
+    var countryLoadFailed = false
     var failCountryLoad = false
     var failCityLoad = false
     var failDistrictLoad = false
@@ -693,6 +717,13 @@ private class FakePrayerTimesRepository : PrayerTimesRepository {
         if (forceRefresh) forcedCountryLoads++
         if (failCountryLoad) throw java.io.IOException("synthetic offline fixture")
         return countries
+    }
+
+    override suspend fun getCountriesForPicker(
+        forceRefresh: Boolean,
+    ): com.parsfilo.contentapp.feature.prayertimes.data.LocationLoadResult<PrayerCountry> {
+        val result = getCountries(forceRefresh)
+        return com.parsfilo.contentapp.feature.prayertimes.data.LocationLoadResult(result, countryLoadFailed)
     }
 
     override suspend fun getCities(countryId: Int, forceRefresh: Boolean): List<PrayerCity> {
