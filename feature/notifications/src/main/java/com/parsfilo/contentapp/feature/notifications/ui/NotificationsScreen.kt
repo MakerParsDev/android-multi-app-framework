@@ -50,6 +50,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -135,6 +136,12 @@ fun NotificationsScreen(
     val colorScheme = MaterialTheme.colorScheme
     val dimens = LocalDimens.current
     var openedNotification by remember { mutableStateOf<Notification?>(null) }
+    var confirmDeleteAll by remember { mutableStateOf(false) }
+    val hasNotifications = uiState is NotificationsUiState.Success && uiState.notifications.isNotEmpty()
+    // A stale dialog cannot reopen if a background refresh removes all notifications.
+    LaunchedEffect(hasNotifications) {
+        if (!hasNotifications) confirmDeleteAll = false
+    }
     var notificationsPermissionEnabled by remember {
         mutableStateOf(isNotificationPermissionEnabled(context))
     }
@@ -156,9 +163,9 @@ fun NotificationsScreen(
             .background(colorScheme.background)
     ) {
         NotificationsTopBar(
-            hasItems = uiState is NotificationsUiState.Success && uiState.notifications.isNotEmpty(),
+            hasItems = hasNotifications,
             onMarkAllRead = onMarkAllRead,
-            onDeleteAll = onDeleteAll
+            onDeleteAll = { confirmDeleteAll = true }
         )
 
         when (uiState) {
@@ -257,6 +264,32 @@ fun NotificationsScreen(
                 onNotificationDelete(selected.id, selected.notificationId)
                 openedNotification = null
             }
+        )
+    }
+
+    if (confirmDeleteAll && hasNotifications) {
+        AlertDialog(
+            onDismissRequest = { confirmDeleteAll = false },
+            title = { Text(stringResource(R.string.notifications_delete_all_confirm_title)) },
+            text = { Text(stringResource(R.string.notifications_delete_all_confirm_body)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmDeleteAll = false
+                        onDeleteAll()
+                    },
+                ) {
+                    Text(
+                        text = stringResource(R.string.notifications_action_delete_all),
+                        color = colorScheme.error,
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDeleteAll = false }) {
+                    Text(stringResource(R.string.notifications_delete_all_cancel))
+                }
+            },
         )
     }
 }

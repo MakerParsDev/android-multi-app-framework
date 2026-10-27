@@ -13,4 +13,7 @@
     <string name="notifications_dialog_delete">Löschen</string>
     <string name="notifications_state_unread">Ungelesen</string>
     <string name="notifications_state_read">Gelesen</string>
+    <string name="notifications_delete_all_confirm_title">Alle Benachrichtigungen löschen?</string>
+    <string name="notifications_delete_all_confirm_body">Gespeicherte Benachrichtigungen und Mitteilungen in der Statusleiste werden entfernt. Dies kann nicht rückgängig gemacht werden.</string>
+    <string name="notifications_delete_all_cancel">Abbrechen</string>
 </resources>
