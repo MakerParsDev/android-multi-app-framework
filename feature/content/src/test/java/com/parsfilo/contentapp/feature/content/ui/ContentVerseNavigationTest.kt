@@ -35,4 +35,16 @@ class ContentVerseNavigationTest {
         assertThat(contentLazyItemIndexForVerse(list, 0, false)).isNull()
         assertThat(contentLazyItemIndexForVerse(emptyList(), 1, true)).isNull()
     }
+
+    @Test fun malformedPastedIdsAreRejectedNotTransformed() {
+        assertThat(canonicalVerseId("12")).isEqualTo(12)
+        assertThat(canonicalVerseId("0012")).isEqualTo(12)
+        assertThat(canonicalVerseId("1 2")).isNull()
+        assertThat(canonicalVerseId("12a")).isNull()
+        assertThat(canonicalVerseId("12\n")).isNull()
+        assertThat(canonicalVerseId("1-2")).isNull()
+        assertThat(canonicalVerseId("9999999")).isNull()
+        assertThat(canonicalVerseId("0")).isNull()
+        assertThat(canonicalVerseId("")).isNull()
+    }
 }
