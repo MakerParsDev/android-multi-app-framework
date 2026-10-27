@@ -34,7 +34,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -63,6 +65,7 @@ import com.parsfilo.contentapp.core.model.SubscriptionState
 import com.parsfilo.contentapp.feature.billing.BillingErrorKeys
 import com.parsfilo.contentapp.feature.billing.R
 import com.parsfilo.contentapp.feature.billing.model.BillingProduct
+import kotlinx.coroutines.delay
 
 @Composable
 fun SubscriptionRoute(
@@ -74,10 +77,13 @@ fun SubscriptionRoute(
     val context = LocalContext.current
     val activity = context as? Activity
 
+    LaunchedEffect(viewModel) { viewModel.billingManager.startConnection() }
+
     SubscriptionScreen(
         uiState = uiState,
         onBackClick = onBackClick,
         onSignInClick = onSignInRequired,
+        onRetry = viewModel.billingManager::retryConnection,
         onPlanSelected = { productPackage ->
             activity?.let { act ->
                 viewModel.billingManager.launchBillingFlow(act, productPackage)
@@ -91,12 +97,40 @@ fun SubscriptionScreen(
     uiState: SubscriptionUiState,
     onBackClick: () -> Unit = {},
     onSignInClick: () -> Unit = {},
+    onRetry: () -> Unit = {},
     onPlanSelected: (BillingProduct) -> Unit
 ) {
     val dimens = LocalDimens.current
     val motion = LocalMotion.current
     val colorScheme = MaterialTheme.colorScheme
     val scrollState = rememberScrollState()
+    var retryAttempt by remember { mutableIntStateOf(0) }
+    var didTimeOut by remember { mutableStateOf(false) }
+    val awaitingBilling = uiState.isSignedIn &&
+        (
+            uiState.subscriptionState is SubscriptionState.Loading ||
+                (
+                    uiState.subscriptionState !is SubscriptionState.Active &&
+                        uiState.subscriptionState !is SubscriptionState.Error &&
+                        uiState.productDetails.isEmpty()
+                )
+        )
+    LaunchedEffect(awaitingBilling, uiState.subscriptionState, retryAttempt) {
+        didTimeOut = false
+        if (awaitingBilling) {
+            delay(BILLING_LOADING_TIMEOUT_MS)
+            didTimeOut = true
+        }
+    }
+    val contentMode = resolveSubscriptionContent(
+        uiState.subscriptionState, uiState.productDetails.isNotEmpty(),
+        didTimeOut, uiState.availabilityError
+    )
+    val retry = {
+        retryAttempt++
+        didTimeOut = false
+        onRetry()
+    }
 
     Column(
         modifier = Modifier
@@ -200,7 +234,16 @@ fun SubscriptionScreen(
                 }
 
                 is SubscriptionState.Loading -> {
-                    SubscriptionLoadingSkeleton()
+                    if (contentMode == SubscriptionContent.AVAILABILITY_ERROR) {
+                        BillingUnavailable(
+                            billingAvailabilityDescription(uiState.availabilityError),
+                            retry
+                        )
+                    } else if (contentMode == SubscriptionContent.TIMED_OUT) {
+                        BillingUnavailable(stringResource(R.string.billing_error_timeout), retry)
+                    } else {
+                        SubscriptionLoadingSkeleton()
+                    }
                 }
 
                 is SubscriptionState.Error -> {
@@ -210,7 +253,9 @@ fun SubscriptionScreen(
                         BillingErrorKeys.UNSUPPORTED -> stringResource(R.string.billing_error_unsupported)
                         BillingErrorKeys.AUTH_REQUIRED -> stringResource(R.string.billing_sign_in_required)
                         BillingErrorKeys.VERIFICATION_UNAVAILABLE -> stringResource(R.string.billing_error_verification_unavailable)
-                        else -> uiState.subscriptionState.message.orEmpty()
+                        BillingErrorKeys.UNAVAILABLE -> stringResource(R.string.billing_error_unavailable)
+                        BillingErrorKeys.NO_PRODUCTS -> stringResource(R.string.billing_error_no_products)
+                        else -> stringResource(R.string.billing_error_unavailable)
                     }
                     Text(
                         text = stringResource(
@@ -221,12 +266,18 @@ fun SubscriptionScreen(
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(modifier = Modifier.height(dimens.space16))
-                    PlansList(uiState.productDetails, onPlanSelected)
+                    BillingRetry(retry)
                 }
 
                 else -> {
-                    // Inactive veya Unknown → planları göster
-                    PlansList(uiState.productDetails, onPlanSelected)
+                    when (contentMode) {
+                        SubscriptionContent.AVAILABILITY_ERROR ->
+                            BillingUnavailable(billingAvailabilityDescription(uiState.availabilityError), retry)
+                        SubscriptionContent.LOADING -> SubscriptionLoadingSkeleton()
+                        SubscriptionContent.TIMED_OUT ->
+                            BillingUnavailable(stringResource(R.string.billing_error_timeout), retry)
+                        else -> PlansList(uiState.productDetails, onPlanSelected)
+                    }
                 }
             }
         }
@@ -236,6 +287,60 @@ fun SubscriptionScreen(
         FeaturesList()
         Spacer(modifier = Modifier.height(dimens.space16))
     }
+}
+
+internal const val BILLING_LOADING_TIMEOUT_MS = 15_000L
+
+internal enum class SubscriptionContent { ACTIVE, LOADING, PLANS, ERROR, TIMED_OUT, AVAILABILITY_ERROR }
+
+internal fun resolveSubscriptionContent(
+    state: SubscriptionState,
+    hasProducts: Boolean,
+    didTimeOut: Boolean,
+    availabilityError: String? = null,
+): SubscriptionContent = when {
+    state is SubscriptionState.Active -> SubscriptionContent.ACTIVE
+    state is SubscriptionState.Error -> SubscriptionContent.ERROR
+    availabilityError != null -> SubscriptionContent.AVAILABILITY_ERROR
+    state is SubscriptionState.Loading -> if (didTimeOut) SubscriptionContent.TIMED_OUT else SubscriptionContent.LOADING
+    hasProducts -> SubscriptionContent.PLANS
+    didTimeOut -> SubscriptionContent.TIMED_OUT
+    else -> SubscriptionContent.LOADING
+}
+
+@Composable
+private fun billingAvailabilityDescription(key: String?): String = when (key) {
+    BillingErrorKeys.RECONNECTING -> stringResource(R.string.billing_error_reconnecting)
+    BillingErrorKeys.NO_PRODUCTS -> stringResource(R.string.billing_error_no_products)
+    else -> stringResource(R.string.billing_error_unavailable)
+}
+
+@Composable
+private fun BillingUnavailable(message: String, onRetry: () -> Unit) {
+    Text(
+        text = message,
+        color = MaterialTheme.colorScheme.error,
+        style = MaterialTheme.typography.bodyMedium,
+        textAlign = TextAlign.Center
+    )
+    Spacer(modifier = Modifier.height(LocalDimens.current.space16))
+    BillingRetry(onRetry)
+}
+
+@Composable
+private fun BillingRetry(onRetry: () -> Unit) {
+    AppButton(
+        text = stringResource(R.string.billing_retry),
+        onClick = onRetry,
+        modifier = Modifier.fillMaxWidth()
+    )
+    Spacer(modifier = Modifier.height(LocalDimens.current.space12))
+    Text(
+        text = stringResource(R.string.billing_continue_free),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.bodySmall,
+        textAlign = TextAlign.Center
+    )
 }
 
 @Composable

@@ -33,4 +33,9 @@
     <string name="billing_plan_yearly">Jährlich</string>
     <string name="billing_plan_generic">Plan</string>
     <string name="billing_back">Zuruck</string>
+    <string name="billing_error_timeout">Der Zahlungsdienst benötigt zu lange. Prüfe Google Play und deine Verbindung und versuche es erneut.</string>
+    <string name="billing_error_no_products">Google Play bietet für diese Installation keine Abonnements an. Eventuell ist eine Play Store-Testversion erforderlich.</string>
+    <string name="billing_error_unavailable">Der Zahlungsdienst ist derzeit nicht verfügbar. Prüfe Google Play und deine Verbindung und versuche es erneut.</string>
+    <string name="billing_retry">Erneut versuchen</string>
+    <string name="billing_continue_free">Du kannst die App ohne Abonnement weiternutzen. Über Zurück gelangst du zur App.</string>
 </resources>
