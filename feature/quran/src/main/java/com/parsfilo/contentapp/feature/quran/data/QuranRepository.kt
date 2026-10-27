@@ -21,6 +21,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -98,17 +99,22 @@ class QuranRepository @Inject constructor(
         withContext(ioDispatcher) {
             val expectedAyahCount = quranDao.getSura(suraNumber)?.ayahCount?.takeIf { it > 0 }
             val currentAyahCount = quranDao.getAyahCountForSura(suraNumber)
-            if (!force) {
-                val isComplete =
-                    if (expectedAyahCount != null) {
-                        currentAyahCount == expectedAyahCount
-                    } else {
-                        currentAyahCount > 0
-                    }
-                if (isComplete) {
-                    return@withContext Result.Success(Unit)
-                }
+            val isComplete = if (expectedAyahCount != null) {
+                currentAyahCount == expectedAyahCount
+            } else {
+                currentAyahCount > 0
             }
+            val cached = if (currentAyahCount > 0) {
+                quranDao.observeAyahsForSura(suraNumber).first()
+            } else {
+                emptyList()
+            }
+
+            if (isComplete && cached.isNotEmpty() && cached.any { it.needsOptionalEditionRefresh() }) {
+                // Heal missing optional text on later opens and retries; preserve verified core ayahs.
+                return@withContext refreshMissingOptionalEditions(suraNumber, cached)
+            }
+            if (isComplete && !force) return@withContext Result.Success(Unit)
 
             return@withContext runCatching {
                 coroutineScope {
@@ -124,17 +130,16 @@ class QuranRepository @Inject constructor(
                     val english = englishDeferred.await()
                     val german = germanDeferred.await()
 
-                    val entities =
-                        buildValidatedSuraAyahEntities(
-                            suraNumber = suraNumber,
-                            expectedAyahCount = expectedAyahCount,
-                            arabic = arabic,
-                            turkish = turkish,
-                            latin = latin,
-                            english = english,
-                            german = german,
-                        )
-
+                    val validated = buildValidatedSuraAyahEntities(
+                        suraNumber = suraNumber,
+                        expectedAyahCount = expectedAyahCount,
+                        arabic = arabic,
+                        turkish = turkish,
+                        latin = latin,
+                        english = english,
+                        german = german,
+                    )
+                    val entities = preserveCachedOptionalEditionContent(validated, cached)
                     quranDao.replaceAyahsForSura(suraNumber = suraNumber, ayahs = entities)
                 }
             }.fold(
@@ -145,6 +150,43 @@ class QuranRepository @Inject constructor(
                 },
             )
         }
+
+    private suspend fun refreshMissingOptionalEditions(
+        suraNumber: Int,
+        cached: List<QuranAyahEntity>,
+    ): Result<Unit> = runCatching {
+        coroutineScope {
+            val latinDeferred = if (cached.any { it.latin.isBlank() }) {
+                async { fetchOptionalEditionMap(QuranApiConfig.LATIN_EDITION, suraNumber) }
+            } else {
+                null
+            }
+            val englishDeferred = if (cached.any { it.english.isBlank() }) {
+                async { fetchOptionalEditionMap(QuranApiConfig.ENGLISH_EDITION, suraNumber) }
+            } else {
+                null
+            }
+            val germanDeferred = if (cached.any { it.german.isBlank() }) {
+                async { fetchOptionalEditionMap(QuranApiConfig.GERMAN_EDITION, suraNumber) }
+            } else {
+                null
+            }
+            val repaired = mergeOptionalEditionContent(
+                cached,
+                latinDeferred?.await().orEmpty(),
+                englishDeferred?.await().orEmpty(),
+                germanDeferred?.await().orEmpty(),
+            )
+            val updated = repaired.filterIndexed { index, row -> row != cached[index] }
+            if (updated.isNotEmpty()) quranDao.insertAyahs(updated)
+        }
+    }.fold(
+        onSuccess = { Result.Success(Unit) },
+        onFailure = { throwable ->
+            Timber.e(throwable, "Failed to refresh optional sura editions for sura=$suraNumber")
+            Result.Error(throwable)
+        },
+    )
 
     suspend fun getAyahAudioPath(
         reciterId: String,
@@ -378,6 +420,39 @@ internal suspend fun loadOptionalQuranEdition(
     // Malformed optional payloads must not overwrite or misalign core ayahs.
     Timber.w(failure, "Optional Quran edition parse failed: edition=%s sura=%d", edition, suraNumber)
     emptyMap()
+}
+
+internal fun QuranAyahEntity.needsOptionalEditionRefresh(): Boolean =
+    latin.isBlank() || english.isBlank() || german.isBlank()
+
+/** Update optional text by verse key, leaving core Arabic and Turkish untouched. */
+internal fun mergeOptionalEditionContent(
+    cached: List<QuranAyahEntity>,
+    latin: Map<Int, String>,
+    english: Map<Int, String>,
+    german: Map<Int, String>,
+): List<QuranAyahEntity> = cached.map { verse ->
+    verse.copy(
+        latin = verse.latin.ifBlank { latin[verse.ayahNumber].orEmpty() },
+        english = verse.english.ifBlank { english[verse.ayahNumber].orEmpty() },
+        german = verse.german.ifBlank { german[verse.ayahNumber].orEmpty() },
+    )
+}
+
+/** A forced reload must not erase previously validated optional text after a failed endpoint. */
+internal fun preserveCachedOptionalEditionContent(
+    fresh: List<QuranAyahEntity>,
+    cached: List<QuranAyahEntity>,
+): List<QuranAyahEntity> {
+    val cachedByVerse = cached.associateBy { it.ayahNumber }
+    return fresh.map { verse ->
+        val previous = cachedByVerse[verse.ayahNumber]
+        verse.copy(
+            latin = verse.latin.ifBlank { previous?.latin.orEmpty() },
+            english = verse.english.ifBlank { previous?.english.orEmpty() },
+            german = verse.german.ifBlank { previous?.german.orEmpty() },
+        )
+    }
 }
 
 internal fun buildValidatedSuraAyahEntities(
