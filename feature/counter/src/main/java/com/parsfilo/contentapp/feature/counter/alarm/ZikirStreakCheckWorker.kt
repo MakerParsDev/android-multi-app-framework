@@ -5,6 +5,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.parsfilo.contentapp.core.datastore.PreferencesDataSource
 import com.parsfilo.contentapp.feature.counter.data.ZikirRepository
+import com.parsfilo.contentapp.feature.counter.data.effectiveActiveStreak
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -43,15 +44,16 @@ class ZikirStreakCheckWorker(
         }
 
         val streak = deps.zikirRepository().getOrCreateStreak()
-        if (streak.currentStreak <= 0) {
-            Timber.d("ZikirStreakCheckWorker skipped: no active streak")
+        val activeStreak = effectiveActiveStreak(streak)
+        if (activeStreak <= 0) {
+            Timber.d("ZikirStreakCheckWorker skipped: no date-valid active streak")
             return Result.success()
         }
 
-        deps.zikirReminderNotifier().showStreakReminder(streak.currentStreak)
+        deps.zikirReminderNotifier().showStreakReminder(activeStreak)
         Timber.d(
             "ZikirStreakCheckWorker reminder shown currentStreak=%d todayTotal=%d dailyGoal=%d",
-            streak.currentStreak,
+            activeStreak,
             todayTotal,
             dailyGoal,
         )
