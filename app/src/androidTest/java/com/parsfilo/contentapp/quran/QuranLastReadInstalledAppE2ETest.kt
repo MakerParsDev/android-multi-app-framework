@@ -112,7 +112,7 @@ class QuranLastReadInstalledAppE2ETest {
         val bookmarkLabel = context.getString(R.string.quran_last_read_format, 2, 8)
 
         Log.i("QURAN_482_E2E", "before_main_activity_launch")
-        ActivityScenario.launch(MainActivity::class.java).use {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             Log.i("QURAN_482_E2E", "activity_launched")
             waitFor(recentLabel)
             Log.i("QURAN_482_E2E", "recent_card_found")
@@ -121,6 +121,29 @@ class QuranLastReadInstalledAppE2ETest {
             waitFor("QA Ayah 5")
             Log.i("QURAN_482_E2E", "target_5_found")
             rule.onNodeWithText("QA Ayah 5").assertIsDisplayed()
+            // The jump itself must not advance progress without a reader scroll.
+            assertEquals(5, readMarker(context))
+
+            // Recreate the real MainActivity while the reader route is visible.
+            // This exercises saved-state and Room coexistence, not just a
+            // synthetic Compose state test. It never touches a physical app.
+            scenario.recreate()
+            waitFor("QA Ayah 5")
+            rule.onNodeWithText("QA Ayah 5").assertIsDisplayed()
+            assertEquals(5, readMarker(context))
+            Log.i("QURAN_482_E2E", "marker_5_retained_after_recreation")
+
+            // Opening and dismissing a modal without reader movement must not
+            // advance or regress the persisted Last Read marker.
+            rule.onNodeWithContentDescription(context.getString(R.string.quran_select_reciter)).performClick()
+            rule.waitUntil(timeoutMillis = 10_000) {
+                rule.onAllNodesWithText("✓", substring = true).fetchSemanticsNodes().isNotEmpty()
+            }
+            assertEquals(5, readMarker(context))
+            Log.i("QURAN_482_E2E", "reciter_overlay_marker_5_stable")
+            Espresso.pressBack()
+            rule.onNodeWithText("QA Ayah 5").assertIsDisplayed()
+            assertEquals(5, readMarker(context))
             Espresso.pressBack()
             Log.i("QURAN_482_E2E", "back_from_5")
             waitFor(recentLabel)
@@ -135,6 +158,12 @@ class QuranLastReadInstalledAppE2ETest {
             waitFor("QA Ayah 8")
             Log.i("QURAN_482_E2E", "target_8_found")
             rule.onNodeWithText("QA Ayah 8").assertIsDisplayed()
+            assertEquals(8, readMarkerEventually(context, 8))
+            scenario.recreate()
+            waitFor("QA Ayah 8")
+            rule.onNodeWithText("QA Ayah 8").assertIsDisplayed()
+            assertEquals(8, readMarker(context))
+            Log.i("QURAN_482_E2E", "marker_8_retained_after_recreation")
             Espresso.pressBack()
             assertEquals(8, readMarkerEventually(context, 8))
             Log.i("QURAN_482_E2E", "marker_8_saved")
