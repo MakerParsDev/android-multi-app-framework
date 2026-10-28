@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import okhttp3.Call
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONException
@@ -334,9 +335,15 @@ class QuranRepository @Inject constructor(
     }
 
     private suspend fun fetchOptionalEditionMap(edition: String, suraNumber: Int): Map<Int, String> =
-        loadOptionalQuranEdition(edition, suraNumber) { fetchEditionMap(edition, suraNumber) }
+        loadOptionalQuranEdition(edition, suraNumber) {
+            fetchEditionMap(edition, suraNumber, OPTIONAL_EDITION_TIMEOUT_MS)
+        }
 
-    private fun fetchEditionMap(edition: String, suraNumber: Int): Map<Int, String> {
+    private fun fetchEditionMap(
+        edition: String,
+        suraNumber: Int,
+        timeoutMillis: Long? = null,
+    ): Map<Int, String> {
         val url = QuranApiConfig.suraEditionUrl(edition, suraNumber)
         val request = Request.Builder()
             .url(url)
@@ -345,7 +352,7 @@ class QuranRepository @Inject constructor(
             .build()
         val startedNs = System.nanoTime()
         return try {
-            okHttpClient.newCall(request).execute().use { response ->
+            newQuranEditionCall(okHttpClient, request, timeoutMillis).execute().use { response ->
                 val code = response.code
                 if (code !in 200..299) {
                     Timber.w("Edition fetch failed for $edition sura=$suraNumber code=$code")
@@ -415,6 +422,20 @@ class QuranRepository @Inject constructor(
                 tempFile.delete()
             }
         }
+    }
+}
+
+// Limit optional translations' total HTTP time without weakening required core editions.
+internal const val OPTIONAL_EDITION_TIMEOUT_MS = 8_000L
+
+internal fun newQuranEditionCall(
+    client: Call.Factory,
+    request: Request,
+    timeoutMillis: Long?,
+): Call = client.newCall(request).apply {
+    if (timeoutMillis != null) {
+        require(timeoutMillis > 0)
+        timeout().timeout(timeoutMillis, TimeUnit.MILLISECONDS)
     }
 }
 
