@@ -245,6 +245,18 @@ class QuranSuraDetailViewModel @Inject constructor(
         }
     }
 
+    // This ViewModel belongs to a navigation entry and survives activity rotation.
+    // Reapplying its original deep-link target would overwrite more recent
+    // user-scroll progress (for example, restore 2:8, scroll to 2:10, rotate).
+    private var hasRecordedInitialRestore = false
+
+    fun onInitialAyahRestored(ayahNumber: Int): Boolean {
+        if (hasRecordedInitialRestore) return false
+        hasRecordedInitialRestore = true
+        progressWriter.record(ayahNumber)
+        return true
+    }
+
     fun onAyahVisible(ayahNumber: Int) {
         progressWriter.record(ayahNumber)
     }
