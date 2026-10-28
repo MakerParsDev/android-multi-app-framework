@@ -175,6 +175,7 @@ fun ContentScreen(
             val compactHeight = shouldUseCompactReader(
                 with(LocalDensity.current) { LocalWindowInfo.current.containerSize.height.toDp().value }
             )
+            val bannerPosition = resolveReaderBannerPosition(showTopBanner, compactHeight)
             Column(
                 modifier = Modifier
                     .testTag("content_detail")
@@ -201,7 +202,7 @@ fun ContentScreen(
                         },
                 )
 
-                if (showTopBanner) {
+                if (bannerPosition == ReaderBannerPosition.ABOVE_VERSES) {
                     BannerAd(
                         adUnitId = bannerAdUnitId,
                         placement = AdPlacement.BANNER_CONTENT_DETAIL,
@@ -417,6 +418,16 @@ fun ContentScreen(
                                     Text(stringResource(R.string.content_jump_cancel))
                                 }
                             },
+                        )
+                    }
+
+                    // On short windows, keep the live banner reachable after the verse viewport
+                    // rather than letting it consume the only visible reading area.
+                    if (bannerPosition == ReaderBannerPosition.AFTER_VERSES) {
+                        BannerAd(
+                            adUnitId = bannerAdUnitId,
+                            placement = AdPlacement.BANNER_CONTENT_DETAIL,
+                            showPlacementLabels = false,
                         )
                     }
 
