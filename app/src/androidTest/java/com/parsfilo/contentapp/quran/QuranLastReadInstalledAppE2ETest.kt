@@ -3,6 +3,7 @@ package com.parsfilo.contentapp.quran
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.os.Build
+import android.os.SystemClock
 import android.util.Log
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
@@ -194,8 +195,10 @@ class QuranLastReadInstalledAppE2ETest {
             val reader = rule.onNodeWithTag("quran_detail")
             reader.performTouchInput { swipeUp() }
             rule.waitUntil(timeoutMillis = 10_000) { readMarker(context) > 8 }
-
-            val actualProgress = readMarker(context)
+            // A swipe can start a fling and the serialized Room writer may lag
+            // behind the first new ayah. Rotate only once both have settled.
+            rule.waitForIdle()
+            val actualProgress = readStableMarker(context, minimumExclusive = 8)
             val viewport = reader.fetchSemanticsNode().boundsInRoot
             val visibleVerseNumbers = (1..40).filter { verse ->
                 rule.onAllNodesWithText("QA Ayah $verse").fetchSemanticsNodes()
@@ -229,6 +232,20 @@ class QuranLastReadInstalledAppE2ETest {
             assertEquals("Portrait rotation changed Last Read without a swipe", actualProgress, readMarker(context))
             Log.i("QURAN_481_E2E", "portrait_marker_stable=$actualProgress")
         }
+    }
+
+    private fun readStableMarker(context: android.content.Context, minimumExclusive: Int): Int {
+        var marker = readMarker(context)
+        var lastChangeAt = SystemClock.uptimeMillis()
+        rule.waitUntil(timeoutMillis = 15_000) {
+            val current = readMarker(context)
+            if (current != marker) {
+                marker = current
+                lastChangeAt = SystemClock.uptimeMillis()
+            }
+            marker > minimumExclusive && SystemClock.uptimeMillis() - lastChangeAt >= 500L
+        }
+        return marker
     }
 
     private fun waitForOrientation(
