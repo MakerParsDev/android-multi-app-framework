@@ -36,6 +36,7 @@ class AppOpenAdManager @Inject constructor(
 
     private var appOpenAd: AppOpenAd? = null
     private var isLoadingAd = false
+    private var loadGeneration = 0L
     private var loadTime: Long = 0
     private var currentAdUnitId: String? = null
     private var currentPlacement: AdPlacement = AdPlacement.APP_OPEN_DEFAULT
@@ -129,6 +130,8 @@ class AppOpenAdManager @Inject constructor(
             route = null,
         )
         isLoadingAd = true
+        val requestGeneration = ++loadGeneration
+        val requestStartedAtMillis = lastLoadStartedAtMillis
         val request = AdRequest.Builder().build()
         AppOpenAd.load(
             context,
@@ -136,9 +139,17 @@ class AppOpenAdManager @Inject constructor(
             request,
             object : AppOpenAd.AppOpenAdLoadCallback() {
                 override fun onAdLoaded(ad: AppOpenAd) {
+                    // A late response may arrive after consent revocation, a clear, or a new load.
+                    if (requestGeneration != loadGeneration) return
+                    if (!AdsConsentRuntimeState.canRequestAds.value ||
+                        !adsPolicyProvider.getPolicy().isAppOpenPlacementEnabled(placement)
+                    ) {
+                        clearAd()
+                        return
+                    }
                     Timber.d(
                         "AppOpen loaded placement=%s adUnit=%s responseId=%s",
-                        currentPlacement.analyticsValue,
+                        placement.analyticsValue,
                         ad.adUnitId,
                         ad.responseInfo.responseId,
                     )
@@ -146,10 +157,10 @@ class AppOpenAdManager @Inject constructor(
                     isLoadingAd = false
                     loadTime = Date().time
                     loadBackoffState = AdLoadBackoffPolicy.onLoadSuccess()
-                    val fillLatencyMs = (SystemTimeProvider.nowMillis() - lastLoadStartedAtMillis).coerceAtLeast(0L)
+                    val fillLatencyMs = (SystemTimeProvider.nowMillis() - requestStartedAtMillis).coerceAtLeast(0L)
                     adRevenueLogger.logLoaded(
                         adFormat = AdFormat.APP_OPEN,
-                        placement = currentPlacement,
+                        placement = placement,
                         adUnitId = ad.adUnitId,
                         route = null,
                         fillLatencyMs = fillLatencyMs,
@@ -160,7 +171,7 @@ class AppOpenAdManager @Inject constructor(
                             AdPaidEventContext(
                                 adUnitId = ad.adUnitId,
                                 adFormat = AdFormat.APP_OPEN,
-                                placement = currentPlacement,
+                                placement = placement,
                                 route = null,
                                 adValue = adValue,
                                 responseMeta = adRevenueLogger.extractResponseMeta(ad.responseInfo),
@@ -170,9 +181,14 @@ class AppOpenAdManager @Inject constructor(
                 }
 
                 override fun onAdFailedToLoad(loadAdError: LoadAdError) {
+                    if (requestGeneration != loadGeneration) return
+                    if (!AdsConsentRuntimeState.canRequestAds.value) {
+                        clearAd()
+                        return
+                    }
                     Timber.d(
                         "AppOpen failedToLoad placement=%s adUnit=%s code=%d msg=%s",
-                        currentPlacement.analyticsValue,
+                        placement.analyticsValue,
                         adUnitId,
                         loadAdError.code,
                         loadAdError.message,
@@ -185,7 +201,7 @@ class AppOpenAdManager @Inject constructor(
                     )
                     adRevenueLogger.logFailedToLoad(
                         adFormat = AdFormat.APP_OPEN,
-                        placement = currentPlacement,
+                        placement = placement,
                         adUnitId = adUnitId,
                         errorCode = loadAdError.code,
                         errorMessage = loadAdError.message,
@@ -516,6 +532,8 @@ class AppOpenAdManager @Inject constructor(
             isLoadingAd,
             isShowingAd,
         )
+        // Invalidate outstanding SDK callbacks; clearing local fields cannot cancel a load().
+        loadGeneration++
         appOpenAd = null
         isLoadingAd = false
         loadTime = 0L
