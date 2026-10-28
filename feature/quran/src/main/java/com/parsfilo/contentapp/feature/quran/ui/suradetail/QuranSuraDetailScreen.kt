@@ -1,7 +1,6 @@
 package com.parsfilo.contentapp.feature.quran.ui.suradetail
 
 import android.content.ClipData
-import android.util.Log
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -107,6 +106,11 @@ fun QuranSuraDetailRoute(
             viewModel.onAyahVisible(ayah.ayahNumber)
             onAyahVisibleExternal?.invoke(ayah)
         },
+        onInitialAyahRestored = { ayah ->
+            if (viewModel.onInitialAyahRestored(ayah.ayahNumber)) {
+                onAyahVisibleExternal?.invoke(ayah)
+            }
+        },
         bannerAdContent = bannerAdContent,
         nativeAdContent = nativeAdContent,
     )
@@ -127,6 +131,7 @@ fun QuranSuraDetailScreen(
     onDownloadAyah: (QuranAyah) -> Unit,
     onToggleBookmark: (QuranAyah) -> Unit,
     onAyahVisible: (QuranAyah) -> Unit,
+    onInitialAyahRestored: (QuranAyah) -> Unit = onAyahVisible,
     bannerAdContent: (@Composable () -> Unit)? = null,
     nativeAdContent: (@Composable () -> Unit)? = null,
 ) {
@@ -157,7 +162,6 @@ fun QuranSuraDetailScreen(
     var lastReportedAyahNumber by rememberSaveable(initialAyahNumber) { mutableIntStateOf(-1) }
 
     LaunchedEffect(initialAyahNumber, state.ayahs.size, lazyRowAyahIndices) {
-        Log.i("QURAN_481_TRACE", "initialEffect init=$initialAyahNumber ready=$initialPositionReady last=$lastReportedAyahNumber")
         if (!initialPositionReady && state.ayahs.isNotEmpty()) {
             val index = initialQuranAyahIndex(
                 state.ayahs.map { it.ayah.ayahNumber },
@@ -168,9 +172,8 @@ fun QuranSuraDetailScreen(
                 // composed first verses overwrite the saved Last Read marker.
                 listState.scrollToItem(lazyRowAyahIndices.indexOf(index))
                 val restoredAyah = state.ayahs[index].ayah
-                Log.i("QURAN_481_TRACE", "initialRecord ayah=${restoredAyah.ayahNumber} last=$lastReportedAyahNumber")
                 lastReportedAyahNumber = restoredAyah.ayahNumber
-                onAyahVisible(restoredAyah)
+                onInitialAyahRestored(restoredAyah)
                 restoredFirstVisibleIndex =
                     lazyRowAyahIndices.getOrNull(listState.firstVisibleItemIndex) ?: index
                 initialPositionReady = true
@@ -201,7 +204,6 @@ fun QuranSuraDetailScreen(
             )
             visibleIndex to listState.isScrollInProgress
         }.distinctUntilChanged().collect { (index, scrolling) ->
-            Log.i("QURAN_481_TRACE", "visible index=$index scrolling=$scrolling last=$lastReportedAyahNumber ready=$initialPositionReady afterRestore=$userScrolledAfterRestore")
             if (scrolling) scrollInThisCollector = true
             val changedByScroll = scrollInThisCollector
             // The final idle sample is part of the gesture. A later layout-only
@@ -227,7 +229,6 @@ fun QuranSuraDetailScreen(
                 return@collect
             }
             if (ayah.ayahNumber != lastReportedAyahNumber) {
-                Log.i("QURAN_481_TRACE", "viewportRecord ayah=${ayah.ayahNumber} prev=$lastReportedAyahNumber scroll=$changedByScroll")
                 lastReportedAyahNumber = ayah.ayahNumber
                 onAyahVisible(ayah)
             }
