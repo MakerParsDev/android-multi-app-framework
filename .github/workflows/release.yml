@@ -330,6 +330,16 @@ jobs:
           echo "Running Gradle tasks: ${TASKS[*]}"
           scripts/doppler-run.sh -- ./gradlew "${TASKS[@]}" --stacktrace --no-daemon --max-workers=2
 
+      - name: Verify generated release Google Sign-In resource before Play upload
+        if: inputs.do_build && inputs.build_type == 'Release' && (inputs.do_internal_test || inputs.do_publish)
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+        run: |
+          set -euo pipefail
+          # The built release resource must match the authorized web OAuth client.
+          # Avoid a false positive from valid config checks with a blank APK resource.
+          scripts/doppler-run.sh -- python3 scripts/ci/verify_release_auth_resource.py
+
       - name: Upload build outputs
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
