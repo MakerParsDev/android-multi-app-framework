@@ -1,5 +1,7 @@
 package com.parsfilo.contentapp.quran
 
+import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.os.Build
 import android.util.Log
 import androidx.compose.ui.test.assertIsDisplayed
@@ -174,7 +176,7 @@ class QuranLastReadInstalledAppE2ETest {
         Log.i("QURAN_482_E2E", "first_activity_closed")
 
         // An entirely new activity should retain the same persisted verse.
-        ActivityScenario.launch(MainActivity::class.java).use {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             Log.i("QURAN_482_E2E", "cold_restart_launched")
             val resumeLabel = context.getString(R.string.quran_last_read_format, 2, 8)
             waitFor(resumeLabel)
@@ -205,6 +207,38 @@ class QuranLastReadInstalledAppE2ETest {
                 actualProgress <= visibleVerseNumbers.max(),
             )
             Log.i("QURAN_481_E2E", "scroll_marker=$actualProgress last_displayed=${visibleVerseNumbers.max()}")
+
+            // A real orientation change recreates MainActivity while keeping the
+            // active Quran route. It must not report prefetched/previous verses
+            // as newly consumed without another user scroll.
+            scenario.onActivity {
+                it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            }
+            waitForOrientation(scenario, Configuration.ORIENTATION_LANDSCAPE)
+            rule.onNodeWithTag("quran_detail").assertIsDisplayed()
+            rule.waitForIdle()
+            assertEquals("Landscape rotation changed Last Read without a swipe", actualProgress, readMarker(context))
+            Log.i("QURAN_481_E2E", "landscape_marker_stable=$actualProgress")
+
+            scenario.onActivity {
+                it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            }
+            waitForOrientation(scenario, Configuration.ORIENTATION_PORTRAIT)
+            rule.onNodeWithTag("quran_detail").assertIsDisplayed()
+            rule.waitForIdle()
+            assertEquals("Portrait rotation changed Last Read without a swipe", actualProgress, readMarker(context))
+            Log.i("QURAN_481_E2E", "portrait_marker_stable=$actualProgress")
+        }
+    }
+
+    private fun waitForOrientation(
+        scenario: ActivityScenario<MainActivity>,
+        expected: Int,
+    ) {
+        rule.waitUntil(timeoutMillis = 15_000) {
+            var actual = Configuration.ORIENTATION_UNDEFINED
+            scenario.onActivity { actual = it.resources.configuration.orientation }
+            actual == expected
         }
     }
 
