@@ -29,6 +29,7 @@
     <string name="quran_open_rewards">Belohnungen</string>
     <string name="quran_error_load_suras">Sure-Liste konnte nicht geladen werden.</string>
     <string name="quran_error_load_sura">Sure-Inhalt konnte nicht geladen werden.</string>
+    <string name="quran_error_retry_guidance">Prüfen Sie die Verbindung und versuchen Sie es erneut. Heruntergeladene Verse bleiben erhalten.</string>
     <string name="quran_audio_download_progress">Wird heruntergeladen %% %d</string>
     <string name="quran_ayah_actions">Versaktionen</string>
     <string name="quran_loading">Wird geladen…</string>
