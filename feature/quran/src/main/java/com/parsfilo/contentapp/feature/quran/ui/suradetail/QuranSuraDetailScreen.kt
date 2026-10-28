@@ -152,7 +152,8 @@ fun QuranSuraDetailScreen(
     var restoredFirstVisibleIndex by rememberSaveable(initialAyahNumber) {
         mutableStateOf<Int?>(null)
     }
-    var lastReportedAyahNumber by remember(initialAyahNumber) { mutableIntStateOf(-1) }
+    // Keep the last actually reported verse across activity reconfiguration.
+    var lastReportedAyahNumber by rememberSaveable(initialAyahNumber) { mutableIntStateOf(-1) }
 
     LaunchedEffect(initialAyahNumber, state.ayahs.size, lazyRowAyahIndices) {
         if (!initialPositionReady && state.ayahs.isNotEmpty()) {
@@ -182,6 +183,7 @@ fun QuranSuraDetailScreen(
 
     LaunchedEffect(listState, initialPositionReady, state.ayahs.size, lazyRowAyahIndices) {
         if (!initialPositionReady) return@LaunchedEffect
+        var scrollInThisCollector = false
         snapshotFlow {
             val layout = listState.layoutInfo
             val visibleIndex = firstMeaningfullyVisibleAyahIndex(
@@ -196,6 +198,11 @@ fun QuranSuraDetailScreen(
             )
             visibleIndex to listState.isScrollInProgress
         }.distinctUntilChanged().collect { (index, scrolling) ->
+            if (scrolling) scrollInThisCollector = true
+            val changedByScroll = scrollInThisCollector
+            // The final idle sample is part of the gesture. A later layout-only
+            // recomputation (such as rotation) must not rewrite saved progress.
+            if (!scrolling) scrollInThisCollector = false
             // isScrollInProgress also becomes true for programmatic scrolls.
             // A changed visible index after restoration is stronger evidence of
             // intentional reader movement than the scroll flag alone.
@@ -203,6 +210,9 @@ fun QuranSuraDetailScreen(
                 userScrolledAfterRestore = true
             }
             val ayah = index?.let { state.ayahs.getOrNull(it)?.ayah } ?: return@collect
+            // First visible verse of a new reader is reportable. Once a verse
+            // has been recorded, only another scrolling gesture can update it.
+            if (lastReportedAyahNumber >= 0 && !changedByScroll) return@collect
             // Near the last verse, scrollToItem may be clamped and leave an
             // earlier verse at the viewport edge. Do not regress the saved
             // deep-link target unless the reader subsequently scrolls.
