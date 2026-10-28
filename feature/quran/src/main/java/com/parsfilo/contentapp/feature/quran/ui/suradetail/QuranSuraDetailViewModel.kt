@@ -45,6 +45,9 @@ data class QuranSuraDetailUiState(
     val shouldShowAds: Boolean = false,
 )
 
+internal fun shouldShowSuraLoading(isSyncing: Boolean, hasAyahs: Boolean): Boolean =
+    isSyncing && !hasAyahs
+
 private data class DetailContent(
     val sura: QuranSura?,
     val ayahs: List<QuranAyah>,
@@ -138,7 +141,9 @@ class QuranSuraDetailViewModel @Inject constructor(
         adGateChecker.shouldShowAds,
     ) { base, content, prefs, playback, shouldShowAds ->
         base.copy(
-            isLoading = false,
+            // Keep the loading indicator until verses are actually available.
+            // Cached, validated verses remain readable during an optional refresh.
+            isLoading = shouldShowSuraLoading(base.isLoading, content.ayahs.isNotEmpty()),
             sura = content.sura,
             ayahs = content.ayahs.map { ayah ->
                 AyahDisplayState(

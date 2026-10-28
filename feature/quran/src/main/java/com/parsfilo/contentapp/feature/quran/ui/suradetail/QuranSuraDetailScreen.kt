@@ -304,7 +304,7 @@ fun QuranSuraDetailScreen(
                 ) {
                     Text(stringResource(R.string.quran_error_load_sura))
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(state.errorMessage)
+                    Text(stringResource(R.string.quran_error_retry_guidance))
                     Spacer(modifier = Modifier.height(12.dp))
                     AppButton(text = stringResource(R.string.quran_retry), onClick = onRetry)
                 }

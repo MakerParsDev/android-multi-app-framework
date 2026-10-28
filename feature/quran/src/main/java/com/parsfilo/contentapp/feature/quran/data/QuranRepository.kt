@@ -343,23 +343,36 @@ class QuranRepository @Inject constructor(
             .get()
             .header("Accept", "application/json")
             .build()
-        return okHttpClient.newCall(request).execute().use { response ->
-            val code = response.code
-            if (code !in 200..299) {
-                Timber.w("Edition fetch failed for $edition sura=$suraNumber code=$code")
-                return emptyMap()
-            }
+        val startedNs = System.nanoTime()
+        return try {
+            okHttpClient.newCall(request).execute().use { response ->
+                val code = response.code
+                if (code !in 200..299) {
+                    Timber.w("Edition fetch failed for $edition sura=$suraNumber code=$code")
+                    return emptyMap()
+                }
 
-            val json = JSONObject(response.body.string())
-            val chapter = json.optJSONArray("chapter") ?: return emptyMap()
-            buildMap {
-                for (i in 0 until chapter.length()) {
-                    val ayah = chapter.optJSONObject(i) ?: continue
-                    val verseNo = ayah.optInt("verse", i + 1)
-                    val text = ayah.optString("text")
-                    put(verseNo, text)
+                val json = JSONObject(response.body.string())
+                val chapter = json.optJSONArray("chapter") ?: return emptyMap()
+                buildMap {
+                    for (i in 0 until chapter.length()) {
+                        val ayah = chapter.optJSONObject(i) ?: continue
+                        val verseNo = ayah.optInt("verse", i + 1)
+                        val text = ayah.optString("text")
+                        put(verseNo, text)
+                    }
                 }
             }
+        } catch (failure: IOException) {
+            Timber.w(
+                "Quran edition network error edition=%s sura=%d host=%s type=%s durationMs=%d",
+                edition,
+                suraNumber,
+                request.url.host,
+                failure.javaClass.simpleName,
+                (System.nanoTime() - startedNs) / 1_000_000,
+            )
+            throw failure
         }
     }
 
