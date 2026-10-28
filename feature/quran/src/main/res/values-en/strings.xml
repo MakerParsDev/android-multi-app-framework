@@ -29,6 +29,7 @@
     <string name="quran_open_rewards">Rewards</string>
     <string name="quran_error_load_suras">Failed to load surah list.</string>
     <string name="quran_error_load_sura">Failed to load surah content.</string>
+    <string name="quran_error_retry_guidance">Check your connection and retry. Downloaded verses are preserved.</string>
     <string name="quran_audio_download_progress">Downloading %% %d</string>
     <string name="quran_ayah_actions">Ayah actions</string>
     <string name="quran_loading">Loading…</string>

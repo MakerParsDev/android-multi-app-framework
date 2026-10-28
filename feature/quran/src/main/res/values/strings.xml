@@ -29,6 +29,7 @@
     <string name="quran_open_rewards">Ödüller</string>
     <string name="quran_error_load_suras">Sure listesi yüklenemedi.</string>
     <string name="quran_error_load_sura">Sure içeriği yüklenemedi.</string>
+    <string name="quran_error_retry_guidance">Bağlantınızı kontrol edip tekrar deneyin. İndirilmiş ayetler korunur.</string>
     <string name="quran_audio_download_progress">İndiriliyor %% %d</string>
     <string name="quran_ayah_actions">Ayet işlemleri</string>
     <string name="quran_loading">Yükleniyor…</string>
