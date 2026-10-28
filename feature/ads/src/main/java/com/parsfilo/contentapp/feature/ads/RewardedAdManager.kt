@@ -172,6 +172,23 @@ class RewardedAdManager @Inject constructor(
             adUnitId,
         )
         isLoadingNext = true
+        val nextPlacement = currentPlacement
+        val nextRoute = currentRoute
+        val nextLoadStartedAtMillis = SystemTimeProvider.nowMillis()
+        // Account for every actual SDK request, including background pool refills.
+        adRevenueLogger.logPreloadRequested(
+            adFormat = AdFormat.REWARDED,
+            placement = nextPlacement,
+            adUnitId = adUnitId,
+            route = nextRoute,
+            reason = "pool_next_slot",
+        )
+        adRevenueLogger.logRequest(
+            adFormat = AdFormat.REWARDED,
+            placement = nextPlacement,
+            adUnitId = adUnitId,
+            route = nextRoute,
+        )
         val adRequest = AdRequest.Builder().build()
         RewardedAd.load(
             context,
@@ -181,6 +198,15 @@ class RewardedAdManager @Inject constructor(
                 override fun onAdLoaded(ad: RewardedAd) {
                     Timber.d("Rewarded next slot loaded adUnit=%s", ad.adUnitId)
                     isLoadingNext = false
+                    adRevenueLogger.logLoaded(
+                        adFormat = AdFormat.REWARDED,
+                        placement = nextPlacement,
+                        adUnitId = ad.adUnitId,
+                        route = nextRoute,
+                        fillLatencyMs = (SystemTimeProvider.nowMillis() - nextLoadStartedAtMillis)
+                            .coerceAtLeast(0L),
+                        adapterName = ad.responseInfo.mediationAdapterClassName,
+                    )
                     ad.onPaidEventListener = { value ->
                         adRevenueLogger.logPaidEvent(
                             AdPaidEventContext(
@@ -204,6 +230,15 @@ class RewardedAdManager @Inject constructor(
                     )
                     isLoadingNext = false
                     rewardedAdNext = null
+                    adRevenueLogger.logFailedToLoad(
+                        adFormat = AdFormat.REWARDED,
+                        placement = nextPlacement,
+                        adUnitId = adUnitId,
+                        errorCode = adError.code,
+                        errorMessage = null,
+                        errorDomain = adError.domain,
+                        route = nextRoute,
+                    )
                 }
             },
         )

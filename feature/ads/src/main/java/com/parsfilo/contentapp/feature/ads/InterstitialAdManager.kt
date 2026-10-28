@@ -498,6 +498,23 @@ class InterstitialAdManager @Inject constructor(
             return
         }
         isLoadingNext = true
+        val nextPlacement = currentPlacement
+        val nextRoute = currentRoute
+        val nextLoadStartedAtMillis = SystemTimeProvider.nowMillis()
+        // Account for every actual SDK request, including background pool refills.
+        adRevenueLogger.logPreloadRequested(
+            adFormat = AdFormat.INTERSTITIAL,
+            placement = nextPlacement,
+            adUnitId = adUnitId,
+            route = nextRoute,
+            reason = "pool_next_slot",
+        )
+        adRevenueLogger.logRequest(
+            adFormat = AdFormat.INTERSTITIAL,
+            placement = nextPlacement,
+            adUnitId = adUnitId,
+            route = nextRoute,
+        )
         val adRequest = AdRequest.Builder().build()
         InterstitialAd.load(
             currentLoadContext ?: appContext,
@@ -507,6 +524,15 @@ class InterstitialAdManager @Inject constructor(
                 override fun onAdLoaded(ad: InterstitialAd) {
                     Timber.d("Interstitial next slot loaded adUnit=%s", ad.adUnitId)
                     isLoadingNext = false
+                    adRevenueLogger.logLoaded(
+                        adFormat = AdFormat.INTERSTITIAL,
+                        placement = nextPlacement,
+                        adUnitId = ad.adUnitId,
+                        route = nextRoute,
+                        fillLatencyMs = (SystemTimeProvider.nowMillis() - nextLoadStartedAtMillis)
+                            .coerceAtLeast(0L),
+                        adapterName = ad.responseInfo.mediationAdapterClassName,
+                    )
                     ad.onPaidEventListener = { adValue ->
                         adRevenueLogger.logPaidEvent(
                             AdPaidEventContext(
@@ -530,6 +556,15 @@ class InterstitialAdManager @Inject constructor(
                     )
                     isLoadingNext = false
                     interstitialAdNext = null
+                    adRevenueLogger.logFailedToLoad(
+                        adFormat = AdFormat.INTERSTITIAL,
+                        placement = nextPlacement,
+                        adUnitId = adUnitId,
+                        errorCode = adError.code,
+                        errorMessage = null,
+                        errorDomain = adError.domain,
+                        route = nextRoute,
+                    )
                 }
             },
         )
