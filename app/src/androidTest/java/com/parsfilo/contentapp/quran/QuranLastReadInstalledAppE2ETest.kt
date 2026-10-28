@@ -6,8 +6,11 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.room.Room
 import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.Espresso
@@ -85,12 +88,12 @@ class QuranLastReadInstalledAppE2ETest {
                         nameTurkish = "QA Sura $number",
                         nameEnglish = "QA Sura $number",
                         revelationType = "MEDINAN",
-                        ayahCount = if (number == 2) 10 else 1,
+                        ayahCount = if (number == 2) 40 else 1,
                     )
                 },
             )
             dao.insertAyahs(
-                (1..10).map { number ->
+                (1..40).map { number ->
                     QuranAyahEntity(
                         suraNumber = 2,
                         ayahNumber = number,
@@ -178,6 +181,30 @@ class QuranLastReadInstalledAppE2ETest {
             rule.onNodeWithText(resumeLabel).assertIsDisplayed()
             assertEquals(8, readMarker(context))
             Log.i("QURAN_482_E2E", "cold_restart_retained_8")
+
+            // The real MainActivity's lazy reader must report verses in the
+            // viewport, not the next composed/prefetched card. Start from the
+            // preserved 2:8 marker and perform an actual user scroll. All
+            // content/Room rows are synthetic and this runs on a fresh emulator.
+            rule.onNodeWithText(resumeLabel).performClick()
+            waitFor("QA Ayah 8")
+            assertEquals(8, readMarker(context))
+            val reader = rule.onNodeWithTag("quran_detail")
+            reader.performTouchInput { swipeUp() }
+            rule.waitUntil(timeoutMillis = 10_000) { readMarker(context) > 8 }
+
+            val actualProgress = readMarker(context)
+            val viewport = reader.fetchSemanticsNode().boundsInRoot
+            val visibleVerseNumbers = (1..40).filter { verse ->
+                rule.onAllNodesWithText("QA Ayah $verse").fetchSemanticsNodes()
+                    .any { node -> node.boundsInRoot.overlaps(viewport) }
+            }
+            assertTrue("Expected displayed Quran verses after user scroll", visibleVerseNumbers.isNotEmpty())
+            assertTrue(
+                "Offscreen prefetch cannot advance persisted $actualProgress beyond displayed $visibleVerseNumbers",
+                actualProgress <= visibleVerseNumbers.max(),
+            )
+            Log.i("QURAN_481_E2E", "scroll_marker=$actualProgress last_displayed=${visibleVerseNumbers.max()}")
         }
     }
 
