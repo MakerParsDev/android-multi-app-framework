@@ -46,6 +46,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -168,6 +169,7 @@ fun ContentScreen(
             val scope = rememberCoroutineScope()
             var showVerseJump by rememberSaveable { mutableStateOf(false) }
             var verseQuery by rememberSaveable { mutableStateOf("") }
+            var jumpSaveAnchor by remember { mutableStateOf<JumpSaveAnchor?>(null) }
             val hasLongContent = verses.size >= 15
             val showTopBanner = uiState.shouldShowAds && shouldShowTopBannerForScrollableContent(verses.size)
             val showInlineFeedAds = uiState.shouldShowAds && shouldPreferInlineFeedAds(verses.size)
@@ -288,10 +290,16 @@ fun ContentScreen(
                                     val visible = layout.visibleItemsInfo.map { item ->
                                         VisibleContentItem(item.key, item.offset, item.size)
                                     }
-                                    val id = visibleVerseToSave(
-                                        visible, layout.viewportStartOffset, layout.viewportEndOffset
+                                    val id = verseToSaveAfterJump(
+                                        visible = visible,
+                                        viewportStart = layout.viewportStartOffset,
+                                        viewportEnd = layout.viewportEndOffset,
+                                        firstVisibleItemIndex = listState.firstVisibleItemIndex,
+                                        firstVisibleItemScrollOffset = listState.firstVisibleItemScrollOffset,
+                                        jumpAnchor = jumpSaveAnchor,
                                     )
                                     if (id != null && verses.any { it.id == id }) onSavePlace(id)
+                                    jumpSaveAnchor = null
                                 },
                             ) {
                                 Text(
@@ -316,7 +324,14 @@ fun ContentScreen(
                                             .weight(1f)
                                             .testTag("content_resume_reading"),
                                         onClick = {
-                                            scope.launch { listState.scrollToItem(savedDestination) }
+                                            scope.launch {
+                                                listState.scrollToItem(savedDestination)
+                                                jumpSaveAnchor = JumpSaveAnchor(
+                                                    verseId = savedId,
+                                                    firstVisibleItemIndex = listState.firstVisibleItemIndex,
+                                                    firstVisibleItemScrollOffset = listState.firstVisibleItemScrollOffset,
+                                                )
+                                            }
                                         },
                                     ) {
                                         Text(
@@ -406,8 +421,16 @@ fun ContentScreen(
                                     enabled = destination != null,
                                     onClick = {
                                         val target = destination ?: return@TextButton
+                                        val verseId = number ?: return@TextButton
                                         showVerseJump = false
-                                        scope.launch { listState.scrollToItem(target) }
+                                        scope.launch {
+                                            listState.scrollToItem(target)
+                                            jumpSaveAnchor = JumpSaveAnchor(
+                                                verseId = verseId,
+                                                firstVisibleItemIndex = listState.firstVisibleItemIndex,
+                                                firstVisibleItemScrollOffset = listState.firstVisibleItemScrollOffset,
+                                            )
+                                        }
                                     },
                                 ) {
                                     Text(stringResource(R.string.content_jump_action))
