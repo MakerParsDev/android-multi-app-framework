@@ -9,6 +9,9 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 import com.parsfilo.contentapp.core.designsystem.component.AppButton
 import com.parsfilo.contentapp.core.model.QuranDisplayMode
@@ -21,6 +24,8 @@ fun DisplayModeSelector(
     translationLabel: String,
     onModeSelected: (QuranDisplayMode) -> Unit,
     modifier: Modifier = Modifier,
+    firstModeFocusRequester: FocusRequester? = null,
+    previousFocusRequester: FocusRequester? = null,
 ) {
     Row(
         modifier = modifier
@@ -32,7 +37,21 @@ fun DisplayModeSelector(
             text = arabicLabel,
             selected = currentMode == QuranDisplayMode.ARABIC,
             onClick = { onModeSelected(QuranDisplayMode.ARABIC) },
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .then(
+                    if (firstModeFocusRequester != null) {
+                        Modifier
+                            .focusRequester(firstModeFocusRequester)
+                            .focusProperties {
+                                if (previousFocusRequester != null) {
+                                    previous = previousFocusRequester
+                                }
+                            }
+                    } else {
+                        Modifier
+                    },
+                ),
         )
         ModeButton(
             text = latinLabel,
