@@ -45,6 +45,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalLocale
@@ -145,6 +148,10 @@ fun QuranSuraDetailScreen(
     var fontSliderValue by remember(state.fontSize) { mutableIntStateOf(state.fontSize) }
     val language = LocalLocale.current.platformLocale.language.lowercase(Locale.ROOT)
     val listState = rememberLazyListState()
+    // Move keyboard focus from the last reader header action directly into
+    // reading controls, rather than through the app-wide bottom navigation.
+    val bookmarksFocusRequester = remember { FocusRequester() }
+    val readerModeFocusRequester = remember { FocusRequester() }
     val lazyRowAyahIndices = remember(state.ayahs.size, state.shouldShowAds, nativeAdContent) {
         quranLazyRowAyahIndices(
             ayahCount = state.ayahs.size,
@@ -249,6 +256,8 @@ fun QuranSuraDetailScreen(
                 onBack = onBack,
                 onOpenReciter = { showReciterSheet = true },
                 onOpenBookmarks = onBookmarksClick,
+                bookmarksFocusRequester = bookmarksFocusRequester,
+                readerModeFocusRequester = readerModeFocusRequester,
             )
         },
     ) { innerPadding ->
@@ -269,6 +278,8 @@ fun QuranSuraDetailScreen(
                 latinLabel = stringResource(R.string.quran_mode_latin),
                 translationLabel = stringResource(R.string.quran_mode_translation),
                 onModeSelected = onDisplayModeSelected,
+                firstModeFocusRequester = readerModeFocusRequester,
+                previousFocusRequester = bookmarksFocusRequester,
             )
 
             Column(modifier = Modifier.padding(horizontal = 12.dp)) {
@@ -417,6 +428,8 @@ private fun QuranSuraDetailHeader(
     onBack: () -> Unit,
     onOpenReciter: () -> Unit,
     onOpenBookmarks: () -> Unit,
+    bookmarksFocusRequester: FocusRequester,
+    readerModeFocusRequester: FocusRequester,
 ) {
     Row(
         modifier = Modifier
@@ -453,7 +466,13 @@ private fun QuranSuraDetailHeader(
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
-            IconButton(onClick = onOpenBookmarks, modifier = Modifier.size(40.dp)) {
+            IconButton(
+                onClick = onOpenBookmarks,
+                modifier = Modifier
+                    .size(40.dp)
+                    .focusRequester(bookmarksFocusRequester)
+                    .focusProperties { next = readerModeFocusRequester },
+            ) {
                 Icon(
                     imageVector = Icons.Default.Bookmark,
                     contentDescription = stringResource(R.string.quran_open_bookmarks),
