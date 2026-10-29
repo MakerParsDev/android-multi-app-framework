@@ -235,22 +235,32 @@ fun MiraclesDetailScreen(
 
                     item {
                         MiraclesDetailSectionCard(
-                            label = if (variant == MiraclesContentVariant.MUCIZEDUALAR) {
-                                stringResource(R.string.miracles_section_prayer)
-                            } else {
-                                stringResource(R.string.miracles_section_description)
+                            label = when {
+                                variant == MiraclesContentVariant.ESMAUL_HUSNA ->
+                                    stringResource(R.string.miracles_section_description)
+                                uiState.prayer.hasArabicScript ->
+                                    stringResource(R.string.miracles_section_arabic)
+                                else -> stringResource(R.string.miracles_section_latin_pronunciation)
                             },
                             contentBackground = if (variant == MiraclesContentVariant.MUCIZEDUALAR) cardBackground else overlayCard,
                             borderColor = colorScheme.secondary.copy(alpha = if (variant == MiraclesContentVariant.MUCIZEDUALAR) 0.3f else 0.2f),
                             labelAccent = variant == MiraclesContentVariant.ESMAUL_HUSNA,
                         ) {
                             if (variant == MiraclesContentVariant.MUCIZEDUALAR) {
+                                if (!uiState.prayer.hasArabicScript) {
+                                    Text(
+                                        text = stringResource(R.string.miracles_original_arabic_unverified),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = colorScheme.onSurfaceVariant,
+                                    )
+                                    Spacer(modifier = Modifier.height(dimens.space8))
+                                }
                                 Text(
                                     text = uiState.prayer.duaArapca,
                                     fontSize = 20.sp,
                                     fontWeight = FontWeight.Medium,
                                     color = colorScheme.onSurface,
-                                    textAlign = TextAlign.End,
+                                    textAlign = if (uiState.prayer.hasArabicScript) TextAlign.End else TextAlign.Start,
                                     lineHeight = 32.sp,
                                     modifier = Modifier.fillMaxWidth()
                                 )
