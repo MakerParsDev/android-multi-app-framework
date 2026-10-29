@@ -35,6 +35,7 @@
     <string name="quran_loading">Yükleniyor…</string>
     <string name="quran_toggle_search">Arama</string>
     <string name="quran_more_options">Daha fazla seçenek</string>
+    <string name="quran_text_size">Yazı boyutu</string>
     <string name="quran_back">Geri</string>
     <string name="quran_ayah_open_actions">%1$d. ayetin işlemleri</string>
     <string name="quran_ayah_bookmark_add">%1$d. ayete yer imi ekle</string>
