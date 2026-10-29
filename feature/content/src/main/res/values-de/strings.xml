@@ -17,6 +17,7 @@
     <string name="miracles_section_prayer">Gebet</string>
     <string name="miracles_section_arabic">@string/content_mode_arabic</string>
     <string name="miracles_section_latin_pronunciation">Lateinische Lesung</string>
+    <string name="miracles_original_arabic_unverified">Der arabische Originaltext wurde noch nicht verifiziert. Unten steht die vorhandene lateinische Umschrift.</string>
     <string name="miracles_play_all_audio">Alles anhören</string>
     <string name="content_open_settings">Einstellungen öffnen</string>
     <string name="content_open_rewards">Belohnungen öffnen</string>
