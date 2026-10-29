@@ -50,6 +50,9 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -273,7 +276,16 @@ fun QuranSuraDetailScreen(
                     text = state.currentReciter.displayName,
                     style = MaterialTheme.typography.labelLarge,
                 )
+                val fontSizeLabel = stringResource(R.string.quran_text_size)
+                Text(
+                    text = fontSizeLabel,
+                    modifier = Modifier.clearAndSetSemantics {},
+                    style = MaterialTheme.typography.labelMedium,
+                )
                 Slider(
+                    modifier = Modifier
+                        .testTag("quran_text_size_slider")
+                        .semantics { contentDescription = fontSizeLabel },
                     value = fontSliderValue.toFloat(),
                     valueRange = 22f..42f,
                     onValueChange = { fontSliderValue = it.toInt() },
