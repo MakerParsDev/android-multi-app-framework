@@ -28,7 +28,6 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.parsfilo.contentapp.core.designsystem.AppTheme
 import com.parsfilo.contentapp.core.model.DisplayMode
-import com.parsfilo.contentapp.feature.content.ui.prayer.BottomModeSelector
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -36,6 +35,8 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.Locale
+import com.parsfilo.contentapp.feature.content.ui.BottomModeSelector as ContentBottomModeSelector
+import com.parsfilo.contentapp.feature.content.ui.prayer.BottomModeSelector as PrayerBottomModeSelector
 
 /** The prayer-detail modes are a true single-choice group, not three visual-only buttons. */
 @RunWith(AndroidJUnit4::class)
@@ -68,7 +69,15 @@ class PrayerModeSelectionSemanticsTest {
     fun germanLargeTextPrayerModesFitWithoutClippingAt411Dp() =
         verifyGermanLargeTextLayout(widthDp = 411)
 
-    private fun verifyGermanLargeTextLayout(widthDp: Int) {
+    @Test
+    fun germanLargeTextContentModesFitWithoutClippingAt320Dp() =
+        verifyGermanLargeTextLayout(widthDp = 320, contentReader = true)
+
+    @Test
+    fun germanLargeTextContentModesFitWithoutClippingAt411Dp() =
+        verifyGermanLargeTextLayout(widthDp = 411, contentReader = true)
+
+    private fun verifyGermanLargeTextLayout(widthDp: Int, contentReader: Boolean = false) {
         rule.setContent {
             val context = LocalContext.current
             val density = LocalDensity.current
@@ -84,10 +93,17 @@ class PrayerModeSelectionSemanticsTest {
             ) {
                 AppTheme(flavorName = "fetihsuresi") {
                     Box(Modifier.width(widthDp.dp)) {
-                        BottomModeSelector(
-                            currentMode = DisplayMode.TURKISH,
-                            onModeSelected = {},
-                        )
+                        if (contentReader) {
+                            ContentBottomModeSelector(
+                                currentMode = DisplayMode.TURKISH,
+                                onModeSelected = {},
+                            )
+                        } else {
+                            PrayerBottomModeSelector(
+                                currentMode = DisplayMode.TURKISH,
+                                onModeSelected = {},
+                            )
+                        }
                     }
                 }
             }
@@ -138,7 +154,7 @@ class PrayerModeSelectionSemanticsTest {
             ) {
                 AppTheme(flavorName = "fetihsuresi") {
                     Box(Modifier.width(320.dp)) {
-                        BottomModeSelector(
+                        PrayerBottomModeSelector(
                             currentMode = mode,
                             onModeSelected = {
                                 callbacks++
