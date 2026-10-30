@@ -427,6 +427,11 @@ fun BottomModeSelector(
     onModeSelected: (DisplayMode) -> Unit
 ) {
     val dimens = LocalDimens.current
+    val options = listOf(
+        DisplayMode.ARABIC to R.string.content_mode_arabic,
+        DisplayMode.LATIN to R.string.content_mode_latin,
+        DisplayMode.TURKISH to R.string.content_mode_turkish
+    )
 
     BoxWithConstraints(
         modifier = Modifier
@@ -439,48 +444,28 @@ fun BottomModeSelector(
                 modifier = Modifier.fillMaxWidth().selectableGroup(),
                 verticalArrangement = Arrangement.spacedBy(dimens.space8)
             ) {
-                ModeButton(
-                    text = stringResource(R.string.content_mode_arabic),
-                    isSelected = currentMode == DisplayMode.ARABIC,
-                    onClick = { onModeSelected(DisplayMode.ARABIC) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                ModeButton(
-                    text = stringResource(R.string.content_mode_latin),
-                    isSelected = currentMode == DisplayMode.LATIN,
-                    onClick = { onModeSelected(DisplayMode.LATIN) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                ModeButton(
-                    text = stringResource(R.string.content_mode_turkish),
-                    isSelected = currentMode == DisplayMode.TURKISH,
-                    onClick = { onModeSelected(DisplayMode.TURKISH) },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                options.forEach { (mode, titleRes) ->
+                    ModeButton(
+                        text = stringResource(titleRes),
+                        isSelected = currentMode == mode,
+                        onClick = { onModeSelected(mode) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
         } else {
             Row(
                 modifier = Modifier.fillMaxWidth().selectableGroup(),
                 horizontalArrangement = Arrangement.spacedBy(dimens.space8)
             ) {
-                ModeButton(
-                    text = stringResource(R.string.content_mode_arabic),
-                    isSelected = currentMode == DisplayMode.ARABIC,
-                    onClick = { onModeSelected(DisplayMode.ARABIC) },
-                    modifier = Modifier.weight(1f)
-                )
-                ModeButton(
-                    text = stringResource(R.string.content_mode_latin),
-                    isSelected = currentMode == DisplayMode.LATIN,
-                    onClick = { onModeSelected(DisplayMode.LATIN) },
-                    modifier = Modifier.weight(1f)
-                )
-                ModeButton(
-                    text = stringResource(R.string.content_mode_turkish),
-                    isSelected = currentMode == DisplayMode.TURKISH,
-                    onClick = { onModeSelected(DisplayMode.TURKISH) },
-                    modifier = Modifier.weight(1f)
-                )
+                options.forEach { (mode, titleRes) ->
+                    ModeButton(
+                        text = stringResource(titleRes),
+                        isSelected = currentMode == mode,
+                        onClick = { onModeSelected(mode) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
     }
