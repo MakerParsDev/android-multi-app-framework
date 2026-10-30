@@ -163,6 +163,15 @@ fun MiraclesDetailScreen(
                                 borderColor = colorScheme.secondary.copy(alpha = 0.3f),
                             ) {
                                 Column(verticalArrangement = Arrangement.spacedBy(dimens.space12)) {
+                                    // Show original-text source before long passages (not only at the bottom).
+                                    Text(
+                                        text = stringResource(R.string.miracles_quran_tanzil_attribution),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = colorScheme.secondary,
+                                        modifier = Modifier.clickable {
+                                            uriHandler.openUri("https://tanzil.net/")
+                                        },
+                                    )
                                     uiState.prayer.originalArabicVerses.forEach { verse ->
                                         Text(
                                             text = verse.reference,
@@ -178,14 +187,6 @@ fun MiraclesDetailScreen(
                                             modifier = Modifier.fillMaxWidth(),
                                         )
                                     }
-                                    Text(
-                                        text = stringResource(R.string.miracles_quran_tanzil_attribution),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = colorScheme.secondary,
-                                        modifier = Modifier.clickable {
-                                            uriHandler.openUri("https://tanzil.net/")
-                                        },
-                                    )
                                 }
                             }
                             Spacer(modifier = Modifier.height(dimens.space12))
@@ -210,25 +211,25 @@ fun MiraclesDetailScreen(
                             Spacer(modifier = Modifier.height(dimens.space12))
                         }
 
-                        if (!uiState.prayer.originalArabicIncludesBasmala) {
-                            item {
-                                MiraclesDetailSectionCard(
-                                    label = stringResource(R.string.miracles_section_besmele),
-                                    contentBackground = cardBackground,
-                                    borderColor = colorScheme.secondary.copy(alpha = 0.3f),
-                                ) {
-                                    Text(
-                                        text = uiState.prayer.duaBesmele,
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = colorScheme.onSurface,
-                                        textAlign = TextAlign.Center,
-                                        lineHeight = 26.sp,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(dimens.space12))
+                        // The Quran Arabic already includes its original basmala where applicable,
+                        // but the legacy Latin basmala remains a separate pronunciation aid.
+                        item {
+                            MiraclesDetailSectionCard(
+                                label = stringResource(R.string.miracles_section_besmele),
+                                contentBackground = cardBackground,
+                                borderColor = colorScheme.secondary.copy(alpha = 0.3f),
+                            ) {
+                                Text(
+                                    text = uiState.prayer.duaBesmele,
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = colorScheme.onSurface,
+                                    textAlign = TextAlign.Center,
+                                    lineHeight = 26.sp,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
                             }
+                            Spacer(modifier = Modifier.height(dimens.space12))
                         }
                     } else {
                         item {

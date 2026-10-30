@@ -45,11 +45,10 @@ class MiraclesPrayerTextIntegrityTest {
         )
         assertFalse(record.hasArabicScript)
         assertTrue(record.originalArabicVerses.single().arabic.isNotBlank())
-        assertFalse(record.originalArabicIncludesBasmala)
     }
 
     @Test
-    fun originalArabicBasmalaFlagDoesNotAlterStoredLatinText() {
+    fun sourceArabicBasmalaDoesNotRemoveStoredLatinPronunciationOrBasmala() {
         val latin = "İnnâ fetahnâ leke fethan mubînâ"
         val record = MiraclesPrayer(
             duaIsim = "Example",
@@ -62,10 +61,9 @@ class MiraclesPrayerTextIntegrityTest {
                     arabic = "بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ",
                 ),
             ),
-            originalArabicIncludesBasmala = true,
         )
-        assertTrue(record.originalArabicIncludesBasmala)
         assertFalse(record.hasArabicScript)
         assertTrue(record.duaArapca == latin)
+        assertTrue(record.duaBesmele == "Bismillahirrahmanirrahim")
     }
 }

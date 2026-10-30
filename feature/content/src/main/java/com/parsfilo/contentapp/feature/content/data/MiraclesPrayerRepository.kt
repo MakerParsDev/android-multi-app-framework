@@ -43,8 +43,7 @@ class AssetMiraclesPrayerRepository @Inject constructor(
                         duaBesmele = obj.getString("duaBesmele"),
                         duaArapca = obj.getString("duaArapca"),
                         duaLatinOkunus = obj.optString("duaLatinOkunus", obj.optString("duaBesmele", "")),
-                        originalArabicVerses = verifiedArabic[obj.getString("duaIsim")]?.first.orEmpty(),
-                        originalArabicIncludesBasmala = verifiedArabic[obj.getString("duaIsim")]?.second ?: false,
+                        originalArabicVerses = verifiedArabic[obj.getString("duaIsim")].orEmpty(),
                     )
                 )
             }
@@ -60,7 +59,7 @@ class AssetMiraclesPrayerRepository @Inject constructor(
 
     // Optional: only Mucize Dualar bundles these unchanged licensed source verses.
     // Other flavors continue working with the original legacy data.json alone.
-    private fun loadVerifiedArabic(): Map<String, Pair<List<MiraclesOriginalVerse>, Boolean>> {
+    private fun loadVerifiedArabic(): Map<String, List<MiraclesOriginalVerse>> {
         val raw = try {
             context.assets.open("verified_quran_verses.json")
                 .bufferedReader().use { it.readText() }
@@ -88,7 +87,7 @@ class AssetMiraclesPrayerRepository @Inject constructor(
                             )
                         }
                     }
-                    put(record.getString("title"), items to record.optBoolean("includesBasmala"))
+                    put(record.getString("title"), items)
                 }
             }
         } catch (error: JSONException) {
