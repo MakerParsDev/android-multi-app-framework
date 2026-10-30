@@ -63,6 +63,7 @@ fun QuranBookmarksScreen(
             AppTopBar(
                 title = stringResource(R.string.quran_bookmarks_title),
                 navigationIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                navigationIconContentDescription = stringResource(R.string.quran_back),
                 onNavigationClick = onBack,
             )
         },

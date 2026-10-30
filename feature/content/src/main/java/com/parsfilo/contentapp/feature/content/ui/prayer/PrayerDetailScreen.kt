@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,15 +22,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CardGiftcard
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -43,6 +46,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -51,7 +55,6 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.parsfilo.contentapp.core.designsystem.AppTheme
-import com.parsfilo.contentapp.core.designsystem.component.AppButton
 import com.parsfilo.contentapp.core.designsystem.tokens.LocalDimens
 import com.parsfilo.contentapp.core.designsystem.tokens.LocalMotion
 import com.parsfilo.contentapp.core.model.DisplayMode
@@ -426,7 +429,8 @@ fun BottomModeSelector(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = dimens.space6, vertical = dimens.space2)
-            .padding(bottom = dimens.space48 + dimens.space2),
+            .padding(bottom = dimens.space48 + dimens.space2)
+            .selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(dimens.space8)
     ) {
         ModeButton(
@@ -470,35 +474,45 @@ fun ModeButton(
         colorScheme.onBackground.copy(alpha = 0.6f)
     }
 
-    AppButton(
-        text = text,
-        onClick = onClick,
+    val shape = RoundedCornerShape(dimens.radiusXLarge)
+    Surface(
         modifier = modifier
-            .height(dimens.space40)
+            .defaultMinSize(minHeight = 48.dp)
+            .selectable(
+                selected = isSelected,
+                onClick = onClick,
+                role = Role.RadioButton
+            )
             .then(
                 if (isSelected) {
                     Modifier.border(
                         width = dimens.stroke + dimens.strokeThin,
                         color = selectedBorder,
-                        shape = RoundedCornerShape(dimens.radiusXLarge)
+                        shape = shape
                     )
                 } else {
                     Modifier
                 }
             ),
-        shape = RoundedCornerShape(dimens.radiusXLarge),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = if (isSelected) selectedContainer else unselectedContainer
-        ),
-        contentPadding = PaddingValues(horizontal = dimens.space6),
-        elevation = if (isSelected) ButtonDefaults.buttonElevation(defaultElevation = dimens.space4) else ButtonDefaults.buttonElevation(defaultElevation = dimens.elevationNone)
+        shape = shape,
+        color = if (isSelected) selectedContainer else unselectedContainer,
+        contentColor = if (isSelected) selectedText else unselectedText,
+        shadowElevation = if (isSelected) dimens.space4 else dimens.elevationNone
     ) {
-        Text(
-            text = text,
-            fontSize = 13.sp,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-            color = if (isSelected) selectedText else unselectedText
-        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = 48.dp)
+                .padding(horizontal = dimens.space6),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = text,
+                fontSize = 13.sp,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                color = if (isSelected) selectedText else unselectedText
+            )
+        }
     }
 }
 

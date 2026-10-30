@@ -45,11 +45,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -106,6 +112,11 @@ fun QuranSuraDetailRoute(
             viewModel.onAyahVisible(ayah.ayahNumber)
             onAyahVisibleExternal?.invoke(ayah)
         },
+        onInitialAyahRestored = { ayah ->
+            if (viewModel.onInitialAyahRestored(ayah.ayahNumber)) {
+                onAyahVisibleExternal?.invoke(ayah)
+            }
+        },
         bannerAdContent = bannerAdContent,
         nativeAdContent = nativeAdContent,
     )
@@ -126,6 +137,7 @@ fun QuranSuraDetailScreen(
     onDownloadAyah: (QuranAyah) -> Unit,
     onToggleBookmark: (QuranAyah) -> Unit,
     onAyahVisible: (QuranAyah) -> Unit,
+    onInitialAyahRestored: (QuranAyah) -> Unit = onAyahVisible,
     bannerAdContent: (@Composable () -> Unit)? = null,
     nativeAdContent: (@Composable () -> Unit)? = null,
 ) {
@@ -136,6 +148,10 @@ fun QuranSuraDetailScreen(
     var fontSliderValue by remember(state.fontSize) { mutableIntStateOf(state.fontSize) }
     val language = LocalLocale.current.platformLocale.language.lowercase(Locale.ROOT)
     val listState = rememberLazyListState()
+    // Move keyboard focus from the last reader header action directly into
+    // reading controls, rather than through the app-wide bottom navigation.
+    val bookmarksFocusRequester = remember { FocusRequester() }
+    val readerModeFocusRequester = remember { FocusRequester() }
     val lazyRowAyahIndices = remember(state.ayahs.size, state.shouldShowAds, nativeAdContent) {
         quranLazyRowAyahIndices(
             ayahCount = state.ayahs.size,
@@ -152,7 +168,8 @@ fun QuranSuraDetailScreen(
     var restoredFirstVisibleIndex by rememberSaveable(initialAyahNumber) {
         mutableStateOf<Int?>(null)
     }
-    var lastReportedAyahNumber by remember(initialAyahNumber) { mutableIntStateOf(-1) }
+    // Keep the last actually reported verse across activity reconfiguration.
+    var lastReportedAyahNumber by rememberSaveable(initialAyahNumber) { mutableIntStateOf(-1) }
 
     LaunchedEffect(initialAyahNumber, state.ayahs.size, lazyRowAyahIndices) {
         if (!initialPositionReady && state.ayahs.isNotEmpty()) {
@@ -166,7 +183,7 @@ fun QuranSuraDetailScreen(
                 listState.scrollToItem(lazyRowAyahIndices.indexOf(index))
                 val restoredAyah = state.ayahs[index].ayah
                 lastReportedAyahNumber = restoredAyah.ayahNumber
-                onAyahVisible(restoredAyah)
+                onInitialAyahRestored(restoredAyah)
                 restoredFirstVisibleIndex =
                     lazyRowAyahIndices.getOrNull(listState.firstVisibleItemIndex) ?: index
                 initialPositionReady = true
@@ -182,6 +199,7 @@ fun QuranSuraDetailScreen(
 
     LaunchedEffect(listState, initialPositionReady, state.ayahs.size, lazyRowAyahIndices) {
         if (!initialPositionReady) return@LaunchedEffect
+        var scrollInThisCollector = false
         snapshotFlow {
             val layout = listState.layoutInfo
             val visibleIndex = firstMeaningfullyVisibleAyahIndex(
@@ -196,6 +214,11 @@ fun QuranSuraDetailScreen(
             )
             visibleIndex to listState.isScrollInProgress
         }.distinctUntilChanged().collect { (index, scrolling) ->
+            if (scrolling) scrollInThisCollector = true
+            val changedByScroll = scrollInThisCollector
+            // The final idle sample is part of the gesture. A later layout-only
+            // recomputation (such as rotation) must not rewrite saved progress.
+            if (!scrolling) scrollInThisCollector = false
             // isScrollInProgress also becomes true for programmatic scrolls.
             // A changed visible index after restoration is stronger evidence of
             // intentional reader movement than the scroll flag alone.
@@ -203,6 +226,9 @@ fun QuranSuraDetailScreen(
                 userScrolledAfterRestore = true
             }
             val ayah = index?.let { state.ayahs.getOrNull(it)?.ayah } ?: return@collect
+            // First visible verse of a new reader is reportable. Once a verse
+            // has been recorded, only another scrolling gesture can update it.
+            if (lastReportedAyahNumber >= 0 && !changedByScroll) return@collect
             // Near the last verse, scrollToItem may be clamped and leave an
             // earlier verse at the viewport edge. Do not regress the saved
             // deep-link target unless the reader subsequently scrolls.
@@ -230,6 +256,8 @@ fun QuranSuraDetailScreen(
                 onBack = onBack,
                 onOpenReciter = { showReciterSheet = true },
                 onOpenBookmarks = onBookmarksClick,
+                bookmarksFocusRequester = bookmarksFocusRequester,
+                readerModeFocusRequester = readerModeFocusRequester,
             )
         },
     ) { innerPadding ->
@@ -250,6 +278,8 @@ fun QuranSuraDetailScreen(
                 latinLabel = stringResource(R.string.quran_mode_latin),
                 translationLabel = stringResource(R.string.quran_mode_translation),
                 onModeSelected = onDisplayModeSelected,
+                firstModeFocusRequester = readerModeFocusRequester,
+                previousFocusRequester = bookmarksFocusRequester,
             )
 
             Column(modifier = Modifier.padding(horizontal = 12.dp)) {
@@ -257,7 +287,16 @@ fun QuranSuraDetailScreen(
                     text = state.currentReciter.displayName,
                     style = MaterialTheme.typography.labelLarge,
                 )
+                val fontSizeLabel = stringResource(R.string.quran_text_size)
+                Text(
+                    text = fontSizeLabel,
+                    modifier = Modifier.clearAndSetSemantics {},
+                    style = MaterialTheme.typography.labelMedium,
+                )
                 Slider(
+                    modifier = Modifier
+                        .testTag("quran_text_size_slider")
+                        .semantics { contentDescription = fontSizeLabel },
                     value = fontSliderValue.toFloat(),
                     valueRange = 22f..42f,
                     onValueChange = { fontSliderValue = it.toInt() },
@@ -288,7 +327,7 @@ fun QuranSuraDetailScreen(
                 ) {
                     Text(stringResource(R.string.quran_error_load_sura))
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(state.errorMessage)
+                    Text(stringResource(R.string.quran_error_retry_guidance))
                     Spacer(modifier = Modifier.height(12.dp))
                     AppButton(text = stringResource(R.string.quran_retry), onClick = onRetry)
                 }
@@ -389,6 +428,8 @@ private fun QuranSuraDetailHeader(
     onBack: () -> Unit,
     onOpenReciter: () -> Unit,
     onOpenBookmarks: () -> Unit,
+    bookmarksFocusRequester: FocusRequester,
+    readerModeFocusRequester: FocusRequester,
 ) {
     Row(
         modifier = Modifier
@@ -425,7 +466,13 @@ private fun QuranSuraDetailHeader(
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
-            IconButton(onClick = onOpenBookmarks, modifier = Modifier.size(40.dp)) {
+            IconButton(
+                onClick = onOpenBookmarks,
+                modifier = Modifier
+                    .size(40.dp)
+                    .focusRequester(bookmarksFocusRequester)
+                    .focusProperties { next = readerModeFocusRequester },
+            ) {
                 Icon(
                     imageVector = Icons.Default.Bookmark,
                     contentDescription = stringResource(R.string.quran_open_bookmarks),

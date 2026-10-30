@@ -17,6 +17,7 @@
     <string name="miracles_section_prayer">Dua</string>
     <string name="miracles_section_arabic">@string/content_mode_arabic</string>
     <string name="miracles_section_latin_pronunciation">Latince Okunuş</string>
+    <string name="miracles_original_arabic_unverified">Özgün Arapça metin henüz doğrulanmadı. Aşağıda mevcut Latin okunuş gösteriliyor.</string>
     <string name="miracles_play_all_audio">Tümünü Dinle</string>
     <string name="content_open_settings">Ayarları aç</string>
     <string name="content_open_rewards">Ödülleri aç</string>

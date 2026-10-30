@@ -29,11 +29,13 @@
     <string name="quran_open_rewards">Ödüller</string>
     <string name="quran_error_load_suras">Sure listesi yüklenemedi.</string>
     <string name="quran_error_load_sura">Sure içeriği yüklenemedi.</string>
+    <string name="quran_error_retry_guidance">Bağlantınızı kontrol edip tekrar deneyin. İndirilmiş ayetler korunur.</string>
     <string name="quran_audio_download_progress">İndiriliyor %% %d</string>
     <string name="quran_ayah_actions">Ayet işlemleri</string>
     <string name="quran_loading">Yükleniyor…</string>
     <string name="quran_toggle_search">Arama</string>
     <string name="quran_more_options">Daha fazla seçenek</string>
+    <string name="quran_text_size">Yazı boyutu</string>
     <string name="quran_back">Geri</string>
     <string name="quran_ayah_open_actions">%1$d. ayetin işlemleri</string>
     <string name="quran_ayah_bookmark_add">%1$d. ayete yer imi ekle</string>
