@@ -19,6 +19,10 @@ android {
         compose = true
     }
 
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.toVersion(requiredToolchainInt("toolchain.java.major"))
         targetCompatibility = JavaVersion.toVersion(requiredToolchainInt("toolchain.java.major"))
