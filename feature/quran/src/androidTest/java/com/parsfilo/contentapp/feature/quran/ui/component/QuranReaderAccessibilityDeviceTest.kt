@@ -110,23 +110,43 @@ class QuranReaderAccessibilityDeviceTest {
     @Test
     fun reciterIsAnActualMutuallyExclusiveRadioChoice() {
         verifyHost()
-        val reciters = QuranApiConfig.Reciters.ALL.take(2)
-        var selected by mutableStateOf(reciters[0].id)
+        val reciters = QuranApiConfig.Reciters.ALL
+        assertEquals(5, reciters.size)
+        var selected by mutableStateOf(reciters.first().id)
+        val selectedIds = mutableListOf<String>()
+        var dismissals = 0
         rule.setContent {
             AppTheme(flavorName = "kuran_kerim") {
                 ReciterSelectionSheet(
                     reciters = reciters,
                     selectedReciterId = selected,
-                    onSelect = { selected = it },
-                    onDismiss = {},
+                    onSelect = {
+                        selected = it
+                        selectedIds += it
+                    },
+                    onDismiss = { dismissals++ },
                 )
             }
         }
         val radioRole = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton)
-        rule.onNodeWithText(reciters[0].displayName + " ✓").assert(radioRole).assertIsSelected()
-        rule.onNodeWithText(reciters[1].displayName).assert(radioRole).assertIsNotSelected().performClick()
-        rule.onNodeWithText(reciters[1].displayName + " ✓").assert(radioRole).assertIsSelected()
-        rule.onNodeWithText(reciters[0].displayName).assert(radioRole).assertIsNotSelected()
-        rule.runOnIdle { assertEquals(reciters[1].id, selected) }
+        reciters.forEachIndexed { index, reciter ->
+            if (index > 0) {
+                rule.onNodeWithText(reciter.displayName)
+                    .assert(radioRole)
+                    .assertIsNotSelected()
+                    .performClick()
+            }
+            reciters.forEach { option ->
+                val isSelected = option.id == reciter.id
+                val text = option.displayName + if (isSelected) " ✓" else ""
+                val node = rule.onNodeWithText(text).assert(radioRole)
+                if (isSelected) node.assertIsSelected() else node.assertIsNotSelected()
+            }
+            rule.runOnIdle {
+                assertEquals(reciter.id, selected)
+                assertEquals(reciters.take(index + 1).drop(1).map { it.id }, selectedIds)
+                assertEquals(index, dismissals)
+            }
+        }
     }
 }
