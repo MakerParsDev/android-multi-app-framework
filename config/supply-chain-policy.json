@@ -27,13 +27,13 @@
     },
     {
       "coordinate": "com.squareup.wire:wire-runtime",
-      "version": "7.0.3",
-      "reason": "Reviewed Wire 7 stable floor above the 6.4.5 security fix; 7.0.1 avoids pulling Kotlin 2.4 via KotlinPoet and 7.0.3 validates generated package option values before code emission."
+      "version": "7.1.2",
+      "reason": "Wire 7.1.2 (2026-10-27) protects the Kotlin runtime against excessive packed-field allocation on truncated messages (GHSA-568c-w3hc-p2v4); retains the reviewed Wire 7 stable floor and earlier package-option and ProtoJSON handling. The accompanying generator has a distinct source-comment advisory requiring generator upgrades where used (GHSA-r593-m628-69hh)."
     },
     {
       "coordinate": "com.squareup.wire:wire-runtime-jvm",
-      "version": "7.0.3",
-      "reason": "Keep the JVM Wire runtime aligned with the reviewed Wire 7 multiplatform runtime floor."
+      "version": "7.1.2",
+      "reason": "Align JVM Wire runtime with Wire 7.1.2, which fixes malformed packed protobuf stream memory-allocation hints (GHSA-568c-w3hc-p2v4); retain the reviewed shared Wire 7 floor and plugin/project resolution constraints."
     },
     {
       "coordinate": "ch.qos.logback:logback-core",
