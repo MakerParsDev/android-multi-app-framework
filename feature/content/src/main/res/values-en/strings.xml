@@ -17,6 +17,7 @@
     <string name="miracles_section_prayer">Prayer</string>
     <string name="miracles_section_arabic">@string/content_mode_arabic</string>
     <string name="miracles_section_latin_pronunciation">Latin Pronunciation</string>
+    <string name="miracles_quran_tanzil_attribution">Tanzil Quran Text · © 2007–2021 Tanzil Project · CC BY 3.0 · tanzil.net (open source)</string>
     <string name="miracles_original_arabic_unverified">Original Arabic text has not been verified. The existing Latin pronunciation is shown below.</string>
     <string name="miracles_play_all_audio">Listen to All</string>
     <string name="content_open_settings">Open settings</string>

@@ -17,6 +17,7 @@
     <string name="miracles_section_prayer">Gebet</string>
     <string name="miracles_section_arabic">@string/content_mode_arabic</string>
     <string name="miracles_section_latin_pronunciation">Lateinische Lesung</string>
+    <string name="miracles_quran_tanzil_attribution">Tanzil Quran Text · © 2007–2021 Tanzil Project · CC BY 3.0 · tanzil.net (Quelle öffnen)</string>
     <string name="miracles_original_arabic_unverified">Der arabische Originaltext wurde noch nicht verifiziert. Unten steht die vorhandene lateinische Umschrift.</string>
     <string name="miracles_play_all_audio">Alles anhören</string>
     <string name="content_open_settings">Einstellungen öffnen</string>

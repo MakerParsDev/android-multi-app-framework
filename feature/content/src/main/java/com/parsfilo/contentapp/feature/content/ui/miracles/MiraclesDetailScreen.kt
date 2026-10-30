@@ -8,6 +8,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,6 +38,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -83,6 +85,7 @@ fun MiraclesDetailScreen(
     content: @Composable () -> Unit = {},
 ) {
     val dimens = LocalDimens.current
+    val uriHandler = LocalUriHandler.current
     val motion = LocalMotion.current
     val colorScheme = MaterialTheme.colorScheme
     val isLightTheme = colorScheme.background.luminance() > 0.5f
@@ -149,6 +152,46 @@ fun MiraclesDetailScreen(
                         .fillMaxWidth(),
                     contentPadding = PaddingValues(horizontal = dimens.space12, vertical = dimens.space12)
                 ) {
+                    if (
+                        variant == MiraclesContentVariant.MUCIZEDUALAR &&
+                        uiState.prayer.originalArabicVerses.isNotEmpty()
+                    ) {
+                        item {
+                            MiraclesDetailSectionCard(
+                                label = stringResource(R.string.miracles_section_arabic),
+                                contentBackground = cardBackground,
+                                borderColor = colorScheme.secondary.copy(alpha = 0.3f),
+                            ) {
+                                Column(verticalArrangement = Arrangement.spacedBy(dimens.space12)) {
+                                    uiState.prayer.originalArabicVerses.forEach { verse ->
+                                        Text(
+                                            text = verse.reference,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = colorScheme.onSurfaceVariant,
+                                        )
+                                        Text(
+                                            text = verse.arabic,
+                                            fontSize = 22.sp,
+                                            lineHeight = 38.sp,
+                                            color = colorScheme.onSurface,
+                                            textAlign = TextAlign.End,
+                                            modifier = Modifier.fillMaxWidth(),
+                                        )
+                                    }
+                                    Text(
+                                        text = stringResource(R.string.miracles_quran_tanzil_attribution),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = colorScheme.secondary,
+                                        modifier = Modifier.clickable {
+                                            uriHandler.openUri("https://tanzil.net/")
+                                        },
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(dimens.space12))
+                        }
+                    }
+
                     if (variant == MiraclesContentVariant.MUCIZEDUALAR) {
                         item {
                             MiraclesDetailSectionCard(
@@ -167,23 +210,25 @@ fun MiraclesDetailScreen(
                             Spacer(modifier = Modifier.height(dimens.space12))
                         }
 
-                        item {
-                            MiraclesDetailSectionCard(
-                                label = stringResource(R.string.miracles_section_besmele),
-                                contentBackground = cardBackground,
-                                borderColor = colorScheme.secondary.copy(alpha = 0.3f),
-                            ) {
-                                Text(
-                                    text = uiState.prayer.duaBesmele,
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = colorScheme.onSurface,
-                                    textAlign = TextAlign.Center,
-                                    lineHeight = 26.sp,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
+                        if (!uiState.prayer.originalArabicIncludesBasmala) {
+                            item {
+                                MiraclesDetailSectionCard(
+                                    label = stringResource(R.string.miracles_section_besmele),
+                                    contentBackground = cardBackground,
+                                    borderColor = colorScheme.secondary.copy(alpha = 0.3f),
+                                ) {
+                                    Text(
+                                        text = uiState.prayer.duaBesmele,
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = colorScheme.onSurface,
+                                        textAlign = TextAlign.Center,
+                                        lineHeight = 26.sp,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(dimens.space12))
                             }
-                            Spacer(modifier = Modifier.height(dimens.space12))
                         }
                     } else {
                         item {
@@ -247,7 +292,10 @@ fun MiraclesDetailScreen(
                             labelAccent = variant == MiraclesContentVariant.ESMAUL_HUSNA,
                         ) {
                             if (variant == MiraclesContentVariant.MUCIZEDUALAR) {
-                                if (!uiState.prayer.hasArabicScript) {
+                                if (
+                                    uiState.prayer.originalArabicVerses.isEmpty() &&
+                                    !uiState.prayer.hasArabicScript
+                                ) {
                                     Text(
                                         text = stringResource(R.string.miracles_original_arabic_unverified),
                                         style = MaterialTheme.typography.bodySmall,
