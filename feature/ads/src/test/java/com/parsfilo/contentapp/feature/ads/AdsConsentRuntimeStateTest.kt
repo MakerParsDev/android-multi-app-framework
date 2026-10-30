@@ -32,6 +32,27 @@ class AdsConsentRuntimeStateTest {
     }
 
     @Test
+    fun `EEA refusal stays denied while UMP permits limited ad requests`() {
+        val state = allowedState(consentStatus = ConsentStatus.Denied, privacyOptionsRequired = true)
+        AdsConsentRuntimeState.update(state)
+
+        assertThat(AdsConsentRuntimeState.canRequestAds.value).isTrue()
+        assertThat(AdsConsentRuntimeState.state.value).isEqualTo(state)
+        val limited = AdsConsentRuntimeState.state.value as AdsPrivacyState.CanRequestAds
+        assertThat(limited.consentStatus).isEqualTo(ConsentStatus.Denied)
+        assertThat(limited.privacyOptionsRequired).isTrue()
+    }
+
+    @Test
+    fun `EEA refusal blocks ad requests when UMP reports ineligible`() {
+        AdsConsentRuntimeState.update(blockedState(ConsentStatus.Denied))
+
+        assertThat(AdsConsentRuntimeState.canRequestAds.value).isFalse()
+        assertThat(AdsConsentRuntimeState.state.value.suppressReasonWhenBlocked())
+            .isEqualTo(AdSuppressReason.NO_CONSENT)
+    }
+
+    @Test
     fun `required consent blocks ad requests`() {
         AdsConsentRuntimeState.update(blockedState(ConsentStatus.Required))
 

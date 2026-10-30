@@ -67,6 +67,35 @@ class AdsPlacementPolicyEvaluatorTest {
     }
 
     @Test
+    fun `interstitial can request limited ads after EEA refusal only if UMP permits`() {
+        val allowed = evaluator.evaluateInterstitial(
+            baseContext(
+                format = AdFormat.INTERSTITIAL,
+                placement = AdPlacement.INTERSTITIAL_NAV_BREAK,
+                privacyState = AdsPrivacyState.CanRequestAds(
+                    consentStatus = ConsentStatus.Denied,
+                    privacyOptionsRequired = true,
+                    ageGateStatus = AdAgeGateStatus.AGE_16_OR_OVER,
+                ),
+            ),
+        )
+        val blocked = evaluator.evaluateInterstitial(
+            baseContext(
+                format = AdFormat.INTERSTITIAL,
+                placement = AdPlacement.INTERSTITIAL_NAV_BREAK,
+                privacyState = AdsPrivacyState.DeniedOrLimited(
+                    consentStatus = ConsentStatus.Denied,
+                    privacyOptionsRequired = true,
+                    ageGateStatus = AdAgeGateStatus.AGE_16_OR_OVER,
+                ),
+            ),
+        )
+
+        assertThat(allowed).isEqualTo(AdEligibility.Allowed)
+        assertThat(blocked).isEqualTo(AdEligibility.Blocked(AdSuppressReason.NO_CONSENT))
+    }
+
+    @Test
     fun `interstitial blocks premium users`() {
         val result = evaluator.evaluateInterstitial(
             baseContext(
