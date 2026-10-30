@@ -12,11 +12,13 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.parsfilo.contentapp.BuildConfig
 import com.parsfilo.contentapp.MainActivity
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import com.parsfilo.contentapp.feature.content.R as ContentR
+import com.parsfilo.contentapp.feature.quran.R as QuranR
 import com.parsfilo.contentapp.feature.settings.R as SettingsR
 
 /**
@@ -30,7 +32,13 @@ class SettingsSwitchNamedSemanticsTest {
     @Test
     fun notificationAndThemeSwitchesExposeNameStateAndSingleAction() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val openSettings = context.getString(ContentR.string.content_open_settings)
+        // Quran opens from its sura-list header, not the standalone Content header.
+        val openSettings =
+            if (BuildConfig.FLAVOR_NAME == "kuran_kerim") {
+                context.getString(QuranR.string.quran_open_settings)
+            } else {
+                context.getString(ContentR.string.content_open_settings)
+            }
         val notifications = context.getString(SettingsR.string.settings_notifications)
         val darkMode = context.getString(SettingsR.string.settings_dark_mode)
 
