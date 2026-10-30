@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -65,8 +66,13 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
@@ -454,44 +460,53 @@ fun SettingsScreen(
                                 .navigationBarsPadding()
                                 .padding(horizontal = dimens.space8, vertical = dimens.space8),
                     ) {
-                        // Bildirimler toggle
+                        // A single accessible element owns the label, action and checked state.
+                        val notificationAccessibleName = stringResource(R.string.settings_notifications)
+                        val onNotificationToggle: (Boolean) -> Unit = notificationToggle@{ enabled ->
+                            if (!enabled) {
+                                onNotificationsChanged(false)
+                                return@notificationToggle
+                            }
+                            if (isNotificationPermissionEnabled(context)) {
+                                systemNotificationsEnabled = true
+                                onNotificationsChanged(true)
+                                return@notificationToggle
+                            }
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                                ContextCompat.checkSelfPermission(
+                                    context,
+                                    Manifest.permission.POST_NOTIFICATIONS,
+                                ) != PackageManager.PERMISSION_GRANTED
+                            ) {
+                                notificationPermissionLauncher.launch(
+                                    Manifest.permission.POST_NOTIFICATIONS,
+                                )
+                            } else {
+                                openAppNotificationSettings(context)
+                            }
+                        }
                         ListItem(
-                            headlineContent = {
-                                Text(stringResource(R.string.settings_notifications))
-                            },
-                            supportingContent = {
-                                Text(stringResource(R.string.settings_notifications_desc))
-                            },
+                            modifier =
+                                Modifier
+                                    .clearAndSetSemantics {
+                                        contentDescription = notificationAccessibleName
+                                        role = Role.Switch
+                                        toggleableState = ToggleableState(notificationsChecked)
+                                        onClick {
+                                            onNotificationToggle(!notificationsChecked)
+                                            true
+                                        }
+                                    }.toggleable(
+                                        value = notificationsChecked,
+                                        role = Role.Switch,
+                                        onValueChange = onNotificationToggle,
+                                    ),
+                            headlineContent = { Text(stringResource(R.string.settings_notifications)) },
+                            supportingContent = { Text(stringResource(R.string.settings_notifications_desc)) },
                             trailingContent = {
-                                val accessibleName = stringResource(R.string.settings_notifications)
                                 Switch(
-                                    modifier = Modifier.semantics { contentDescription = accessibleName },
                                     checked = notificationsChecked,
-                                    onCheckedChange = { enabled ->
-                                        if (!enabled) {
-                                            onNotificationsChanged(false)
-                                            return@Switch
-                                        }
-
-                                        if (isNotificationPermissionEnabled(context)) {
-                                            systemNotificationsEnabled = true
-                                            onNotificationsChanged(true)
-                                            return@Switch
-                                        }
-
-                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                                            ContextCompat.checkSelfPermission(
-                                                context,
-                                                Manifest.permission.POST_NOTIFICATIONS,
-                                            ) != PackageManager.PERMISSION_GRANTED
-                                        ) {
-                                            notificationPermissionLauncher.launch(
-                                                Manifest.permission.POST_NOTIFICATIONS,
-                                            )
-                                        } else {
-                                            openAppNotificationSettings(context)
-                                        }
-                                    },
+                                    onCheckedChange = null,
                                     colors = switchColors,
                                 )
                             },
@@ -605,17 +620,29 @@ fun SettingsScreen(
                             modifier = Modifier.padding(horizontal = dimens.space16),
                         )
 
-                        // Dark Mode toggle
+                        // The switch is one named and checkable accessibility target.
+                        val darkModeAccessibleName = stringResource(R.string.settings_dark_mode)
                         ListItem(
-                            headlineContent = {
-                                Text(stringResource(R.string.settings_dark_mode))
-                            },
+                            modifier =
+                                Modifier
+                                    .clearAndSetSemantics {
+                                        contentDescription = darkModeAccessibleName
+                                        role = Role.Switch
+                                        toggleableState = ToggleableState(preferences.darkMode)
+                                        onClick {
+                                            onDarkModeChanged(!preferences.darkMode)
+                                            true
+                                        }
+                                    }.toggleable(
+                                        value = preferences.darkMode,
+                                        role = Role.Switch,
+                                        onValueChange = onDarkModeChanged,
+                                    ),
+                            headlineContent = { Text(stringResource(R.string.settings_dark_mode)) },
                             trailingContent = {
-                                val accessibleName = stringResource(R.string.settings_dark_mode)
                                 Switch(
-                                    modifier = Modifier.semantics { contentDescription = accessibleName },
                                     checked = preferences.darkMode,
-                                    onCheckedChange = onDarkModeChanged,
+                                    onCheckedChange = null,
                                     colors = switchColors,
                                 )
                             },
