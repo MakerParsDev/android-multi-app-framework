@@ -60,6 +60,46 @@ class MaintenanceHealthControllerTest(unittest.TestCase):
         state, _ = health.check_github_ruleset_state("o/r")
         self.assertEqual(state, "HEALTHY")
 
+    def test_codeql_dashboard_reports_exclusive_policy_boundary_not_live_probe(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            policy = root / "config/codeql-compatibility-policy.json"
+            policy.parent.mkdir(parents=True)
+            policy.write_text(
+                json.dumps({
+                    "schema_version": 2,
+                    "codeql_bundle_version": "2.27.1",
+                    "kotlin": {
+                        "current_configured_version": "2.4.20",
+                        "supported_max_exclusive": "2.4.21",
+                    },
+                }),
+                encoding="utf-8",
+            )
+            catalog = root / "gradle/libs.versions.toml"
+            catalog.parent.mkdir(parents=True)
+            catalog.write_text('[versions]\nkotlin = "2.4.20"\n', encoding="utf-8")
+            with patch.object(health, "ROOT", root):
+                healthy, message = health.check_codeql_kotlin_compatibility()
+            self.assertTrue(healthy)
+            self.assertIn("2.4.20", message)
+            self.assertIn("exclusive", message)
+            self.assertIn("2.4.21", message)
+            self.assertNotIn("live", message.lower())
+            self.assertIn("policy", message.lower())
+
+            # Never label the excluded next Kotlin patch as supported.
+            policy_data = json.loads(policy.read_text(encoding="utf-8"))
+            policy_data["kotlin"]["current_configured_version"] = "2.4.21"
+            policy.write_text(json.dumps(policy_data), encoding="utf-8")
+            catalog.write_text('[versions]\nkotlin = "2.4.21"\n', encoding="utf-8")
+            with patch.object(health, "ROOT", root):
+                healthy, message = health.check_codeql_kotlin_compatibility()
+            self.assertFalse(healthy)
+            self.assertIn("exclusive", message)
+            self.assertIn("2.4.21", message)
+            self.assertNotIn("live", message.lower())
+
     def test_side_project_exception_expiry_uses_current_policy_schema(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

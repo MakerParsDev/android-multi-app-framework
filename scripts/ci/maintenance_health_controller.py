@@ -72,9 +72,12 @@ def check_codeql_kotlin_compatibility() -> tuple[bool, str]:
             return False, "CodeQL compatibility policy schema must be version 2"
         if policy["kotlin"].get("current_configured_version") != kotlin_str:
             return False, "CodeQL policy configured Kotlin version does not match the catalog"
+        # This is a configured exclusive upper bound, not the highest supported
+        # version and not a live probe of the CodeQL extractor on a PR.
+        boundary = f"configured CodeQL policy cutoff < {max_str} (exclusive; static policy, not a runtime extractor check)"
         if kotlin_tup < max_tup:
-            return True, f"Kotlin {kotlin_str} < live CodeQL ceiling {max_str}"
-        return False, f"Kotlin {kotlin_str} reaches/exceeds live CodeQL ceiling {max_str}"
+            return True, f"Kotlin {kotlin_str} is below {boundary}"
+        return False, f"Kotlin {kotlin_str} does not satisfy {boundary}"
     except Exception as err:
         return False, f"CodeQL compatibility check error: {err}"
 
