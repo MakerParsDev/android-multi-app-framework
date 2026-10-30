@@ -44,12 +44,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -109,6 +111,8 @@ fun ContentRoute(
         onRewardsClick = onRewardsClick,
         onSavePlace = viewModel::saveReadingPlace,
         onClearPlace = viewModel::clearReadingPlace,
+        initialViewportVerseId = viewModel.lastVisibleVerseId,
+        onVisibleVerseChanged = viewModel::updateVisibleVerse,
         audioPlayerContent = audioPlayerContent,
         nativeAdContent = nativeAdContent,
         bannerAdUnitId = bannerAdUnitId,
@@ -132,6 +136,8 @@ fun ContentScreen(
     onRetry: () -> Unit = {},
     onSavePlace: (Int) -> Unit = {},
     onClearPlace: () -> Unit = {},
+    initialViewportVerseId: Int = 0,
+    onVisibleVerseChanged: (Int) -> Unit = {},
 ) {
     val dimens = LocalDimens.current
     val motion = LocalMotion.current
@@ -173,6 +179,22 @@ fun ContentScreen(
             val hasLongContent = verses.size >= 15
             val showTopBanner = uiState.shouldShowAds && shouldShowTopBannerForScrollableContent(verses.size)
             val showInlineFeedAds = uiState.shouldShowAds && shouldPreferInlineFeedAds(verses.size)
+            LaunchedEffect(verses, showInlineFeedAds) {
+                if (verses.isNotEmpty()) {
+                    contentLazyItemIndexForVerse(verses, initialViewportVerseId, showInlineFeedAds)
+                        ?.let { listState.scrollToItem(it) }
+                    snapshotFlow {
+                        val verseKey = listState.layoutInfo.visibleItemsInfo.firstOrNull { item ->
+                            (item.key as? String)?.startsWith("verse_") == true
+                        }?.key as? String
+                        listState.isScrollInProgress to verseKey
+                    }.collect { (scrolling, key) ->
+                        if (scrolling) {
+                            key?.removePrefix("verse_")?.toIntOrNull()?.let(onVisibleVerseChanged)
+                        }
+                    }
+                }
+            }
             // A short window must not let audio and actions consume the entire verse viewport.
             val compactHeight = shouldUseCompactReader(
                 with(LocalDensity.current) { LocalWindowInfo.current.containerSize.height.toDp().value }
@@ -326,6 +348,7 @@ fun ContentScreen(
                                         onClick = {
                                             scope.launch {
                                                 listState.scrollToItem(savedDestination)
+                                                onVisibleVerseChanged(savedId)
                                                 jumpSaveAnchor = JumpSaveAnchor(
                                                     verseId = savedId,
                                                     firstVisibleItemIndex = listState.firstVisibleItemIndex,
@@ -425,6 +448,7 @@ fun ContentScreen(
                                         showVerseJump = false
                                         scope.launch {
                                             listState.scrollToItem(target)
+                                            onVisibleVerseChanged(verseId)
                                             jumpSaveAnchor = JumpSaveAnchor(
                                                 verseId = verseId,
                                                 firstVisibleItemIndex = listState.firstVisibleItemIndex,
