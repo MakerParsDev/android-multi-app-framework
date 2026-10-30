@@ -48,6 +48,46 @@ class MiraclesVerifiedArabicDetailTest {
     }
 
     @Test
+    fun quranSourceEntry01ShowsOriginalArabicAndLegacyLatin() {
+        checkDetail(index = 0, firstReference = "38:35", lastReference = "38:35")
+    }
+
+    @Test
+    fun quranSourceEntry04ShowsOriginalArabicAndLegacyLatin() {
+        checkDetail(index = 3, firstReference = "3:173", lastReference = "3:173")
+    }
+
+    @Test
+    fun quranSourceEntry06ShowsOriginalArabicAndLegacyLatin() {
+        checkDetail(index = 5, firstReference = "59:22", lastReference = "59:24")
+    }
+
+    @Test
+    fun quranSourceEntry08ShowsOriginalArabicAndLegacyLatin() {
+        checkDetail(index = 7, firstReference = "19:96", lastReference = "19:96")
+    }
+
+    @Test
+    fun quranSourceEntry12ShowsOriginalArabicAndLegacyLatin() {
+        checkDetail(index = 11, firstReference = "20:25", lastReference = "20:28")
+    }
+
+    @Test
+    fun quranSourceEntry13ShowsOriginalArabicAndLegacyLatin() {
+        checkDetail(index = 12, firstReference = "12:101", lastReference = "12:101")
+    }
+
+    @Test
+    fun quranSourceEntry17ShowsOriginalArabicAndLegacyLatin() {
+        checkDetail(index = 16, firstReference = "23:29", lastReference = "23:29")
+    }
+
+    @Test
+    fun quranSourceEntry20ShowsOriginalArabicAndLegacyLatin() {
+        checkDetail(index = 19, firstReference = "2:107", lastReference = "2:107")
+    }
+
+    @Test
     fun fetihOriginalArabicRemainsAccessibleInRtlLayout() {
         checkDetail(index = 15, firstReference = "48:1", lastReference = "48:10", rtl = true)
     }
