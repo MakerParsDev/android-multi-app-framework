@@ -26,6 +26,40 @@ internal fun canonicalVerseId(raw: String): Int? {
 /** One composed lazy item and its actual measured position; no prefetch-derived progress. */
 internal data class VisibleContentItem(val key: Any, val offset: Int, val size: Int)
 
+/** A user-chosen jump keeps its save target only while the visible list stays at that position. */
+internal data class JumpSaveAnchor(
+    val verseId: Int,
+    val firstVisibleItemIndex: Int,
+    val firstVisibleItemScrollOffset: Int,
+)
+
+internal fun verseToSaveAfterJump(
+    visible: List<VisibleContentItem>,
+    viewportStart: Int,
+    viewportEnd: Int,
+    firstVisibleItemIndex: Int,
+    firstVisibleItemScrollOffset: Int,
+    jumpAnchor: JumpSaveAnchor?,
+): Int? {
+    if (
+        jumpAnchor != null &&
+        firstVisibleItemIndex == jumpAnchor.firstVisibleItemIndex &&
+        firstVisibleItemScrollOffset == jumpAnchor.firstVisibleItemScrollOffset
+    ) {
+        val target = jumpAnchor.verseId
+        if (
+            visibleVerseToSave(
+                visible.filter { it.key == "verse_$target" },
+                viewportStart,
+                viewportEnd,
+            ) == target
+        ) {
+            return target
+        }
+    }
+    return visibleVerseToSave(visible, viewportStart, viewportEnd)
+}
+
 /** Choose the verse actually most visible *when the user presses Save*. Ads are ignored. */
 internal fun visibleVerseToSave(
     visible: List<VisibleContentItem>,

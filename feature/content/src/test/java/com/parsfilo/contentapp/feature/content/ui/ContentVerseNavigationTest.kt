@@ -58,6 +58,31 @@ class ContentVerseNavigationTest {
         assertThat(visibleVerseToSave(visible, 900, 1000)).isEqualTo(12)
     }
 
+    @Test fun immediateJumpSavePrefersSelectedVerseOverLargerFollowingVerse() {
+        val visible = listOf(
+            VisibleContentItem("verse_9", 0, 40),
+            VisibleContentItem("verse_10", 40, 30),
+            VisibleContentItem("verse_11", 70, 830),
+        )
+        val anchor = JumpSaveAnchor(verseId = 9, firstVisibleItemIndex = 8, firstVisibleItemScrollOffset = 0)
+        assertThat(visibleVerseToSave(visible, 0, 1000)).isEqualTo(11)
+        assertThat(verseToSaveAfterJump(visible, 0, 1000, 8, 0, anchor)).isEqualTo(9)
+        assertThat(verseToSaveAfterJump(visible, 0, 1000, 8, 1, anchor)).isEqualTo(11)
+        assertThat(verseToSaveAfterJump(visible, 0, 1000, 9, 0, anchor)).isEqualTo(11)
+        assertThat(verseToSaveAfterJump(visible, 0, 1000, 8, 0, null)).isEqualTo(11)
+    }
+
+    @Test fun jumpAnchorNeverSavesOffscreenVerseOrNativeAd() {
+        val anchor = JumpSaveAnchor(verseId = 9, firstVisibleItemIndex = 8, firstVisibleItemScrollOffset = 0)
+        val visible = listOf(
+            VisibleContentItem("verse_9", 1300, 100),
+            VisibleContentItem("native_ad_9", 0, 300),
+            VisibleContentItem("verse_11", 300, 500),
+        )
+        assertThat(verseToSaveAfterJump(visible, 0, 800, 8, 0, anchor)).isEqualTo(11)
+        assertThat(verseToSaveAfterJump(visible.filter { it.key != "verse_11" }, 0, 800, 8, 0, anchor)).isNull()
+    }
+
     @Test fun outsideViewportAndAdOnlyCannotAdvanceAnySavedPlace() {
         val prefetch = listOf(VisibleContentItem("verse_99", 1300, 600))
         assertThat(visibleVerseToSave(prefetch, 0, 1000)).isNull()
