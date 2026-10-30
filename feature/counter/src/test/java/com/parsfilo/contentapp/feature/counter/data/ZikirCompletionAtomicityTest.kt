@@ -21,6 +21,9 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import java.nio.file.Files
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 import java.util.UUID
 
 /** Uses only disposable test databases and preferences; no user data is touched. */
@@ -121,6 +124,69 @@ class ZikirCompletionAtomicityTest {
             scope.cancel()
             context.deleteDatabase(databaseName)
             prefsDir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun delayedYesterdayCompletionKeepsYesterdayStreakDateAndDoesNotInventTodayProgress() = runBlocking {
+        val context = RuntimeEnvironment.getApplication()
+        val database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
+        try {
+            val repo = ZikirRepositoryImpl(
+                zikirSessionDao = database.zikirSessionDao(),
+                zikirStreakDao = database.zikirStreakDao(),
+                database = database,
+                context = context,
+            )
+            val yesterday = Calendar.getInstance().apply {
+                add(Calendar.DAY_OF_MONTH, -1)
+                set(Calendar.HOUR_OF_DAY, 12)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            val expectedDate = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(yesterday.time)
+            val delayedSession = ZikirSession(
+                id = 8132459233L,
+                zikirKey = "synthetic_yesterday_completion",
+                arabicText = "synthetic",
+                latinText = "synthetic",
+                targetCount = 33,
+                completedCount = 33,
+                completedAt = yesterday.timeInMillis,
+                durationSeconds = 42,
+                isComplete = true,
+            )
+            // Room save simulates a crash-recovered completion being replayed today.
+            assertThat(repo.saveSession(delayedSession)).isTrue()
+            assertThat(database.zikirStreakDao().getStreak()!!.lastActivityDate).isEqualTo(expectedDate)
+            assertThat(repo.getTodayCompletedSessionCount().first()).isEqualTo(0)
+            assertThat(repo.getTodayTotalCount().first()).isEqualTo(0)
+            assertThat(repo.observeStreak().first().currentStreak).isEqualTo(1)
+
+            // Once today's activity really completes, it should extend the
+            // yesterday streak, not collapse the days into a single record.
+            val today = (yesterday.clone() as Calendar).apply { add(Calendar.DAY_OF_MONTH, 1) }
+            val todayDate = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(today.time)
+            assertThat(
+                repo.saveSession(delayedSession.copy(id = 8132459234L, completedAt = today.timeInMillis)),
+            ).isTrue()
+            val afterToday = database.zikirStreakDao().getStreak()!!
+            assertThat(afterToday.lastActivityDate).isEqualTo(todayDate)
+            assertThat(afterToday.currentStreak).isEqualTo(2)
+            assertThat(afterToday.longestStreak).isEqualTo(2)
+
+            // A second older completion reaching Room late must not roll the
+            // persisted last activity back to yesterday or inflate the streak.
+            assertThat(repo.saveSession(delayedSession.copy(id = 8132459235L))).isTrue()
+            val afterLateReplay = database.zikirStreakDao().getStreak()!!
+            assertThat(afterLateReplay.lastActivityDate).isEqualTo(todayDate)
+            assertThat(afterLateReplay.currentStreak).isEqualTo(2)
+            assertThat(afterLateReplay.longestStreak).isEqualTo(2)
+            assertThat(repo.getRecentSessions().first()).hasSize(3)
+            assertThat(repo.getTodayCompletedSessionCount().first()).isEqualTo(1)
+        } finally {
+            database.close()
         }
     }
 
