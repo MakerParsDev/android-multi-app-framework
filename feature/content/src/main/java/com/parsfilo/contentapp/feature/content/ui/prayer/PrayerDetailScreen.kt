@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -44,6 +45,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -62,6 +64,7 @@ import com.parsfilo.contentapp.core.model.Prayer
 import com.parsfilo.contentapp.core.model.PrayerVerse
 import com.parsfilo.contentapp.feature.content.R
 import com.parsfilo.contentapp.feature.content.ui.shouldInsertNativeAdAfterVerse
+import com.parsfilo.contentapp.feature.content.ui.shouldStackReaderModes
 
 @Composable
 fun PrayerDetailRoute(
@@ -425,32 +428,61 @@ fun BottomModeSelector(
 ) {
     val dimens = LocalDimens.current
 
-    Row(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = dimens.space6, vertical = dimens.space2)
             .padding(bottom = dimens.space48 + dimens.space2)
-            .selectableGroup(),
-        horizontalArrangement = Arrangement.spacedBy(dimens.space8)
     ) {
-        ModeButton(
-            text = stringResource(R.string.content_mode_arabic),
-            isSelected = currentMode == DisplayMode.ARABIC,
-            onClick = { onModeSelected(DisplayMode.ARABIC) },
-            modifier = Modifier.weight(1f)
-        )
-        ModeButton(
-            text = stringResource(R.string.content_mode_latin),
-            isSelected = currentMode == DisplayMode.LATIN,
-            onClick = { onModeSelected(DisplayMode.LATIN) },
-            modifier = Modifier.weight(1f)
-        )
-        ModeButton(
-            text = stringResource(R.string.content_mode_turkish),
-            isSelected = currentMode == DisplayMode.TURKISH,
-            onClick = { onModeSelected(DisplayMode.TURKISH) },
-            modifier = Modifier.weight(1f)
-        )
+        if (shouldStackReaderModes(maxWidth.value, LocalDensity.current.fontScale)) {
+            Column(
+                modifier = Modifier.fillMaxWidth().selectableGroup(),
+                verticalArrangement = Arrangement.spacedBy(dimens.space8)
+            ) {
+                ModeButton(
+                    text = stringResource(R.string.content_mode_arabic),
+                    isSelected = currentMode == DisplayMode.ARABIC,
+                    onClick = { onModeSelected(DisplayMode.ARABIC) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                ModeButton(
+                    text = stringResource(R.string.content_mode_latin),
+                    isSelected = currentMode == DisplayMode.LATIN,
+                    onClick = { onModeSelected(DisplayMode.LATIN) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                ModeButton(
+                    text = stringResource(R.string.content_mode_turkish),
+                    isSelected = currentMode == DisplayMode.TURKISH,
+                    onClick = { onModeSelected(DisplayMode.TURKISH) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth().selectableGroup(),
+                horizontalArrangement = Arrangement.spacedBy(dimens.space8)
+            ) {
+                ModeButton(
+                    text = stringResource(R.string.content_mode_arabic),
+                    isSelected = currentMode == DisplayMode.ARABIC,
+                    onClick = { onModeSelected(DisplayMode.ARABIC) },
+                    modifier = Modifier.weight(1f)
+                )
+                ModeButton(
+                    text = stringResource(R.string.content_mode_latin),
+                    isSelected = currentMode == DisplayMode.LATIN,
+                    onClick = { onModeSelected(DisplayMode.LATIN) },
+                    modifier = Modifier.weight(1f)
+                )
+                ModeButton(
+                    text = stringResource(R.string.content_mode_turkish),
+                    isSelected = currentMode == DisplayMode.TURKISH,
+                    onClick = { onModeSelected(DisplayMode.TURKISH) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
     }
 }
 
