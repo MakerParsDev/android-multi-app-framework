@@ -76,7 +76,7 @@ class ZikirRepositoryImpl @Inject constructor(
             // Retrying a save that already committed is a success, not a new session.
             return@withTransaction false
         }
-        updateStreakAfterSession()
+        updateStreakAfterSession(session.completedAt)
         true
     }
 
@@ -115,38 +115,35 @@ class ZikirRepositoryImpl @Inject constructor(
             )
         }.distinctUntilChanged()
 
-    private suspend fun updateStreakAfterSession() {
-        val today = todayKey()
-        val yesterday = yesterdayKey()
+    private suspend fun updateStreakAfterSession(completedAt: Long) {
+        // A completed session can be replayed after a process crash, including
+        // after local midnight. Attribute the streak to when it actually ended,
+        // rather than when Room eventually persisted the recovery checkpoint.
+        val calendar = Calendar.getInstance().apply { timeInMillis = completedAt }
+        val format = dateFormatter()
+        val completionDay = format.format(calendar.time)
+        calendar.add(Calendar.DAY_OF_MONTH, -1)
+        val previousDay = format.format(calendar.time)
         val current = getOrCreateStreak()
 
-        val updated = when (current.lastActivityDate) {
-            today -> current
-            yesterday -> {
+        val updated = when {
+            current.lastActivityDate >= completionDay -> current
+            current.lastActivityDate == previousDay -> {
                 val next = current.currentStreak + 1
                 current.copy(
                     currentStreak = next,
                     longestStreak = max(current.longestStreak, next),
-                    lastActivityDate = today,
+                    lastActivityDate = completionDay,
                 )
             }
-            else -> {
-                current.copy(
-                    currentStreak = 1,
-                    longestStreak = max(current.longestStreak, 1),
-                    lastActivityDate = today,
-                )
-            }
+            else -> current.copy(
+                currentStreak = 1,
+                longestStreak = max(current.longestStreak, 1),
+                lastActivityDate = completionDay,
+            )
         }
 
         zikirStreakDao.upsert(updated)
-    }
-
-    private fun todayKey(): String = dateFormatter().format(System.currentTimeMillis())
-
-    private fun yesterdayKey(): String {
-        val calendar = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -1) }
-        return dateFormatter().format(calendar.time)
     }
 
     private fun dateFormatter(): SimpleDateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
