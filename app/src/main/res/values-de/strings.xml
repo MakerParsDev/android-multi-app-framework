@@ -17,7 +17,7 @@
 
     <string name="audio_loading">Audio wird geladen…</string>
     <string name="audio_play">Abspielen</string>
-    <string name="audio_pause">Pause</string>
+    <string name="audio_pause">Pausieren</string>
     <string name="audio_error">Audio konnte nicht geladen werden</string>
 
     <string name="display_mode_arabic">Arabisch</string>
