@@ -31,6 +31,15 @@ class ContentViewModel @Inject constructor(
 ) : ViewModel() {
     private val reloadSignal = MutableStateFlow(0)
 
+    // In-memory reading viewport: survives a portrait/landscape navigation host swap
+    // without silently rewriting the user's explicitly saved reading place.
+    var lastVisibleVerseId: Int = 0
+        private set
+
+    fun updateVisibleVerse(verseId: Int) {
+        if (verseId > 0) lastVisibleVerseId = verseId
+    }
+
     private val versesFlow = reloadSignal.map {
         when (val result = contentRepository.getVerses()) {
             is Result.Success -> result.data

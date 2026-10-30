@@ -23,13 +23,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
@@ -41,17 +44,21 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -104,6 +111,8 @@ fun ContentRoute(
         onRewardsClick = onRewardsClick,
         onSavePlace = viewModel::saveReadingPlace,
         onClearPlace = viewModel::clearReadingPlace,
+        initialViewportVerseId = viewModel.lastVisibleVerseId,
+        onVisibleVerseChanged = viewModel::updateVisibleVerse,
         audioPlayerContent = audioPlayerContent,
         nativeAdContent = nativeAdContent,
         bannerAdUnitId = bannerAdUnitId,
@@ -127,6 +136,8 @@ fun ContentScreen(
     onRetry: () -> Unit = {},
     onSavePlace: (Int) -> Unit = {},
     onClearPlace: () -> Unit = {},
+    initialViewportVerseId: Int = 0,
+    onVisibleVerseChanged: (Int) -> Unit = {},
 ) {
     val dimens = LocalDimens.current
     val motion = LocalMotion.current
@@ -160,12 +171,35 @@ fun ContentScreen(
             val colorScheme = MaterialTheme.colorScheme
             val verses = uiState.verses
             val listState = rememberLazyListState()
+            val readerScrollState = rememberScrollState()
             val scope = rememberCoroutineScope()
             var showVerseJump by rememberSaveable { mutableStateOf(false) }
             var verseQuery by rememberSaveable { mutableStateOf("") }
+            var jumpSaveAnchor by remember { mutableStateOf<JumpSaveAnchor?>(null) }
             val hasLongContent = verses.size >= 15
             val showTopBanner = uiState.shouldShowAds && shouldShowTopBannerForScrollableContent(verses.size)
             val showInlineFeedAds = uiState.shouldShowAds && shouldPreferInlineFeedAds(verses.size)
+            LaunchedEffect(verses, showInlineFeedAds) {
+                if (verses.isNotEmpty()) {
+                    contentLazyItemIndexForVerse(verses, initialViewportVerseId, showInlineFeedAds)
+                        ?.let { listState.scrollToItem(it) }
+                    snapshotFlow {
+                        val verseKey = listState.layoutInfo.visibleItemsInfo.firstOrNull { item ->
+                            (item.key as? String)?.startsWith("verse_") == true
+                        }?.key as? String
+                        listState.isScrollInProgress to verseKey
+                    }.collect { (scrolling, key) ->
+                        if (scrolling) {
+                            key?.removePrefix("verse_")?.toIntOrNull()?.let(onVisibleVerseChanged)
+                        }
+                    }
+                }
+            }
+            // A short window must not let audio and actions consume the entire verse viewport.
+            val compactHeight = shouldUseCompactReader(
+                with(LocalDensity.current) { LocalWindowInfo.current.containerSize.height.toDp().value }
+            )
+            val bannerPosition = resolveReaderBannerPosition(showTopBanner, compactHeight)
             Column(
                 modifier = Modifier
                     .testTag("content_detail")
@@ -177,15 +211,22 @@ fun ContentScreen(
                             easing = motion.emphasizedEasing
                         )
                     )
+                    .then(if (compactHeight) Modifier.verticalScroll(readerScrollState) else Modifier)
             ) {
                 // Header with App Name and action icons
                 AppHeader(
                     appName = appName,
                     onSettingsClick = onSettingsClick,
                     onRewardsClick = onRewardsClick,
+                    onReaderToolsClick =
+                        if (compactHeight) {
+                            { scope.launch { readerScrollState.animateScrollTo(readerScrollState.maxValue) } }
+                        } else {
+                            null
+                        },
                 )
 
-                if (showTopBanner) {
+                if (bannerPosition == ReaderBannerPosition.ABOVE_VERSES) {
                     BannerAd(
                         adUnitId = bannerAdUnitId,
                         placement = AdPlacement.BANNER_CONTENT_DETAIL,
@@ -237,9 +278,10 @@ fun ContentScreen(
                     }
                 } else {
                     // Audio Player
-                    audioPlayerContent()
-
-                    Spacer(modifier = Modifier.height(dimens.space4))
+                    if (!compactHeight) {
+                        audioPlayerContent()
+                        Spacer(modifier = Modifier.height(dimens.space4))
+                    }
 
                     if (hasLongContent) {
                         Row(
@@ -270,10 +312,16 @@ fun ContentScreen(
                                     val visible = layout.visibleItemsInfo.map { item ->
                                         VisibleContentItem(item.key, item.offset, item.size)
                                     }
-                                    val id = visibleVerseToSave(
-                                        visible, layout.viewportStartOffset, layout.viewportEndOffset
+                                    val id = verseToSaveAfterJump(
+                                        visible = visible,
+                                        viewportStart = layout.viewportStartOffset,
+                                        viewportEnd = layout.viewportEndOffset,
+                                        firstVisibleItemIndex = listState.firstVisibleItemIndex,
+                                        firstVisibleItemScrollOffset = listState.firstVisibleItemScrollOffset,
+                                        jumpAnchor = jumpSaveAnchor,
                                     )
                                     if (id != null && verses.any { it.id == id }) onSavePlace(id)
+                                    jumpSaveAnchor = null
                                 },
                             ) {
                                 Text(
@@ -298,7 +346,15 @@ fun ContentScreen(
                                             .weight(1f)
                                             .testTag("content_resume_reading"),
                                         onClick = {
-                                            scope.launch { listState.scrollToItem(savedDestination) }
+                                            scope.launch {
+                                                listState.scrollToItem(savedDestination)
+                                                onVisibleVerseChanged(savedId)
+                                                jumpSaveAnchor = JumpSaveAnchor(
+                                                    verseId = savedId,
+                                                    firstVisibleItemIndex = listState.firstVisibleItemIndex,
+                                                    firstVisibleItemScrollOffset = listState.firstVisibleItemScrollOffset,
+                                                )
+                                            }
                                         },
                                     ) {
                                         Text(
@@ -329,7 +385,7 @@ fun ContentScreen(
                         state = listState,
                         modifier = Modifier
                             .testTag("content_list")
-                            .weight(1f)
+                            .then(if (compactHeight) Modifier.height(260.dp) else Modifier.weight(1f))
                             .fillMaxWidth(),
                         contentPadding = PaddingValues(horizontal = dimens.space6, vertical = dimens.space2)
                     ) {
@@ -388,8 +444,17 @@ fun ContentScreen(
                                     enabled = destination != null,
                                     onClick = {
                                         val target = destination ?: return@TextButton
+                                        val verseId = number ?: return@TextButton
                                         showVerseJump = false
-                                        scope.launch { listState.scrollToItem(target) }
+                                        scope.launch {
+                                            listState.scrollToItem(target)
+                                            onVisibleVerseChanged(verseId)
+                                            jumpSaveAnchor = JumpSaveAnchor(
+                                                verseId = verseId,
+                                                firstVisibleItemIndex = listState.firstVisibleItemIndex,
+                                                firstVisibleItemScrollOffset = listState.firstVisibleItemScrollOffset,
+                                            )
+                                        }
                                     },
                                 ) {
                                     Text(stringResource(R.string.content_jump_action))
@@ -403,11 +468,30 @@ fun ContentScreen(
                         )
                     }
 
+                    // On short windows, keep the live banner reachable after the verse viewport
+                    // rather than letting it consume the only visible reading area.
+                    if (bannerPosition == ReaderBannerPosition.AFTER_VERSES) {
+                        BannerAd(
+                            adUnitId = bannerAdUnitId,
+                            placement = AdPlacement.BANNER_CONTENT_DETAIL,
+                            showPlacementLabels = false,
+                        )
+                    }
+
                     // Bottom Mode Selector
                     BottomModeSelector(
                         currentMode = uiState.displayMode,
                         onModeSelected = onModeSelected
                     )
+                    if (compactHeight) {
+                        audioPlayerContent()
+                        TextButton(
+                            modifier = Modifier.fillMaxWidth().testTag("content_back_to_reading"),
+                            onClick = { scope.launch { readerScrollState.animateScrollTo(0) } },
+                        ) {
+                            Text(stringResource(R.string.content_back_to_reading))
+                        }
+                    }
                 }
             }
         }
@@ -418,7 +502,8 @@ fun ContentScreen(
 fun AppHeader(
     appName: String,
     onSettingsClick: () -> Unit = {},
-    onRewardsClick: () -> Unit = {}
+    onRewardsClick: () -> Unit = {},
+    onReaderToolsClick: (() -> Unit)? = null,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val dimens = LocalDimens.current
@@ -473,6 +558,19 @@ fun AppHeader(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.weight(1f)
             )
+
+            if (onReaderToolsClick != null) {
+                IconButton(
+                    onClick = onReaderToolsClick,
+                    modifier = Modifier.size(dimens.iconXl).testTag("content_reader_tools")
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = stringResource(R.string.content_reader_tools),
+                        tint = colorScheme.onPrimaryContainer,
+                    )
+                }
+            }
 
             // Sağ: Ödüller ikonu
             IconButton(
@@ -561,8 +659,10 @@ fun BottomModeSelector(
     }
 }
 
+internal fun shouldUseCompactReader(heightDp: Float): Boolean = heightDp < 420f
+
 internal fun shouldStackReaderModes(widthDp: Float, fontScale: Float): Boolean =
-    widthDp < 360f || fontScale >= 1.3f
+    widthDp < 360f || (fontScale >= 1.3f && widthDp < 600f)
 
 @Composable
 private fun ContentLoadingSkeleton(appName: String) {

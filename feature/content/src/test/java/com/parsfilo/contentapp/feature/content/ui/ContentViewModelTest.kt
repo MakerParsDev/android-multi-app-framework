@@ -214,6 +214,27 @@ class ContentViewModelTest {
         }
 
     @Test
+    fun `reader viewport anchor does not overwrite explicitly saved reading place`() =
+        runTest(testDispatcher) {
+            coEvery { contentRepository.getVerses() } returns Result.Success(testVerses)
+            every { preferencesDataSource.userData } returns flowOf(defaultPrefs)
+            every { adGateChecker.shouldShowAds } returns flowOf(false)
+
+            val viewModel = createViewModel()
+            assertThat(viewModel.lastVisibleVerseId).isEqualTo(0)
+
+            viewModel.updateVisibleVerse(96)
+            assertThat(viewModel.lastVisibleVerseId).isEqualTo(96)
+            viewModel.updateVisibleVerse(-1)
+            assertThat(viewModel.lastVisibleVerseId).isEqualTo(96)
+            viewModel.updateVisibleVerse(40)
+            assertThat(viewModel.lastVisibleVerseId).isEqualTo(40)
+
+            coVerify(exactly = 0) { preferencesDataSource.setContentSavedVerseId(any()) }
+            coVerify(exactly = 0) { preferencesDataSource.setDisplayMode(any()) }
+        }
+
+    @Test
     fun `repository error emits Error state`() = runTest(testDispatcher) {
         val exception = RuntimeException("Network error")
         coEvery { contentRepository.getVerses() } returns Result.Error(exception)

@@ -15,6 +15,18 @@ class NativeAdInsertionPolicyTest {
     }
 
     @Test
+    fun `short-height readers keep banner after verses without removing ad placement`() {
+        assertThat(resolveReaderBannerPosition(showTopBanner = false, compactHeight = false))
+            .isEqualTo(ReaderBannerPosition.HIDDEN)
+        assertThat(resolveReaderBannerPosition(showTopBanner = false, compactHeight = true))
+            .isEqualTo(ReaderBannerPosition.HIDDEN)
+        assertThat(resolveReaderBannerPosition(showTopBanner = true, compactHeight = false))
+            .isEqualTo(ReaderBannerPosition.ABOVE_VERSES)
+        assertThat(resolveReaderBannerPosition(showTopBanner = true, compactHeight = true))
+            .isEqualTo(ReaderBannerPosition.AFTER_VERSES)
+    }
+
+    @Test
     fun `inline ads stay disabled below minimum content threshold`() {
         assertThat(shouldPreferInlineFeedAds(0)).isFalse()
         assertThat(shouldPreferInlineFeedAds(11)).isFalse()
