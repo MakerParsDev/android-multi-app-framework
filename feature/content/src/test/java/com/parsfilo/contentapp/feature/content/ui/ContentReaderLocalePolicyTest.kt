@@ -35,11 +35,20 @@ class ContentReaderLocalePolicyTest {
     }
 
     @Test
+    fun readerKeepsScrollableVerseViewportOnShortScreensOnly() {
+        assertTrue(shouldUseCompactReader(283f))
+        assertFalse(shouldUseCompactReader(627f))
+        assertFalse(shouldUseCompactReader(420f))
+    }
+
+    @Test
     fun readerModesStackForNarrowScreensOrLargeSystemFont() {
         assertTrue(shouldStackReaderModes(320f, 1f))
         assertTrue(shouldStackReaderModes(360f, 2f))
         assertTrue(shouldStackReaderModes(411f, 1.5f))
         assertFalse(shouldStackReaderModes(360f, 1f))
         assertFalse(shouldStackReaderModes(411f, 1f))
+        assertFalse(shouldStackReaderModes(731f, 2f))
+        assertTrue(shouldStackReaderModes(599f, 2f))
     }
 }
