@@ -1,0 +1,32 @@
+{
+  "source": {
+    "name": "Cited classical hadith supplication excerpts",
+    "notice": "Four short Arabic supplication excerpts from classical hadith sources, with direct per-record original collection citations. Not Tanzil Quran text, a religious grading guarantee, or a translation. Modern translations and full hadith narratives are not redistributed."
+  },
+  "prayers": [
+    {
+      "title": "Hz Muhammed’in dilinden şifa duası",
+      "reference": "Sahih al-Bukhari 5675",
+      "sourceUrl": "https://sunnah.com/bukhari:5675",
+      "arabic": "أَذْهِبِ الْبَاسَ رَبَّ النَّاسِ، اشْفِ وَأَنْتَ الشَّافِي لاَ شِفَاءَ إِلاَّ شِفَاؤُكَ، شِفَاءً لاَ يُغَادِرُ سَقَمًا"
+    },
+    {
+      "title": "En büyük günahların affına vesile olan tövbe duası",
+      "reference": "Jami at-Tirmidhi 3577",
+      "sourceUrl": "https://sunnah.com/tirmidhi:3577",
+      "arabic": "أَسْتَغْفِرُ اللَّهَ الْعَظِيمَ الَّذِي لاَ إِلَهَ إِلاَّ هُوَ الْحَىَّ الْقَيُّومَ وَأَتُوبُ إِلَيْهِ"
+    },
+    {
+      "title": "Kaza-beladan korunmak için okunan dua",
+      "reference": "Musnad Ahmad 446",
+      "sourceUrl": "https://sunnah.com/ahmad:446",
+      "arabic": "بِسْمِ اللَّهِ الَّذِي لَا يَضُرُّ مَعَ اسْمِهِ شَيْءٌ فِي الْأَرْضِ وَلَا فِي السَّمَاءِ وَهُوَ السَّمِيعُ الْعَلِيمُ"
+    },
+    {
+      "title": "Cesaret duası",
+      "reference": "Sunan Abi Dawud 3893",
+      "sourceUrl": "https://sunnah.com/abudawud:3893",
+      "arabic": "أَعُوذُ بِكَلِمَاتِ اللَّهِ التَّامَّةِ مِنْ غَضَبِهِ وَشَرِّ عِبَادِهِ وَمِنْ هَمَزَاتِ الشَّيَاطِينِ وَأَنْ يَحْضُرُونِ"
+    }
+  ]
+}
