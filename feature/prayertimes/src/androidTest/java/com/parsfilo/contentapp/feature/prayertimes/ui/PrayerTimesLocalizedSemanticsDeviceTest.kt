@@ -1,12 +1,14 @@
 package com.parsfilo.contentapp.feature.prayertimes.ui
 
 import android.content.res.Configuration
+import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.parsfilo.contentapp.core.designsystem.AppTheme
@@ -106,4 +108,43 @@ class PrayerTimesLocalizedSemanticsDeviceTest {
     @Test fun englishPrayerRowsUseVisibleNames() = rows("en-US", "Time for Dhuhr: 12:30")
 
     @Test fun germanPrayerRowsUseVisibleNames() = rows("de-DE", "Zeit für Dhuhr: 12:30")
+
+    private fun alarm(language: String, enabled: Boolean, expected: String) {
+        var clickedPrayer: String? = null
+        render(language) {
+            Column {
+                PrayerTimesListSection(
+                    variant = PrayerAppVariant.NAMAZ_VAKITLERI,
+                    upcomingDays = listOf(
+                        PrayerTimesDay(
+                            localDate = "2026-10-31",
+                            imsak = "05:30",
+                            gunes = "07:05",
+                            ogle = "12:30",
+                            ikindi = "15:35",
+                            aksam = "18:00",
+                            yatsi = "19:30",
+                        ),
+                    ),
+                    // Empty means all selected; a set of Imsak alone leaves Dhuhr off.
+                    selectedAlarmPrayerKeys = if (enabled) emptySet() else setOf("imsak"),
+                    onToggleAlarm = { clickedPrayer = it },
+                )
+            }
+        }
+        rule.onNodeWithContentDescription(expected).assertHasClickAction().performClick()
+        rule.runOnIdle { assertEquals("ogle", clickedPrayer) }
+    }
+
+    @Test fun englishEnabledAlarmIdentifiesPrayer() =
+        alarm("en-US", true, "Dhuhr reminder on")
+
+    @Test fun englishDisabledAlarmIdentifiesPrayer() =
+        alarm("en-US", false, "Dhuhr reminder off")
+
+    @Test fun germanEnabledAlarmIdentifiesPrayer() =
+        alarm("de-DE", true, "Erinnerung für Dhuhr an")
+
+    @Test fun germanDisabledAlarmIdentifiesPrayer() =
+        alarm("de-DE", false, "Erinnerung für Dhuhr aus")
 }

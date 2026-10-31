@@ -218,6 +218,14 @@ private fun PrayerTimeRow(
         stringResource(row.item.labelRes),
         row.hm,
     )
+    val spokenAlarmToggle = stringResource(
+        if (isAlarmEnabled) {
+            R.string.prayertimes_alarm_row_enabled_a11y
+        } else {
+            R.string.prayertimes_alarm_row_disabled_a11y
+        },
+        stringResource(row.item.labelRes),
+    )
 
     Row(
         modifier = Modifier
@@ -275,7 +283,7 @@ private fun PrayerTimeRow(
             modifier = Modifier
                 .size(42.dp)
                 .semantics {
-                    contentDescription = if (isAlarmEnabled) "Alarm açık" else "Alarm kapalı"
+                    contentDescription = spokenAlarmToggle
                 },
         ) {
             Icon(

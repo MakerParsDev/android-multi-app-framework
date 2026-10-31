@@ -52,6 +52,8 @@
     <string name="prayertimes_alarm_title">Vakit Hatırlatmaları</string>
     <string name="prayertimes_alarm_desc">Namaz vakti için yerel bildirim planla</string>
     <string name="prayertimes_alarm_enabled">Hatırlatıcı tercihi açık</string>
+    <string name="prayertimes_alarm_row_enabled_a11y">%1$s hatırlatıcısı açık</string>
+    <string name="prayertimes_alarm_row_disabled_a11y">%1$s hatırlatıcısı kapalı</string>
     <string name="prayertimes_alarm_disabled">Alarm kapalı</string>
     <string name="prayertimes_alarm_scheduled">Sonraki hatırlatma planlandı.</string>
     <string name="prayertimes_alarm_exact_enabled">Dakikaya yakın zamanlama etkin. Pil kısıtlamaları bildirimlerin teslimini yine etkileyebilir.</string>
