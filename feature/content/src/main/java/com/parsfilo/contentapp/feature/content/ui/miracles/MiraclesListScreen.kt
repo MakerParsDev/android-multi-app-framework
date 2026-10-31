@@ -45,9 +45,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.testTag
@@ -59,6 +63,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.parsfilo.contentapp.core.designsystem.AppTheme
 import com.parsfilo.contentapp.core.designsystem.tokens.LocalDimens
@@ -136,6 +142,9 @@ fun MiraclesListScreen(
             val prayers = uiState.prayers
             var searchExpanded by rememberSaveable { mutableStateOf(false) }
             var searchQuery by rememberSaveable { mutableStateOf("") }
+            var focusedEsmaIndex by remember { mutableStateOf<Int?>(null) }
+            var pendingFocusRestoreIndex by rememberSaveable { mutableStateOf<Int?>(null) }
+            val resultFocusRequester = remember { FocusRequester() }
             val listState = rememberLazyListState()
             val scope = rememberCoroutineScope()
             val isEsmaSearchOpen = variant == MiraclesContentVariant.ESMAUL_HUSNA && searchExpanded
@@ -144,6 +153,25 @@ fun MiraclesListScreen(
                     findEsmaNames(prayers, searchQuery)
                 } else {
                     prayers.withIndex().toList()
+                }
+            }
+            // NavHost recreates the list on Back. Restore the previously keyboard-focused
+            // filtered result, rather than moving keyboard users back to the header.
+            LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+                val indexToRestore = pendingFocusRestoreIndex
+                if (indexToRestore != null && isEsmaSearchOpen && searchQuery.isNotBlank()) {
+                    scope.launch {
+                        val rowIndex = visible.indexOfFirst { it.index == indexToRestore }
+                        if (rowIndex >= 0) {
+                            listState.scrollToItem(rowIndex)
+                            withFrameNanos { }
+                            if (resultFocusRequester.requestFocus()) {
+                                pendingFocusRestoreIndex = null
+                            }
+                        } else {
+                            pendingFocusRestoreIndex = null
+                        }
+                    }
                 }
             }
             val showTopBanner = uiState.shouldShowAds && shouldShowTopBannerForScrollableContent(prayers.size)
@@ -266,13 +294,35 @@ fun MiraclesListScreen(
                                 prayer = prayer,
                                 index = index + 1,
                                 variant = variant,
-                                onClick = { onPrayerClick(index) },
-                                modifier =
-                                    if (index == 0) {
-                                        Modifier.testTag("miracles_first_item")
-                                    } else {
-                                        Modifier
-                                    },
+                                onClick = {
+                                    if (isEsmaSearchOpen &&
+                                        searchQuery.isNotBlank() &&
+                                        focusedEsmaIndex == index
+                                    ) {
+                                        pendingFocusRestoreIndex = index
+                                    }
+                                    onPrayerClick(index)
+                                },
+                                modifier = Modifier
+                                    .then(
+                                        if (index == pendingFocusRestoreIndex) {
+                                            Modifier.focusRequester(resultFocusRequester)
+                                        } else {
+                                            Modifier
+                                        }
+                                    )
+                                    .onFocusChanged {
+                                        if (isEsmaSearchOpen && it.isFocused) {
+                                            focusedEsmaIndex = index
+                                        }
+                                    }
+                                    .then(
+                                        if (index == 0) {
+                                            Modifier.testTag("miracles_first_item")
+                                        } else {
+                                            Modifier
+                                        }
+                                    ),
                             )
                         }
 
