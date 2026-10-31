@@ -41,6 +41,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -55,6 +56,7 @@ import com.parsfilo.contentapp.core.model.Prayer
 import com.parsfilo.contentapp.core.model.PrayerVerse
 import com.parsfilo.contentapp.feature.ads.AdPlacement
 import com.parsfilo.contentapp.feature.ads.ui.BannerAd
+import com.parsfilo.contentapp.feature.content.R
 import com.parsfilo.contentapp.feature.content.ui.shouldInsertInlineFeedAdAfterItem
 import com.parsfilo.contentapp.feature.content.ui.shouldPreferInlineFeedAds
 import com.parsfilo.contentapp.feature.content.ui.shouldShowTopBannerForScrollableContent
@@ -285,7 +287,7 @@ fun PrayerListHeader(
         ) {
             Icon(
                 imageVector = Icons.Filled.Settings,
-                contentDescription = "Ayarlar",
+                contentDescription = stringResource(R.string.content_open_settings),
                 tint = colorScheme.secondary,
                 modifier = Modifier.size(dimens.iconMd)
             )
@@ -308,7 +310,7 @@ fun PrayerListHeader(
         ) {
             Icon(
                 imageVector = Icons.Filled.CardGiftcard,
-                contentDescription = "Ödüller",
+                contentDescription = stringResource(R.string.content_open_rewards),
                 tint = colorScheme.secondary,
                 modifier = Modifier.size(dimens.iconMd)
             )
