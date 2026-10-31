@@ -48,6 +48,24 @@ class ContentVerseNavigationTest {
         assertThat(canonicalVerseId("")).isNull()
     }
 
+    @Test fun localizedArabicNumeralsReachCanonicalVerseIds() {
+        // Arabic-keyboard input must not be mistaken for an invalid verse number.
+        assertThat(canonicalVerseId("٩٦")).isEqualTo(96)
+        assertThat(canonicalVerseId("۹۶")).isEqualTo(96)
+        assertThat(canonicalVerseId("٠٠١٢")).isEqualTo(12)
+        assertThat(canonicalVerseId("۰۰۱۲")).isEqualTo(12)
+        assertThat(canonicalVerseId("96")).isEqualTo(96)
+    }
+
+    @Test fun malformedLocalizedNumeralsRemainRejected() {
+        assertThat(canonicalVerseId("٩ ٦")).isNull()
+        assertThat(canonicalVerseId("٩٦a")).isNull()
+        assertThat(canonicalVerseId("٩٦\\n")).isNull()
+        assertThat(canonicalVerseId("٩-٦")).isNull()
+        assertThat(canonicalVerseId("٩٩٩٩٩٩٩")).isNull()
+        assertThat(canonicalVerseId("٠")).isNull()
+    }
+
     @Test fun savingPlacePicksMeasuredMostVisibleVerseNotPrefetchOrAd() {
         val visible = listOf(
             VisibleContentItem("native_ad_9", 0, 150),

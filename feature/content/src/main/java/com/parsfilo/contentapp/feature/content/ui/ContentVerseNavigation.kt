@@ -17,10 +17,18 @@ internal fun contentLazyItemIndexForVerse(
     return index + adsBefore
 }
 
-/** Never silently rewrite pasted malformed text into a different canonical verse ID. */
+/** Accept localized decimal digits, but never silently discard malformed input. */
 internal fun canonicalVerseId(raw: String): Int? {
-    if (raw.isEmpty() || raw.length > 6 || raw.any { it !in '0'..'9' }) return null
-    return raw.toIntOrNull()?.takeIf { it > 0 }
+    if (raw.isEmpty() || raw.length > 6) return null
+    val asciiDigits = raw.map { digit ->
+        when (digit) {
+            in '0'..'9' -> digit
+            in '٠'..'٩' -> ('0'.code + digit.code - '٠'.code).toChar()
+            in '۰'..'۹' -> ('0'.code + digit.code - '۰'.code).toChar()
+            else -> return null
+        }
+    }.joinToString("")
+    return asciiDigits.toIntOrNull()?.takeIf { it > 0 }
 }
 
 /** One composed lazy item and its actual measured position; no prefetch-derived progress. */
