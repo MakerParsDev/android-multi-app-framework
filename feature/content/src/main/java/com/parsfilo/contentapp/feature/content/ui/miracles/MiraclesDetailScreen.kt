@@ -194,6 +194,41 @@ fun MiraclesDetailScreen(
                     }
 
                     if (variant == MiraclesContentVariant.MUCIZEDUALAR) {
+                        uiState.prayer.originalArabicSupplication?.let { supplication ->
+                            item {
+                                MiraclesDetailSectionCard(
+                                    label = stringResource(R.string.miracles_section_arabic),
+                                    contentBackground = cardBackground,
+                                    borderColor = colorScheme.secondary.copy(alpha = 0.3f),
+                                ) {
+                                    Column(verticalArrangement = Arrangement.spacedBy(dimens.space12)) {
+                                        Text(
+                                            text = stringResource(
+                                                R.string.miracles_hadith_source,
+                                                supplication.reference,
+                                            ),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = colorScheme.secondary,
+                                            modifier = Modifier.clickable {
+                                                uriHandler.openUri(supplication.sourceUrl)
+                                            },
+                                        )
+                                        Text(
+                                            text = supplication.arabic,
+                                            fontSize = 22.sp,
+                                            lineHeight = 38.sp,
+                                            color = colorScheme.onSurface,
+                                            textAlign = TextAlign.End,
+                                            modifier = Modifier.fillMaxWidth(),
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(dimens.space12))
+                            }
+                        }
+                    }
+
+                    if (variant == MiraclesContentVariant.MUCIZEDUALAR) {
                         item {
                             MiraclesDetailSectionCard(
                                 label = stringResource(R.string.miracles_section_description),
