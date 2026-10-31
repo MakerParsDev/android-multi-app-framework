@@ -35,6 +35,26 @@ class ZikirReminderNotifierTest {
     }
 
     @Test
+    fun cancellingStreakWarningPreservesOtherNotificationTypes() = runTest {
+        val app = RuntimeEnvironment.getApplication()
+        val preferences = mockk<PreferencesDataSource>()
+        val userData = mockk<UserPreferencesData>()
+        every { userData.notificationsEnabled } returns true
+        every { preferences.userData } returns flowOf(userData)
+        val manager = app.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notifier = ZikirReminderNotifier(app, preferences)
+
+        notifier.showDailyReminder(0)
+        notifier.showStreakReminder(4)
+        notifier.showGoalCompleted(33)
+        assertThat(manager.activeNotifications.map { it.id }).containsExactly(94001, 94002, 94003)
+
+        notifier.cancelStreakReminder()
+
+        assertThat(manager.activeNotifications.map { it.id }).containsExactly(94001, 94003)
+    }
+
+    @Test
     fun notificationsDisabledInPreferencesSuppressesTheStreakReminder() = runTest {
         val app = RuntimeEnvironment.getApplication()
         val preferences = mockk<PreferencesDataSource>()

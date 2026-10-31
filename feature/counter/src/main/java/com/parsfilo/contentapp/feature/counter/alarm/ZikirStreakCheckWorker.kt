@@ -28,6 +28,7 @@ class ZikirStreakCheckWorker(
         val prefs = deps.preferencesDataSource()
         val streakReminderEnabled = prefs.zikirStreakReminderEnabled.first()
         if (!streakReminderEnabled) {
+            deps.zikirReminderNotifier().cancelStreakReminder()
             Timber.d("ZikirStreakCheckWorker skipped: reminder disabled")
             return Result.success()
         }
@@ -35,6 +36,7 @@ class ZikirStreakCheckWorker(
         val dailyGoal = prefs.zikirDailyGoal.first()
         val todayTotal = deps.zikirRepository().getTodayTotalCount().first()
         if (todayTotal >= dailyGoal) {
+            deps.zikirReminderNotifier().cancelStreakReminder()
             Timber.d(
                 "ZikirStreakCheckWorker skipped: goal reached todayTotal=%d dailyGoal=%d",
                 todayTotal,
@@ -46,6 +48,7 @@ class ZikirStreakCheckWorker(
         val streak = deps.zikirRepository().getOrCreateStreak()
         val activeStreak = effectiveActiveStreak(streak)
         if (activeStreak <= 0) {
+            deps.zikirReminderNotifier().cancelStreakReminder()
             Timber.d("ZikirStreakCheckWorker skipped: no date-valid active streak")
             return Result.success()
         }
