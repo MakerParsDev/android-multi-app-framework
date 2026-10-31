@@ -196,8 +196,10 @@ fun ContentScreen(
                 }
             }
             // A short window must not let audio and actions consume the entire verse viewport.
+            val density = LocalDensity.current
             val compactHeight = shouldUseCompactReader(
-                with(LocalDensity.current) { LocalWindowInfo.current.containerSize.height.toDp().value }
+                heightDp = with(density) { LocalWindowInfo.current.containerSize.height.toDp().value },
+                fontScale = density.fontScale,
             )
             val bannerPosition = resolveReaderBannerPosition(showTopBanner, compactHeight)
             Column(
@@ -659,7 +661,10 @@ fun BottomModeSelector(
     }
 }
 
-internal fun shouldUseCompactReader(heightDp: Float): Boolean = heightDp < 420f
+// Large text makes the stacked reading modes and audio controls taller even on
+// nominally medium-height windows. Keep the whole reader vertically reachable.
+internal fun shouldUseCompactReader(heightDp: Float, fontScale: Float = 1f): Boolean =
+    heightDp < 420f || (fontScale >= 1.5f && heightDp < 720f)
 
 internal fun shouldStackReaderModes(widthDp: Float, fontScale: Float): Boolean =
     widthDp < 360f || (fontScale >= 1.3f && widthDp < 600f)
