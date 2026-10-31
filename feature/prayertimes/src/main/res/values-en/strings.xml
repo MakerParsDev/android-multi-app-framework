@@ -50,6 +50,8 @@
     <string name="prayertimes_alarm_title">Prayer Reminders</string>
     <string name="prayertimes_alarm_desc">Schedule local notifications for prayer times</string>
     <string name="prayertimes_alarm_enabled">Reminders requested</string>
+    <string name="prayertimes_alarm_row_enabled_a11y">%1$s reminder on</string>
+    <string name="prayertimes_alarm_row_disabled_a11y">%1$s reminder off</string>
     <string name="prayertimes_alarm_disabled">Alarm off</string>
     <string name="prayertimes_alarm_exact_enabled">More precise scheduling is enabled. Battery restrictions may still delay notifications.</string>
     <string name="prayertimes_alarm_exact_unavailable">Reminders use approximate timing and may be delayed by battery saver or Doze. You can optionally allow Alarms &amp; reminders access for more precise scheduling.</string>

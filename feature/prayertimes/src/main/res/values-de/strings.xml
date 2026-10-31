@@ -50,6 +50,8 @@
     <string name="prayertimes_alarm_title">Gebets-Erinnerungen</string>
     <string name="prayertimes_alarm_desc">Lokale Benachrichtigungen für Gebetszeiten planen</string>
     <string name="prayertimes_alarm_enabled">Erinnerungen gewünscht</string>
+    <string name="prayertimes_alarm_row_enabled_a11y">Erinnerung für %1$s an</string>
+    <string name="prayertimes_alarm_row_disabled_a11y">Erinnerung für %1$s aus</string>
     <string name="prayertimes_alarm_disabled">Alarm aus</string>
     <string name="prayertimes_alarm_exact_enabled">Genauere Zeitplanung ist aktiviert. Akkubeschränkungen können Benachrichtigungen dennoch verzögern.</string>
     <string name="prayertimes_alarm_exact_unavailable">Erinnerungen können durch Energiesparmodus oder Doze verspätet eintreffen. Für genauere Zeitplanung kannst du optional den Zugriff auf Alarme und Erinnerungen erlauben.</string>
