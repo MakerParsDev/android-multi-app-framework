@@ -39,6 +39,10 @@ class ContentReaderLocalePolicyTest {
         assertTrue(shouldUseCompactReader(283f))
         assertFalse(shouldUseCompactReader(627f))
         assertFalse(shouldUseCompactReader(420f))
+        assertFalse(shouldUseCompactReader(569f, 1f))
+        assertTrue(shouldUseCompactReader(569f, 2f))
+        assertTrue(shouldUseCompactReader(700f, 1.8f))
+        assertFalse(shouldUseCompactReader(720f, 2f))
     }
 
     @Test
