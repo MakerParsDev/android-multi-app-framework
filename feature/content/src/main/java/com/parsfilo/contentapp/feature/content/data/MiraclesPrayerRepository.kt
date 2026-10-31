@@ -3,6 +3,7 @@ package com.parsfilo.contentapp.feature.content.data
 import android.content.Context
 import com.parsfilo.contentapp.core.common.network.AppDispatchers
 import com.parsfilo.contentapp.core.common.network.Dispatcher
+import com.parsfilo.contentapp.core.model.MiraclesOriginalSupplication
 import com.parsfilo.contentapp.core.model.MiraclesOriginalVerse
 import com.parsfilo.contentapp.core.model.MiraclesPrayer
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -32,6 +33,7 @@ class AssetMiraclesPrayerRepository @Inject constructor(
             val jsonString = context.assets.open("data.json").bufferedReader().use { it.readText() }
             val jsonArray = JSONArray(jsonString)
             val verifiedArabic = loadVerifiedArabic()
+            val verifiedHadith = loadVerifiedHadith()
             val prayers = mutableListOf<MiraclesPrayer>()
 
             for (i in 0 until jsonArray.length()) {
@@ -44,6 +46,7 @@ class AssetMiraclesPrayerRepository @Inject constructor(
                         duaArapca = obj.getString("duaArapca"),
                         duaLatinOkunus = obj.optString("duaLatinOkunus", obj.optString("duaBesmele", "")),
                         originalArabicVerses = verifiedArabic[obj.getString("duaIsim")].orEmpty(),
+                        originalArabicSupplication = verifiedHadith[obj.getString("duaIsim")],
                     )
                 )
             }
@@ -92,6 +95,39 @@ class AssetMiraclesPrayerRepository @Inject constructor(
             }
         } catch (error: JSONException) {
             Timber.e(error, "Verified Quran verse index is invalid")
+            emptyMap()
+        }
+    }
+
+    // Optional separate sourced hadith extracts; never inherit Quran attribution.
+    private fun loadVerifiedHadith(): Map<String, MiraclesOriginalSupplication> {
+        val raw = try {
+            context.assets.open("verified_hadith_supplications.json")
+                .bufferedReader().use { it.readText() }
+        } catch (_: FileNotFoundException) {
+            return emptyMap()
+        } catch (error: IOException) {
+            Timber.e(error, "Verified hadith supplications could not be read")
+            return emptyMap()
+        }
+
+        return try {
+            val records = JSONObject(raw).getJSONArray("prayers")
+            buildMap {
+                for (i in 0 until records.length()) {
+                    val entry = records.getJSONObject(i)
+                    put(
+                        entry.getString("title"),
+                        MiraclesOriginalSupplication(
+                            reference = entry.getString("reference"),
+                            sourceUrl = entry.getString("sourceUrl"),
+                            arabic = entry.getString("arabic"),
+                        ),
+                    )
+                }
+            }
+        } catch (error: JSONException) {
+            Timber.e(error, "Verified hadith source index is invalid")
             emptyMap()
         }
     }
