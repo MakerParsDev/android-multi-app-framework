@@ -521,7 +521,7 @@ fun MiraclesListItem(
 
         Icon(
             imageVector = Icons.Filled.ChevronRight,
-            contentDescription = "Detay",
+            contentDescription = null, // Decorative; the entire named row is already clickable.
             tint = colorScheme.secondary,
             modifier = Modifier.size(dimens.iconMd)
         )
