@@ -510,7 +510,7 @@ fun MiraclesDetailHeader(
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Geri",
+                contentDescription = stringResource(R.string.content_navigate_back),
                 tint = MaterialTheme.colorScheme.secondary,
                 modifier = Modifier.size(dimens.iconMd)
             )

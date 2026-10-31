@@ -47,6 +47,12 @@ class ContentSecondaryHeaderA11yTest {
                 AppTheme(flavorName = "esmaulhusna") { content() }
             }
         }
+        if (!showSettings) {
+            rule.onNodeWithContentDescription(
+                localizedContext.getString(ContentR.string.content_navigate_back),
+            ).assertHasClickAction()
+            rule.onNodeWithContentDescription("Geri").assertDoesNotExist()
+        }
         if (showSettings) {
             rule.onNodeWithContentDescription(
                 localizedContext.getString(ContentR.string.content_open_settings),
