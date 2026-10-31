@@ -1,6 +1,7 @@
 package com.parsfilo.contentapp.ui
 
 import android.content.pm.ActivityInfo
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -54,6 +55,23 @@ class ContentReaderRotationRegressionTest {
             rule.activityRule.scenario.onActivity {
                 it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
             }
+        }
+    }
+
+    @Test
+    fun localizedArabicKeyboardDigitsCanJumpToLastVerse() {
+        assumeTrue(BuildConfig.FLAVOR_NAME == "vakiasuresi")
+        val goLabel =
+            InstrumentationRegistry.getInstrumentation().targetContext
+                .getString(R.string.content_jump_action)
+        rule.waitUntil(20_000) {
+            rule.onAllNodesWithTag("content_go_to_verse").fetchSemanticsNodes().isNotEmpty()
+        }
+        listOf("٩٦", "۹۶").forEach { localizedId ->
+            rule.onNodeWithTag("content_go_to_verse").performClick()
+            rule.onNodeWithTag("content_verse_number").performTextInput(localizedId)
+            rule.onNodeWithText(goLabel).assertIsEnabled().performClick()
+            waitForLastVerses()
         }
     }
 
