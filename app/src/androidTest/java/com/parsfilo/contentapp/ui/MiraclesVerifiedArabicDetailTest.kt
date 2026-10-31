@@ -92,6 +92,59 @@ class MiraclesVerifiedArabicDetailTest {
         checkDetail(index = 15, firstReference = "48:1", lastReference = "48:10", rtl = true)
     }
 
+    @Test
+    fun healingShowsCitedBukhariArabicNotTanzil() {
+        checkHadithDetail(index = 1, reference = "Sahih al-Bukhari 5675")
+    }
+
+    @Test
+    fun repentanceShowsCitedTirmidhiArabicNotTanzil() {
+        checkHadithDetail(index = 2, reference = "Jami at-Tirmidhi 3577")
+    }
+
+    @Test
+    fun protectionShowsCitedAhmadArabicNotTanzil() {
+        checkHadithDetail(index = 6, reference = "Musnad Ahmad 446")
+    }
+
+    @Test
+    fun courageShowsCitedAbuDawudArabicNotTanzil() {
+        checkHadithDetail(index = 18, reference = "Sunan Abi Dawud 3893")
+    }
+
+    private fun checkHadithDetail(index: Int, reference: String) {
+        assumeTrue(BuildConfig.FLAVOR_NAME == "mucizedualar")
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val prayers = runBlocking {
+            AssetMiraclesPrayerRepository(context, Dispatchers.IO).getPrayers()
+        }
+        assertEquals(20, prayers.size)
+        val prayer = prayers[index]
+        val hadith = requireNotNull(prayer.originalArabicSupplication)
+        assertEquals(reference, hadith.reference)
+        assertEquals(0, prayer.originalArabicVerses.size)
+        composeRule.setContent {
+            AppTheme(flavorName = "mucizedualar") {
+                MiraclesDetailScreen(
+                    uiState = MiraclesDetailUiState.Success(prayer, shouldShowAds = false),
+                )
+            }
+        }
+        val list = composeRule.onNodeWithTag("miracles_detail")
+        composeRule.onNodeWithText(
+            context.getString(
+                com.parsfilo.contentapp.feature.content.R.string.miracles_hadith_source,
+                reference,
+            )
+        ).assertIsDisplayed()
+        composeRule.onNodeWithText(hadith.arabic).assertExists()
+        composeRule.onNodeWithText(
+            context.getString(com.parsfilo.contentapp.feature.content.R.string.miracles_quran_tanzil_attribution)
+        ).assertDoesNotExist()
+        list.performScrollToNode(hasText(prayer.duaArapca))
+        composeRule.onNodeWithText(prayer.duaArapca).assertExists()
+    }
+
     private fun checkDetail(
         index: Int,
         firstReference: String,

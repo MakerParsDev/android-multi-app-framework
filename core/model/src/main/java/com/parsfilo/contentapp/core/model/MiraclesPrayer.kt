@@ -11,6 +11,7 @@ data class MiraclesPrayer(
     val duaArapca: String,
     val duaLatinOkunus: String = "",
     val originalArabicVerses: List<MiraclesOriginalVerse> = emptyList(),
+    val originalArabicSupplication: MiraclesOriginalSupplication? = null,
 ) {
     // Legacy Mucize Dualar data stores Latin phonetics in duaArapca.
     // Never present Latin text as original Arabic scripture.
@@ -25,5 +26,12 @@ data class MiraclesPrayer(
 // Original Quran Arabic is separate from legacy Latin phonetic data.
 data class MiraclesOriginalVerse(
     val reference: String,
+    val arabic: String,
+)
+
+// Source-specific classical hadith supplication: never label it as Quran/Tanzil.
+data class MiraclesOriginalSupplication(
+    val reference: String,
+    val sourceUrl: String,
     val arabic: String,
 )
