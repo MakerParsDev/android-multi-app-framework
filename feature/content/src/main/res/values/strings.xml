@@ -22,6 +22,7 @@
     <string name="miracles_original_arabic_unverified">Özgün Arapça metin henüz doğrulanmadı. Aşağıda mevcut Latin okunuş gösteriliyor.</string>
     <string name="miracles_play_all_audio">Tümünü Dinle</string>
     <string name="content_open_settings">Ayarları aç</string>
+    <string name="content_navigate_back">Geri</string>
     <string name="content_open_rewards">Ödülleri aç</string>
     <string name="content_translation_turkish_fallback">Türkçe meal (seçili dilde çeviri bulunamadı)</string>
     <string name="content_copy_turkish_translation">Türkçe meali kopyala</string>
