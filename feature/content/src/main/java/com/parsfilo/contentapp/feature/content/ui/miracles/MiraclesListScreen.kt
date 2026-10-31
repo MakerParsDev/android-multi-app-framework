@@ -395,7 +395,7 @@ fun MiraclesListHeader(
         ) {
             Icon(
                 imageVector = Icons.Filled.Settings,
-                contentDescription = "Ayarlar",
+                contentDescription = stringResource(R.string.content_open_settings),
                 tint = colorScheme.secondary,
                 modifier = Modifier.size(dimens.iconMd)
             )
@@ -432,7 +432,7 @@ fun MiraclesListHeader(
         ) {
             Icon(
                 imageVector = Icons.Filled.CardGiftcard,
-                contentDescription = "Ödüller",
+                contentDescription = stringResource(R.string.content_open_rewards),
                 tint = colorScheme.secondary,
                 modifier = Modifier.size(dimens.iconMd)
             )
