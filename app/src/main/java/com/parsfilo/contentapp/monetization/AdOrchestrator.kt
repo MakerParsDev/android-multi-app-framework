@@ -979,41 +979,47 @@ class AdOrchestrator
         private fun maybeRequestOpportunisticPreload(route: String) {
             val context = applicationContextRef ?: return
             if (!AdsConsentRuntimeState.canRequestAds.value) return
-            val policy = adsPolicyProvider.getPolicy()
-            if (!policy.isHotInterstitialRoute(route)) return
+            orchestratorScope.launch {
+                if (!adGateChecker.shouldShowAds.first() || !AdsConsentRuntimeState.canRequestAds.value) {
+                    Timber.d("Route-hint preload skipped: consent or ad-free entitlement gate closed")
+                    return@launch
+                }
+                val policy = adsPolicyProvider.getPolicy()
+                if (!policy.isHotInterstitialRoute(route)) return@launch
 
-            val interstitialPlacement = AdPlacement.INTERSTITIAL_NAV_BREAK
-            if (policy.shouldUseAggressiveInterstitialPreload(context.packageName) &&
-                policy.isInterstitialPlacementEnabled(interstitialPlacement) &&
-                !policy.isBlockedContext(route)
-            ) {
-                interstitialAdManager.loadAd(
-                    context,
-                    AppAdUnitIds.resolvePlacement(
+                val interstitialPlacement = AdPlacement.INTERSTITIAL_NAV_BREAK
+                if (policy.shouldUseAggressiveInterstitialPreload(context.packageName) &&
+                    policy.isInterstitialPlacementEnabled(interstitialPlacement) &&
+                    !policy.isBlockedContext(route)
+                ) {
+                    interstitialAdManager.loadAd(
                         context,
+                        AppAdUnitIds.resolvePlacement(
+                            context,
+                            interstitialPlacement,
+                            BuildConfig.USE_TEST_ADS,
+                        ),
                         interstitialPlacement,
-                        BuildConfig.USE_TEST_ADS,
-                    ),
-                    interstitialPlacement,
-                    route = route,
-                    loadReason = PreloadReason.ROUTE_HINT.analyticsValue,
-                )
-            }
+                        route = route,
+                        loadReason = PreloadReason.ROUTE_HINT.analyticsValue,
+                    )
+                }
 
-            val appOpenPlacement = AdPlacement.APP_OPEN_RESUME
-            if (policy.shouldUseAggressiveAppOpenPreload(context.packageName) &&
-                policy.isAppOpenPlacementEnabled(appOpenPlacement) &&
-                !policy.isBlockedContext(route)
-            ) {
-                appOpenAdManager.loadAd(
-                    AppAdUnitIds.resolvePlacement(
-                        context,
+                val appOpenPlacement = AdPlacement.APP_OPEN_RESUME
+                if (policy.shouldUseAggressiveAppOpenPreload(context.packageName) &&
+                    policy.isAppOpenPlacementEnabled(appOpenPlacement) &&
+                    !policy.isBlockedContext(route)
+                ) {
+                    appOpenAdManager.loadAd(
+                        AppAdUnitIds.resolvePlacement(
+                            context,
+                            appOpenPlacement,
+                            BuildConfig.USE_TEST_ADS,
+                        ),
                         appOpenPlacement,
-                        BuildConfig.USE_TEST_ADS,
-                    ),
-                    appOpenPlacement,
-                    loadReason = PreloadReason.ROUTE_HINT.analyticsValue,
-                )
+                        loadReason = PreloadReason.ROUTE_HINT.analyticsValue,
+                    )
+                }
             }
         }
 
