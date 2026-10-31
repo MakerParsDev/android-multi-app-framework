@@ -35,6 +35,7 @@ internal fun NextPrayerCountdownCard(
     nextPrayerTime: String,
     countdown: String,
 ) {
+    val countdownLabel = stringResource(R.string.prayertimes_countdown_label)
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -94,7 +95,7 @@ internal fun NextPrayerCountdownCard(
                     style = MaterialTheme.typography.bodyLarge.copy(fontFamily = prayerBodyFontFamily()),
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.semantics {
-                        contentDescription = "Kalan süre $animated"
+                        contentDescription = "$countdownLabel $animated"
                     },
                 )
             }
