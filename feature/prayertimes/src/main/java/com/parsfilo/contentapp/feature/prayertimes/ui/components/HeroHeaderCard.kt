@@ -47,6 +47,8 @@ internal fun HeroHeaderCard(
     onOpenQibla: () -> Unit,
 ) {
     val clock = SimpleDateFormat("HH:mm", Locale.US).format(currentTimeMillis)
+    val spokenClock = stringResource(R.string.prayertimes_clock_a11y, clock)
+    val spokenLocation = stringResource(R.string.prayertimes_location_label, locationName)
 
     Box(
         modifier = Modifier
@@ -105,7 +107,7 @@ internal fun HeroHeaderCard(
                 fontWeight = FontWeight.Bold,
                 color = PrayerTimesDesignTokens.GoldText,
                 modifier = Modifier.semantics {
-                    contentDescription = "Saat $clock"
+                    contentDescription = spokenClock
                 },
             )
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -131,7 +133,7 @@ internal fun HeroHeaderCard(
                 .background(PrayerTimesDesignTokens.AccentSecondary.copy(alpha = 0.25f))
                 .padding(horizontal = 14.dp, vertical = 8.dp)
                 .semantics {
-                    contentDescription = "Konum $locationName"
+                    contentDescription = spokenLocation
                 },
             color = PrayerTimesDesignTokens.HeaderText,
             style = MaterialTheme.typography.bodySmall.copy(fontFamily = prayerBodyFontFamily()),

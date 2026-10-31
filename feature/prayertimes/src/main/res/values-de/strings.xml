@@ -2,6 +2,8 @@
     <string name="prayertimes_title">Gebetszeiten</string>
     <string name="prayertimes_next_prayer">Nächstes Gebet: %1$s (%2$s)</string>
     <string name="prayertimes_next_prayer_title">Nächstes Gebet</string>
+    <string name="prayertimes_clock_a11y">Uhrzeit %1$s</string>
+    <string name="prayertimes_row_a11y">Zeit für %1$s: %2$s</string>
     <string name="prayertimes_countdown_label">Verbleibend:</string>
     <string name="prayertimes_refresh">Aktualisieren</string>
     <string name="prayertimes_change_location">Standort ändern</string>

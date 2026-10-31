@@ -2,6 +2,8 @@
     <string name="prayertimes_title">Namaz Vakitleri</string>
     <string name="prayertimes_next_prayer">Sıradaki vakit: %1$s (%2$s)</string>
     <string name="prayertimes_next_prayer_title">Bir Sonraki Vakit</string>
+    <string name="prayertimes_clock_a11y">Saat %1$s</string>
+    <string name="prayertimes_row_a11y">%1$s vakti: %2$s</string>
     <string name="prayertimes_countdown_label">Kalan:</string>
     <string name="prayertimes_refresh">Yenile</string>
     <string name="prayertimes_change_location">Konumu değiştir</string>

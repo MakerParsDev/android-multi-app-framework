@@ -2,6 +2,8 @@
     <string name="prayertimes_title">Prayer Times</string>
     <string name="prayertimes_next_prayer">Next prayer: %1$s (%2$s)</string>
     <string name="prayertimes_next_prayer_title">Next Prayer</string>
+    <string name="prayertimes_clock_a11y">Time %1$s</string>
+    <string name="prayertimes_row_a11y">Time for %1$s: %2$s</string>
     <string name="prayertimes_countdown_label">Remaining:</string>
     <string name="prayertimes_refresh">Refresh</string>
     <string name="prayertimes_change_location">Change location</string>

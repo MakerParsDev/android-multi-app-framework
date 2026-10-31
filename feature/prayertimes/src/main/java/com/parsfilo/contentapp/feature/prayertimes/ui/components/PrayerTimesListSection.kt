@@ -213,6 +213,12 @@ private fun PrayerTimeRow(
     val contentColor =
         if (rowState == PrayerRowState.ACTIVE) PrayerTimesDesignTokens.HeaderText else MaterialTheme.colorScheme.onSurface
 
+    val spokenPrayerTime = stringResource(
+        R.string.prayertimes_row_a11y,
+        stringResource(row.item.labelRes),
+        row.hm,
+    )
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -232,7 +238,7 @@ private fun PrayerTimeRow(
             )
             .padding(horizontal = 14.dp)
             .semantics {
-                contentDescription = "${row.item.key} namazı vakti ${row.hm.replace(':', ' ')}"
+                contentDescription = spokenPrayerTime
             },
         verticalAlignment = Alignment.CenterVertically,
     ) {
