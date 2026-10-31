@@ -689,6 +689,10 @@ class CounterViewModel @Inject constructor(
             preferencesDataSource.setZikirReminderMinute(settings.minute)
             preferencesDataSource.setZikirDailyGoal(settings.dailyGoal)
             preferencesDataSource.setZikirStreakReminderEnabled(settings.streakReminderEnabled)
+            // Opt-out is immediate; the periodic worker must not leave a stale warning visible.
+            if (!settings.streakReminderEnabled) {
+                zikirReminderNotifier.cancelStreakReminder()
+            }
             if (settings.enabled) {
                 val scheduleMode = try {
                     zikirReminderScheduler.scheduleDaily(settings.hour, settings.minute)
