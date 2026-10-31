@@ -488,9 +488,25 @@ class AdOrchestrator
                     )
                 },
             ) { completionReason ->
-                when (completionReason) {
-                    ShowCompletionReason.ATTEMPTED -> {
-                        Timber.d("AppOpen show completed after attempt; requesting reload")
+                val reloadReason = when (completionReason) {
+                    ShowCompletionReason.ATTEMPTED -> PreloadReason.POST_SHOW
+                    ShowCompletionReason.NOT_LOADED -> PreloadReason.NOT_LOADED_RECOVERY
+                    ShowCompletionReason.BLOCKED -> null
+                }
+                if (reloadReason == null) {
+                    Timber.d("AppOpen show completed while blocked; reload skipped")
+                } else {
+                    orchestratorScope.launch {
+                        // Entitlement and UMP consent can change before a full-screen
+                        // show-completion callback requests its follow-up preload.
+                        if (!AdsConsentRuntimeState.canRequestAds.value ||
+                            !adGateChecker.shouldShowAds.first() ||
+                            !AdsConsentRuntimeState.canRequestAds.value
+                        ) {
+                            Timber.d("AppOpen reload skipped: consent or ad-free entitlement gate closed")
+                            return@launch
+                        }
+                        Timber.d("AppOpen show completed; requesting reload reason=%s", reloadReason.analyticsValue)
                         appOpenAdManager.loadAd(
                             AppAdUnitIds.resolvePlacement(
                                 activity,
@@ -498,25 +514,8 @@ class AdOrchestrator
                                 BuildConfig.USE_TEST_ADS,
                             ),
                             AdPlacement.APP_OPEN_RESUME,
-                            loadReason = PreloadReason.POST_SHOW.analyticsValue,
+                            loadReason = reloadReason.analyticsValue,
                         )
-                    }
-                    ShowCompletionReason.NOT_LOADED -> {
-                        Timber.d(
-                            "AppOpen show completed without loaded ad; requesting top-up preload",
-                        )
-                        appOpenAdManager.loadAd(
-                            AppAdUnitIds.resolvePlacement(
-                                activity,
-                                AdPlacement.APP_OPEN_RESUME,
-                                BuildConfig.USE_TEST_ADS,
-                            ),
-                            AdPlacement.APP_OPEN_RESUME,
-                            loadReason = PreloadReason.NOT_LOADED_RECOVERY.analyticsValue,
-                        )
-                    }
-                    ShowCompletionReason.BLOCKED -> {
-                        Timber.d("AppOpen show completed while blocked; reload skipped")
                     }
                 }
             }
