@@ -263,7 +263,7 @@ fun PrayerDetailHeader(
         ) {
             Icon(
                 imageVector = Icons.Filled.CardGiftcard,
-                contentDescription = "Ödüller",
+                contentDescription = stringResource(R.string.content_open_rewards),
                 tint = MaterialTheme.colorScheme.secondary,
                 modifier = Modifier.size(dimens.iconMd)
             )
