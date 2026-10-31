@@ -11,6 +11,7 @@ import com.parsfilo.contentapp.feature.counter.alarm.ZikirReminderScheduler
 import com.parsfilo.contentapp.feature.counter.data.ZikirRepository
 import com.parsfilo.contentapp.feature.counter.model.CompletionPersistenceStatus
 import com.parsfilo.contentapp.feature.counter.model.CounterCheckpointStatus
+import com.parsfilo.contentapp.feature.counter.model.ReminderSettings
 import com.parsfilo.contentapp.feature.counter.model.ZikirItem
 import com.parsfilo.contentapp.feature.counter.model.ZikirSession
 import com.parsfilo.contentapp.feature.counter.sharing.ZikirShareHelper
@@ -18,6 +19,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -112,6 +114,31 @@ class CounterCompletionPersistenceTest {
         zikirShareHelper = share,
         ioDispatcher = dispatcher,
     )
+
+    @Test
+    fun disablingStreakReminderClearsPreviouslyDeliveredWarningImmediately() = runTest(dispatcher) {
+        val vm = viewModel()
+        runCurrent()
+
+        vm.onReminderSaved(ReminderSettings(enabled = false, streakReminderEnabled = false))
+        runCurrent()
+
+        coVerify(exactly = 1) { prefs.setZikirStreakReminderEnabled(false) }
+        verify(exactly = 1) { notifier.cancelStreakReminder() }
+        coVerify(exactly = 1) { reminderScheduler.scheduleStreakCheckWorker() }
+    }
+
+    @Test
+    fun savingEnabledStreakReminderDoesNotWithdrawValidWarning() = runTest(dispatcher) {
+        val vm = viewModel()
+        runCurrent()
+
+        vm.onReminderSaved(ReminderSettings(enabled = false, streakReminderEnabled = true))
+        runCurrent()
+
+        coVerify(exactly = 1) { prefs.setZikirStreakReminderEnabled(true) }
+        verify(exactly = 0) { notifier.cancelStreakReminder() }
+    }
 
     @Test
     fun optimisticTapIsNotAcknowledgedUntilSnapshotCompletes() = runTest(dispatcher) {
