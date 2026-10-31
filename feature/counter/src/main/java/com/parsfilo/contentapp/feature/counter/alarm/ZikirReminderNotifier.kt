@@ -42,7 +42,7 @@ class ZikirReminderNotifier @Inject constructor(
 
     suspend fun showStreakReminder(streak: Int) {
         showNotification(
-            notificationId = 94002,
+            notificationId = STREAK_NOTIFICATION_ID,
             title = context.getString(R.string.notif_streak_title),
             body = context.resources.getQuantityString(
                 R.plurals.notif_streak_body,
@@ -50,6 +50,12 @@ class ZikirReminderNotifier @Inject constructor(
                 streak,
             ),
         )
+    }
+
+    /** Withdraw only a stale streak warning; keep daily and goal notifications untouched. */
+    fun cancelStreakReminder() {
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+        manager?.cancel(STREAK_NOTIFICATION_ID)
     }
 
     suspend fun showGoalCompleted(goal: Int) {
@@ -125,6 +131,7 @@ class ZikirReminderNotifier @Inject constructor(
     }
 
     companion object {
+        private const val STREAK_NOTIFICATION_ID = 94002
         const val CHANNEL_ID = "zikir_reminders"
     }
 }
