@@ -3,8 +3,8 @@ package com.parsfilo.contentapp.feature.content.data
 import android.content.Context
 import com.parsfilo.contentapp.core.common.network.AppDispatchers
 import com.parsfilo.contentapp.core.common.network.Dispatcher
-import com.parsfilo.contentapp.core.model.MiraclesOriginalVerse
 import com.parsfilo.contentapp.core.model.MiraclesOriginalSupplication
+import com.parsfilo.contentapp.core.model.MiraclesOriginalVerse
 import com.parsfilo.contentapp.core.model.MiraclesPrayer
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
