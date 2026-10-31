@@ -68,6 +68,42 @@ class AdOrchestratorPreloadGateTest {
     }
 
     @Test
+    fun pauseDoesNotPreloadForPremiumOrTemporaryAdFreeUsers() = runTest {
+        val orchestrator =
+            AdOrchestrator(
+                manager,
+                appOpen,
+                interstitial,
+                native,
+                rewarded,
+                rewardedInterstitial,
+                mockk<AdRevenueLogger>(relaxed = true),
+                gateChecker,
+                policies,
+                mockk<PreferencesDataSource>(relaxed = true),
+                mockk<AdsPlacementPolicyEvaluator>(relaxed = true),
+                mockk<RewardedInterstitialCoordinator>(relaxed = true),
+                mockk<AppOpenEligibilityTracker>(relaxed = true),
+                mockk<AdsConfigValidator>(relaxed = true),
+            )
+        val context = mockk<Context>(relaxed = true)
+        every { context.getString(any()) } returns "test-app-open-id"
+        every { context.packageName } returns "com.parsfilo.ismiazamduasi"
+        AdsConsentRuntimeState.update(true)
+
+        // AdGateChecker maps both premium and rewarded ad-free entitlements to false.
+        adsAllowed.value = false
+        orchestrator.onAppPaused(context)
+        runCurrent()
+        verify(exactly = 0) { appOpen.loadAd(any(), any(), any()) }
+
+        adsAllowed.value = true
+        orchestrator.onAppPaused(context)
+        runCurrent()
+        verify(exactly = 1) { appOpen.loadAd(any(), any(), any()) }
+    }
+
+    @Test
     fun preloadsOnlyAfterConsentGateAndSdkReadyThenClearsOnRevocation() = runTest {
         val orchestrator =
             AdOrchestrator(

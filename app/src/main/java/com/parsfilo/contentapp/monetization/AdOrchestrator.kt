@@ -146,16 +146,23 @@ class AdOrchestrator
                 Timber.d("AppOpen preload skipped on pause: ready ad already cached")
                 return
             }
-            Timber.d("AppOpen preload requested on pause route=%s", adSessionContext.activeRoute)
-            appOpenAdManager.loadAd(
-                AppAdUnitIds.resolvePlacement(
-                    context,
+            orchestratorScope.launch {
+                if (!adGateChecker.shouldShowAds.first()) {
+                    Timber.d("AppOpen preload skipped on pause: premium or rewarded-ad-free")
+                    return@launch
+                }
+                if (appOpenAdManager.isAdReady()) return@launch
+                Timber.d("AppOpen preload requested on pause route=%s", adSessionContext.activeRoute)
+                appOpenAdManager.loadAd(
+                    AppAdUnitIds.resolvePlacement(
+                        context,
+                        AdPlacement.APP_OPEN_RESUME,
+                        BuildConfig.USE_TEST_ADS,
+                    ),
                     AdPlacement.APP_OPEN_RESUME,
-                    BuildConfig.USE_TEST_ADS,
-                ),
-                AdPlacement.APP_OPEN_RESUME,
-                loadReason = PreloadReason.PAUSE.analyticsValue,
-            )
+                    loadReason = PreloadReason.PAUSE.analyticsValue,
+                )
+            }
         }
 
         fun isAppOpenAdShowing(): Boolean = appOpenAdManager.isShowingAdNow()
