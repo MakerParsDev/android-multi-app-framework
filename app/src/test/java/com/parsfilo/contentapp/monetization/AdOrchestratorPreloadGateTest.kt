@@ -4,6 +4,8 @@ import android.app.Activity
 import android.content.Context
 import com.parsfilo.contentapp.BuildConfig
 import com.parsfilo.contentapp.core.datastore.PreferencesDataSource
+import com.parsfilo.contentapp.core.datastore.UserPreferencesData
+import com.parsfilo.contentapp.feature.ads.AdEligibility
 import com.parsfilo.contentapp.feature.ads.AdGateChecker
 import com.parsfilo.contentapp.feature.ads.AdManager
 import com.parsfilo.contentapp.feature.ads.AdRevenueLogger
@@ -12,6 +14,7 @@ import com.parsfilo.contentapp.feature.ads.AdsPlacementPolicyEvaluator
 import com.parsfilo.contentapp.feature.ads.AdsPolicyConfig
 import com.parsfilo.contentapp.feature.ads.AdsPolicyProvider
 import com.parsfilo.contentapp.feature.ads.AppOpenAdManager
+import com.parsfilo.contentapp.feature.ads.AppOpenAdManager.ShowCompletionReason
 import com.parsfilo.contentapp.feature.ads.AppOpenEligibilityTracker
 import com.parsfilo.contentapp.feature.ads.InterstitialAdManager
 import com.parsfilo.contentapp.feature.ads.NativeAdManager
@@ -19,12 +22,14 @@ import com.parsfilo.contentapp.feature.ads.RewardedAdManager
 import com.parsfilo.contentapp.feature.ads.RewardedInterstitialAdManager
 import com.parsfilo.contentapp.feature.ads.RewardedInterstitialCoordinator
 import com.parsfilo.contentapp.product.AppProductDefinition
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
@@ -66,6 +71,81 @@ class AdOrchestratorPreloadGateTest {
     fun cleanup() {
         AdsConsentRuntimeState.update(false)
         Dispatchers.resetMain()
+    }
+
+    @Test
+    fun appOpenCompletionDoesNotReloadAfterAdFreeEntitlementBegins() = runTest {
+        for (reason in listOf(ShowCompletionReason.ATTEMPTED, ShowCompletionReason.NOT_LOADED)) {
+            adsAllowed.value = true
+            AdsConsentRuntimeState.update(true)
+            val preferences = mockk<PreferencesDataSource>()
+            every { preferences.userData } returns flowOf(
+                UserPreferencesData(
+                    darkMode = false,
+                    displayMode = "default",
+                    fontSize = 16,
+                    developerModeEnabled = false,
+                    isPremium = false,
+                    lastAppOpenAdShown = 0L,
+                    rewardedAdFreeUntil = 0L,
+                    rewardWatchCount = 0,
+                    lastInterstitialShown = 0L,
+                    lastRewardedInterstitialShown = 0L,
+                    notificationsEnabled = true,
+                ),
+            )
+            val eligibility = mockk<AdsPlacementPolicyEvaluator>()
+            every { eligibility.evaluateAppOpen(any()) } returns AdEligibility.Allowed
+            val tracker = mockk<AppOpenEligibilityTracker>()
+            every { tracker.onResume(any()) } returns AppOpenEligibilityTracker.ResumeSnapshot(
+                isColdStart = true,
+                resumeGapMs = null,
+                sessionCount = 1,
+            )
+            val adManager = mockk<AppOpenAdManager>(relaxed = true)
+            var closeGateOnCompletion = true
+            var revokeConsentOnCompletion = false
+            coEvery { adManager.showAdIfAvailable(any(), any(), any(), any(), any()) } coAnswers {
+                // Entitlement or UMP consent can change while the full-screen ad is finishing.
+                if (closeGateOnCompletion) adsAllowed.value = false
+                if (revokeConsentOnCompletion) AdsConsentRuntimeState.update(false)
+                arg<(ShowCompletionReason) -> Unit>(4)(reason)
+            }
+            val orchestrator = AdOrchestrator(
+                manager,
+                adManager,
+                interstitial,
+                native,
+                rewarded,
+                rewardedInterstitial,
+                mockk<AdRevenueLogger>(relaxed = true),
+                gateChecker,
+                policies,
+                preferences,
+                eligibility,
+                mockk<RewardedInterstitialCoordinator>(relaxed = true),
+                tracker,
+                mockk<AdsConfigValidator>(relaxed = true),
+            )
+            val activity = mockk<Activity>(relaxed = true)
+            every { activity.getString(any()) } returns "test-app-open-id"
+            orchestrator.showAppOpenAdIfEligible(activity)
+            runCurrent()
+            verify(exactly = 0) { adManager.loadAd(any(), any(), any()) }
+
+            // After the gate reopens, the existing post-show reload must still work.
+            closeGateOnCompletion = false
+            adsAllowed.value = true
+            orchestrator.showAppOpenAdIfEligible(activity)
+            runCurrent()
+            verify(exactly = 1) { adManager.loadAd(any(), any(), any()) }
+
+            revokeConsentOnCompletion = true
+            AdsConsentRuntimeState.update(true)
+            orchestrator.showAppOpenAdIfEligible(activity)
+            runCurrent()
+            verify(exactly = 1) { adManager.loadAd(any(), any(), any()) }
+        }
     }
 
     @Test
