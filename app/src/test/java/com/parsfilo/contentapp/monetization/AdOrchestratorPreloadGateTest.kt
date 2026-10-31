@@ -9,6 +9,7 @@ import com.parsfilo.contentapp.feature.ads.AdManager
 import com.parsfilo.contentapp.feature.ads.AdRevenueLogger
 import com.parsfilo.contentapp.feature.ads.AdsConsentRuntimeState
 import com.parsfilo.contentapp.feature.ads.AdsPlacementPolicyEvaluator
+import com.parsfilo.contentapp.feature.ads.AdsPolicyConfig
 import com.parsfilo.contentapp.feature.ads.AdsPolicyProvider
 import com.parsfilo.contentapp.feature.ads.AppOpenAdManager
 import com.parsfilo.contentapp.feature.ads.AppOpenEligibilityTracker
@@ -65,6 +66,61 @@ class AdOrchestratorPreloadGateTest {
     fun cleanup() {
         AdsConsentRuntimeState.update(false)
         Dispatchers.resetMain()
+    }
+
+    @Test
+    fun routeHintPreloadRespectsAdFreeEntitlementsAndConsent() = runTest {
+        val routePolicy = mockk<AdsPolicyConfig>()
+        every { policies.getPolicy() } returns routePolicy
+        every { routePolicy.isHotInterstitialRoute(any()) } returns true
+        every { routePolicy.shouldUseAggressiveInterstitialPreload(any()) } returns true
+        every { routePolicy.shouldUseAggressiveAppOpenPreload(any()) } returns true
+        every { routePolicy.isInterstitialPlacementEnabled(any()) } returns true
+        every { routePolicy.isAppOpenPlacementEnabled(any()) } returns true
+        every { routePolicy.isBlockedContext(any()) } returns false
+        val orchestrator =
+            AdOrchestrator(
+                manager,
+                appOpen,
+                interstitial,
+                native,
+                rewarded,
+                rewardedInterstitial,
+                mockk<AdRevenueLogger>(relaxed = true),
+                gateChecker,
+                policies,
+                mockk<PreferencesDataSource>(relaxed = true),
+                mockk<AdsPlacementPolicyEvaluator>(relaxed = true),
+                mockk<RewardedInterstitialCoordinator>(relaxed = true),
+                mockk<AppOpenEligibilityTracker>(relaxed = true),
+                mockk<AdsConfigValidator>(relaxed = true),
+            )
+        val context = mockk<Context>(relaxed = true)
+        every { context.getString(any()) } returns "test-ad-id"
+        every { context.packageName } returns "com.parsfilo.mucizedualar"
+        val activity = mockk<Activity>(relaxed = true)
+        every { activity.applicationContext } returns context
+        orchestrator.initialize(activity, this)
+        runCurrent()
+
+        AdsConsentRuntimeState.update(true)
+        adsAllowed.value = false
+        orchestrator.updateSessionContext(activeRoute = "content")
+        runCurrent()
+        verify(exactly = 0) { interstitial.loadAd(any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { appOpen.loadAd(any(), any(), any()) }
+
+        adsAllowed.value = true
+        orchestrator.updateSessionContext(activeRoute = "prayer_list")
+        runCurrent()
+        verify(exactly = 1) { interstitial.loadAd(any(), any(), any(), any(), any()) }
+        verify(exactly = 1) { appOpen.loadAd(any(), any(), any()) }
+
+        AdsConsentRuntimeState.update(false)
+        orchestrator.updateSessionContext(activeRoute = "prayer_detail")
+        runCurrent()
+        verify(exactly = 1) { interstitial.loadAd(any(), any(), any(), any(), any()) }
+        verify(exactly = 1) { appOpen.loadAd(any(), any(), any()) }
     }
 
     @Test
