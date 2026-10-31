@@ -22,6 +22,7 @@
     <string name="miracles_original_arabic_unverified">Original Arabic text has not been verified. The existing Latin pronunciation is shown below.</string>
     <string name="miracles_play_all_audio">Listen to All</string>
     <string name="content_open_settings">Open settings</string>
+    <string name="content_navigate_back">Back</string>
     <string name="content_open_rewards">Open rewards</string>
     <string name="content_translation_turkish_fallback">Turkish translation (not available in this language)</string>
     <string name="content_copy_turkish_translation">Copy Turkish translation</string>
