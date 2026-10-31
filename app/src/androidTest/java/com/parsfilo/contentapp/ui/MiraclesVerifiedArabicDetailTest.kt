@@ -112,6 +112,29 @@ class MiraclesVerifiedArabicDetailTest {
         checkHadithDetail(index = 18, reference = "Sunan Abi Dawud 3893")
     }
 
+    @Test
+    fun unsourcedPrayerStillExplainsThatOriginalArabicIsUnverified() {
+        assumeTrue(BuildConfig.FLAVOR_NAME == "mucizedualar")
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val prayers = runBlocking {
+            AssetMiraclesPrayerRepository(context, Dispatchers.IO).getPrayers()
+        }
+        val prayer = prayers[4] // The held insomnia record has no verified original.
+        assertEquals(0, prayer.originalArabicVerses.size)
+        assertEquals(null, prayer.originalArabicSupplication)
+        composeRule.setContent {
+            AppTheme(flavorName = "mucizedualar") {
+                MiraclesDetailScreen(
+                    uiState = MiraclesDetailUiState.Success(prayer, shouldShowAds = false),
+                )
+            }
+        }
+        composeRule.onNodeWithTag("miracles_detail").performScrollToNode(hasText(prayer.duaArapca))
+        composeRule.onNodeWithText(
+            context.getString(com.parsfilo.contentapp.feature.content.R.string.miracles_original_arabic_unverified)
+        ).assertExists()
+    }
+
     private fun checkHadithDetail(index: Int, reference: String) {
         assumeTrue(BuildConfig.FLAVOR_NAME == "mucizedualar")
         val context = InstrumentationRegistry.getInstrumentation().targetContext
@@ -138,6 +161,10 @@ class MiraclesVerifiedArabicDetailTest {
             )
         ).assertIsDisplayed()
         composeRule.onNodeWithText(hadith.arabic).assertExists()
+        // A separately sourced hadith Arabic original must not be described as unverified.
+        composeRule.onNodeWithText(
+            context.getString(com.parsfilo.contentapp.feature.content.R.string.miracles_original_arabic_unverified)
+        ).assertDoesNotExist()
         composeRule.onNodeWithText(
             context.getString(com.parsfilo.contentapp.feature.content.R.string.miracles_quran_tanzil_attribution)
         ).assertDoesNotExist()

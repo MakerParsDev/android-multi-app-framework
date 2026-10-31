@@ -330,6 +330,7 @@ fun MiraclesDetailScreen(
                             if (variant == MiraclesContentVariant.MUCIZEDUALAR) {
                                 if (
                                     uiState.prayer.originalArabicVerses.isEmpty() &&
+                                    uiState.prayer.originalArabicSupplication == null &&
                                     !uiState.prayer.hasArabicScript
                                 ) {
                                     Text(
