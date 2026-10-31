@@ -12,6 +12,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
+import io.mockk.verify
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -59,6 +60,7 @@ class ZikirStreakCheckWorkerTest {
 
         assertThat(runWorker()).isEqualTo(androidx.work.ListenableWorker.Result.success())
         coVerify(exactly = 0) { notifier.showStreakReminder(any()) }
+        verify(exactly = 1) { notifier.cancelStreakReminder() }
     }
 
     @Test
@@ -67,6 +69,7 @@ class ZikirStreakCheckWorkerTest {
 
         assertThat(runWorker()).isEqualTo(androidx.work.ListenableWorker.Result.success())
         coVerify(exactly = 1) { notifier.showStreakReminder(4) }
+        verify(exactly = 0) { notifier.cancelStreakReminder() }
     }
 
     @Test
@@ -76,6 +79,7 @@ class ZikirStreakCheckWorkerTest {
         assertThat(runWorker()).isEqualTo(androidx.work.ListenableWorker.Result.success())
         coVerify(exactly = 0) { repository.getOrCreateStreak() }
         coVerify(exactly = 0) { notifier.showStreakReminder(any()) }
+        verify(exactly = 1) { notifier.cancelStreakReminder() }
     }
 
     @Test
@@ -85,6 +89,7 @@ class ZikirStreakCheckWorkerTest {
         assertThat(runWorker()).isEqualTo(androidx.work.ListenableWorker.Result.success())
         coVerify(exactly = 0) { repository.getOrCreateStreak() }
         coVerify(exactly = 0) { notifier.showStreakReminder(any()) }
+        verify(exactly = 1) { notifier.cancelStreakReminder() }
     }
 
     private suspend fun runWorker(): androidx.work.ListenableWorker.Result {
