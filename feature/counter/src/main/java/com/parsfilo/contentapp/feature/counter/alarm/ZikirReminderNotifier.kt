@@ -14,6 +14,8 @@ import com.parsfilo.contentapp.core.datastore.PreferencesDataSource
 import com.parsfilo.contentapp.feature.counter.R
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
+import java.util.Calendar
+import java.util.TimeZone
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -49,6 +51,12 @@ class ZikirReminderNotifier @Inject constructor(
                 streak,
                 streak,
             ),
+            // An unclicked evening warning must not survive into the following day
+            // if WorkManager is delayed or the user never launches the app.
+            timeoutAfterMillis = millisUntilNextLocalMidnight(
+                System.currentTimeMillis(),
+                TimeZone.getDefault(),
+            ),
         )
     }
 
@@ -74,6 +82,7 @@ class ZikirReminderNotifier @Inject constructor(
         notificationId: Int,
         title: String,
         body: String,
+        timeoutAfterMillis: Long? = null,
     ) {
         if (!shouldShowNotification()) return
 
@@ -104,6 +113,7 @@ class ZikirReminderNotifier @Inject constructor(
             .setAutoCancel(true)
             .apply {
                 contentIntent?.let { setContentIntent(it) }
+                timeoutAfterMillis?.let { setTimeoutAfter(it) }
             }
             .build()
 
@@ -134,4 +144,18 @@ class ZikirReminderNotifier @Inject constructor(
         private const val STREAK_NOTIFICATION_ID = 94002
         const val CHANNEL_ID = "zikir_reminders"
     }
+}
+
+// Local-midnight expiry uses actual elapsed duration (23/25h on DST days).
+// NotificationManager auto-removes it without a follow-up worker run.
+internal fun millisUntilNextLocalMidnight(nowMillis: Long, zone: TimeZone): Long {
+    val nextMidnight = Calendar.getInstance(zone).apply {
+        timeInMillis = nowMillis
+        add(Calendar.DAY_OF_MONTH, 1)
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+    return (nextMidnight - nowMillis).coerceAtLeast(1L)
 }
