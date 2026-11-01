@@ -113,6 +113,44 @@ class MiraclesVerifiedArabicDetailTest {
     }
 
     @Test
+    fun successPrayerShowsCommentarySourceButNeverHadithAttribution() {
+        assumeTrue(BuildConfig.FLAVOR_NAME == "mucizedualar")
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val prayers = runBlocking {
+            AssetMiraclesPrayerRepository(context, Dispatchers.IO).getPrayers()
+        }
+        val prayer = prayers[10]
+        val scholarly = requireNotNull(prayer.originalArabicScholarlySupplication)
+        assertEquals(0, prayer.originalArabicVerses.size)
+        assertEquals(null, prayer.originalArabicSupplication)
+        composeRule.setContent {
+            AppTheme(flavorName = "mucizedualar") {
+                MiraclesDetailScreen(
+                    uiState = MiraclesDetailUiState.Success(prayer, shouldShowAds = false),
+                )
+            }
+        }
+        val sourceLabel = context.getString(
+            com.parsfilo.contentapp.feature.content.R.string.miracles_scholarly_source,
+            scholarly.reference,
+        )
+        composeRule.onNodeWithText(sourceLabel).assertIsDisplayed()
+        composeRule.onNodeWithText(scholarly.arabic).assertExists()
+        composeRule.onNodeWithText(
+            context.getString(
+                com.parsfilo.contentapp.feature.content.R.string.miracles_hadith_source,
+                scholarly.reference,
+            )
+        ).assertDoesNotExist()
+        composeRule.onNodeWithText(
+            context.getString(com.parsfilo.contentapp.feature.content.R.string.miracles_original_arabic_unverified)
+        ).assertDoesNotExist()
+        composeRule.onNodeWithTag("miracles_detail")
+            .performScrollToNode(hasText(prayer.duaArapca))
+        composeRule.onNodeWithText(prayer.duaArapca).assertExists()
+    }
+
+    @Test
     fun unsourcedPrayerStillExplainsThatOriginalArabicIsUnverified() {
         assumeTrue(BuildConfig.FLAVOR_NAME == "mucizedualar")
         val context = InstrumentationRegistry.getInstrumentation().targetContext

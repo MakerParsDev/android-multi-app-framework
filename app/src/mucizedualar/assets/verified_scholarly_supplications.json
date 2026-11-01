@@ -1,0 +1,14 @@
+{
+  "source": {
+    "name": "Classical scholarly supplication wording (not attributed as an authenticated Prophetic hadith)",
+    "notice": "The exact short prayer phrase appears in Ali al-Qari's Mirqat al-Mafatih commentary on istikhara. This is a historical literary attestation, not evidence of a sahih hadith, a guaranteed outcome or a medical claim. The classical scholarly wording is public-domain; only the short original Arabic phrase is included, not the modern website's editorial content."
+  },
+  "prayers": [
+    {
+      "title": "Başarı duası",
+      "reference": "Ali al-Qari, Mirqat al-Mafatih, Book of Prayer, Bab al-Tatawwu, p. 987",
+      "sourceUrl": "https://www.islamweb.net/ar/library/content/79/2643/",
+      "arabic": "اللهم خر لي واختر لي ولا تكلني إلى اختياري"
+    }
+  ]
+}
