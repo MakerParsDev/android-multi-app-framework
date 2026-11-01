@@ -16,6 +16,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.TimeZone
 import java.util.concurrent.TimeUnit
 
 @RunWith(RobolectricTestRunner::class)
@@ -74,7 +75,7 @@ class ZikirReminderNotifierTest {
         val notifications = manager.activeNotifications.associateBy { it.id }
         val streakTimeout = notifications.getValue(94002).notification.timeoutAfter
         assertThat(streakTimeout).isGreaterThan(0L)
-        assertThat(streakTimeout).isAtMost(24 * 60 * 60 * 1000L)
+        assertThat(streakTimeout).isAtMost(25 * 60 * 60 * 1000L)
         assertThat(notifications.getValue(94001).notification.timeoutAfter).isEqualTo(0L)
         assertThat(notifications.getValue(94003).notification.timeoutAfter).isEqualTo(0L)
     }
@@ -85,20 +86,20 @@ class ZikirReminderNotifierTest {
         val berlin = ZoneId.of("Europe/Berlin")
         assertThat(
             millisUntilNextLocalMidnight(
-                LocalDate.of(2026, 11, 1).atTime(23, 59, 59).atZone(istanbul).toInstant(),
-                istanbul,
+                LocalDate.of(2026, 11, 1).atTime(23, 59, 59).atZone(istanbul).toInstant().toEpochMilli(),
+                TimeZone.getTimeZone(istanbul),
             ),
         ).isEqualTo(1_000L)
         assertThat(
             millisUntilNextLocalMidnight(
-                LocalDate.of(2026, 3, 29).atStartOfDay(berlin).toInstant(),
-                berlin,
+                LocalDate.of(2026, 3, 29).atStartOfDay(berlin).toInstant().toEpochMilli(),
+                TimeZone.getTimeZone(berlin),
             ),
         ).isEqualTo(TimeUnit.HOURS.toMillis(23))
         assertThat(
             millisUntilNextLocalMidnight(
-                LocalDate.of(2026, 10, 25).atStartOfDay(berlin).toInstant(),
-                berlin,
+                LocalDate.of(2026, 10, 25).atStartOfDay(berlin).toInstant().toEpochMilli(),
+                TimeZone.getTimeZone(berlin),
             ),
         ).isEqualTo(TimeUnit.HOURS.toMillis(25))
     }

@@ -14,9 +14,8 @@ import com.parsfilo.contentapp.core.datastore.PreferencesDataSource
 import com.parsfilo.contentapp.feature.counter.R
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
-import java.time.Duration
-import java.time.Instant
-import java.time.ZoneId
+import java.util.Calendar
+import java.util.TimeZone
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -55,8 +54,8 @@ class ZikirReminderNotifier @Inject constructor(
             // An unclicked evening warning must not survive into the following day
             // if WorkManager is delayed or the user never launches the app.
             timeoutAfterMillis = millisUntilNextLocalMidnight(
-                Instant.now(),
-                ZoneId.systemDefault(),
+                System.currentTimeMillis(),
+                TimeZone.getDefault(),
             ),
         )
     }
@@ -149,7 +148,14 @@ class ZikirReminderNotifier @Inject constructor(
 
 // Local-midnight expiry uses actual elapsed duration (23/25h on DST days).
 // NotificationManager auto-removes it without a follow-up worker run.
-internal fun millisUntilNextLocalMidnight(now: Instant, zone: ZoneId): Long {
-    val nextMidnight = now.atZone(zone).toLocalDate().plusDays(1).atStartOfDay(zone).toInstant()
-    return Duration.between(now, nextMidnight).toMillis().coerceAtLeast(1L)
+internal fun millisUntilNextLocalMidnight(nowMillis: Long, zone: TimeZone): Long {
+    val nextMidnight = Calendar.getInstance(zone).apply {
+        timeInMillis = nowMillis
+        add(Calendar.DAY_OF_MONTH, 1)
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+    return (nextMidnight - nowMillis).coerceAtLeast(1L)
 }
