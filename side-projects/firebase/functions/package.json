@@ -33,7 +33,7 @@
     "devDependencies": {
         "eslint": "^10.13.0",
         "typescript": "^5.7.0",
-        "typescript-eslint": "^8.72.0"
+        "typescript-eslint": "^8.72.1"
     },
     "overrides": {
         "brace-expansion": "^1.1.18",
