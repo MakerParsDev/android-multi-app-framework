@@ -194,7 +194,10 @@ fun MiraclesDetailScreen(
                     }
 
                     if (variant == MiraclesContentVariant.MUCIZEDUALAR) {
-                        uiState.prayer.originalArabicSupplication?.let { supplication ->
+                        val hadithSupplication = uiState.prayer.originalArabicSupplication
+                        val sourcedSupplication = hadithSupplication
+                            ?: uiState.prayer.originalArabicScholarlySupplication
+                        sourcedSupplication?.let { supplication ->
                             item {
                                 MiraclesDetailSectionCard(
                                     label = stringResource(R.string.miracles_section_arabic),
@@ -202,9 +205,14 @@ fun MiraclesDetailScreen(
                                     borderColor = colorScheme.secondary.copy(alpha = 0.3f),
                                 ) {
                                     Column(verticalArrangement = Arrangement.spacedBy(dimens.space12)) {
+                                        val sourceLabel = if (hadithSupplication != null) {
+                                            R.string.miracles_hadith_source
+                                        } else {
+                                            R.string.miracles_scholarly_source
+                                        }
                                         Text(
                                             text = stringResource(
-                                                R.string.miracles_hadith_source,
+                                                sourceLabel,
                                                 supplication.reference,
                                             ),
                                             style = MaterialTheme.typography.bodySmall,
@@ -331,6 +339,7 @@ fun MiraclesDetailScreen(
                                 if (
                                     uiState.prayer.originalArabicVerses.isEmpty() &&
                                     uiState.prayer.originalArabicSupplication == null &&
+                                    uiState.prayer.originalArabicScholarlySupplication == null &&
                                     !uiState.prayer.hasArabicScript
                                 ) {
                                     Text(

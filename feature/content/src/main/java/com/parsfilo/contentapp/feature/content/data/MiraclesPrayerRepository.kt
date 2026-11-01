@@ -33,7 +33,8 @@ class AssetMiraclesPrayerRepository @Inject constructor(
             val jsonString = context.assets.open("data.json").bufferedReader().use { it.readText() }
             val jsonArray = JSONArray(jsonString)
             val verifiedArabic = loadVerifiedArabic()
-            val verifiedHadith = loadVerifiedHadith()
+            val verifiedHadith = loadSourcedSupplications("verified_hadith_supplications.json")
+            val verifiedScholarly = loadSourcedSupplications("verified_scholarly_supplications.json")
             val prayers = mutableListOf<MiraclesPrayer>()
 
             for (i in 0 until jsonArray.length()) {
@@ -47,6 +48,7 @@ class AssetMiraclesPrayerRepository @Inject constructor(
                         duaLatinOkunus = obj.optString("duaLatinOkunus", obj.optString("duaBesmele", "")),
                         originalArabicVerses = verifiedArabic[obj.getString("duaIsim")].orEmpty(),
                         originalArabicSupplication = verifiedHadith[obj.getString("duaIsim")],
+                        originalArabicScholarlySupplication = verifiedScholarly[obj.getString("duaIsim")],
                     )
                 )
             }
@@ -100,14 +102,14 @@ class AssetMiraclesPrayerRepository @Inject constructor(
     }
 
     // Optional separate sourced hadith extracts; never inherit Quran attribution.
-    private fun loadVerifiedHadith(): Map<String, MiraclesOriginalSupplication> {
+    private fun loadSourcedSupplications(assetName: String): Map<String, MiraclesOriginalSupplication> {
         val raw = try {
-            context.assets.open("verified_hadith_supplications.json")
+            context.assets.open(assetName)
                 .bufferedReader().use { it.readText() }
         } catch (_: FileNotFoundException) {
             return emptyMap()
         } catch (error: IOException) {
-            Timber.e(error, "Verified hadith supplications could not be read")
+            Timber.e(error, "Sourced supplications asset could not be read: %s", assetName)
             return emptyMap()
         }
 
@@ -127,7 +129,7 @@ class AssetMiraclesPrayerRepository @Inject constructor(
                 }
             }
         } catch (error: JSONException) {
-            Timber.e(error, "Verified hadith source index is invalid")
+            Timber.e(error, "Sourced supplications index is invalid: %s", assetName)
             emptyMap()
         }
     }
