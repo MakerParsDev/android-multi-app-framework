@@ -14,6 +14,9 @@ import com.parsfilo.contentapp.core.datastore.PreferencesDataSource
 import com.parsfilo.contentapp.feature.counter.R
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
+import java.time.Duration
+import java.time.Instant
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -49,6 +52,12 @@ class ZikirReminderNotifier @Inject constructor(
                 streak,
                 streak,
             ),
+            // An unclicked evening warning must not survive into the following day
+            // if WorkManager is delayed or the user never launches the app.
+            timeoutAfterMillis = millisUntilNextLocalMidnight(
+                Instant.now(),
+                ZoneId.systemDefault(),
+            ),
         )
     }
 
@@ -74,6 +83,7 @@ class ZikirReminderNotifier @Inject constructor(
         notificationId: Int,
         title: String,
         body: String,
+        timeoutAfterMillis: Long? = null,
     ) {
         if (!shouldShowNotification()) return
 
@@ -104,6 +114,7 @@ class ZikirReminderNotifier @Inject constructor(
             .setAutoCancel(true)
             .apply {
                 contentIntent?.let { setContentIntent(it) }
+                timeoutAfterMillis?.let { setTimeoutAfter(it) }
             }
             .build()
 
@@ -134,4 +145,11 @@ class ZikirReminderNotifier @Inject constructor(
         private const val STREAK_NOTIFICATION_ID = 94002
         const val CHANNEL_ID = "zikir_reminders"
     }
+}
+
+// Local-midnight expiry uses actual elapsed duration (23/25h on DST days).
+// NotificationManager auto-removes it without a follow-up worker run.
+internal fun millisUntilNextLocalMidnight(now: Instant, zone: ZoneId): Long {
+    val nextMidnight = now.atZone(zone).toLocalDate().plusDays(1).atStartOfDay(zone).toInstant()
+    return Duration.between(now, nextMidnight).toMillis().coerceAtLeast(1L)
 }
