@@ -18,6 +18,7 @@
     <string name="miracles_section_arabic">@string/content_mode_arabic</string>
     <string name="miracles_section_latin_pronunciation">Lateinische Lesung</string>
     <string name="miracles_quran_tanzil_attribution">Tanzil Quran Text · © 2007–2021 Tanzil Project · CC BY 3.0 · tanzil.net (Quelle öffnen)</string>
+    <string name="miracles_weak_hadith_source">Gebetswortlaut aus einer als schwach eingestuften Überlieferung (kein authentischer Hadith oder zugesichertes Ergebnis): %1$s (Quelle öffnen)</string>
     <string name="miracles_scholarly_source">Gebetswortlaut im klassischen Kommentar (nicht als authentischer prophetischer Hadith bestätigt): %1$s (Quelle öffnen)</string>
     <string name="miracles_hadith_source">Hadith-Quelle: %1$s (Quelle öffnen)</string>
     <string name="miracles_original_arabic_unverified">Der arabische Originaltext wurde noch nicht verifiziert. Unten steht die vorhandene lateinische Umschrift.</string>
