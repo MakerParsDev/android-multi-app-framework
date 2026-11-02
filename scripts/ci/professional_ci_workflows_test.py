@@ -231,6 +231,13 @@ def test_baseline_profiles_workflow_is_full_speed_and_safe() -> None:
     assert "swiftshader_indirect" in runs
     assert "setup-performance-device-sdk.sh" in runs
 
+    fixture = named_step(matrix_job, "Generate benchmark-only offline audio fixture")["run"]
+    assert "app/src/nonMinifiedRelease/assets/audio.mp3" in fixture
+    assert "anullsrc=" in fixture
+    assert "libmp3lame" in fixture
+    assert "ffmpeg -nostdin -v error -i" in fixture
+    assert "app/src/main/assets" not in fixture
+
 
 def test_managed_device_is_pinned_and_scheduled() -> None:
     workflow = load(".github/workflows/device-smoke.yml")
