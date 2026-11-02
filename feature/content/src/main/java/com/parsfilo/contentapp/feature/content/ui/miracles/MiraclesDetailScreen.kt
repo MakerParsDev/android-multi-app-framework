@@ -1,5 +1,9 @@
 package com.parsfilo.contentapp.feature.content.ui.miracles
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -25,6 +29,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,7 +43,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -161,6 +168,9 @@ fun MiraclesDetailScreen(
                                 label = stringResource(R.string.miracles_section_arabic),
                                 contentBackground = cardBackground,
                                 borderColor = colorScheme.secondary.copy(alpha = 0.3f),
+                                copyText = uiState.prayer.originalArabicVerses.joinToString("\n") { it.arabic },
+                                copyActionLabel = stringResource(R.string.content_copy_arabic),
+                                copyTag = "miracles_copy_arabic",
                             ) {
                                 Column(verticalArrangement = Arrangement.spacedBy(dimens.space12)) {
                                     // Show original-text source before long passages (not only at the bottom).
@@ -209,6 +219,9 @@ fun MiraclesDetailScreen(
                                     label = stringResource(R.string.miracles_section_arabic),
                                     contentBackground = cardBackground,
                                     borderColor = colorScheme.secondary.copy(alpha = 0.3f),
+                                    copyText = supplication.arabic,
+                                    copyActionLabel = stringResource(R.string.content_copy_arabic),
+                                    copyTag = "miracles_copy_arabic",
                                 ) {
                                     Column(verticalArrangement = Arrangement.spacedBy(dimens.space12)) {
                                         val sourceLabel = when {
@@ -332,16 +345,17 @@ fun MiraclesDetailScreen(
 
                     item {
                         MiraclesDetailSectionCard(
-                            label = when {
-                                variant == MiraclesContentVariant.ESMAUL_HUSNA ->
-                                    stringResource(R.string.miracles_section_description)
-                                uiState.prayer.hasArabicScript ->
-                                    stringResource(R.string.miracles_section_arabic)
-                                else -> stringResource(R.string.miracles_section_latin_pronunciation)
+                            label = if (variant == MiraclesContentVariant.MUCIZEDUALAR) {
+                                stringResource(R.string.miracles_section_latin_pronunciation)
+                            } else {
+                                stringResource(R.string.miracles_section_description)
                             },
                             contentBackground = if (variant == MiraclesContentVariant.MUCIZEDUALAR) cardBackground else overlayCard,
                             borderColor = colorScheme.secondary.copy(alpha = if (variant == MiraclesContentVariant.MUCIZEDUALAR) 0.3f else 0.2f),
                             labelAccent = variant == MiraclesContentVariant.ESMAUL_HUSNA,
+                            copyText = if (variant == MiraclesContentVariant.MUCIZEDUALAR) uiState.prayer.duaArapca else null,
+                            copyActionLabel = stringResource(R.string.content_copy_latin),
+                            copyTag = "miracles_copy_latin",
                         ) {
                             if (variant == MiraclesContentVariant.MUCIZEDUALAR) {
                                 if (
@@ -391,10 +405,16 @@ private fun MiraclesDetailSectionCard(
     contentBackground: androidx.compose.ui.graphics.Color,
     borderColor: androidx.compose.ui.graphics.Color,
     labelAccent: Boolean = false,
+    copyText: String? = null,
+    copyActionLabel: String = "",
+    copyTag: String = "",
     content: @Composable () -> Unit,
 ) {
     val dimens = LocalDimens.current
     val colorScheme = MaterialTheme.colorScheme
+    val context = LocalContext.current
+    val view = LocalView.current
+    val copiedMessage = stringResource(R.string.miracles_text_copied)
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -409,15 +429,42 @@ private fun MiraclesDetailSectionCard(
             )
             .padding(dimens.space16)
     ) {
-        Text(
-            text = label,
-            color = if (labelAccent) colorScheme.secondary else colorScheme.onSurface,
-            fontSize = if (labelAccent) 14.sp else 12.sp,
-            fontWeight = FontWeight.Bold
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = label,
+                color = if (labelAccent) colorScheme.secondary else colorScheme.onSurface,
+                fontSize = if (labelAccent) 14.sp else 12.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f),
+            )
+            if (!copyText.isNullOrBlank()) {
+                IconButton(
+                    onClick = {
+                        copyMiraclesText(context, copyText, copiedMessage)
+                        view.announceForAccessibility(copiedMessage)
+                    },
+                    modifier = Modifier.size(48.dp).testTag(copyTag),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.ContentCopy,
+                        contentDescription = copyActionLabel,
+                        tint = colorScheme.primary,
+                    )
+                }
+            }
+        }
         Spacer(modifier = Modifier.height(dimens.space12))
         content()
     }
+}
+
+private fun copyMiraclesText(context: Context, text: String, message: String) {
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
+    clipboard.setPrimaryClip(ClipData.newPlainText("prayer_text", text))
+    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
 }
 
 @Composable
