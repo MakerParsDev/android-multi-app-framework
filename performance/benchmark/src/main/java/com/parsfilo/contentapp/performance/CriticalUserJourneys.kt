@@ -88,7 +88,11 @@ internal object CriticalUserJourneys {
 
     private fun counter(scope: MacrobenchmarkScope, config: PerformanceConfig) {
         scope.clickTagIfPresent(config, PerformanceTags.COUNTER_SELECTOR_FIRST_ITEM)
-        scope.waitForTag(config, PerformanceTags.COUNTER_INCREMENT)
+        scope.scrollUntilTag(
+            config,
+            PerformanceTags.COUNTER_INCREMENT,
+            PerformanceTags.COUNTER_ROOT,
+        )
         repeat(3) { scope.clickTag(config, PerformanceTags.COUNTER_INCREMENT) }
         scope.waitForTag(config, PerformanceTags.COUNTER_VALUE)
     }
