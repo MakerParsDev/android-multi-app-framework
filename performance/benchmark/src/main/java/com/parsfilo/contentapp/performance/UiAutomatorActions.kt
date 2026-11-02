@@ -74,6 +74,22 @@ private fun MacrobenchmarkScope.clickNodeWithRetry(
     )
 }
 
+internal fun MacrobenchmarkScope.scrollUntilTag(
+    config: PerformanceConfig,
+    tag: String,
+    containerTag: String,
+) {
+    // Accessibility only exposes visible Compose nodes. On a fresh counter
+    // launch the increment button is below the statistics and target cards.
+    repeat(3) {
+        if (findTag(tag, timeoutMs = 500L) != null) return
+        scrollTag(config, containerTag)
+    }
+    // Preserve the actionable hierarchy diagnostic instead of silently
+    // ignoring a genuinely missing control.
+    waitForTag(config, tag)
+}
+
 internal fun MacrobenchmarkScope.clickTag(config: PerformanceConfig, tag: String) {
     check(clickNodeWithRetry(config, tag) { waitForTag(config, tag) })
 }
