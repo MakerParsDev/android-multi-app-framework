@@ -575,13 +575,22 @@ play {
     // Default to internal; pipelines can still override with -PPLAY_TRACK=production/beta/etc.
     track.set(releaseTrackValue)
     if (releaseTrackValue == "production") {
-        // Production cannot silently default to 100%. Only a reviewed 5%
-        // staged rollout is supported by the legacy release workflow.
-        require(providers.gradleProperty("PLAY_ROLLOUT_PERCENT").orNull == "5") {
-            "Production requires -PPLAY_ROLLOUT_PERCENT=5 and protected environment approval."
+        // Never default production to 100%: an explicit protected workflow
+        // selection is required. The workflow scopes 100% to amenerrasulu.
+        val productionPercent = providers.gradleProperty("PLAY_ROLLOUT_PERCENT").orNull
+        require(productionPercent == "5" || productionPercent == "100") {
+            "Production requires explicit -PPLAY_ROLLOUT_PERCENT=5 or 100 and protected environment approval."
         }
-        userFraction.set(0.05)
-        releaseStatus.set(com.github.triplet.gradle.androidpublisher.ReleaseStatus.IN_PROGRESS)
+        if (productionPercent == "5") {
+            userFraction.set(0.05)
+            releaseStatus.set(com.github.triplet.gradle.androidpublisher.ReleaseStatus.IN_PROGRESS)
+        } else {
+            require(providers.gradleProperty("PLAY_PRODUCTION_FLAVOR").orNull == "amenerrasulu") {
+                "100% production publication is currently scoped to amenerrasulu."
+            }
+            // A 100% release is COMPLETED; userFraction=1.0 is invalid in Play API.
+            releaseStatus.set(com.github.triplet.gradle.androidpublisher.ReleaseStatus.COMPLETED)
+        }
     }
     defaultToAppBundles.set(true)
 }
