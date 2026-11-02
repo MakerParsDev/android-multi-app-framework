@@ -128,6 +128,24 @@ jobs:
           set -euo pipefail
           python3 scripts/ci/generate_ci_google_services.py --flavors "$FLAVOR"
 
+      # NonMinifiedRelease disables remote services. Without an offline fixture,
+      # audio-family benchmarks time out on the intentionally unavailable player
+      # instead of measuring the actual play/pause journey. Never ship this asset.
+      - name: Generate benchmark-only offline audio fixture
+        run: |
+          set -euo pipefail
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends ffmpeg
+          fi
+          sample="app/src/nonMinifiedRelease/assets/audio.mp3"
+          test ! -e "$sample"
+          mkdir -p "$(dirname "$sample")"
+          ffmpeg -nostdin -hide_banner -loglevel error -f lavfi \
+            -i "anullsrc=channel_layout=mono:sample_rate=22050" \
+            -t 5 -c:a libmp3lame -q:a 8 "$sample"
+          ffmpeg -nostdin -v error -i "$sample" -f null -
+
       - name: Generate variant Baseline Profile
         run: |
           set -euo pipefail
