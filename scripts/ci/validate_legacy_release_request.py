@@ -40,8 +40,6 @@ def validate_release_inputs(env: dict[str, str]) -> bool:
             raise ValueError("production rollout requires one canonical flavor")
         if fraction not in {"5", "100"}:
             raise ValueError("production requires explicit 5% or 100% rollout selection")
-        if fraction == "100" and target != "amenerrasulu":
-            raise ValueError("explicit full production release is scoped to amenerrasulu only")
         if update_listing:
             raise ValueError("listing changes must be reviewed separately")
     elif fraction != "0":

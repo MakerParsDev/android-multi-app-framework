@@ -84,9 +84,13 @@ def test_production_requires_explicit_scoped_rollout() -> None:
     assert rejected(RELEASE_DO_INTERNAL_TEST="true",
                     RELEASE_PRODUCTION_ROLLOUT_PERCENT="100")
     assert rejected(RELEASE_PRODUCTION_ROLLOUT_PERCENT="100")
-    assert rejected(RELEASE_DO_PUBLISH="true",
-                    RELEASE_PRODUCTION_ROLLOUT_PERCENT="100",
-                    RELEASE_TARGET_FLAVORS="mucizedualar")
+    for flavor in ("amenerrasulu", "mucizedualar", "namazvakitleri"):
+        assert validate_release_inputs({
+            **BASE,
+            "RELEASE_DO_PUBLISH": "true",
+            "RELEASE_PRODUCTION_ROLLOUT_PERCENT": "100",
+            "RELEASE_TARGET_FLAVORS": flavor,
+        })
     assert rejected(RELEASE_DO_PUBLISH="true",
                     RELEASE_PRODUCTION_ROLLOUT_PERCENT="100",
                     RELEASE_TARGET_FLAVORS="all")
@@ -181,9 +185,9 @@ def test_production_publish_requires_manual_protected_environment() -> None:
     publish = next(x for x in release["steps"] if x.get("name") == "Publish to Play")
     assert "PRODUCTION_ROLLOUT_PERCENT" in publish["env"]
     assert "ROLLOUT_FLAGS=(-PPLAY_ROLLOUT_PERCENT=" in publish["run"]
-    assert '"$PRODUCTION_ROLLOUT_PERCENT" == "100"' in publish["run"]
-    assert "'[\"amenerrasulu\"]'" in publish["run"]
-    assert "ROLLOUT_FLAGS+=(-PPLAY_PRODUCTION_FLAVOR=amenerrasulu)" in publish["run"]
+    assert '"$PRODUCTION_ROLLOUT_PERCENT" = "100"' in publish["run"]
+    assert '"${#FLAVORS[@]}" -ne 1' in publish["run"]
+    assert 'ROLLOUT_FLAGS+=(-PPLAY_PRODUCTION_FLAVOR="${FLAVORS[0]}")' in publish["run"]
     options = workflow["on"]["workflow_dispatch"]["inputs"]["production_rollout_percent"]["options"] if "on" in workflow else workflow[True]["workflow_dispatch"]["inputs"]["production_rollout_percent"]["options"]
     assert options == ["0", "5", "100"]
     assert '"${ROLLOUT_FLAGS[@]}"' in publish["run"]
