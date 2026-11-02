@@ -1,0 +1,24 @@
+{
+  "source": {
+    "name": "Attested Arabic phrases in reports graded weak (Daif)",
+    "notice": "Source quotation only: both historical narrations are graded Daif in the cited editions. The quoted original Arabic wording is not certified as an authenticated Prophetic hadith, a promised special reward, a financial outcome or a guaranteed benefit. Short classical Arabic phrases only; no modern translation or explanatory website text redistributed."
+  },
+  "prayers": [
+    {
+      "title": "Nimetleri bollaştıran şükür duası",
+      "reference": "Sunan Ibn Majah 3801",
+      "sourceUrl": "https://sunnah.com/ibnmajah:3801",
+      "grade": "Daif",
+      "grader": "Darussalam",
+      "arabic": "يَا رَبِّ لَكَ الْحَمْدُ كَمَا يَنْبَغِي لِجَلاَلِ وَجْهِكَ وَلِعَظِيمِ سُلْطَانِكَ"
+    },
+    {
+      "title": "Borçlardan kurtulma duası",
+      "reference": "Sunan Abi Dawud 1555",
+      "sourceUrl": "https://sunnah.com/abudawud:1555",
+      "grade": "Daif",
+      "grader": "Al-Albani",
+      "arabic": "اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنَ الْهَمِّ وَالْحَزَنِ وَأَعُوذُ بِكَ مِنَ الْعَجْزِ وَالْكَسَلِ وَأَعُوذُ بِكَ مِنَ الْجُبْنِ وَالْبُخْلِ وَأَعُوذُ بِكَ مِنْ غَلَبَةِ الدَّيْنِ وَقَهْرِ الرِّجَالِ"
+    }
+  ]
+}

@@ -18,6 +18,7 @@
     <string name="miracles_section_arabic">@string/content_mode_arabic</string>
     <string name="miracles_section_latin_pronunciation">Latince Okunuş</string>
     <string name="miracles_quran_tanzil_attribution">Tanzil Quran Text · © 2007–2021 Tanzil Project · CC BY 3.0 · tanzil.net (kaynağı aç)</string>
+    <string name="miracles_weak_hadith_source">Zayıf olarak derecelendirilmiş rivayette geçen dua ifadesi (sahih hadis veya vaat edilmiş sonuç değildir): %1$s (kaynağı aç)</string>
     <string name="miracles_scholarly_source">Klasik şerhte geçen dua ifadesi (sahih hadis olarak doğrulanmadı): %1$s (kaynağı aç)</string>
     <string name="miracles_hadith_source">Hadis kaynağı: %1$s (kaynağı aç)</string>
     <string name="miracles_original_arabic_unverified">Özgün Arapça metin henüz doğrulanmadı. Aşağıda mevcut Latin okunuş gösteriliyor.</string>
