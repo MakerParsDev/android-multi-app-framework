@@ -17,6 +17,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from urllib.parse import urlsplit
 
 API_VERSION = "2026-03-10"
 REPO_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
@@ -24,6 +25,18 @@ REPO_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 
 class SbomFetchError(RuntimeError):
     pass
+
+
+class _SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Keep GitHub credentials on the API host, never on a download redirect."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if urlsplit(newurl).scheme != "https":
+            raise SbomFetchError("GitHub SBOM download redirect must use HTTPS")
+        redirected = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if redirected is not None and urlsplit(req.full_url).netloc != urlsplit(newurl).netloc:
+            redirected.remove_header("Authorization")
+        return redirected
 
 
 def _request_json(
@@ -41,8 +54,9 @@ def _request_json(
         headers["Authorization"] = f"Bearer {token}"
 
     request = urllib.request.Request(url, headers=headers, method="GET")
+    opener = urllib.request.build_opener(_SafeRedirectHandler())
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        with opener.open(request, timeout=timeout) as response:
             status = int(getattr(response, "status", response.getcode()))
             body = response.read().decode("utf-8")
     except urllib.error.HTTPError as error:
@@ -96,9 +110,10 @@ def fetch_sbom(
     deadline = time.monotonic() + timeout_seconds
 
     while True:
-        # The repository is public. Fetch the report without Authorization so a
-        # GitHub redirect to temporary object storage can never receive a token.
-        status, report = _request_json(report_url, token=None)
+        # Authenticate both GitHub API endpoints to avoid the low shared
+        # anonymous-IP rate limit. The redirect handler strips credentials
+        # before the final temporary storage download.
+        status, report = _request_json(report_url, token=token)
         if status == 202:
             if time.monotonic() >= deadline:
                 raise SbomFetchError("Timed out waiting for GitHub SBOM report")

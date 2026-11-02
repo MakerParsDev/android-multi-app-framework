@@ -10,6 +10,7 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import patch
+import urllib.request
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -56,7 +57,7 @@ class FetchGithubSbomTest(unittest.TestCase):
         self.assertTrue(generate_call.args[0].endswith("/generate-report"))
         for fetch_call in request_json.call_args_list[1:]:
             self.assertEqual(fetch_call.args[0], report_url)
-            self.assertIsNone(fetch_call.kwargs["token"])
+            self.assertEqual(fetch_call.kwargs["token"], "token")
         sleep.assert_called_once_with(0)
 
     @patch("fetch_github_sbom._request_json")
@@ -72,6 +73,31 @@ class FetchGithubSbomTest(unittest.TestCase):
                     Path(temp_dir) / "repo.spdx.json",
                     token="token",
                 )
+
+    def test_redirect_keeps_token_on_api_host_only(self):
+        source = urllib.request.Request(
+            "https://api.github.com/repos/owner/repo/dependency-graph/sbom/fetch-report/abc123",
+            headers={"Authorization": "Bearer secret"},
+        )
+        handler = sbom._SafeRedirectHandler()
+
+        api_redirect = handler.redirect_request(
+            source, None, 302, "Found", {},
+            "https://api.github.com/other-path",
+        )
+        self.assertEqual(api_redirect.get_header("Authorization"), "Bearer secret")
+
+        storage_redirect = handler.redirect_request(
+            source, None, 302, "Found", {},
+            "https://storage.example.invalid/temporary-report",
+        )
+        self.assertIsNone(storage_redirect.get_header("Authorization"))
+
+        with self.assertRaises(sbom.SbomFetchError):
+            handler.redirect_request(
+                source, None, 302, "Found", {},
+                "http://storage.example.invalid/insecure",
+            )
 
     @patch("fetch_github_sbom._request_json")
     def test_empty_packages_fail_closed(self, request_json):
