@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -83,10 +84,10 @@ fun AppBottomBarWithFab(
                 .testTag("primary_navigation")
                 .fillMaxWidth()
                 .drawBehind {
-                    val stroke = 2.dp.toPx()
+                    val stroke = 1.dp.toPx()
                     val insetTop = size.height - systemNavBottomInsetPx - (stroke / 2f)
                     drawLine(
-                        color = colorScheme.onSurface.copy(alpha = 0.82f),
+                        color = colorScheme.outlineVariant.copy(alpha = 0.5f),
                         start = Offset(0f, insetTop),
                         end = Offset(size.width, insetTop),
                         strokeWidth = stroke,
@@ -160,7 +161,8 @@ private fun RowScope.AppBottomNavigationItem(
                 {
                     Text(
                         text = title,
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
                         maxLines = 1,
                         softWrap = false,
                         overflow = TextOverflow.Ellipsis,
