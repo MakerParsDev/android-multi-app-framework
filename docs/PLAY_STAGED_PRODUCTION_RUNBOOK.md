@@ -45,3 +45,20 @@ Amenerrasulu v57: source PR #363, internal release #38949238981, actual
 device acceptance #339, release-health tracking #365. Production remains
 on v56 until sufficient v57 telemetry is available and issue #337's
 AdMob/UMP observability blocker has a documented disposition.
+
+
+## Explicit owner-approved full release (Amenerrasulü only)
+
+The release workflow also supports \`production_rollout_percent=100\` for exactly
+\`target_flavors=amenerrasulu\` when the owner explicitly selects immediate full
+production. This does **not** change the default \`0\`, nor does it bypass
+protected main, exact-head CI/CodeQL, signing, production environment review,
+single-flavor enforcement, duplicate-publish protection or Play account checks.
+Other flavors remain staged at 5% until separately authorized.
+
+For a full release, Gradle Play Publisher uses \`ReleaseStatus.COMPLETED\`,
+**not** \`IN_PROGRESS\` with \`userFraction=1.0\` (invalid in Google Play).
+This is a deliberate release decision and cannot be used as a substitute for
+an evidence-backed statement that all health metrics are green. Keep the
+known health-data gaps recorded, monitor the published version after release,
+and preserve existing rollback/stop controls.

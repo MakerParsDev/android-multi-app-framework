@@ -62,9 +62,9 @@ def test_reject_ambiguous_track_and_listing_without_publish() -> None:
     assert rejected(RELEASE_DO_PUBLISH="true", RELEASE_DO_QUALITY="invalid")
 
 
-def test_production_requires_explicit_five_percent_canary() -> None:
+def test_production_requires_explicit_scoped_rollout() -> None:
     assert rejected(RELEASE_DO_PUBLISH="true")
-    for fraction in ("", "0", "1", "10", "25", "100", "05", "5.0", "-5"):
+    for fraction in ("", "0", "1", "10", "25", "05", "5.0", "-5", "99", "100.0"):
         assert rejected(
             RELEASE_DO_PUBLISH="true",
             RELEASE_PRODUCTION_ROLLOUT_PERCENT=fraction,
@@ -81,11 +81,24 @@ def test_production_requires_explicit_five_percent_canary() -> None:
     assert rejected(RELEASE_PRODUCTION_ROLLOUT_PERCENT="5")
     assert rejected(RELEASE_DO_INTERNAL_TEST="true",
                     RELEASE_PRODUCTION_ROLLOUT_PERCENT="5")
-    assert validate_release_inputs({
-        **BASE,
-        "RELEASE_DO_PUBLISH": "true",
-        "RELEASE_PRODUCTION_ROLLOUT_PERCENT": "5",
-    })
+    assert rejected(RELEASE_DO_INTERNAL_TEST="true",
+                    RELEASE_PRODUCTION_ROLLOUT_PERCENT="100")
+    assert rejected(RELEASE_PRODUCTION_ROLLOUT_PERCENT="100")
+    assert rejected(RELEASE_DO_PUBLISH="true",
+                    RELEASE_PRODUCTION_ROLLOUT_PERCENT="100",
+                    RELEASE_TARGET_FLAVORS="mucizedualar")
+    assert rejected(RELEASE_DO_PUBLISH="true",
+                    RELEASE_PRODUCTION_ROLLOUT_PERCENT="100",
+                    RELEASE_TARGET_FLAVORS="all")
+    assert rejected(RELEASE_DO_PUBLISH="true",
+                    RELEASE_PRODUCTION_ROLLOUT_PERCENT="100",
+                    RELEASE_UPDATE_PLAY_LISTING="true")
+    for percent in ("5", "100"):
+        assert validate_release_inputs({
+            **BASE,
+            "RELEASE_DO_PUBLISH": "true",
+            "RELEASE_PRODUCTION_ROLLOUT_PERCENT": percent,
+        })
 
 
 def test_success_requires_exact_main_push_commit() -> None:
@@ -168,6 +181,11 @@ def test_production_publish_requires_manual_protected_environment() -> None:
     publish = next(x for x in release["steps"] if x.get("name") == "Publish to Play")
     assert "PRODUCTION_ROLLOUT_PERCENT" in publish["env"]
     assert "ROLLOUT_FLAGS=(-PPLAY_ROLLOUT_PERCENT=" in publish["run"]
+    assert '"$PRODUCTION_ROLLOUT_PERCENT" == "100"' in publish["run"]
+    assert "'[\"amenerrasulu\"]'" in publish["run"]
+    assert "ROLLOUT_FLAGS+=(-PPLAY_PRODUCTION_FLAVOR=amenerrasulu)" in publish["run"]
+    options = workflow["on"]["workflow_dispatch"]["inputs"]["production_rollout_percent"]["options"] if "on" in workflow else workflow[True]["workflow_dispatch"]["inputs"]["production_rollout_percent"]["options"]
+    assert options == ["0", "5", "100"]
     assert '"${ROLLOUT_FLAGS[@]}"' in publish["run"]
     security = next(x for x in workflow["jobs"]["security-gate"]["steps"]
                     if x.get("name") == "Validate release publication prerequisites")
