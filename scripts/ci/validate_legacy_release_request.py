@@ -35,11 +35,13 @@ def validate_release_inputs(env: dict[str, str]) -> bool:
 
     # Fail closed: an omitted/ambiguous percentage must not publish to everyone.
     if production:
-        if fraction != "5":
-            raise ValueError("production requires explicit 5% staged rollout selection")
         target = env.get("RELEASE_TARGET_FLAVORS", "")
         if not re.fullmatch(r"[a-z][A-Za-z0-9]{1,48}", target) or target == "all":
-            raise ValueError("production staged rollout requires one canonical flavor")
+            raise ValueError("production rollout requires one canonical flavor")
+        if fraction not in {"5", "100"}:
+            raise ValueError("production requires explicit 5% or 100% rollout selection")
+        if fraction == "100" and target != "amenerrasulu":
+            raise ValueError("explicit full production release is scoped to amenerrasulu only")
         if update_listing:
             raise ValueError("listing changes must be reviewed separately")
     elif fraction != "0":
