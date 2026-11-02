@@ -160,6 +160,7 @@ jobs:
           python3 scripts/ci/mucizedualar_latin_integrity_test.py
           python3 scripts/ci/mucizedualar_verified_arabic_integrity_test.py
           python3 scripts/ci/mucizedualar_verified_scholarly_integrity_test.py
+          python3 scripts/ci/mucizedualar_attested_weak_hadith_integrity_test.py
           python3 scripts/ci/validate_legacy_release_request_test.py
           python3 scripts/ci/verify_play_generated_apk_test.py
           python3 scripts/ci/verify_release_auth_resource_test.py

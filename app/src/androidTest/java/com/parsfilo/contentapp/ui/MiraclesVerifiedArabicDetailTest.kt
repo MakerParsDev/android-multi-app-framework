@@ -151,6 +151,51 @@ class MiraclesVerifiedArabicDetailTest {
     }
 
     @Test
+    fun gratitudeShowsWeakSourceGradeWithoutAuthenticatedClaim() {
+        checkWeakNarrationDetail(index = 8, reference = "Sunan Ibn Majah 3801")
+    }
+
+    @Test
+    fun debtShowsWeakSourceGradeWithoutSubstitutingBukhariWording() {
+        checkWeakNarrationDetail(index = 14, reference = "Sunan Abi Dawud 1555")
+    }
+
+    private fun checkWeakNarrationDetail(index: Int, reference: String) {
+        assumeTrue(BuildConfig.FLAVOR_NAME == "mucizedualar")
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val prayers = runBlocking { AssetMiraclesPrayerRepository(context, Dispatchers.IO).getPrayers() }
+        val prayer = prayers[index]
+        val weak = requireNotNull(prayer.originalArabicWeakHadithSupplication)
+        assertEquals(reference, weak.reference)
+        assertEquals(null, prayer.originalArabicSupplication)
+        assertEquals(null, prayer.originalArabicScholarlySupplication)
+        assertEquals(0, prayer.originalArabicVerses.size)
+        composeRule.setContent {
+            AppTheme(flavorName = "mucizedualar") {
+                MiraclesDetailScreen(
+                    uiState = MiraclesDetailUiState.Success(prayer, shouldShowAds = false),
+                )
+            }
+        }
+        composeRule.onNodeWithText(
+            context.getString(
+                com.parsfilo.contentapp.feature.content.R.string.miracles_weak_hadith_source,
+                reference,
+            ),
+        ).assertIsDisplayed()
+        composeRule.onNodeWithText(weak.arabic).assertExists()
+        composeRule.onNodeWithText(
+            context.getString(
+                com.parsfilo.contentapp.feature.content.R.string.miracles_hadith_source,
+                reference,
+            ),
+        ).assertDoesNotExist()
+        composeRule.onNodeWithTag("miracles_detail")
+            .performScrollToNode(hasText(prayer.duaArapca))
+        composeRule.onNodeWithText(prayer.duaArapca).assertExists()
+    }
+
+    @Test
     fun unsourcedPrayerStillExplainsThatOriginalArabicIsUnverified() {
         assumeTrue(BuildConfig.FLAVOR_NAME == "mucizedualar")
         val context = InstrumentationRegistry.getInstrumentation().targetContext
