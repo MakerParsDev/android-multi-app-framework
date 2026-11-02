@@ -38,16 +38,16 @@ class ScholarlySourceIntegrityTest(unittest.TestCase):
         self.assertNotIn(title, {p["title"] for p in hadith["prayers"]})
         self.assertIn("not attributed as an authenticated Prophetic hadith", self.data["source"]["name"])
 
-    def test_other_two_remain_without_attested_original(self):
+    def test_all_source_categories_have_distinct_witnesses(self):
         quran = json.loads((ROOT / "app/src/mucizedualar/assets/verified_quran_verses.json").read_text())
         hadith = json.loads((ROOT / "app/src/mucizedualar/assets/verified_hadith_supplications.json").read_text())
         weak = json.loads((ROOT / "app/src/mucizedualar/assets/attested_weak_hadith_supplications.json").read_text())
-        known = {p["title"] for p in quran["prayers"] + hadith["prayers"] + self.data["prayers"] + weak["prayers"]}
-        self.assertEqual(18, len(known))
-        self.assertEqual(
-            {4, 17},
-            {i for i, row in enumerate(self.legacy) if row["duaIsim"] not in known},
-        )
+        additional = ("attested_very_weak_hadith_supplications.json", "documented_traditional_supplications.json")
+        extra = [p for fn in additional for p in json.loads((ROOT / "app/src/mucizedualar/assets" / fn).read_text())["prayers"]]
+        titles = [p["title"] for p in quran["prayers"] + hadith["prayers"] + self.data["prayers"] + weak["prayers"] + extra]
+        self.assertEqual(20, len(titles))
+        self.assertEqual(20, len(set(titles)))
+        self.assertEqual({r["duaIsim"] for r in self.legacy}, set(titles))
 
 if __name__ == "__main__":
     unittest.main()

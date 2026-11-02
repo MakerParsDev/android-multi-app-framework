@@ -1,0 +1,16 @@
+{
+  "source": {
+    "name": "Historic insomnia prayer with weak and very-weak transmission variants",
+    "notice": "Fuller wording recorded in al-Busiri Ithaf 6/462 with weak chain. A shorter variant is graded very weak by al-Albani (Silsila Daifa 1328). Neither is authenticated Prophetic instruction or evidence of sleep therapy. Only a brief ancient prayer phrase is included."
+  },
+  "prayers": [
+    {
+      "title": "Uyku problemlerini gideren mucizevi dua",
+      "reference": "al-Busiri, Ithaf al-Khiyara 6/462 (weak chain); related al-Albani 1328 (very weak)",
+      "sourceUrl": "https://dorar.net/h/cmOtogIl",
+      "relatedVariantUrl": "https://dorar.net/h/N824iK19?osoul=1",
+      "grade": "Daif (full phrase); Daif Jiddan (related short variant)",
+      "arabic": "اللَّهُمَّ غَارَتِ النُّجُومُ وَهَدَأَتِ الْعُيُونُ وَأَنْتَ حَيٌّ قَيُّومٌ لَا تَأْخُذُكَ سِنَةٌ وَلَا نَوْمٌ يَا حَيُّ يَا قَيُّومُ أَهْدِئْ لَيْلِي وَأَنِمْ عَيْنِي"
+    }
+  ]
+}

@@ -196,15 +196,42 @@ class MiraclesVerifiedArabicDetailTest {
     }
 
     @Test
-    fun unsourcedPrayerStillExplainsThatOriginalArabicIsUnverified() {
+    fun insomniaShowsWeakChainAndVeryWeakVariantWarning() {
+        checkCautiousSourceDetail(
+            index = 4,
+            label = com.parsfilo.contentapp.feature.content.R.string.miracles_very_weak_hadith_source,
+            reference = "al-Busiri, Ithaf al-Khiyara 6/462 (weak chain); related al-Albani 1328 (very weak)",
+        )
+    }
+
+    @Test
+    fun memoryShowsDocumentedTraditionalSourceWithoutHadithAttribution() {
+        checkCautiousSourceDetail(
+            index = 17,
+            label = com.parsfilo.contentapp.feature.content.R.string.miracles_traditional_source,
+            reference = "Emine Çakmak, Süleymancılık Cemaatinde Dini Eğitim Metotları (2013), p.70",
+        )
+    }
+
+    private fun checkCautiousSourceDetail(
+        index: Int,
+        label: Int,
+        reference: String,
+    ) {
         assumeTrue(BuildConfig.FLAVOR_NAME == "mucizedualar")
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val prayers = runBlocking {
-            AssetMiraclesPrayerRepository(context, Dispatchers.IO).getPrayers()
+        val prayers = runBlocking { AssetMiraclesPrayerRepository(context, Dispatchers.IO).getPrayers() }
+        val prayer = prayers[index]
+        val witness = when (index) {
+            4 -> prayer.originalArabicVeryWeakHadithSupplication
+            17 -> prayer.originalArabicDocumentedTraditionalSupplication
+            else -> null
         }
-        val prayer = prayers[4] // The held insomnia record has no verified original.
+        requireNotNull(witness)
+        assertEquals(reference, witness.reference)
         assertEquals(0, prayer.originalArabicVerses.size)
         assertEquals(null, prayer.originalArabicSupplication)
+        assertEquals(null, prayer.originalArabicWeakHadithSupplication)
         composeRule.setContent {
             AppTheme(flavorName = "mucizedualar") {
                 MiraclesDetailScreen(
@@ -212,10 +239,20 @@ class MiraclesVerifiedArabicDetailTest {
                 )
             }
         }
-        composeRule.onNodeWithTag("miracles_detail").performScrollToNode(hasText(prayer.duaArapca))
+        composeRule.onNodeWithText(context.getString(label, reference)).assertIsDisplayed()
+        composeRule.onNodeWithText(witness.arabic).assertExists()
         composeRule.onNodeWithText(
-            context.getString(com.parsfilo.contentapp.feature.content.R.string.miracles_original_arabic_unverified)
-        ).assertExists()
+            context.getString(
+                com.parsfilo.contentapp.feature.content.R.string.miracles_hadith_source,
+                reference,
+            ),
+        ).assertDoesNotExist()
+        composeRule.onNodeWithText(
+            context.getString(com.parsfilo.contentapp.feature.content.R.string.miracles_original_arabic_unverified),
+        ).assertDoesNotExist()
+        composeRule.onNodeWithTag("miracles_detail")
+            .performScrollToNode(hasText(prayer.duaArapca))
+        composeRule.onNodeWithText(prayer.duaArapca).assertExists()
     }
 
     private fun checkHadithDetail(index: Int, reference: String) {
