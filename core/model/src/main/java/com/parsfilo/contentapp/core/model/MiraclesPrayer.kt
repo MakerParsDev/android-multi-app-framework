@@ -14,6 +14,8 @@ data class MiraclesPrayer(
     val originalArabicSupplication: MiraclesOriginalSupplication? = null,
     val originalArabicScholarlySupplication: MiraclesOriginalSupplication? = null,
     val originalArabicWeakHadithSupplication: MiraclesOriginalSupplication? = null,
+    val originalArabicVeryWeakHadithSupplication: MiraclesOriginalSupplication? = null,
+    val originalArabicDocumentedTraditionalSupplication: MiraclesOriginalSupplication? = null,
 ) {
     // Legacy Mucize Dualar data stores Latin phonetics in duaArapca.
     // Never present Latin text as original Arabic scripture.

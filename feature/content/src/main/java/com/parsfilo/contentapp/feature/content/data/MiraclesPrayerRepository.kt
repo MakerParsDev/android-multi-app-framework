@@ -36,6 +36,8 @@ class AssetMiraclesPrayerRepository @Inject constructor(
             val verifiedHadith = loadSourcedSupplications("verified_hadith_supplications.json")
             val verifiedScholarly = loadSourcedSupplications("verified_scholarly_supplications.json")
             val attestedWeakHadith = loadSourcedSupplications("attested_weak_hadith_supplications.json")
+            val attestedVeryWeakHadith = loadSourcedSupplications("attested_very_weak_hadith_supplications.json")
+            val documentedTraditional = loadSourcedSupplications("documented_traditional_supplications.json")
             val prayers = mutableListOf<MiraclesPrayer>()
 
             for (i in 0 until jsonArray.length()) {
@@ -51,6 +53,8 @@ class AssetMiraclesPrayerRepository @Inject constructor(
                         originalArabicSupplication = verifiedHadith[obj.getString("duaIsim")],
                         originalArabicScholarlySupplication = verifiedScholarly[obj.getString("duaIsim")],
                         originalArabicWeakHadithSupplication = attestedWeakHadith[obj.getString("duaIsim")],
+                        originalArabicVeryWeakHadithSupplication = attestedVeryWeakHadith[obj.getString("duaIsim")],
+                        originalArabicDocumentedTraditionalSupplication = documentedTraditional[obj.getString("duaIsim")],
                     )
                 )
             }
