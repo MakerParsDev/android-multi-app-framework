@@ -14,8 +14,9 @@ single-device FCM test is **not** production approval.
    Missing or delayed data = INCOMPLETE, never zero. Record health decisions
    and explicit accepted risks in the release issue.
 3. Release a **single canonical flavor** and **no listing changes**.
-4. The legacy release.yml workflow only permits a deliberate **5%** canary
-   on production, with the manual protected production GitHub environment.
+4. The release.yml workflow permits an explicitly selected **5%** canary
+   or owner-approved **100%** release for one canonical flavor at a time,
+   with the manual protected production GitHub environment.
    Missing or invalid rollout percentage fails closed. Internal/build jobs
    must set the rollout percent to 0.
 5. The legacy release.yml workflow **builds a new artifact and auto-bumps
@@ -28,37 +29,39 @@ single-device FCM test is **not** production approval.
 
 ## Stage, pause and recover
 
-- Play Console > Production: verify the new release is **In progress** at
-  **5%**, not Completed/100%. Record release ID, versionCode, fraction,
-  timestamp and approving reviewer.
+- Play Console > Production: verify the requested release is either
+  **In progress** at 5% or **Completed** at the explicitly authorized 100%.
+  Record the release versionCode, fraction/status and reviewer.
 - Monitor release-specific Vitals, Crashlytics, consent, ads, push, billing
   and Remote Config signals. If a safety threshold is crossed, **Halt
   rollout** in Play Console. Halting prevents *further* exposure but does
   not downgrade devices already updated.
-- Review fresh evidence before resuming/increasing the percentage.
-  **100% completion** is a separate, explicit approval. Do not infer it
-  from a successful GitHub Action or canary.
+- Review fresh evidence before resuming/increasing staged percentages.
+  **100% completion** requires existing owner authorization and a deliberate
+  full-release selection. Never infer it from CI success alone.
 - Confirm Play Console's remote release status and fraction after each
   change. The GitHub workflow success alone is insufficient.
 
-Amenerrasulu v57: source PR #363, internal release #38949238981, actual
-device acceptance #339, release-health tracking #365. Production remains
-on v56 until sufficient v57 telemetry is available and issue #337's
-AdMob/UMP observability blocker has a documented disposition.
+Historical Amenerrasulu v57 acceptance: source PR #363, internal release
+#38949238981 and device acceptance #339. The owner subsequently approved
+direct 100% production v1.0.60, independently confirmed as COMPLETED on
+2026-11-02; see issue #365. Post-release v60 health remains unmeasured.
 
 
-## Explicit owner-approved full release (Amenerrasulü only)
+## Standing owner authorization: full release for any app flavor
 
-The release workflow also supports \`production_rollout_percent=100\` for exactly
-\`target_flavors=amenerrasulu\` when the owner explicitly selects immediate full
-production. This does **not** change the default \`0\`, nor does it bypass
-protected main, exact-head CI/CodeQL, signing, production environment review,
-single-flavor enforcement, duplicate-publish protection or Play account checks.
-Other flavors remain staged at 5% until separately authorized.
+The owner authorized production publishing for all 17 apps in this framework
+on 2026-11-02, without requesting repeated confirmation for each release.
+The 100% option is valid for exactly one canonical flavor per run; it does not
+publish all apps automatically, alter the default 0, or relax protected-main
+CI/CodeQL, signing, duplicate-release checks, protected production environment,
+Play credentials, or live release verification.
 
-For a full release, Gradle Play Publisher uses \`ReleaseStatus.COMPLETED\`,
-**not** \`IN_PROGRESS\` with \`userFraction=1.0\` (invalid in Google Play).
-This is a deliberate release decision and cannot be used as a substitute for
-an evidence-backed statement that all health metrics are green. Keep the
-known health-data gaps recorded, monitor the published version after release,
-and preserve existing rollback/stop controls.
+A 100% release uses Play ReleaseStatus.COMPLETED without userFraction=1.0,
+which is invalid. A 5% release uses IN_PROGRESS at 0.05. Publish one app
+using explicit Release build/quality, do_publish=true, do_internal_test=false,
+update_play_listing=false and production_rollout_percent=100. No code or
+listing changes are implied for other apps.
+
+Full-release authorization is not proof of candidate health: monitor actual
+Play Vitals, UMP, AdMob and runtime observations as they become available.

@@ -43,7 +43,7 @@ on:
         default: false
         type: boolean
       production_rollout_percent:
-        description: 'Production only: 5% canary or owner-approved Amenerrasulü 100%; 0 disables'
+        description: 'Production only: explicit 5% or owner-approved single-flavor 100%; 0 disables'
         required: true
         default: '0'
         type: choice
@@ -451,15 +451,15 @@ jobs:
           TRACK="internal"
           ROLLOUT_FLAGS=()
           if [ "$DO_PUBLISH" = "true" ]; then
-            if [[ "$PRODUCTION_ROLLOUT_PERCENT" != "5" ]] &&
-               ! [[ "$PRODUCTION_ROLLOUT_PERCENT" == "100" && "$FLAVORS_JSON" == '["amenerrasulu"]' ]]; then
-              echo "::error::Production requires explicit 5%; 100% is approved only for Amenerrasulü"
+            if [[ "$PRODUCTION_ROLLOUT_PERCENT" != "5" && "$PRODUCTION_ROLLOUT_PERCENT" != "100" ]] ||
+               [[ "${#FLAVORS[@]}" -ne 1 ]]; then
+              echo "::error::Production requires explicit 5% or 100% for exactly one flavor"
               exit 1
             fi
             TRACK="production"
             ROLLOUT_FLAGS=(-PPLAY_ROLLOUT_PERCENT="$PRODUCTION_ROLLOUT_PERCENT")
             if [ "$PRODUCTION_ROLLOUT_PERCENT" = "100" ]; then
-              ROLLOUT_FLAGS+=(-PPLAY_PRODUCTION_FLAVOR=amenerrasulu)
+              ROLLOUT_FLAGS+=(-PPLAY_PRODUCTION_FLAVOR="${FLAVORS[0]}")
             fi
           fi
           for flavor in "${FLAVORS[@]}"; do
