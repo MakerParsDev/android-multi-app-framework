@@ -95,6 +95,8 @@ fun AppNavHost(
             resolveHomeStartDestination(productDefinition)
         }
     val coroutineScope = rememberCoroutineScope()
+    // Let the first prayer/name open immediately; later navigation may show a capped ad.
+    var hasOpenedMiraclesDetail by remember { mutableStateOf(false) }
     var rewardedInterstitialIntroRequest by remember {
         mutableStateOf<RewardedInterstitialIntroRequest?>(null)
     }
@@ -672,7 +674,12 @@ fun AppNavHost(
                 }
                 MiraclesListRoute(
                     onPrayerClick = { prayerIndex ->
-                        if (hostActivity == null) {
+                        val shouldRequestAd = shouldRequestMiraclesInterstitial(
+                            hasOpenedDetail = hasOpenedMiraclesDetail,
+                            hasHostActivity = hostActivity != null,
+                        )
+                        hasOpenedMiraclesDetail = true
+                        if (!shouldRequestAd) {
                             navController.navigate(AppRoute.MiraclesDetail.createRoute(prayerIndex))
                         } else {
                             requestInterstitialAd(
@@ -933,3 +940,9 @@ private data class RewardedInterstitialIntroRequest(
     val spec: RewardedInterstitialIntroSpec,
     val onRewardEarned: () -> Unit,
 )
+
+/** A reader's first detail opening is uninterrupted; subsequent entries keep ad eligibility. */
+internal fun shouldRequestMiraclesInterstitial(
+    hasOpenedDetail: Boolean,
+    hasHostActivity: Boolean,
+): Boolean = hasOpenedDetail && hasHostActivity

@@ -335,14 +335,6 @@ fun MiraclesDetailScreen(
                         }
                     }
 
-                    // Detay ekranı ortasında 1 native reklam
-                    if (uiState.shouldShowAds) {
-                        item(key = "miracles_native_ad") {
-                            content()
-                            Spacer(modifier = Modifier.height(dimens.space12))
-                        }
-                    }
-
                     item {
                         MiraclesDetailSectionCard(
                             label = if (variant == MiraclesContentVariant.MUCIZEDUALAR) {
@@ -391,6 +383,15 @@ fun MiraclesDetailScreen(
                                     lineHeight = 20.sp
                                 )
                             }
+                        }
+                    }
+
+                    // Keep the first meaningful explanation visible before a native ad.
+                    // The same ad placement remains available below the reading content.
+                    if (uiState.shouldShowAds) {
+                        item(key = "miracles_native_ad") {
+                            content()
+                            Spacer(modifier = Modifier.height(dimens.space12))
                         }
                     }
                 }

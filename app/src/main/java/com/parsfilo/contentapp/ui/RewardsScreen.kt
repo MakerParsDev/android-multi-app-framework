@@ -103,6 +103,10 @@ fun RewardsScreen(
         // Top Bar
         AppTopBar(
             title = stringResource(R.string.rewards_title),
+            titleStyle = MaterialTheme.typography.titleLarge.copy(
+                fontFamily = FontFamily.Default,
+                fontWeight = FontWeight.SemiBold,
+            ),
             navigationIcon = Icons.AutoMirrored.Filled.ArrowBack,
             navigationIconContentDescription = "Geri",
             onNavigationClick = onBackClick,
@@ -183,7 +187,7 @@ private fun AdFreeInfoCard() {
                 color = colorScheme.onSurface,
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
-                fontFamily = FontFamily.Serif,
+                fontFamily = FontFamily.Default,
             )
             Spacer(modifier = Modifier.height(dimens.space8))
             Text(
@@ -239,7 +243,7 @@ private fun RewardAdSection(
                     color = colorScheme.onSurface,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
-                    fontFamily = FontFamily.Serif,
+                    fontFamily = FontFamily.Default,
                 )
             }
 
@@ -383,7 +387,7 @@ private fun ActiveRewardTimer(remainingSeconds: Long) {
                     color = colorScheme.onPrimaryContainer,
                     fontWeight = FontWeight.Bold,
                     fontSize = 28.sp,
-                    fontFamily = FontFamily.Serif,
+                    fontFamily = FontFamily.Default,
                 )
             }
         }
