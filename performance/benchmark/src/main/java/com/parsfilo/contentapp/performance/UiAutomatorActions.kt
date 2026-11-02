@@ -3,6 +3,8 @@ package com.parsfilo.contentapp.performance
 import android.Manifest
 import android.graphics.Point
 import androidx.benchmark.macro.MacrobenchmarkScope
+import androidx.test.uiautomator.By
+import androidx.test.uiautomator.Direction
 import androidx.test.uiautomator.StaleObjectException
 import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.onElementOrNull
@@ -79,11 +81,20 @@ internal fun MacrobenchmarkScope.scrollUntilTag(
     tag: String,
     containerTag: String,
 ) {
-    // Accessibility only exposes visible Compose nodes. On a fresh counter
-    // launch the increment button is below the statistics and target cards.
-    repeat(3) {
+    // Scroll the actual content rather than the full-screen Scaffold. Swipes
+    // against the Scaffold can land on non-scrollable controls and do nothing.
+    repeat(6) {
         if (findTag(tag, timeoutMs = 500L) != null) return
-        scrollTag(config, containerTag)
+        val container = waitForTag(config, containerTag)
+        val scrollable = container.findObject(By.scrollable(true))
+            ?: device.findObject(By.scrollable(true))
+        checkNotNull(scrollable) {
+            "No scrollable content for tag=$tag flavor=${config.flavor}"
+        }
+        if (!scrollable.scroll(Direction.DOWN, 0.85f)) {
+            waitForTag(config, tag)
+        }
+        device.waitForIdle()
     }
     // Preserve the actionable hierarchy diagnostic instead of silently
     // ignoring a genuinely missing control.
