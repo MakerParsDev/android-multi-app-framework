@@ -18,6 +18,8 @@
     <string name="miracles_section_arabic">@string/content_mode_arabic</string>
     <string name="miracles_section_latin_pronunciation">Latin Pronunciation</string>
     <string name="miracles_quran_tanzil_attribution">Tanzil Quran Text · © 2007–2021 Tanzil Project · CC BY 3.0 · tanzil.net (open source)</string>
+    <string name="miracles_very_weak_hadith_source">Prayer from a weak chain; a shorter variant is graded very weak (not authenticated hadith or sleep therapy): %1$s (open source)</string>
+    <string name="miracles_traditional_source">Traditional prayer recorded in an educational study (not Quran, authenticated hadith, or proven memory improvement): %1$s (open source)</string>
     <string name="miracles_weak_hadith_source">Prayer wording attested in a weakly graded narration (not an authenticated hadith or promised outcome): %1$s (open source)</string>
     <string name="miracles_scholarly_source">Prayer wording cited in classical commentary (not verified as an authentic Prophetic hadith): %1$s (open source)</string>
     <string name="miracles_hadith_source">Hadith source: %1$s (open source)</string>

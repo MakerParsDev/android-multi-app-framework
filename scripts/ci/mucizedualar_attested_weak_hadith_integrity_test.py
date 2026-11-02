@@ -32,7 +32,7 @@ class WeakReportSourceIntegrityTest(unittest.TestCase):
             self.assertNotIn("(Amin)", record["arabic"])
             self.assertTrue(rows[index]["duaArapca"].endswith("(Amin)"))
 
-    def test_sources_do_not_overlap_and_two_records_remain_unverified(self):
+    def test_source_categories_do_not_overlap(self):
         rows = json.loads((ASSETS / "data.json").read_text(encoding="utf-8"))
         files = (
             "verified_quran_verses.json",
@@ -43,7 +43,11 @@ class WeakReportSourceIntegrityTest(unittest.TestCase):
         titles = [p["title"] for fn in files for p in json.loads((ASSETS / fn).read_text())["prayers"]]
         self.assertEqual(18, len(titles))
         self.assertEqual(18, len(set(titles)))
-        self.assertEqual({4,17}, {i for i,p in enumerate(rows) if p["duaIsim"] not in titles})
+        extra = ("attested_very_weak_hadith_supplications.json", "documented_traditional_supplications.json")
+        additional = [p["title"] for fn in extra for p in json.loads((ASSETS / fn).read_text())["prayers"]]
+        self.assertEqual(2, len(additional))
+        self.assertTrue(set(titles).isdisjoint(additional))
+        self.assertEqual({p["duaIsim"] for p in rows}, set(titles + additional))
 
 if __name__ == "__main__":
     unittest.main()
