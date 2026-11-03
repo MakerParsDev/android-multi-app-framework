@@ -27,8 +27,8 @@ import os
 import pathlib
 import re
 import sys
+import time
 from dataclasses import dataclass
-
 
 NAMED_ARG_PATTERN = re.compile(r'(?P<key>\w+)\s*=\s*"(?P<value>[^"]+)"')
 POSITIONAL_PATTERN = re.compile(
@@ -196,14 +196,33 @@ def build_android_publisher(service_account_info: dict):
     return build("androidpublisher", "v3", credentials=creds, cache_discovery=False)
 
 
-def try_execute(label: str, fn) -> tuple[bool, str]:
-    try:
-        fn()
-        return True, ""
-    except Exception as exc:  # noqa: BLE001
-        msg = str(exc)
-        # Keep output short and avoid leaking details.
-        return False, f"{label}: {msg.splitlines()[0][:240]}"
+TRANSIENT_API_STATUSES = {429, 500, 502, 503, 504}
+READ_RETRY_DELAYS_SECONDS = (1.0, 2.0)
+
+
+def try_execute(label: str, fn, *, retry_transient: bool = True) -> tuple[bool, str]:
+    # Only retry read-only calls; edit creation must never be repeated.
+    delays = READ_RETRY_DELAYS_SECONDS if retry_transient else ()
+    for attempt in range(len(delays) + 1):
+        try:
+            fn()
+            return True, ""
+        except Exception as exc:  # noqa: BLE001
+            status = getattr(getattr(exc, "resp", None), "status", None)
+            if status in TRANSIENT_API_STATUSES:
+                if attempt < len(delays):
+                    time.sleep(delays[attempt])
+                    continue
+                return (
+                    False,
+                    (
+                        f"{label}: Google Play API temporarily unavailable "
+                        f"(HTTP {status}) after {attempt + 1} attempt(s)"
+                    ),
+                )
+            msg = str(exc)
+            return False, f"{label}: {msg.splitlines()[0][:240]}"
+    raise AssertionError("Unreachable API retry state")
 
 
 def check_package(service, package_name: str) -> dict:
@@ -225,7 +244,7 @@ def check_package(service, package_name: str) -> dict:
         if not edit_id:
             raise RuntimeError("Missing edit id in response")
 
-    ok, err = try_execute("edits.insert", create_edit)
+    ok, err = try_execute("edits.insert", create_edit, retry_transient=False)
     result["can_create_edit"] = ok
     if not ok:
         result["errors"].append(err)
@@ -341,8 +360,9 @@ def main() -> int:
 
     if failures:
         print(
-            "\nFAILED: Some packages are missing access.\n"
-            "Hint: In Play Console -> Users and permissions, ensure the service account has:\n"
+            "\nFAILED: Some Google Play API access checks failed.\n"
+            "HTTP 429/5xx is temporary, not proof of missing permissions.\n"
+            "For HTTP 401/403, verify the service account has:\n"
             "- Release permissions (for bundle upload / tracks)\n"
             "- Store presence permissions (for listing/graphics/release notes)\n"
         )
