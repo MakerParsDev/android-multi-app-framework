@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.parsfilo.contentapp.core.designsystem.component.AppCard
+import com.parsfilo.contentapp.core.designsystem.theme.ExtendedQuranMarkFontFamily
 import com.parsfilo.contentapp.core.designsystem.tokens.LocalDimens
 import com.parsfilo.contentapp.core.model.DisplayMode
 import com.parsfilo.contentapp.core.model.Verse
@@ -146,6 +147,11 @@ fun VerseItem(
                     Text(
                         text = verseText,
                         style = MaterialTheme.typography.bodyLarge.copy(
+                            fontFamily = if (requiresExtendedQifFont(displayMode, verseText)) {
+                                ExtendedQuranMarkFontFamily
+                            } else {
+                                MaterialTheme.typography.bodyLarge.fontFamily
+                            },
                             fontSize = fontSize.sp,
                             lineHeight = (fontSize * 1.6).sp,
                             fontWeight = FontWeight.Normal
@@ -174,6 +180,9 @@ fun VerseItem(
         }
     }
 }
+
+internal fun requiresExtendedQifFont(displayMode: DisplayMode, text: String): Boolean =
+    displayMode == DisplayMode.ARABIC && '\u08DE' in text
 
 private fun copyToClipboard(context: Context, verseText: String, successMessage: String) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
