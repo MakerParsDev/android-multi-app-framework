@@ -57,7 +57,10 @@ internal fun PrayerTimesListSection(
 ) {
     if (upcomingDays.isEmpty()) return
 
-    var selectedDayIndex by remember(upcomingDays) { mutableIntStateOf(0) }
+    val todayIso = PrayerDateTime.todayIso()
+    var selectedDayIndex by remember(upcomingDays, todayIso) {
+        mutableIntStateOf(initialPrayerDayIndex(upcomingDays, todayIso))
+    }
     val dayIndex = selectedDayIndex.coerceIn(0, upcomingDays.lastIndex)
     val selectedDay = upcomingDays[dayIndex]
 
@@ -75,7 +78,7 @@ internal fun PrayerTimesListSection(
     }
 
     val currentHm = PrayerDateTime.currentTimeHm()
-    val useRelativeState = dayIndex == 0
+    val useRelativeState = selectedDay.localDate == todayIso
     val nextIndex = if (useRelativeState) {
         prayers.indexOfFirst { it.hm > currentHm }.let { if (it < 0) prayers.lastIndex else it }
     } else {
@@ -154,6 +157,17 @@ internal fun PrayerTimesListSection(
             Spacer(modifier = Modifier.height(8.dp))
         }
     }
+}
+
+/**
+ * The cache intentionally includes two historical days. Select today rather than
+ * the earliest cached date; if today is missing, use the next available date.
+ * Only historical data left? Show the newest available day.
+ */
+internal fun initialPrayerDayIndex(days: List<PrayerTimesDay>, todayIso: String): Int {
+    if (days.isEmpty()) return 0
+    val firstCurrentOrFuture = days.indexOfFirst { it.localDate >= todayIso }
+    return if (firstCurrentOrFuture >= 0) firstCurrentOrFuture else days.lastIndex
 }
 
 private enum class PrayerRowState {
