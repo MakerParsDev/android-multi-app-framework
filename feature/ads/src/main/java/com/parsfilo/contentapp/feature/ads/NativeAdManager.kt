@@ -250,6 +250,7 @@ class NativeAdManager @Inject constructor(
                                         nowMillis = SystemTimeProvider.nowMillis(),
                                         current = loadBackoffState,
                                         errorCode = error.code,
+                                        errorDomain = error.domain,
                                     )
                                 if (loadedCount.incrementAndGet() >= targetCount) {
                                     isLoading = false

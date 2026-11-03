@@ -165,6 +165,7 @@ class RewardedInterstitialAdManager @Inject constructor(
                         nowMillis = SystemTimeProvider.nowMillis(),
                         current = loadBackoffState,
                         errorCode = error.code,
+                        errorDomain = error.domain,
                     )
                     adRevenueLogger.logFailedToLoad(
                         adFormat = AdFormat.REWARDED_INTERSTITIAL,

@@ -117,6 +117,7 @@ class RewardedAdManager @Inject constructor(
                         nowMillis = SystemTimeProvider.nowMillis(),
                         current = loadBackoffState,
                         errorCode = adError.code,
+                        errorDomain = adError.domain,
                     )
                     adRevenueLogger.logFailedToLoad(
                         adFormat = AdFormat.REWARDED,
