@@ -1,5 +1,7 @@
 package com.parsfilo.contentapp.feature.ads
 
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.MobileAds
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.random.Random
@@ -18,11 +20,15 @@ internal object AdLoadBackoffPolicy {
         nowMillis: Long,
         current: AdLoadBackoffState,
         errorCode: Int?,
+        errorDomain: String?,
         random: Random = Random.Default,
     ): AdLoadBackoffState {
         val nextStreak = current.failureStreak + 1
         val baseDelay = scheduleMs[min(nextStreak - 1, scheduleMs.lastIndex)]
-        val tunedDelay = if (errorCode == 3) baseDelay else max(3_000L, baseDelay / 2)
+        // SDK numeric codes are not globally unique across error domains.
+        val isGoogleNoFill = errorCode == AdRequest.ERROR_CODE_NO_FILL &&
+            errorDomain == MobileAds.ERROR_DOMAIN
+        val tunedDelay = if (isGoogleNoFill) baseDelay else max(3_000L, baseDelay / 2)
         val jittered = applyJitter(tunedDelay, random)
         return AdLoadBackoffState(
             failureStreak = nextStreak,
