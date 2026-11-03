@@ -27,6 +27,7 @@ class RewardedAdManager @Inject constructor(
     private var rewardedAdNext: RewardedAd? = null
     private var isLoading = false
     private var isLoadingNext = false
+    private var loadGeneration = 0L
     private var currentAdUnitId: String = ""
     private var currentPlacement: AdPlacement = AdPlacement.REWARDED_DEFAULT
     private var currentRoute: String? = null
@@ -86,6 +87,10 @@ class RewardedAdManager @Inject constructor(
         currentRoute = route
         lastLoadStartedAtMillis = now
         isLoading = true
+        // A new primary request invalidates a still-pending second-slot request.
+        isLoadingNext = false
+        rewardedAdNext = null
+        val requestGeneration = ++loadGeneration
         adRevenueLogger.logRequest(
             adFormat = AdFormat.REWARDED,
             placement = placement,
@@ -100,6 +105,11 @@ class RewardedAdManager @Inject constructor(
             adRequest,
             object : RewardedAdLoadCallback() {
                 override fun onAdFailedToLoad(adError: LoadAdError) {
+                    if (requestGeneration != loadGeneration) return
+                    if (!AdsConsentRuntimeState.canRequestAds.value) {
+                        clearAd()
+                        return
+                    }
                     rewardedAd = null
                     _isAdReady.value = false
                     isLoading = false
@@ -122,6 +132,13 @@ class RewardedAdManager @Inject constructor(
                 }
 
                 override fun onAdLoaded(ad: RewardedAd) {
+                    if (requestGeneration != loadGeneration) return
+                    if (!AdsConsentRuntimeState.canRequestAds.value ||
+                        !adsPolicyProvider.getPolicy().isRewardedPlacementEnabled(placement)
+                    ) {
+                        clearAd()
+                        return
+                    }
                     loadBackoffState = AdLoadBackoffPolicy.onLoadSuccess()
                     val fillLatencyMs = (SystemTimeProvider.nowMillis() - lastLoadStartedAtMillis).coerceAtLeast(0L)
                     adRevenueLogger.logLoaded(
@@ -172,6 +189,7 @@ class RewardedAdManager @Inject constructor(
             adUnitId,
         )
         isLoadingNext = true
+        val requestGeneration = loadGeneration
         val nextPlacement = currentPlacement
         val nextRoute = currentRoute
         val nextLoadStartedAtMillis = SystemTimeProvider.nowMillis()
@@ -196,6 +214,13 @@ class RewardedAdManager @Inject constructor(
             adRequest,
             object : RewardedAdLoadCallback() {
                 override fun onAdLoaded(ad: RewardedAd) {
+                    if (requestGeneration != loadGeneration) return
+                    if (!AdsConsentRuntimeState.canRequestAds.value ||
+                        !adsPolicyProvider.getPolicy().isRewardedPlacementEnabled(nextPlacement)
+                    ) {
+                        clearAd()
+                        return
+                    }
                     Timber.d("Rewarded next slot loaded adUnit=%s", ad.adUnitId)
                     isLoadingNext = false
                     adRevenueLogger.logLoaded(
@@ -223,6 +248,11 @@ class RewardedAdManager @Inject constructor(
                 }
 
                 override fun onAdFailedToLoad(adError: LoadAdError) {
+                    if (requestGeneration != loadGeneration) return
+                    if (!AdsConsentRuntimeState.canRequestAds.value) {
+                        clearAd()
+                        return
+                    }
                     Timber.d(
                         "Rewarded next slot failed code=%d placement=%s",
                         adError.code,
@@ -413,6 +443,8 @@ class RewardedAdManager @Inject constructor(
     }
 
     fun clearAd() {
+        // SDK loads cannot be cancelled; ignore responses from cleared requests.
+        loadGeneration++
         Timber.d(
             "Rewarded clearAd placement=%s hasAd=%s loading=%s",
             currentPlacement.analyticsValue,

@@ -147,6 +147,7 @@ class SecondarySlotTelemetryTest {
     @Test
     fun rewardedSecondSlotLoadedEventMatchesTheSDKRequest() {
         every { config.rewardedPoolMax } returns 2
+        every { config.isRewardedPlacementEnabled(any()) } returns true
         every { policy.getPolicy() } returns config
         AdsConsentRuntimeState.update(true)
         val manager = RewardedAdManager(context, logger, policy)
