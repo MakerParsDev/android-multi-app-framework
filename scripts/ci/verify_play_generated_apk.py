@@ -96,6 +96,90 @@ def validate_firebase_resources(records: dict[str, list[tuple[str, str | None]]]
     return result
 
 
+def read_toolchain_sdk_values(config_file: Path) -> tuple[int, int]:
+    """Use the same build-time Gradle toolchain properties as the release AAB."""
+    keys = ("toolchain.android.minSdk", "toolchain.android.targetSdk")
+    values: dict[str, int] = {}
+    for line in config_file.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith(("#", "!")) or "=" not in line:
+            continue
+        key, raw = (part.strip() for part in line.split("=", 1))
+        if key not in keys:
+            continue
+        if key in values or not raw.isdecimal() or int(raw) < 1:
+            raise ValueError("invalid or duplicated Android SDK build setting")
+        values[key] = int(raw)
+    if len(values) != len(keys):
+        raise ValueError("missing required Android SDK build setting")
+    min_sdk, target_sdk = (values[key] for key in keys)
+    if min_sdk > target_sdk:
+        raise ValueError("Android minSdk exceeds targetSdk in build settings")
+    return min_sdk, target_sdk
+
+
+def parse_manifest_badging(output: str) -> dict[str, str | int]:
+    """Fail closed on absent, duplicated or malformed aapt2 package/SDK fields."""
+    lines = output.splitlines()
+    package_lines = [line for line in lines if line.startswith("package:")]
+    if len(package_lines) != 1:
+        raise ValueError("APK manifest missing or duplicated package metadata")
+    package_match = re.match(
+        r"^package: name='([a-zA-Z0-9_.]+)' versionCode='([0-9]+)'(?:\s|$)",
+        package_lines[0],
+    )
+    if not package_match or int(package_match.group(2)) < 1:
+        raise ValueError("APK manifest has invalid package/versionCode")
+
+    def sdk_value(names: tuple[str, ...]) -> int:
+        entries = [line for line in lines if any(line.startswith(n + ":") for n in names)]
+        if len(entries) != 1:
+            raise ValueError("APK manifest missing or duplicated SDK field")
+        match = re.fullmatch(r"[A-Za-z]+:'([0-9]+)'", entries[0])
+        if not match or int(match.group(1)) < 1:
+            raise ValueError("APK manifest has invalid SDK field")
+        return int(match.group(1))
+
+    return {
+        "packageName": package_match.group(1),
+        "versionCode": int(package_match.group(2)),
+        "minSdk": sdk_value(("minSdkVersion", "sdkVersion")),
+        "targetSdk": sdk_value(("targetSdkVersion",)),
+    }
+
+
+def validate_manifest_badging(
+    output: str, expected_package: str, expected_version_code: int,
+    expected_min_sdk: int, expected_target_sdk: int,
+) -> dict[str, str | int]:
+    metadata = parse_manifest_badging(output)
+    expected = {
+        "packageName": expected_package,
+        "versionCode": expected_version_code,
+        "minSdk": expected_min_sdk,
+        "targetSdk": expected_target_sdk,
+    }
+    for field, wanted in expected.items():
+        if metadata[field] != wanted:
+            raise ValueError(f"Play APK manifest {field} does not match release build metadata")
+    return metadata
+
+
+def audit_manifest(
+    apk_file: Path, aapt2: str, package: str, version_code: int,
+    min_sdk: int, target_sdk: int,
+) -> dict[str, str | int]:
+    proc = subprocess.run(
+        [aapt2, "dump", "badging", str(apk_file)],
+        capture_output=True, text=True, timeout=120, check=False,
+    )
+    if proc.returncode:
+        raise ValueError("APK package metadata could not be decoded by aapt2")
+    return validate_manifest_badging(
+        proc.stdout, package, version_code, min_sdk, target_sdk,
+    )
+
+
 def find_aapt2(explicit: str | None) -> str:
     if explicit:
         if not Path(explicit).is_file() and not shutil.which(explicit):
@@ -220,10 +304,19 @@ def main(argv: list[str] | None = None) -> int:
         version_code = args.version_code
         if args.versions_file:
             version_code = read_play_version_code(args.versions_file, args.flavor)
+        # Offline checks default to the current source flavor version; callers
+        # auditing a historical APK must supply its exact --version-code.
+        if args.apk and version_code is None:
+            version_code = read_play_version_code(ROOT / "app-versions.properties", args.flavor)
+        min_sdk, target_sdk = read_toolchain_sdk_values(ROOT / "gradle.properties")
+        package_name = catalog[args.flavor].package_name
         if args.apk:
             if not args.apk.is_file():
                 raise ValueError("APK file does not exist")
             result = audit_apk(args.apk, aapt2, expected[args.flavor])
+            manifest = audit_manifest(
+                args.apk, aapt2, package_name, version_code, min_sdk, target_sdk,
+            )
             digest = apk_sha256(args.apk)
         else:
             if not version_code or version_code < 1:
@@ -236,11 +329,15 @@ def main(argv: list[str] | None = None) -> int:
                 download_play_signed_apk(catalog[args.flavor].package_name,
                                          version_code, apk_file, account)
                 result = audit_apk(apk_file, aapt2, expected[args.flavor])
+                manifest = audit_manifest(
+                    apk_file, aapt2, package_name, version_code, min_sdk, target_sdk,
+                )
                 digest = apk_sha256(apk_file)
         # Do not print raw API-key / auth-token / Firebase secret values.
         print(json.dumps({"status": "PASS", "flavor": args.flavor,
                           "versionCode": version_code,
-                          "apkSha256": digest, "firebaseResources": result},
+                          "apkSha256": digest, "firebaseResources": result,
+                          "manifest": manifest},
                          sort_keys=True))
         return 0
     except ValueError as error:
