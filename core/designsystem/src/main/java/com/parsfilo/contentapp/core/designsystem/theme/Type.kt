@@ -13,6 +13,12 @@ val ArabicFontFamily = FontFamily(
     Font(R.font.amiri_bold, weight = FontWeight.Bold),
 )
 
+// U+08DE (Qif) is absent from Amiri and Android 9 system fallback fonts.
+// Keep the existing reader typography except for verses using this Quranic mark.
+val ExtendedQuranMarkFontFamily = FontFamily(
+    Font(R.font.noto_naskh_arabic, weight = FontWeight.Normal),
+)
+
 val Typography = Typography(
     displaySmall = TextStyle(
         fontFamily = ArabicFontFamily,
