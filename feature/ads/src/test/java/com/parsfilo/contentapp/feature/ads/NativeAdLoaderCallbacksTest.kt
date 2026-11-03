@@ -100,6 +100,7 @@ class NativeAdLoaderCallbacksTest {
         assertThat(manager.getNativeAd(AdPlacement.NATIVE_FEED_HOME)).isSameInstanceAs(ad)
         verify(exactly = 0) { ad.destroy() }
         verify(exactly = 0) { logger.logNativeInventoryDiscarded(any(), any(), any()) }
+        verify(exactly = 1) { logger.logLoaded(any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -163,6 +164,8 @@ class NativeAdLoaderCallbacksTest {
             )
         }
         assertThat(manager.getNativeAd(AdPlacement.NATIVE_FEED_HOME)).isNull()
+        // A discarded stale SDK response must not count as usable native inventory.
+        verify(exactly = 0) { logger.logLoaded(any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -183,6 +186,8 @@ class NativeAdLoaderCallbacksTest {
                 NativeAdDiscardReason.GATE_CLOSED,
             )
         }
+        // Consent-revoked inventory is destroyed before it becomes available.
+        verify(exactly = 0) { logger.logLoaded(any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
