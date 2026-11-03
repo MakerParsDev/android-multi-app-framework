@@ -92,10 +92,21 @@ fun BannerAd(
         val adSize = remember(sizingPolicy, adWidthDp) {
             sizingPolicy.toAdSize(adWidthDp)
         }
-        var loadState by remember(adUnitId, placement, adWidthDp) {
+        // Keep the state and the SDK view keyed to the same request identity:
+        // both placement and route are captured by the AdListener callbacks.
+        val requestKey = BannerAdRequestKey(
+            adUnitId = adUnitId,
+            placement = placement,
+            route = route,
+            widthDp = adWidthDp,
+            sizeWidth = adSize.width,
+            sizeHeight = adSize.height,
+            showPlacementLabels = showPlacementLabels,
+        )
+        var loadState by remember(requestKey, adContext) {
             mutableStateOf(BannerLoadState.LOADING)
         }
-        val adView = remember(adUnitId, adWidthDp, showPlacementLabels, adSize) {
+        val adView = remember(requestKey, adContext) {
             val loadStartedAtMillis = SystemTimeProvider.nowMillis()
             AdView(adContext).apply {
                 this.adUnitId = adUnitId
@@ -226,6 +237,17 @@ fun BannerAd(
         )
     }
 }
+
+/** Identity shared by load state and SDK view, including callback attribution. */
+internal data class BannerAdRequestKey(
+    val adUnitId: String,
+    val placement: AdPlacement,
+    val route: String?,
+    val widthDp: Int,
+    val sizeWidth: Int,
+    val sizeHeight: Int,
+    val showPlacementLabels: Boolean,
+)
 
 private enum class BannerLoadState {
     LOADING,
