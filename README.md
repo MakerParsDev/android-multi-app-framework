@@ -1,5 +1,7 @@
 # ContentApp
 
+[![GitGem](https://gitgem.org/api/badge/github/MakerParsDev/android-multi-app-framework.svg)](https://gitgem.org/github/MakerParsDev/android-multi-app-framework) [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/MakerParsDev/android-multi-app-framework)
+
 ## CI/CD
 
 This repository uses GitHub Actions for CI/CD. Azure Pipelines have been fully removed.
