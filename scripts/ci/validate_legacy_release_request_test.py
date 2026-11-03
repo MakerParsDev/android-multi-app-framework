@@ -105,6 +105,31 @@ def test_production_requires_explicit_scoped_rollout() -> None:
         })
 
 
+def test_production_accepts_only_known_underscore_flavor() -> None:
+    for percent in ("5", "100"):
+        assert validate_release_inputs({
+            **BASE,
+            "RELEASE_DO_PUBLISH": "true",
+            "RELEASE_PRODUCTION_ROLLOUT_PERCENT": percent,
+            "RELEASE_TARGET_FLAVORS": "kuran_kerim",
+        })
+
+    for invalid in (
+        "kuran__kerim",
+        "_kuran_kerim",
+        "kuran_kerim_",
+        "kuran_kerim_other",
+        "kuran_kerim,amenerrasulu",
+        "kuran_kerim/../",
+        "kuran_kerim ",
+    ):
+        assert rejected(
+            RELEASE_DO_PUBLISH="true",
+            RELEASE_PRODUCTION_ROLLOUT_PERCENT="100",
+            RELEASE_TARGET_FLAVORS=invalid,
+        ), invalid
+
+
 def test_success_requires_exact_main_push_commit() -> None:
     sha = "a" * 40
     good = {"head_sha": sha, "head_branch": "main",

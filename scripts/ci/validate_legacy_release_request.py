@@ -36,7 +36,12 @@ def validate_release_inputs(env: dict[str, str]) -> bool:
     # Fail closed: an omitted/ambiguous percentage must not publish to everyone.
     if production:
         target = env.get("RELEASE_TARGET_FLAVORS", "")
-        if not re.fullmatch(r"[a-z][A-Za-z0-9]{1,48}", target) or target == "all":
+        # kuran_kerim is the one existing flavor with an underscore.
+        # Preserve the strict single-flavor rule for every other target.
+        canonical = target == "kuran_kerim" or bool(
+            re.fullmatch(r"[a-z][A-Za-z0-9]{1,48}", target)
+        )
+        if not canonical or target == "all":
             raise ValueError("production rollout requires one canonical flavor")
         if fraction not in {"5", "100"}:
             raise ValueError("production requires explicit 5% or 100% rollout selection")
