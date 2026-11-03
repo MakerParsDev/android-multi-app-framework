@@ -112,6 +112,7 @@ class SecondarySlotTelemetryTest {
     fun interstitialSecondSlotLoadedEventMatchesTheSDKRequest() {
         every { config.interstitialPoolMax } returns 2
         every { config.demandAwarePreloadEnabled } returns false
+        every { config.isInterstitialPlacementEnabled(any()) } returns true
         every { policy.getPolicy() } returns config
         AdsConsentRuntimeState.update(true)
         val manager = InterstitialAdManager(
