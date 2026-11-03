@@ -177,26 +177,6 @@ class NativeAdManager @Inject constructor(
             )
             val adLoader = nativeAdLoaderFactory.create(currentLoadContext ?: appContext, adUnitId)
                 .forNativeAd { ad: NativeAd ->
-                    adRevenueLogger.logLoaded(
-                        adFormat = AdFormat.NATIVE,
-                        placement = placement,
-                        adUnitId = adUnitId,
-                        route = null,
-                        fillLatencyMs = (SystemTimeProvider.nowMillis() - requestStartedAtMillis).coerceAtLeast(0L),
-                        adapterName = ad.responseInfo?.mediationAdapterClassName,
-                    )
-                    ad.setOnPaidEventListener { adValue: AdValue ->
-                        adRevenueLogger.logPaidEvent(
-                            AdPaidEventContext(
-                                adUnitId = adUnitId,
-                                adFormat = AdFormat.NATIVE,
-                                placement = impressionAttribution.actualPlacement() ?: placement,
-                                route = null,
-                                adValue = adValue,
-                                responseMeta = adRevenueLogger.extractResponseMeta(ad.responseInfo),
-                            ),
-                        )
-                    }
                     // Decisions are made under the pool lock: an old async
                     // callback must not repopulate a reset/revoked pool.
                     val discardReason =
@@ -228,6 +208,28 @@ class NativeAdManager @Inject constructor(
                             placement, adUnitId, discardReason,
                         )
                         return@forNativeAd
+                    }
+                    // Only inventory accepted into the current pool counts as loaded.
+                    // Rejected stale/gate-closed SDK responses are tracked as discards.
+                    adRevenueLogger.logLoaded(
+                        adFormat = AdFormat.NATIVE,
+                        placement = placement,
+                        adUnitId = adUnitId,
+                        route = null,
+                        fillLatencyMs = (SystemTimeProvider.nowMillis() - requestStartedAtMillis).coerceAtLeast(0L),
+                        adapterName = ad.responseInfo?.mediationAdapterClassName,
+                    )
+                    ad.setOnPaidEventListener { adValue: AdValue ->
+                        adRevenueLogger.logPaidEvent(
+                            AdPaidEventContext(
+                                adUnitId = adUnitId,
+                                adFormat = AdFormat.NATIVE,
+                                placement = impressionAttribution.actualPlacement() ?: placement,
+                                route = null,
+                                adValue = adValue,
+                                responseMeta = adRevenueLogger.extractResponseMeta(ad.responseInfo),
+                            ),
+                        )
                     }
                     Timber.d("Native ad loaded (pool=%d)", synchronized(nativeAds) { nativeAds.size })
                 }
