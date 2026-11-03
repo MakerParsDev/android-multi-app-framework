@@ -1,5 +1,6 @@
 package com.parsfilo.contentapp.feature.ads
 
+import com.google.android.gms.ads.MobileAds
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 import kotlin.random.Random
@@ -15,6 +16,7 @@ class AdLoadBackoffPolicyTest {
                 nowMillis = now,
                 current = state,
                 errorCode = 3,
+                errorDomain = MobileAds.ERROR_DOMAIN,
                 random = Random(index),
             )
             assertThat(state.nextLoadAllowedAtMillis).isGreaterThan(now)
@@ -24,11 +26,43 @@ class AdLoadBackoffPolicyTest {
     }
 
     @Test
+    fun `non-GMA code three is not treated as AdMob no fill`() {
+        val gmaNoFill = AdLoadBackoffPolicy.onLoadFailure(
+            nowMillis = 10_000L,
+            current = AdLoadBackoffState(),
+            errorCode = 3,
+            errorDomain = MobileAds.ERROR_DOMAIN,
+            random = Random(0),
+        )
+        val otherDomainCodeThree = AdLoadBackoffPolicy.onLoadFailure(
+            nowMillis = 10_000L,
+            current = AdLoadBackoffState(),
+            errorCode = 3,
+            errorDomain = "example.mediation.sdk",
+            random = Random(0),
+        )
+        val missingDomainCodeThree = AdLoadBackoffPolicy.onLoadFailure(
+            nowMillis = 10_000L,
+            current = AdLoadBackoffState(),
+            errorCode = 3,
+            errorDomain = null,
+            random = Random(0),
+        )
+
+        assertThat(otherDomainCodeThree.failureStreak).isEqualTo(1)
+        assertThat(otherDomainCodeThree.nextLoadAllowedAtMillis)
+            .isLessThan(gmaNoFill.nextLoadAllowedAtMillis)
+        assertThat(missingDomainCodeThree.nextLoadAllowedAtMillis)
+            .isEqualTo(otherDomainCodeThree.nextLoadAllowedAtMillis)
+    }
+
+    @Test
     fun `success resets backoff`() {
         val failed = AdLoadBackoffPolicy.onLoadFailure(
             nowMillis = 1_000L,
             current = AdLoadBackoffState(),
             errorCode = 3,
+            errorDomain = MobileAds.ERROR_DOMAIN,
             random = Random(1),
         )
         val reset = AdLoadBackoffPolicy.onLoadSuccess()

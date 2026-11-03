@@ -198,6 +198,7 @@ class AppOpenAdManager @Inject constructor(
                         nowMillis = SystemTimeProvider.nowMillis(),
                         current = loadBackoffState,
                         errorCode = loadAdError.code,
+                        errorDomain = loadAdError.domain,
                     )
                     adRevenueLogger.logFailedToLoad(
                         adFormat = AdFormat.APP_OPEN,
