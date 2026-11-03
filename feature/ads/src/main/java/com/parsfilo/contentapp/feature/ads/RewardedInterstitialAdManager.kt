@@ -29,6 +29,7 @@ class RewardedInterstitialAdManager @Inject constructor(
 ) {
     private var rewardedInterstitialAd: RewardedInterstitialAd? = null
     private var isLoading = false
+    private var loadGeneration = 0L
     private var currentAdUnitId: String = ""
     private var currentPlacement: AdPlacement = AdPlacement.REWARDED_INTERSTITIAL_DEFAULT
     private var currentRoute: String? = null
@@ -99,6 +100,7 @@ class RewardedInterstitialAdManager @Inject constructor(
         )
 
         isLoading = true
+        val requestGeneration = ++loadGeneration
         val adRequest = AdRequest.Builder().build()
 
         RewardedInterstitialAd.load(
@@ -107,6 +109,13 @@ class RewardedInterstitialAdManager @Inject constructor(
             adRequest,
             object : RewardedInterstitialAdLoadCallback() {
                 override fun onAdLoaded(ad: RewardedInterstitialAd) {
+                    if (requestGeneration != loadGeneration) return
+                    if (!AdsConsentRuntimeState.canRequestAds.value ||
+                        !adsPolicyProvider.getPolicy().isRewardedInterstitialPlacementEnabled(placement)
+                    ) {
+                        clearAd()
+                        return
+                    }
                     Timber.d("Ad loaded: %s", adUnitId)
                     loadBackoffState = AdLoadBackoffPolicy.onLoadSuccess()
                     val fillLatencyMs = (SystemTimeProvider.nowMillis() - lastLoadStartedAtMillis).coerceAtLeast(0L)
@@ -143,6 +152,11 @@ class RewardedInterstitialAdManager @Inject constructor(
                 }
 
                 override fun onAdFailedToLoad(error: LoadAdError) {
+                    if (requestGeneration != loadGeneration) return
+                    if (!AdsConsentRuntimeState.canRequestAds.value) {
+                        clearAd()
+                        return
+                    }
                     Timber.w("Failed to load: %s", error.message)
                     rewardedInterstitialAd = null
                     isLoading = false
@@ -349,6 +363,8 @@ class RewardedInterstitialAdManager @Inject constructor(
     fun isAdReadyNow(): Boolean = rewardedInterstitialAd != null
 
     fun clearAd() {
+        // SDK callbacks can arrive after a load was cleared or superseded.
+        loadGeneration++
         Timber.d(
             "RewardedInterstitial clearAd placement=%s hasAd=%s loading=%s",
             currentPlacement.analyticsValue,
