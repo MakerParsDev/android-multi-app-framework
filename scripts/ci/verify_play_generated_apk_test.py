@@ -5,7 +5,8 @@ from __future__ import annotations
 
 from verify_play_generated_apk import (
     choose_universal, parse_resources, read_play_version_code, signed_apk_media_url,
-    validate_firebase_resources,
+    validate_firebase_resources, parse_manifest_badging, validate_manifest_badging,
+    read_toolchain_sdk_values,
 )
 
 EXPECTED = {
@@ -143,6 +144,84 @@ def test_signed_apk_download_requests_media_contents():
 def test_validated_resources_never_echo_api_key():
     result = validate_firebase_resources(parse_resources(sample()), EXPECTED)
     assert DATA["google_api_key"] not in str(result)
+
+
+
+def example_badging(package="com.parsfilo.mucizedualar", code=81, min_sdk=24, target_sdk=37):
+    return (
+        f"package: name='{package}' versionCode='{code}' versionName='1.0.{code}'\n"
+        f"minSdkVersion:'{min_sdk}'\n"
+        f"targetSdkVersion:'{target_sdk}'\n"
+    )
+
+
+def test_manifest_package_version_and_sdk_match_release_build():
+    assert parse_manifest_badging(example_badging())["minSdk"] == 24
+    result = validate_manifest_badging(
+        example_badging(), expected_package="com.parsfilo.mucizedualar",
+        expected_version_code=81, expected_min_sdk=24, expected_target_sdk=37,
+    )
+    assert result == {"packageName": "com.parsfilo.mucizedualar", "versionCode": 81,
+                      "minSdk": 24, "targetSdk": 37}
+
+
+def test_reject_wrong_package_and_version_code():
+    for bad in (example_badging(package="com.example.other"),
+                example_badging(code=80)):
+        raises(lambda bad=bad: validate_manifest_badging(
+            bad, "com.parsfilo.mucizedualar", 81, 24, 37,
+        ))
+
+
+def test_manifest_supports_legacy_sdk_label_without_accepting_duplicates():
+    legacy = example_badging().replace("minSdkVersion:", "sdkVersion:")
+    result = validate_manifest_badging(
+        legacy, "com.parsfilo.mucizedualar", 81, 24, 37,
+    )
+    assert result["minSdk"] == 24
+    raises(lambda: validate_manifest_badging(
+        legacy + "minSdkVersion:'24'\n",
+        "com.parsfilo.mucizedualar", 81, 24, 37,
+    ))
+
+
+def test_reject_sdk_compatibility_drift():
+    for bad in (example_badging(min_sdk=32), example_badging(target_sdk=35),
+                example_badging(min_sdk=38)):
+        raises(lambda bad=bad: validate_manifest_badging(
+            bad, "com.parsfilo.mucizedualar", 81, 24, 37,
+        ))
+
+
+def test_reject_missing_duplicate_and_malformed_manifest_fields():
+    valid = example_badging()
+    for bad in (valid.replace("minSdkVersion:'24'\n", ""),
+                valid.replace("targetSdkVersion:'37'\n", ""),
+                valid.replace("versionCode='81'", ""),
+                valid + "targetSdkVersion:'37'\n",
+                valid + "package: name='com.other.app' versionCode='81'\n",
+                valid.replace("minSdkVersion:'24'", "minSdkVersion:'abc'")):
+        raises(lambda bad=bad: validate_manifest_badging(
+            bad, "com.parsfilo.mucizedualar", 81, 24, 37,
+        ))
+
+
+def test_parse_sdk_settings_from_exact_release_properties():
+    import tempfile
+    from pathlib import Path
+    with tempfile.TemporaryDirectory() as folder:
+        path = Path(folder) / "gradle.properties"
+        path.write_text("toolchain.android.minSdk=24\n"
+                        "toolchain.android.targetSdk=37\n")
+        assert read_toolchain_sdk_values(path) == (24, 37)
+        for bad in ("toolchain.android.minSdk=24\n",
+                    "toolchain.android.minSdk=24\n"
+                    "toolchain.android.targetSdk=37\n"
+                    "toolchain.android.minSdk=25\n",
+                    "toolchain.android.minSdk=38\n"
+                    "toolchain.android.targetSdk=37\n"):
+            path.write_text(bad)
+            raises(lambda: read_toolchain_sdk_values(path))
 
 
 def main() -> int:
