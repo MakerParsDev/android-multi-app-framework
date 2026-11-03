@@ -32,6 +32,7 @@ class InterstitialAdManager @Inject constructor(
     private var interstitialAdNext: InterstitialAd? = null
     private var isLoading = false
     private var isLoadingNext = false
+    private var loadGeneration = 0L
     private var currentAdUnitId: String? = null
     private var currentPlacement: AdPlacement = AdPlacement.INTERSTITIAL_DEFAULT
     private var currentRoute: String? = null
@@ -114,6 +115,11 @@ class InterstitialAdManager @Inject constructor(
         currentLoadContext = loadContext.findActivity() ?: loadContext
         lastLoadStartedAtMillis = now
         isLoading = true
+        // A new primary request supersedes any still-loading secondary slot.
+        // The old callback is ignored by the generation check below.
+        isLoadingNext = false
+        interstitialAdNext = null
+        val requestGeneration = ++loadGeneration
         adRevenueLogger.logPreloadRequested(
             adFormat = AdFormat.INTERSTITIAL,
             placement = placement,
@@ -135,6 +141,11 @@ class InterstitialAdManager @Inject constructor(
             adRequest,
             object : InterstitialAdLoadCallback() {
                 override fun onAdFailedToLoad(adError: LoadAdError) {
+                    if (requestGeneration != loadGeneration) return
+                    if (!AdsConsentRuntimeState.canRequestAds.value) {
+                        clearAd()
+                        return
+                    }
                     interstitialAd = null
                     isLoading = false
                     loadBackoffState = AdLoadBackoffPolicy.onLoadFailure(
@@ -162,6 +173,13 @@ class InterstitialAdManager @Inject constructor(
                 }
 
                 override fun onAdLoaded(ad: InterstitialAd) {
+                    if (requestGeneration != loadGeneration) return
+                    if (!AdsConsentRuntimeState.canRequestAds.value ||
+                        !adsPolicyProvider.getPolicy().isInterstitialPlacementEnabled(placement)
+                    ) {
+                        clearAd()
+                        return
+                    }
                     Timber.d(
                         "Interstitial loaded placement=%s route=%s adUnit=%s responseId=%s",
                         currentPlacement.analyticsValue,
@@ -498,6 +516,7 @@ class InterstitialAdManager @Inject constructor(
             return
         }
         isLoadingNext = true
+        val requestGeneration = loadGeneration
         val nextPlacement = currentPlacement
         val nextRoute = currentRoute
         val nextLoadStartedAtMillis = SystemTimeProvider.nowMillis()
@@ -522,6 +541,13 @@ class InterstitialAdManager @Inject constructor(
             adRequest,
             object : InterstitialAdLoadCallback() {
                 override fun onAdLoaded(ad: InterstitialAd) {
+                    if (requestGeneration != loadGeneration) return
+                    if (!AdsConsentRuntimeState.canRequestAds.value ||
+                        !adsPolicyProvider.getPolicy().isInterstitialPlacementEnabled(nextPlacement)
+                    ) {
+                        clearAd()
+                        return
+                    }
                     Timber.d("Interstitial next slot loaded adUnit=%s", ad.adUnitId)
                     isLoadingNext = false
                     adRevenueLogger.logLoaded(
@@ -549,6 +575,11 @@ class InterstitialAdManager @Inject constructor(
                 }
 
                 override fun onAdFailedToLoad(adError: LoadAdError) {
+                    if (requestGeneration != loadGeneration) return
+                    if (!AdsConsentRuntimeState.canRequestAds.value) {
+                        clearAd()
+                        return
+                    }
                     Timber.d(
                         "Interstitial next slot failed code=%d placement=%s",
                         adError.code,
@@ -602,6 +633,9 @@ class InterstitialAdManager @Inject constructor(
         )
 
     fun clearAd() {
+        // SDK load callbacks may arrive after consent revocation or cache reset.
+        // Invalidate both the primary request and any pending second-slot load.
+        loadGeneration++
         Timber.d(
             "Interstitial clearAd placement=%s hasAd=%s loading=%s",
             currentPlacement.analyticsValue,
