@@ -119,6 +119,15 @@
       "maximum": 180,
       "client_default": 30
     },
+    "ads_demand_aware_preload_enabled": {
+      "owner": "monetization",
+      "type": "boolean",
+      "scope": "flavor",
+      "default": false,
+      "description": "Opt-in demand-aware ad preload experiment; disabled by default across all flavors.",
+      "flavor_default": false,
+      "client_default": false
+    },
     "ads_emergency_disabled": {
       "owner": "monetization",
       "type": "boolean",

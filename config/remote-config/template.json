@@ -263,6 +263,13 @@
       "description": "Bounded per-app advertising policy value.",
       "valueType": "STRING"
     },
+    "ads_demand_aware_preload_enabled": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Opt-in demand-aware ad preload experiment; disabled by default across all flavors.",
+      "valueType": "STRING"
+    },
     "ads_emergency_disabled": {
       "defaultValue": {
         "value": "true"
