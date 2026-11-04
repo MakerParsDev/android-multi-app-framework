@@ -9,8 +9,12 @@
         tools:node="remove" />
 
     <application>
+        <!-- The service is removed at manifest merge time, not registered.
+             Lint's Instantiatable detector checks this removal marker as if
+             it were an actual service declaration. Suppress only that marker. -->
         <service
             android:name="com.parsfilo.contentapp.feature.audio.service.AudioService"
-            tools:node="remove" />
+            tools:node="remove"
+            tools:ignore="Instantiatable" />
     </application>
 </manifest>
