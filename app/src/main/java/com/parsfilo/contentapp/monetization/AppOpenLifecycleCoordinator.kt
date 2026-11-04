@@ -131,6 +131,14 @@ class AppOpenLifecycleCoordinator
                 recordSuppression(requestActivity, AdSuppressReason.APP_LIFECYCLE, triggerReason)
                 return
             }
+            // App-open is never eligible on the first foreground. MainActivity's
+            // AdManager.initialize() already requests UMP consent for this launch;
+            // an extra refresh here races that request without showing an ad.
+            if (!shouldRefreshAppOpenConsent(triggerReason)) {
+                Timber.d("AppOpen cold-start suppressed; leaving UMP to initial consent flow")
+                recordSuppression(requestActivity, AdSuppressReason.COLD_START, triggerReason)
+                return
+            }
             adOrchestrator.refreshConsent(
                 activity = requireNotNull(targetActivity),
                 scope = ProcessLifecycleOwner.get().lifecycleScope,
@@ -189,3 +197,7 @@ class AppOpenLifecycleCoordinator
         private fun Activity?.isUsableForAds(): Boolean =
             this != null && !isFinishing && !isDestroyed
     }
+
+/** Cold-start app-open is blocked by policy; resume refresh must remain enabled. */
+internal fun shouldRefreshAppOpenConsent(reason: AppOpenTriggerReason): Boolean =
+    reason != AppOpenTriggerReason.COLD_START
