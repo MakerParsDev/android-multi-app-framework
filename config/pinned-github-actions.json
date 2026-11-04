@@ -40,8 +40,8 @@
     "version": "v7.1.1"
   },
   "github/codeql-action": {
-    "sha": "9b3254085494b55a0f7c4c2b3d2d52cc712ce370",
-    "version": "v4.39.1"
+    "sha": "1fc58d04a4d4374f921bdac573c3811c240f9c26",
+    "version": "v4.39.2"
   },
   "gradle/actions": {
     "sha": "8da46b539cd8fe6ab27ca75128919a18d757604c",
