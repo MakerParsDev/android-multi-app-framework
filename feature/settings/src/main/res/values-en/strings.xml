@@ -43,6 +43,11 @@
     <string name="settings_language_de">German</string>
     <string name="settings_language_changed">Language changed</string>
 
+    <string name="settings_account_deletion_title">Account and data deletion</string>
+    <string name="settings_account_deletion_description">Request deletion of your account and associated data</string>
+    <string name="settings_account_deletion_action">Request deletion</string>
+    <string name="settings_account_deletion_unavailable">Could not open the account deletion page</string>
+
     <string name="settings_privacy_options">Privacy options</string>
     <string name="settings_privacy_options_desc_required">Ad privacy options are required</string>
     <string name="settings_privacy_options_desc_optional">View / update privacy and ad preferences</string>

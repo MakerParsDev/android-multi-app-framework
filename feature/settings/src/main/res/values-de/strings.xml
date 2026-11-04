@@ -43,6 +43,11 @@
     <string name="settings_language_de">Deutsch</string>
     <string name="settings_language_changed">Sprache geändert</string>
 
+    <string name="settings_account_deletion_title">Konto- und Datenlöschung</string>
+    <string name="settings_account_deletion_description">Löschung Ihres Kontos und der zugehörigen Daten beantragen</string>
+    <string name="settings_account_deletion_action">Löschung beantragen</string>
+    <string name="settings_account_deletion_unavailable">Die Seite zur Kontolöschung konnte nicht geöffnet werden</string>
+
     <string name="settings_privacy_options">Datenschutzoptionen</string>
     <string name="settings_privacy_options_desc_required">Datenschutzoptionen für Werbung sind erforderlich</string>
     <string name="settings_privacy_options_desc_optional">Datenschutz- und Werbeeinstellungen anzeigen / aktualisieren</string>
