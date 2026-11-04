@@ -22,14 +22,17 @@ class NativeAdViewModel @Inject constructor(
 ) : ViewModel() {
     private val currentPlacement = MutableStateFlow(AdPlacement.NATIVE_DEFAULT)
 
+    // The default is only a placeholder until a route selects its actual slot.
+    // Consuming preloaded inventory here wastes an ad when the first route
+    // immediately switches to NATIVE_FEED_HOME or NATIVE_FEED_CONTENT.
+    private var placementSelected = false
+
     private val _nativeAdState = MutableStateFlow<NativeAd?>(null)
     val nativeAdState: StateFlow<NativeAd?> = _nativeAdState.asStateFlow()
 
     init {
-        // Acquire one ad for the current screen, but don't churn through the pool.
-        refreshAdIfAvailable()
-
-        // Only consume from the pool when UI does not already hold an ad.
+        // Only consume from the pool once the navigation route has selected
+        // a real placement and UI does not already hold an ad.
         viewModelScope.launch {
             nativeAdManager.adLoadedFlow.collect {
                 refreshAdIfAvailable()
@@ -50,18 +53,9 @@ class NativeAdViewModel @Inject constructor(
         }
     }
 
-    private fun refreshAdIfAvailable(forceReplace: Boolean = false) {
-        if (!forceReplace && _nativeAdState.value != null) return
-
-        val nextAd = nativeAdManager.getNativeAd(currentPlacement.value) ?: return
-        val previousAd = _nativeAdState.value
-
-        if (previousAd === nextAd) return
-
-        _nativeAdState.value = nextAd
-        if (forceReplace) {
-            previousAd?.destroy()
-        }
+    private fun refreshAdIfAvailable() {
+        if (!placementSelected || _nativeAdState.value != null) return
+        _nativeAdState.value = nativeAdManager.getNativeAd(currentPlacement.value)
     }
 
     private fun clearCurrentNativeAd() {
@@ -71,10 +65,11 @@ class NativeAdViewModel @Inject constructor(
     }
 
     fun setPlacement(placement: AdPlacement) {
-        if (currentPlacement.value == placement) return
+        if (placementSelected && currentPlacement.value == placement) return
         clearCurrentNativeAd()
         currentPlacement.value = placement
-        refreshAdIfAvailable(forceReplace = true)
+        placementSelected = true
+        refreshAdIfAvailable()
     }
 
     override fun onCleared() {
