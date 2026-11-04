@@ -1,6 +1,7 @@
 package com.parsfilo.contentapp.feature.settings.ui
 
 import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.Context
 import android.content.ContextWrapper
@@ -209,6 +210,7 @@ fun SettingsScreen(
         stringResource(R.string.settings_privacy_options_unavailable)
     val privacyOptionsErrorText = stringResource(R.string.settings_privacy_options_error)
     val privacyOptionsSavedText = stringResource(R.string.settings_privacy_options_saved)
+    val accountDeletionUnavailableText = stringResource(R.string.settings_account_deletion_unavailable)
     val adInspectorOpenedText = stringResource(R.string.settings_ads_debug_ad_inspector_opened)
     val adInspectorErrorText = stringResource(R.string.settings_ads_debug_ad_inspector_error)
     val consentResetText = stringResource(R.string.settings_ads_debug_consent_reset)
@@ -556,6 +558,40 @@ fun SettingsScreen(
                                 modifier = Modifier.padding(horizontal = dimens.space16),
                             )
                         }
+
+                        // Keep the deletion request accessible even when no account is signed in.
+                        // Stacking the action avoids narrow-font-scale ListItem squeeze.
+                        Column(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.settings_account_deletion_title),
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                            Text(
+                                text = stringResource(R.string.settings_account_deletion_description),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                            TextButton(
+                                onClick = {
+                                    if (!openAccountDeletionRequestPage(context)) {
+                                        showMessage(accountDeletionUnavailableText)
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp),
+                            ) {
+                                Text(stringResource(R.string.settings_account_deletion_action))
+                            }
+                        }
+
+                        HorizontalDivider(
+                            color = colorScheme.outline.copy(alpha = 0.3f),
+                            modifier = Modifier.padding(horizontal = dimens.space16),
+                        )
 
                         // Keep the privacy disclosure readable even with 200% font scale.
                         // A trailing ListItem button squeezed the explanatory copy to
@@ -1446,6 +1482,28 @@ private fun openAppNotificationSettings(context: Context) {
             )
         }
     context.startActivity(intent)
+}
+
+private const val ACCOUNT_DELETION_REQUEST_URL = "https://parsfilo.com/account-deletion/"
+
+private fun openAccountDeletionRequestPage(context: Context): Boolean {
+    val language = when (
+        context.resources.configuration.locales.get(0)?.language?.lowercase(Locale.ROOT)
+    ) {
+        "tr" -> "tr"
+        "de" -> "de"
+        else -> "en"
+    }
+    val requestIntent =
+        Intent(Intent.ACTION_VIEW, "$ACCOUNT_DELETION_REQUEST_URL#$language".toUri())
+    return try {
+        context.startActivity(requestIntent)
+        true
+    } catch (_: ActivityNotFoundException) {
+        false
+    } catch (_: SecurityException) {
+        false
+    }
 }
 
 private fun shareApp(context: Context) {
