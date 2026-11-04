@@ -39,38 +39,59 @@ FROM daily
 ORDER BY event_date;
 
 --------------------------------------------------------------------------------
--- 2) Ad funnel by format/placement (request -> loaded -> impression)
+-- 2) App-owned ad funnel diagnostics by app/version/format/placement
 --------------------------------------------------------------------------------
+-- These are client event counts, not AdMob billable network impressions.
+-- 'ad_impression' is Firebase/AdMob-collected and has no reliable client
+-- placement key. Use only the separate SDK callback 'ad_placement_impression'
+-- for placement attribution. UI handoffs, callbacks and paid impressions
+-- are distinct events; do not calculate an impression/revenue rate from them.
+-- Compare mature days and the same app/version cohort; daily GA4 exports can
+-- receive late events, and older binaries may not emit all diagnostic events.
 WITH base AS (
   SELECT
     event_date,
     event_name,
+    COALESCE(app_info.id, 'unknown') AS app_package,
+    COALESCE(app_info.version, 'unknown') AS app_version,
     COALESCE(
       (SELECT ep.value.string_value FROM UNNEST(event_params) ep WHERE ep.key = 'ad_format'),
       'unknown'
     ) AS ad_format,
     COALESCE(
-      (SELECT ep.value.string_value FROM UNNEST(event_params) ep WHERE ep.key = 'placement'),
+      (SELECT ep.value.string_value FROM UNNEST(event_params) ep WHERE ep.key = 'ad_placement'),
       'unknown'
-    ) AS placement
+    ) AS ad_placement,
+    COALESCE(
+      (SELECT ep.value.string_value FROM UNNEST(event_params) ep WHERE ep.key = 'ad_error_category'),
+      'unknown'
+    ) AS ad_error_category
   FROM `<DATASET>.events_*`
   WHERE _TABLE_SUFFIX BETWEEN '20260301' AND '20260331'
-    AND event_name IN ('ad_request_sent', 'ad_loaded', 'ad_impression', 'ad_failed_to_load', 'ad_suppressed')
+    AND event_name IN (
+      'ad_request_sent', 'ad_loaded', 'ad_served', 'ad_inventory_discarded',
+      'ad_placement_impression', 'ad_failed_to_load', 'ad_suppressed'
+    )
 )
 SELECT
   event_date,
+  app_package,
+  app_version,
   ad_format,
-  placement,
-  COUNTIF(event_name = 'ad_request_sent') AS requests,
-  COUNTIF(event_name = 'ad_loaded') AS loaded,
-  COUNTIF(event_name = 'ad_impression') AS impressions,
-  COUNTIF(event_name = 'ad_failed_to_load') AS failed_to_load,
-  COUNTIF(event_name = 'ad_suppressed') AS suppressed,
-  SAFE_DIVIDE(COUNTIF(event_name = 'ad_loaded'), COUNTIF(event_name = 'ad_request_sent')) * 100 AS load_rate_pct,
-  SAFE_DIVIDE(COUNTIF(event_name = 'ad_impression'), COUNTIF(event_name = 'ad_loaded')) * 100 AS show_rate_pct
+  ad_placement,
+  COUNTIF(event_name = 'ad_request_sent') AS request_events,
+  COUNTIF(event_name = 'ad_loaded') AS loaded_events,
+  COUNTIF(event_name = 'ad_served') AS ui_handoffs,
+  COUNTIF(event_name = 'ad_inventory_discarded') AS native_discarded_before_handoff,
+  COUNTIF(event_name = 'ad_placement_impression') AS placement_impression_callbacks,
+  COUNTIF(event_name = 'ad_failed_to_load') AS failed_to_load_events,
+  COUNTIF(event_name = 'ad_failed_to_load' AND ad_error_category IN ('no_fill', 'mediation_no_fill')) AS no_fill_events,
+  COUNTIF(event_name = 'ad_failed_to_load' AND ad_error_category IN ('internal', 'network', 'invalid_request', 'configuration', 'other_domain', 'other')) AS other_categorized_failure_events,
+  COUNTIF(event_name = 'ad_failed_to_load' AND ad_error_category = 'unknown') AS uncategorized_failure_events,
+  COUNTIF(event_name = 'ad_suppressed') AS suppressed_events
 FROM base
-GROUP BY event_date, ad_format, placement
-ORDER BY event_date, ad_format, placement;
+GROUP BY event_date, app_package, app_version, ad_format, ad_placement
+ORDER BY event_date, app_package, app_version, ad_format, ad_placement;
 
 --------------------------------------------------------------------------------
 -- 3) Consent cohort performance
