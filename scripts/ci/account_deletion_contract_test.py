@@ -83,6 +83,17 @@ class AccountDeletionContractTest(unittest.TestCase):
         self.assertEqual(page, (WEB_ROOT / "privacy.html").read_bytes())
         self.assertIn(b'href="/account-deletion/"', page)
 
+    def test_deletion_site_does_not_drop_existing_published_app(self) -> None:
+        """The live public directory includes an app omitted from older sources."""
+        import json
+
+        catalog = json.loads((WEB_ROOT / "other_apps.json").read_text())
+        matches = [row for row in catalog if row.get("packageName") == "com.parsfilo.imsakiye"]
+        self.assertEqual(len(matches), 1)
+        self.assertEqual(matches[0]["appName"], "İmsakiye")
+        privacy = (WEB_ROOT / "privacy/index.html").read_text()
+        self.assertEqual(privacy.count("<code>com.parsfilo.imsakiye</code>"), 2)
+
     def test_page_is_static_and_never_auto_submits(self) -> None:
         html = (WEB_ROOT / "account-deletion/index.html").read_text().lower()
         self.assertNotIn("<form", html)
