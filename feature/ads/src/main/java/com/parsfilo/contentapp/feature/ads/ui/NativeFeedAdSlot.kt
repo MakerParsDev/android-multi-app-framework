@@ -31,9 +31,10 @@ fun NativeFeedAdSlot(
     }
     val canRequestAds by AdsConsentRuntimeState.canRequestAds.collectAsState()
     val canShowAds by entryPoint.adGateChecker().shouldShowAds.collectAsState(initial = false)
+    val eligible = nativeFeedSlotEligible(canRequestAds, canShowAds)
     val policy = entryPoint.adsPolicyProvider().getPolicy()
-    LaunchedEffect(nativeAd, nativePlacement, nativeAdUnitId, canRequestAds, canShowAds, policy.demandAwarePreloadEnabled) {
-        if (policy.demandAwarePreloadEnabled && nativeAd == null && canRequestAds && canShowAds) {
+    LaunchedEffect(nativeAd, nativePlacement, nativeAdUnitId, eligible, policy.demandAwarePreloadEnabled) {
+        if (policy.demandAwarePreloadEnabled && nativeAd == null && eligible) {
             // A deferred request leaves nativeAd null; retry at most twice while
             // this slot remains composed and eligible. Changes to consent/slot
             // cancel the effect; manager deduplication and SDK backoff still apply.
@@ -45,6 +46,11 @@ fun NativeFeedAdSlot(
             }
         }
     }
+    // The ViewModel also clears transferred ads on gate changes, but that
+    // collection is asynchronous. Never render a retained native ad (or the
+    // banner fallback) during the gap after consent or entitlement closes.
+    if (!eligible) return
+
     if (nativeAd != null) {
         NativeAdItem(nativeAd = nativeAd, isSmallFormat = useSmallFormat, modifier = modifier)
         return
@@ -61,3 +67,9 @@ fun NativeFeedAdSlot(
         modifier = modifier,
     )
 }
+
+/** Shared eligibility for native rendering and demand-aware slot preloads. */
+internal fun nativeFeedSlotEligible(
+    canRequestAds: Boolean,
+    canShowAds: Boolean,
+): Boolean = canRequestAds && canShowAds
