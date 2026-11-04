@@ -7,9 +7,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
@@ -103,11 +101,11 @@ fun BannerAd(
             sizeHeight = adSize.height,
             showPlacementLabels = showPlacementLabels,
         )
-        var loadState by remember(requestKey, adContext) {
-            mutableStateOf(BannerLoadState.LOADING)
-        }
         val adView = remember(requestKey, adContext) {
             val loadStartedAtMillis = SystemTimeProvider.nowMillis()
+            // The SDK can auto-refresh without calling our loadAd again. Only
+            // the explicit first request has a measurable start timestamp.
+            var initialLoadPending = true
             AdView(adContext).apply {
                 this.adUnitId = adUnitId
                 setAdSize(adSize)
@@ -122,8 +120,13 @@ fun BannerAd(
                 )
                 adListener = object : AdListener() {
                     override fun onAdLoaded() {
-                        loadState = BannerLoadState.LOADED
-                        val fillLatencyMs = (SystemTimeProvider.nowMillis() - loadStartedAtMillis).coerceAtLeast(0L)
+                        val fillLatencyMs =
+                            if (initialLoadPending) {
+                                (SystemTimeProvider.nowMillis() - loadStartedAtMillis).coerceAtLeast(0L)
+                            } else {
+                                null
+                            }
+                        initialLoadPending = false
                         revenueLogger.logLoaded(
                             adFormat = AdFormat.BANNER,
                             placement = placement,
@@ -141,7 +144,7 @@ fun BannerAd(
                     }
 
                     override fun onAdFailedToLoad(error: com.google.android.gms.ads.LoadAdError) {
-                        loadState = BannerLoadState.FAILED
+                        initialLoadPending = false
                         revenueLogger.logFailedToLoad(
                             adFormat = AdFormat.BANNER,
                             placement = placement,
@@ -194,8 +197,10 @@ fun BannerAd(
             }
         }
 
-        if (loadState == BannerLoadState.FAILED) return@BoxWithConstraints
-
+        // Keep the view attached after a failed load: for AdMob-managed banner
+        // refresh, the SDK retries only while the banner stays visible. Removing
+        // and destroying this view prevents that recovery and manual retries can
+        // duplicate the SDK's own requests.
         DisposableEffect(adView, lifecycleOwner) {
             val observer = LifecycleEventObserver { _, event ->
                 when (event) {
@@ -248,12 +253,6 @@ internal data class BannerAdRequestKey(
     val sizeHeight: Int,
     val showPlacementLabels: Boolean,
 )
-
-private enum class BannerLoadState {
-    LOADING,
-    LOADED,
-    FAILED,
-}
 
 private fun BannerSizingPolicy.toAdSize(adWidthDp: Int): AdSize =
     when (mode) {
