@@ -21,6 +21,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Drives the production NativeAdManager's actual SDK callbacks without
@@ -86,6 +90,60 @@ class NativeAdLoaderCallbacksTest {
             count = 1,
         )
         verify(atLeast = 1) { sdkLoader.loadAd(any<AdRequest>()) }
+    }
+
+    @Test
+    fun concurrentNativePreloadsReserveOneBudgetAndIssueOneSdkRequest() {
+        val app = RuntimeEnvironment.getApplication()
+        val budgetEntered = CountDownLatch(1)
+        val releaseBudget = CountDownLatch(1)
+        val secondStarted = CountDownLatch(1)
+        val secondBudgetAttempt = CountDownLatch(1)
+        val reservations = AtomicInteger(0)
+        val failure = AtomicReference<Throwable?>()
+        every { budget.tryReserve(any(), any()) } answers {
+            if (reservations.incrementAndGet() == 1) {
+                budgetEntered.countDown()
+                check(releaseBudget.await(5, TimeUnit.SECONDS)) { "budget reservation timed out" }
+            } else {
+                secondBudgetAttempt.countDown()
+            }
+            true
+        }
+        val first = Thread {
+            try {
+                manager.loadAds(app, "test-native", AdPlacement.NATIVE_FEED_HOME, count = 1)
+            } catch (error: Throwable) {
+                failure.set(error)
+            }
+        }
+        val second = Thread {
+            secondStarted.countDown()
+            try {
+                manager.loadAds(app, "test-native", AdPlacement.NATIVE_FEED_CONTENT, count = 1)
+            } catch (error: Throwable) {
+                failure.set(error)
+            }
+        }
+        try {
+            first.start()
+            assertThat(budgetEntered.await(5, TimeUnit.SECONDS)).isTrue()
+            second.start()
+            assertThat(secondStarted.await(5, TimeUnit.SECONDS)).isTrue()
+            // The second request must not reach the budget before the first
+            // has atomically reserved the pool and started its SDK load.
+            assertThat(secondBudgetAttempt.await(500, TimeUnit.MILLISECONDS)).isFalse()
+            assertThat(second.isAlive).isTrue()
+        } finally {
+            releaseBudget.countDown()
+            first.join(5_000)
+            if (second.state != Thread.State.NEW) second.join(5_000)
+        }
+        assertThat(first.isAlive).isFalse()
+        assertThat(second.isAlive).isFalse()
+        assertThat(failure.get()).isNull()
+        verify(exactly = 1) { budget.tryReserve(any(), any()) }
+        verify(exactly = 1) { sdkLoader.loadAd(any<AdRequest>()) }
     }
 
     @Test
