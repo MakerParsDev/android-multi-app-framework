@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Mucize Dualar is text-only: only the Esma variant wires the Media3 player.
+         Do not ship an unused foreground media playback permission or service. -->
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+        tools:node="remove" />
+
+    <application>
+        <service
+            android:name="com.parsfilo.contentapp.feature.audio.service.AudioService"
+            tools:node="remove" />
+    </application>
+</manifest>
