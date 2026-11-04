@@ -134,34 +134,33 @@ class NativeAdManager @Inject constructor(
             Timber.d("Native load throttled until=%d", loadBackoffState.nextLoadAllowedAtMillis)
             return
         }
-        if (isLoading) {
-            Timber.d("Already loading, ignoring native load request")
-            return
-        }
         val poolMax = policy.nativePoolMax.takeIf { it > 0 } ?: DEFAULT_POOL_MAX
-        val targetCount = synchronized(nativeAds) {
-            if (nativeAds.size >= poolMax) {
-                Timber.d("Native pool already full (%d)", nativeAds.size)
-                return
-            }
-            count.coerceIn(1, (poolMax - nativeAds.size).coerceAtLeast(1))
-        }
-
-        if (policy.demandAwarePreloadEnabled && !adPreloadRequestBudget.tryReserve(targetCount)) {
-            Timber.d("Native optional load deferred: shared request budget exhausted")
-            adRevenueLogger.logSuppressed(
-                AdFormat.NATIVE, placement, adUnitId, "request_budget",
-            )
-            return
-        }
-
-        val requestGeneration =
+        // Reserve the pool slot, optional budget, and active load together.
+        // Otherwise two simultaneous placements can both pass the unlocked
+        // isLoading check and issue duplicate SDK requests for the same pool.
+        val (targetCount, requestGeneration) =
             synchronized(nativeAds) {
+                if (isLoading) {
+                    Timber.d("Already loading, ignoring native load request")
+                    return
+                }
+                if (nativeAds.size >= poolMax) {
+                    Timber.d("Native pool already full (%d)", nativeAds.size)
+                    return
+                }
+                val requestedCount = count.coerceIn(1, poolMax - nativeAds.size)
+                if (policy.demandAwarePreloadEnabled && !adPreloadRequestBudget.tryReserve(requestedCount)) {
+                    Timber.d("Native optional load deferred: shared request budget exhausted")
+                    adRevenueLogger.logSuppressed(
+                        AdFormat.NATIVE, placement, adUnitId, "request_budget",
+                    )
+                    return
+                }
                 currentAdUnitId = adUnitId
                 currentPlacement = placement
                 currentLoadContext = loadContext.findActivity() ?: loadContext
                 isLoading = true
-                nativeLoadGeneration
+                requestedCount to nativeLoadGeneration
             }
 
         val loadedCount = AtomicInteger(0)
