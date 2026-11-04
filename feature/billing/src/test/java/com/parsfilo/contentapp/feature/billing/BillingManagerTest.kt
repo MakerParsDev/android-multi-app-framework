@@ -7,6 +7,8 @@ import com.android.billingclient.api.BillingClientStateListener
 import com.android.billingclient.api.BillingResult
 import com.android.billingclient.api.ProductDetailsResponseListener
 import com.android.billingclient.api.Purchase
+import com.android.billingclient.api.PurchasesResponseListener
+import com.android.billingclient.api.PurchasesUpdatedListener
 import com.android.billingclient.api.QueryProductDetailsResult
 import com.google.common.truth.Truth.assertThat
 import com.parsfilo.contentapp.core.datastore.PreferencesDataSource
@@ -239,6 +241,77 @@ class BillingManagerTest {
         assertThat(manager.subscriptionState.value).isEqualTo(SubscriptionState.Loading)
         verify(exactly = 2) { billingClient.startConnection(any()) }
         verify(exactly = 1) { billingClient.endConnection() }
+        coVerify(exactly = 0) { preferencesDataSource.setPremium(false) }
+    }
+
+    @Test
+    fun cancelledCheckoutRefreshesPurchasesWithoutGrantingPremium() = runBlocking {
+        lateinit var purchaseUpdates: PurchasesUpdatedListener
+        val testManager = BillingManager(
+            context, preferencesDataSource, purchaseVerifier,
+            BillingClientFactory { _, listener ->
+                purchaseUpdates = listener
+                billingClient
+            },
+        )
+        every { billingClient.isReady } returns true
+        val query = slot<PurchasesResponseListener>()
+        every { billingClient.queryPurchasesAsync(any(), capture(query)) } just Runs
+        val processed = CompletableDeferred<Unit>()
+        testManager.onPurchaseResultProcessed = { processed.complete(Unit) }
+
+        purchaseUpdates.onPurchasesUpdated(
+            BillingResult.newBuilder()
+                .setResponseCode(BillingClient.BillingResponseCode.USER_CANCELED)
+                .build(),
+            null,
+        )
+        verify(exactly = 1) { billingClient.queryPurchasesAsync(any(), any()) }
+        query.captured.onQueryPurchasesResponse(
+            BillingResult.newBuilder()
+                .setResponseCode(BillingClient.BillingResponseCode.OK)
+                .build(),
+            emptyList(),
+        )
+        withTimeout(5_000) { processed.await() }
+
+        assertThat(testManager.subscriptionState.value).isEqualTo(SubscriptionState.Inactive)
+        coVerify(exactly = 0) { preferencesDataSource.setPremium(true) }
+        verify(exactly = 0) { billingClient.acknowledgePurchase(any(), any()) }
+    }
+
+    @Test
+    fun lateSetupFailureFromReplacedClientCannotOverrideRetry() {
+        val firstClient = mockk<BillingClient>(relaxed = true)
+        val secondClient = mockk<BillingClient>(relaxed = true)
+        every { firstClient.isReady } returns false
+        every { secondClient.isReady } returns false
+        val firstListener = slot<BillingClientStateListener>()
+        val secondListener = slot<BillingClientStateListener>()
+        every { firstClient.startConnection(capture(firstListener)) } just Runs
+        every { secondClient.startConnection(capture(secondListener)) } just Runs
+        var creations = 0
+        val testManager = BillingManager(
+            context, preferencesDataSource, purchaseVerifier,
+            BillingClientFactory { _, _ -> if (++creations == 1) firstClient else secondClient },
+        )
+
+        testManager.startConnection()
+        testManager.retryConnection()
+        firstListener.captured.onBillingSetupFinished(
+            BillingResult.newBuilder()
+                .setResponseCode(BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE)
+                .build(),
+        )
+        assertThat(testManager.subscriptionState.value).isEqualTo(SubscriptionState.Loading)
+        assertThat(testManager.availabilityError.value).isNull()
+
+        secondListener.captured.onBillingSetupFinished(
+            BillingResult.newBuilder()
+                .setResponseCode(BillingClient.BillingResponseCode.NETWORK_ERROR)
+                .build(),
+        )
+        assertThat(testManager.availabilityError.value).isEqualTo(BillingErrorKeys.UNAVAILABLE)
         coVerify(exactly = 0) { preferencesDataSource.setPremium(false) }
     }
 
