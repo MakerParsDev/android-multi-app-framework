@@ -43,6 +43,11 @@
     <string name="settings_language_de">Deutsch</string>
     <string name="settings_language_changed">Dil değiştirildi</string>
 
+    <string name="settings_account_deletion_title">Hesap ve veri silme talebi</string>
+    <string name="settings_account_deletion_description">Google hesabınızla ilişkili verilerin silinmesini isteyin</string>
+    <string name="settings_account_deletion_action">Talep oluştur</string>
+    <string name="settings_account_deletion_unavailable">Hesap silme sayfası açılamadı</string>
+
     <string name="settings_privacy_options">Gizlilik seçenekleri</string>
     <string name="settings_privacy_options_desc_required">Reklam gizlilik seçenekleri gerekli</string>
     <string name="settings_privacy_options_desc_optional">Gizlilik ve reklam tercihlerini görüntüle / güncelle</string>
