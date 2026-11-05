@@ -207,6 +207,7 @@ class AppOpenAdManager @Inject constructor(
                         errorCode = loadAdError.code,
                         errorMessage = loadAdError.message,
                         errorDomain = loadAdError.domain,
+                        responseInfo = loadAdError.responseInfo,
                         route = null,
                         backoffAttempt = loadBackoffState.failureStreak,
                     )

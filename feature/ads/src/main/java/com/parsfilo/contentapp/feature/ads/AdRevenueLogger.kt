@@ -57,6 +57,27 @@ internal fun classifyAdLoadFailure(errorCode: Int, errorDomain: String?): String
     }
 }
 
+/**
+ * A low-cardinality summary of attempted mediation adapters on a failed load.
+ * Never emit response IDs, adapter names, credentials, raw errors or waterfall JSON.
+ * No response info is represented by a missing analytics field, not a fake no-fill.
+ */
+internal fun classifyAdWaterfallFailure(responseInfo: ResponseInfo?): String? {
+    val adapters = responseInfo?.adapterResponses ?: return null
+    if (adapters.isEmpty()) return "no_adapters"
+    val categories = adapters.mapNotNull { adapter ->
+        adapter.adError?.let { classifyAdLoadFailure(it.code, it.domain) }
+    }
+    if (categories.isEmpty()) return "no_adapter_errors"
+    return when {
+        categories.all { it == "no_fill" || it == "mediation_no_fill" } -> "no_fill_only"
+        categories.any { it in setOf("internal", "network", "configuration", "invalid_request") } ->
+            "sdk_technical"
+        categories.any { it == "other_domain" } -> "adapter_domain"
+        else -> "other"
+    }
+}
+
 @Singleton
 class AdRevenueLogger @Inject constructor(
     private val appAnalytics: AppAnalytics,
@@ -320,12 +341,16 @@ class AdRevenueLogger @Inject constructor(
         errorDomain: String? = null,
         route: String? = null,
         backoffAttempt: Int? = null,
+        responseInfo: ResponseInfo? = null,
     ) {
         appAnalytics.logEvent(
             AnalyticsEventName.AD_FAILED_TO_LOAD,
             adEventBundle(adFormat, placement, adUnitId, route).apply {
                 putLong(AnalyticsParamKey.ERROR_CODE, errorCode.toLong())
                 putString(AnalyticsParamKey.AD_ERROR_CATEGORY, classifyAdLoadFailure(errorCode, errorDomain))
+                classifyAdWaterfallFailure(responseInfo)?.let {
+                    putString(AnalyticsParamKey.AD_WATERFALL_CATEGORY, it)
+                }
                 if (!errorMessage.isNullOrBlank()) putString(AnalyticsParamKey.ERROR_MESSAGE, errorMessage)
                 if (backoffAttempt != null) putLong(AnalyticsParamKey.BACKOFF_ATTEMPT, backoffAttempt.toLong())
             },
