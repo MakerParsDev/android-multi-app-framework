@@ -270,6 +270,67 @@ class AdRevenueLoggerTest {
     }
 
     @Test
+    fun adapterWaterfallHandlesMissingAndUnknownErrorCategories() {
+        fun responseFor(vararg errors: Pair<Int, String>?): com.google.android.gms.ads.ResponseInfo {
+            val adapters =
+                errors.map { error ->
+                    val sdkError = error?.let { (code, domain) ->
+                        mockk<com.google.android.gms.ads.AdError> {
+                            every { this@mockk.code } returns code
+                            every { this@mockk.domain } returns domain
+                        }
+                    }
+                    mockk<com.google.android.gms.ads.AdapterResponseInfo> {
+                        every { adError } returns sdkError
+                    }
+                }
+            return mockk {
+                every { adapterResponses } returns adapters
+            }
+        }
+
+        assertThat(classifyAdWaterfallFailure(responseFor(null)))
+            .isEqualTo("no_adapter_errors")
+        assertThat(classifyAdWaterfallFailure(responseFor(3 to "partner.adapter")))
+            .isEqualTo("adapter_domain")
+        assertThat(classifyAdWaterfallFailure(responseFor(123 to MobileAds.ERROR_DOMAIN)))
+            .isEqualTo("other")
+        assertThat(
+            classifyAdWaterfallFailure(
+                responseFor(3 to MobileAds.ERROR_DOMAIN, 9 to MobileAds.ERROR_DOMAIN),
+            ),
+        ).isEqualTo("no_fill_only")
+        assertThat(
+            classifyAdWaterfallFailure(
+                responseFor(3 to MobileAds.ERROR_DOMAIN, 2 to MobileAds.ERROR_DOMAIN),
+            ),
+        ).isEqualTo("sdk_technical")
+    }
+
+    @Test
+    fun missingSdkWaterfallOmitsCategoryWithoutFakingNoFill() {
+        logger.logFailedToLoad(
+            adFormat = AdFormat.APP_OPEN,
+            placement = AdPlacement.APP_OPEN_DEFAULT,
+            adUnitId = "test-app-open",
+            errorCode = 0,
+            errorMessage = "unknown",
+            errorDomain = MobileAds.ERROR_DOMAIN,
+            responseInfo = null,
+        )
+        verify {
+            appAnalytics.logEvent(
+                AnalyticsEventName.AD_FAILED_TO_LOAD,
+                withArg { bundle ->
+                    requireNotNull(bundle)
+                    assertThat(bundle.containsKey(AnalyticsParamKey.AD_WATERFALL_CATEGORY)).isFalse()
+                    assertThat(bundle.getString(AnalyticsParamKey.AD_ERROR_CATEGORY)).isEqualTo("internal")
+                },
+            )
+        }
+    }
+
+    @Test
     fun ga4ReceivesBothNumericErrorCodeAndSafeStringCategory() {
         logger.logFailedToLoad(
             adFormat = AdFormat.INTERSTITIAL,

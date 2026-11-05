@@ -68,11 +68,12 @@ class SecondarySlotTelemetryTest {
         verify(exactly = 1) {
             logger.logRequest(AdFormat.INTERSTITIAL, AdPlacement.INTERSTITIAL_DEFAULT, "interstitial-slot", null)
         }
-        callback.captured.onAdFailedToLoad(mockFailure(3))
+        val responseInfo = mockk<ResponseInfo>(relaxed = true)
+        callback.captured.onAdFailedToLoad(mockFailure(3, responseInfo))
         verify(exactly = 1) {
             logger.logFailedToLoad(
                 AdFormat.INTERSTITIAL, AdPlacement.INTERSTITIAL_DEFAULT, "interstitial-slot",
-                3, null, MobileAds.ERROR_DOMAIN, null, null,
+                3, null, MobileAds.ERROR_DOMAIN, null, null, responseInfo,
             )
         }
     }
@@ -188,9 +189,12 @@ class SecondarySlotTelemetryTest {
         field.set(manager, adUnitId)
     }
 
-    private fun mockFailure(code: Int) = mockk<LoadAdError> {
+    private fun mockFailure(
+        code: Int,
+        sdkResponseInfo: ResponseInfo? = null,
+    ) = mockk<LoadAdError> {
         every { this@mockk.code } returns code
         every { domain } returns MobileAds.ERROR_DOMAIN
-        every { responseInfo } returns null
+        every { responseInfo } returns sdkResponseInfo
     }
 }
