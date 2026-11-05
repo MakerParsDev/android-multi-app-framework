@@ -103,6 +103,99 @@ when reviewing the actual Console declaration.
   changed paths on the existing live release; preserve current public app
   listings and all existing file hashes outside the targeted paths.
 
+## Mucize Dualar Data Safety reconciliation — 5 November 2026
+
+**Scope:** `com.parsfilo.mucizedualar` only, source at
+`main=2ce2e000b13ab38301e1ea82b13b683aebf9f86a`.
+This is a disclosure *inventory*, not a completed Google Play form or a
+deletion-service implementation. Separate each row's **collection, sharing,
+required vs optional, purpose, and deletion/retention** before publication.
+Do not copy this matrix to other app flavors.
+
+### Live status and Console draft
+
+- **Hosting published:** the revised TR/EN/DE account-deletion request page
+  `https://parsfilo.com/account-deletion/` is live as Firebase Hosting
+  version `18fe7a1fd741052f`. Both production domains passed 36/36
+  static-file SHA-256 acceptance checks. Publishing the page did **not**
+  delete any user account, execute an automatic data-removal job, or submit
+  a Google Play Data Safety declaration.
+- **Saved Play Console draft, independently reloaded and verified:**
+  account creation method `OAuth` (Google Credential Manager →
+  Firebase `signInWithCredential`), account deletion URL set to the
+  public page, and **optional data-only deletion = No**. The old
+  "all user data automatically deleted within 90 days" answer had no
+  source-backed mechanism and was removed from this **draft**.
+  **No Play form submission or approved store-label change.**
+- **Current Data types screen before the new selections:** Personal
+  information **0/9**, Financial information **0/4**, Messages **0/3**,
+  App activity **0/5**; Crash logs + Diagnostics **2/3**, Device or other
+  identifiers **1/1**. Some additional candidate checkboxes were explored
+  in the browser but **not saved** because the subsequent browser read was
+  blocked by its security control. Do not describe those selections as
+  persistent, validated answers.
+
+### Source-backed category candidates (not yet submitted)
+
+| Google Play type | Evidence in this app | Required review before final answer |
+| --- | --- | --- |
+| Personal info → **Name**, **Email address**, **User IDs** | `core/auth/.../AuthManager.kt` Google ID token → Firebase Auth; `feature/messages/.../MessageRepository.kt` stores `userName`, `userEmail`, `userId` with messages; purchase verification stores UID/optional email | Optional sign-in, account/profile data purposes, service-provider sharing exception, and lifecycle |
+| Messages → **Other in-app messages** | `MessageRepository.kt` stores user-initiated `subject`, `message`, `category` in Firestore `user_messages` | Optional support feature, message retention and operator-verified removal |
+| Financial info → **Purchase history** | `side-projects/firebase/functions/src/verifyPurchase.ts` persists `productId`, purchase type/state, expiry and token **hash** in `purchase_verifications` | Only purchase/verification history; **no evidence of collecting payment card numbers**. Confirm lawful exceptions and actual retention periods |
+| App activity → **App interactions** | `core/firebase/AppAnalytics.kt` and `Analytics*.kt` log app, content, ad and consent events; Google Mobile Ads SDK additionally collects product interactions | Separate optional consent-gated vs automatic/limited ads events; determine purposes and SDK sharing |
+| Location → **Approximate location (potential SDK collection)** | Google Mobile Ads SDK documents collecting IP addresses that may be used to estimate approximate location | Verify exact Mucize production SDK configuration and purpose; **not a Mucize GPS claim** |
+| App info and performance → **Crash logs**, **Diagnostics** | Firebase Crashlytics, Firebase Performance, Google Mobile Ads diagnostics; these two types are already selected | Provider defaults, custom crash metadata, retention and optional toggles |
+| Device or other IDs → **Device or other identifiers** | Firebase Installations, push registration `registerDevice.ts` (installation ID/FCM token), Google Mobile Ads device identifiers | Existing type selected; verify collection/share/purpose and account-to-installation mapping before deletion |
+
+**Do not select solely from an app's subject matter:** prayer content is
+not itself a declaration that the app collected the user's **religious
+beliefs**; there is no supported claim here that Mucize transmits precise
+GPS coordinates, SMS content, payment-card details, health data, contacts
+or user recordings. `MainActivity.kt` limits the device GPS permission
+flow to `productDefinition.isPrayerTimesFlavor`; the separate
+`namazvakitleri` flavor needs its own precise-location review. This
+does **not** override the AdMob SDK's possible IP-derived approximate
+location category.
+
+### Remaining mandatory verification
+
+1. In step 3 select every **actually collected/shared** category above
+   after the exact signed Mucize SDK/runtime review. Do not assume a
+   type is absent simply because the app's code does not directly read it.
+2. In step 4 record per type: collected vs shared, user-optional vs
+   always-collected, ephemeral vs retained, and justified purposes.
+   Transfers to contracted *service providers* may qualify for
+   Google Play's sharing exclusion; do not label **all** Google SDK
+   transfers as excluded without reviewing the specific AdMob/Analytics
+   usage. Google Mobile Ads documentation states that some data is
+   collected **and shared** automatically.
+3. Check storage/deletion **per provider**: Authentication principal,
+   Firestore messages, purchase verification records, Firebase
+   installation/push identifiers, Analytics, Crashlytics, Performance
+   and advertising data. No TTL or 90-day auto-delete mechanism is
+   established for the app-owned Firestore collections.
+4. Determine and document the **actual** processing procedure and any
+   legitimately required retention category/period before claiming one
+   publicly. Firebase's provider-specific post-deletion windows do **not**
+   establish a universal app data deletion deadline. The public page's
+   manual request route alone is not proof of fulfillment.
+5. Preview all five Console steps and send for review **only** after
+   the account/deletion answers, classification, SDK purposes, privacy
+   policy, real request fulfillment and live web disclosure agree.
+
+**Authoritative references (checked 2026-11-05):**
+
+- Google Play data types, collection/sharing and service-provider exemptions:
+  https://support.google.com/googleplay/android-developer/answer/10787469
+- Google Play account deletion requirements:
+  https://support.google.com/googleplay/android-developer/answer/13327111
+- Firebase Android SDK data disclosure:
+  https://firebase.google.com/docs/android/play-data-disclosure
+- Firebase service privacy and deletion/retention specifics:
+  https://firebase.google.com/support/privacy/
+- Google Mobile Ads Android SDK disclosure:
+  https://developers.google.com/admob/android/privacy/play-data-disclosure
+
 ## OPS-CRITICAL Notes
 - If a new ad SDK or privacy SDK is added, re-run the Data Safety review.
 - If child-directed or TFUA behavior changes, review store disclosures again.
