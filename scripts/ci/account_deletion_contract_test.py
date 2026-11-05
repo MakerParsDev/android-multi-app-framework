@@ -140,6 +140,41 @@ class AccountDeletionContractTest(unittest.TestCase):
         self.assertFalse((WEB_ROOT / ".well-known/assetlinks.json").exists())
         self.assertFalse((WEB_ROOT / ".well-known/apple-app-site-association").exists())
 
+    def test_operator_procedure_maps_actual_backend_records_and_safe_order(self) -> None:
+        guide = (ROOT / "docs/ACCOUNT_DELETION_REQUEST_OPERATIONS.md").read_text()
+        messages = (ROOT / "feature/messages/src/main/java/com/parsfilo/contentapp/"
+                    "feature/messages/data/MessageRepository.kt").read_text()
+        purchases = (ROOT / "side-projects/firebase/functions/src/verifyPurchase.ts").read_text()
+        devices = (ROOT / "side-projects/firebase/functions/src/registerDevice.ts").read_text()
+        self.assertIn('collection("user_messages")', messages)
+        self.assertIn('whereEqualTo("userId", user.uid)', messages)
+        self.assertIn('collection("purchase_verifications")', purchases)
+        self.assertIn('uid: record.uid', purchases)
+        self.assertIn('doc(installationId)', devices)
+        for requirement in (
+            'Verify account ownership',
+            'getUserByEmail(verifiedEmail)',
+            'where("userId", "==", uid)',
+            'where("uid", "==", uid)',
+            'devices/{installationId}',
+            'no reliable UID link is stored',
+            'deleteUser(uid)',
+            'Delete **last**',
+            'no default 90-day deadline',
+            'does not cancel a Google Play subscription',
+        ):
+            with self.subTest(requirement=requirement):
+                self.assertIn(requirement, guide)
+
+    def test_operator_procedure_is_human_approved_and_not_an_automatic_delete(self) -> None:
+        guide = (ROOT / "docs/ACCOUNT_DELETION_REQUEST_OPERATIONS.md").read_text()
+        self.assertIn('STOP before any irreversible operation', guide)
+        self.assertIn('Do not trigger any of these deletes for a demonstration', guide)
+        self.assertIn('test identities', guide)
+        self.assertNotIn('firebase firestore:delete', guide)
+        self.assertNotIn('firebase auth:delete', guide)
+        self.assertNotIn('serviceAccountKey.json', guide)
+
     def test_page_is_static_and_never_auto_submits(self) -> None:
         html = (WEB_ROOT / "account-deletion/index.html").read_text().lower()
         self.assertNotIn("<form", html)
