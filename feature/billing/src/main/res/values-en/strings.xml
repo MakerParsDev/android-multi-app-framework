@@ -17,7 +17,7 @@
     <string name="billing_subscribe">Buy on Google Play</string>
 
     <string name="billing_feature_no_ads">All ads are removed</string>
-    <string name="billing_feature_continuous">Uninterrupted listening experience</string>
+    <string name="billing_feature_continuous">Uninterrupted access to content</string>
     <string name="billing_feature_no_open_ad">No app open ads</string>
     <string name="billing_feature_cancel_anytime">Does not auto-renew</string>
     <string name="billing_disclosure_title">Important subscription details</string>
