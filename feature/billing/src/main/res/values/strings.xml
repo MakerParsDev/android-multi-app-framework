@@ -17,7 +17,7 @@
     <string name="billing_subscribe">Google Play ile satın al</string>
 
     <string name="billing_feature_no_ads">Tüm reklamlar kaldırılır</string>
-    <string name="billing_feature_continuous">Kesintisiz dinleme deneyimi</string>
+    <string name="billing_feature_continuous">İçeriklere kesintisiz erişim</string>
     <string name="billing_feature_no_open_ad">Uygulama açılış reklamı yok</string>
     <string name="billing_feature_cancel_anytime">Otomatik yenilenmez</string>
     <string name="billing_disclosure_title">Önemli abonelik bilgileri</string>
