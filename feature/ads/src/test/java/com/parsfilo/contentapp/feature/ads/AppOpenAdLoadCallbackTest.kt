@@ -167,5 +167,6 @@ class AppOpenAdLoadCallbackTest {
         every { code } returns 2
         every { message } returns "timeout"
         every { domain } returns "com.google.android.gms.ads"
+        every { responseInfo } returns null
     }
 }

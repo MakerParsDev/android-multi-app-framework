@@ -214,6 +214,62 @@ class AdRevenueLoggerTest {
     }
 
     @Test
+    fun mediationSummaryIsBoundedAndDoesNotExposeResponseIdentifiers() {
+        val sdkError = mockk<com.google.android.gms.ads.AdError> {
+            every { code } returns 0
+            every { domain } returns MobileAds.ERROR_DOMAIN
+        }
+        val adapter = mockk<com.google.android.gms.ads.AdapterResponseInfo> {
+            every { adError } returns sdkError
+        }
+        val info = mockk<com.google.android.gms.ads.ResponseInfo> {
+            every { adapterResponses } returns listOf(adapter)
+        }
+        assertThat(classifyAdWaterfallFailure(info)).isEqualTo("sdk_technical")
+        logger.logFailedToLoad(
+            adFormat = AdFormat.BANNER,
+            placement = AdPlacement.BANNER_HOME,
+            adUnitId = "banner-unit",
+            errorCode = 0,
+            errorMessage = "sensitive response text",
+            errorDomain = MobileAds.ERROR_DOMAIN,
+            responseInfo = info,
+        )
+        verify {
+            appAnalytics.logEvent(
+                AnalyticsEventName.AD_FAILED_TO_LOAD,
+                withArg { bundle ->
+                    requireNotNull(bundle)
+                    assertThat(bundle.getString(AnalyticsParamKey.AD_WATERFALL_CATEGORY))
+                        .isEqualTo("sdk_technical")
+                    assertThat(bundle.containsKey(AnalyticsParamKey.RESPONSE_ID)).isFalse()
+                    assertThat(bundle.containsKey(AnalyticsParamKey.MEDIATION_ADAPTER)).isFalse()
+                },
+            )
+        }
+    }
+
+    @Test
+    fun absentWaterfallDoesNotPretendToBeNoFill() {
+        assertThat(classifyAdWaterfallFailure(null)).isNull()
+        val info = mockk<com.google.android.gms.ads.ResponseInfo> {
+            every { adapterResponses } returns emptyList()
+        }
+        assertThat(classifyAdWaterfallFailure(info)).isEqualTo("no_adapters")
+        val noFill = mockk<com.google.android.gms.ads.AdError> {
+            every { code } returns 3
+            every { domain } returns MobileAds.ERROR_DOMAIN
+        }
+        val adapter = mockk<com.google.android.gms.ads.AdapterResponseInfo> {
+            every { adError } returns noFill
+        }
+        val sdkInfo = mockk<com.google.android.gms.ads.ResponseInfo> {
+            every { adapterResponses } returns listOf(adapter)
+        }
+        assertThat(classifyAdWaterfallFailure(sdkInfo)).isEqualTo("no_fill_only")
+    }
+
+    @Test
     fun ga4ReceivesBothNumericErrorCodeAndSafeStringCategory() {
         logger.logFailedToLoad(
             adFormat = AdFormat.INTERSTITIAL,
