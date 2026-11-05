@@ -152,6 +152,7 @@ object AnalyticsParamKey {
     const val AD_UNIT_ID = "ad_unit_id"
     const val ERROR_CODE = "error_code"
     const val AD_ERROR_CATEGORY = "ad_error_category"
+    const val AD_WATERFALL_CATEGORY = "ad_waterfall_category"
     const val ERROR_MESSAGE = "error_message"
     const val FILL_LATENCY_MS = "load_latency_ms"
     const val SUPPRESS_REASON = "suppress_reason"

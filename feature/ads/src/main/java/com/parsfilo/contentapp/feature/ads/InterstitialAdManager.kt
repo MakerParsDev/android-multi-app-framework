@@ -161,6 +161,7 @@ class InterstitialAdManager @Inject constructor(
                         errorCode = adError.code,
                         errorMessage = adError.message,
                         errorDomain = adError.domain,
+                        responseInfo = adError.responseInfo,
                         route = currentRoute,
                         backoffAttempt = loadBackoffState.failureStreak,
                     )
@@ -595,6 +596,7 @@ class InterstitialAdManager @Inject constructor(
                         errorCode = adError.code,
                         errorMessage = null,
                         errorDomain = adError.domain,
+                        responseInfo = adError.responseInfo,
                         route = nextRoute,
                     )
                 }

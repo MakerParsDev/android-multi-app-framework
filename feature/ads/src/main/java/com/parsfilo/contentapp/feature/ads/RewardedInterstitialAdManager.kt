@@ -174,6 +174,7 @@ class RewardedInterstitialAdManager @Inject constructor(
                         errorCode = error.code,
                         errorMessage = error.message,
                         errorDomain = error.domain,
+                        responseInfo = error.responseInfo,
                         route = currentRoute,
                         backoffAttempt = loadBackoffState.failureStreak,
                     )

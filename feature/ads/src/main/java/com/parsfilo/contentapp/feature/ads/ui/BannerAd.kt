@@ -152,6 +152,7 @@ fun BannerAd(
                             errorCode = error.code,
                             errorMessage = error.message,
                             errorDomain = error.domain,
+                            responseInfo = error.responseInfo,
                             route = route,
                             backoffAttempt = null,
                         )

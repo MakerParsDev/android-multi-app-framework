@@ -191,5 +191,6 @@ class SecondarySlotTelemetryTest {
     private fun mockFailure(code: Int) = mockk<LoadAdError> {
         every { this@mockk.code } returns code
         every { domain } returns MobileAds.ERROR_DOMAIN
+        every { responseInfo } returns null
     }
 }
