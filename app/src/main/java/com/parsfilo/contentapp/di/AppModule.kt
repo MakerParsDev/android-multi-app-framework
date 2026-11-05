@@ -45,16 +45,19 @@ object AppModule {
     fun providePurchaseVerificationUrl(): String = BuildConfig.PURCHASE_VERIFICATION_URL
 }
 
-// Only the isolated nonMinifiedRelease benchmark exercises offline audio in
-// CI. Real production builds keep their normal startup; smoke/debug and the
-// other performance families keep network-capable audio startup disabled.
+// MIRACLES is text-only and excludes AudioService from its manifest. Never
+// initialize a MediaSession controller for a service absent from that app.
+// Other flavors keep the existing production and CI smoke startup contract.
 internal fun shouldStartAudio(
     ciSmoke: Boolean,
     buildType: String,
     family: ContentFamily,
 ): Boolean =
-    !ciSmoke ||
+    family != ContentFamily.MIRACLES &&
         (
-            buildType == "nonMinifiedRelease" &&
-                family in setOf(ContentFamily.CONTENT, ContentFamily.PRAYER_LIBRARY, ContentFamily.ESMA)
+            !ciSmoke ||
+                (
+                    buildType == "nonMinifiedRelease" &&
+                        family in setOf(ContentFamily.CONTENT, ContentFamily.PRAYER_LIBRARY, ContentFamily.ESMA)
+                )
         )
