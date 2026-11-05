@@ -1,0 +1,125 @@
+/**
+ * #878: isolated Firebase Auth + Firestore operator-sequence rehearsal.
+ *
+ * This is a TEST HARNESS, not a production deletion entry point. It must never
+ * start unless both emulators are bound to localhost and the demo project is
+ * selected. No service-account key, real user, network provider or mail call.
+ */
+import assert from "node:assert/strict";
+import { after, before, test } from "node:test";
+import { deleteApp, initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
+import { getFirestore } from "firebase-admin/firestore";
+
+const PROJECT = "demo-contentapp";
+if (
+  process.env.GCLOUD_PROJECT !== PROJECT ||
+  process.env.FIREBASE_AUTH_EMULATOR_HOST !== "127.0.0.1:9099" ||
+  process.env.FIRESTORE_EMULATOR_HOST !== "127.0.0.1:8080"
+) {
+  throw new Error("Account deletion rehearsal requires localhost Auth + Firestore demo emulators");
+}
+
+const app = initializeApp({ projectId: PROJECT });
+const auth = getAuth(app);
+const db = getFirestore(app);
+const ownerUid = "synthetic-deletion-owner-878";
+const otherUid = "synthetic-other-owner-878";
+const ownerEmail = "synthetic-owner-878@example.invalid";
+
+
+async function seedSyntheticAccounts() {
+  await auth.createUser({ uid: ownerUid, email: ownerEmail });
+  await auth.createUser({ uid: otherUid, email: "synthetic-other-878@example.invalid" });
+  const writes = [
+    db.collection("user_messages").doc("owner-a").set({ userId: ownerUid, message: "fixture A" }),
+    db.collection("user_messages").doc("owner-b").set({ userId: ownerUid, message: "fixture B" }),
+    db.collection("user_messages").doc("other").set({ userId: otherUid, message: "other user" }),
+    db.collection("purchase_verifications").doc("owner").set({ uid: ownerUid, status: "test" }),
+    db.collection("purchase_verifications").doc("other").set({ uid: otherUid, status: "test" }),
+    db.collection("devices").doc("not-linked").set({ installationId: "not-linked", packageName: "test" }),
+  ];
+  await Promise.all(writes);
+}
+
+async function rehearseDeletion({
+  verifiedEmail,
+  ownerVerified,
+  crossAppScopeConfirmed,
+  purchaseDisposition,
+  retentionBasis,
+  retentionUntil,
+}) {
+  // Fail-closed preflight BEFORE any query, purchase change or Auth deletion.
+  if (!ownerVerified || !crossAppScopeConfirmed || !verifiedEmail) {
+    throw new Error("verified identity and cross-app scope required");
+  }
+  if (purchaseDisposition !== "erase" && purchaseDisposition !== "documented-retention") {
+    throw new Error("purchase disposition requires an explicit review");
+  }
+  if (purchaseDisposition === "documented-retention" && (!retentionBasis || !retentionUntil)) {
+    throw new Error("documented retention requires an explicit basis and end date");
+  }
+  const user = await auth.getUserByEmail(verifiedEmail);
+  if (user.uid !== ownerUid) throw new Error("resolved UID did not match verified scope");
+
+  const messages = await db.collection("user_messages").where("userId", "==", user.uid).get();
+  const purchases = await db.collection("purchase_verifications").where("uid", "==", user.uid).get();
+  const order = [];
+  for (const doc of messages.docs) {
+    await doc.ref.delete();
+    order.push("message");
+  }
+  if (purchaseDisposition === "erase") {
+    for (const doc of purchases.docs) {
+      await doc.ref.delete();
+      order.push("purchase");
+    }
+  } else {
+    order.push("purchase-retained");
+  }
+  // Deliberately never guess devices/{installationId} from an Auth UID.
+  await auth.deleteUser(user.uid);
+  order.push("auth-last");
+  return { uid: user.uid, order };
+}
+
+before(async () => {
+  await seedSyntheticAccounts();
+});
+
+after(async () => {
+  await deleteApp(app);
+});
+
+test("operator rehearsal refuses missing identity, scope or retention decision", async () => {
+  for (const input of [
+    { verifiedEmail: ownerEmail, ownerVerified: false, crossAppScopeConfirmed: true, purchaseDisposition: "erase" },
+    { verifiedEmail: ownerEmail, ownerVerified: true, crossAppScopeConfirmed: false, purchaseDisposition: "erase" },
+    { verifiedEmail: ownerEmail, ownerVerified: true, crossAppScopeConfirmed: true, purchaseDisposition: null },
+    { verifiedEmail: ownerEmail, ownerVerified: true, crossAppScopeConfirmed: true, purchaseDisposition: "documented-retention" },
+  ]) {
+    await assert.rejects(rehearseDeletion(input));
+  }
+  assert.equal((await auth.getUser(ownerUid)).uid, ownerUid);
+  assert.equal((await db.collection("user_messages").where("userId", "==", ownerUid).get()).size, 2);
+  assert.equal((await db.collection("purchase_verifications").where("uid", "==", ownerUid).get()).size, 1);
+});
+
+test("verified synthetic requester erases scoped data BEFORE Auth, preserves unrelated records", async () => {
+  const result = await rehearseDeletion({
+    verifiedEmail: ownerEmail,
+    ownerVerified: true,
+    crossAppScopeConfirmed: true,
+    purchaseDisposition: "erase",
+  });
+  assert.equal(result.uid, ownerUid);
+  assert.deepEqual(result.order, ["message", "message", "purchase", "auth-last"]);
+  await assert.rejects(auth.getUser(ownerUid), (error) => error.code === "auth/user-not-found");
+  assert.equal((await db.collection("user_messages").where("userId", "==", ownerUid).get()).size, 0);
+  assert.equal((await db.collection("purchase_verifications").where("uid", "==", ownerUid).get()).size, 0);
+  assert.equal((await auth.getUser(otherUid)).uid, otherUid);
+  assert.equal((await db.collection("user_messages").where("userId", "==", otherUid).get()).size, 1);
+  assert.equal((await db.collection("purchase_verifications").where("uid", "==", otherUid).get()).size, 1);
+  assert.equal((await db.collection("devices").doc("not-linked").get()).exists, true);
+});
