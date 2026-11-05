@@ -6,7 +6,7 @@
     "node": ">=24.12.0"
   },
   "scripts": {
-    "test": "firebase emulators:exec --project demo-contentapp --config ../firebase.json --only firestore \"node --test --test-concurrency=1 firestore.rules.test.mjs\""
+    "test": "firebase emulators:exec --project demo-contentapp --config ../firebase.emulators.json --only auth,firestore \"node --test --test-concurrency=1 firestore.rules.test.mjs && GCLOUD_PROJECT=demo-contentapp FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 node ../functions/test/accountDeletion.emulator.mjs\""
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "6.0.0",
