@@ -7,9 +7,19 @@ import org.junit.Test
 
 class AudioStartupPolicyTest {
     @Test
-    fun normalBuildsPreserveAudioStartup() {
+    fun normalBuildsPreserveAudioStartupExceptTextOnlyMiracles() {
         ContentFamily.entries.forEach { family ->
-            assertTrue(shouldStartAudio(ciSmoke = false, buildType = "release", family = family))
+            val enabled = shouldStartAudio(ciSmoke = false, buildType = "release", family = family)
+            if (family == ContentFamily.MIRACLES) assertFalse(enabled) else assertTrue(enabled)
+        }
+    }
+
+    @Test
+    fun textOnlyMiraclesNeverStartsTheMissingMediaService() {
+        for (smoke in listOf(false, true)) {
+            for (buildType in listOf("debug", "release", "nonMinifiedRelease")) {
+                assertFalse(shouldStartAudio(ciSmoke = smoke, buildType = buildType, family = ContentFamily.MIRACLES))
+            }
         }
     }
 
