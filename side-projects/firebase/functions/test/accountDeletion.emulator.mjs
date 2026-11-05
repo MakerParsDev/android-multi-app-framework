@@ -28,20 +28,26 @@ const otherUid = "synthetic-other-owner-878";
 const ownerEmail = "synthetic-owner-878@example.invalid";
 const retainedUid = "synthetic-retained-owner-878";
 const retainedEmail = "synthetic-retained-878@example.invalid";
+const retryUid = "synthetic-retry-owner-878";
+const retryEmail = "synthetic-retry-878@example.invalid";
 
 
 async function seedSyntheticAccounts() {
   await auth.createUser({ uid: ownerUid, email: ownerEmail });
   await auth.createUser({ uid: otherUid, email: "synthetic-other-878@example.invalid" });
   await auth.createUser({ uid: retainedUid, email: retainedEmail });
+  await auth.createUser({ uid: retryUid, email: retryEmail });
   const writes = [
     db.collection("user_messages").doc("owner-a").set({ userId: ownerUid, message: "fixture A" }),
     db.collection("user_messages").doc("owner-b").set({ userId: ownerUid, message: "fixture B" }),
     db.collection("user_messages").doc("other").set({ userId: otherUid, message: "other user" }),
     db.collection("user_messages").doc("retained").set({ userId: retainedUid, message: "synthetic retained user" }),
+    db.collection("user_messages").doc("retry-a").set({ userId: retryUid, message: "first retry fixture" }),
+    db.collection("user_messages").doc("retry-b").set({ userId: retryUid, message: "second retry fixture" }),
     db.collection("purchase_verifications").doc("owner").set({ uid: ownerUid, status: "test" }),
     db.collection("purchase_verifications").doc("other").set({ uid: otherUid, status: "test" }),
     db.collection("purchase_verifications").doc("retained").set({ uid: retainedUid, status: "test" }),
+    db.collection("purchase_verifications").doc("retry").set({ uid: retryUid, status: "test" }),
     db.collection("devices").doc("not-linked").set({ installationId: "not-linked", packageName: "test" }),
   ];
   await Promise.all(writes);
@@ -55,6 +61,7 @@ async function rehearseDeletion({
   purchaseDisposition,
   retentionBasis,
   retentionUntil,
+  failAfterMessageDeletes,
 }) {
   // Fail-closed preflight BEFORE any query, purchase change or Auth deletion.
   if (!ownerVerified || !crossAppScopeConfirmed || !verifiedEmail || !verifiedUid) {
@@ -66,7 +73,8 @@ async function rehearseDeletion({
   if (purchaseDisposition === "documented-retention" && (
     !retentionBasis?.trim() ||
     !/^\d{4}-\d{2}-\d{2}$/.test(retentionUntil ?? "") ||
-    Number.isNaN(Date.parse(`${retentionUntil}T00:00:00Z`))
+    Number.isNaN(Date.parse(`${retentionUntil}T00:00:00Z`)) ||
+    new Date(`${retentionUntil}T00:00:00Z`).toISOString().slice(0, 10) !== retentionUntil
   )) {
     throw new Error("documented retention requires a basis and valid ISO end date");
   }
@@ -79,6 +87,10 @@ async function rehearseDeletion({
   for (const doc of messages.docs) {
     await doc.ref.delete();
     order.push("message");
+    // Test-only failure injection: simulate interruption after a completed write.
+    if (failAfterMessageDeletes === order.length) {
+      throw new Error("synthetic interruption before purchase and Auth deletion");
+    }
   }
   if (purchaseDisposition === "erase") {
     for (const doc of purchases.docs) {
@@ -109,6 +121,7 @@ test("operator rehearsal refuses missing identity, scope or retention decision",
     { verifiedEmail: ownerEmail, verifiedUid: ownerUid, ownerVerified: true, crossAppScopeConfirmed: true, purchaseDisposition: null },
     { verifiedEmail: ownerEmail, verifiedUid: ownerUid, ownerVerified: true, crossAppScopeConfirmed: true, purchaseDisposition: "documented-retention" },
     { verifiedEmail: ownerEmail, verifiedUid: ownerUid, ownerVerified: true, crossAppScopeConfirmed: true, purchaseDisposition: "documented-retention", retentionBasis: "synthetic hold", retentionUntil: "not-a-date" },
+    { verifiedEmail: ownerEmail, verifiedUid: ownerUid, ownerVerified: true, crossAppScopeConfirmed: true, purchaseDisposition: "documented-retention", retentionBasis: "synthetic hold", retentionUntil: "2026-02-30" },
     { verifiedEmail: ownerEmail, verifiedUid: otherUid, ownerVerified: true, crossAppScopeConfirmed: true, purchaseDisposition: "erase" },
     { verifiedEmail: ownerEmail, verifiedUid: "", ownerVerified: true, crossAppScopeConfirmed: true, purchaseDisposition: "erase" },
   ]) {
@@ -156,5 +169,34 @@ test("documented purchase retention preserves the hold while Auth is deleted las
   assert.equal((await db.collection("purchase_verifications").where("uid", "==", retainedUid).get()).size, 1);
   assert.equal((await auth.getUser(otherUid)).uid, otherUid);
   assert.equal((await db.collection("user_messages").where("userId", "==", otherUid).get()).size, 1);
+  assert.equal((await db.collection("devices").doc("not-linked").get()).exists, true);
+});
+
+test("partial Firestore failure preserves Auth and retry safely resumes scoped deletion", async () => {
+  const request = {
+    verifiedEmail: retryEmail,
+    verifiedUid: retryUid,
+    ownerVerified: true,
+    crossAppScopeConfirmed: true,
+    purchaseDisposition: "erase",
+  };
+  await assert.rejects(
+    rehearseDeletion({ ...request, failAfterMessageDeletes: 1 }),
+    /synthetic interruption/,
+  );
+  // One message was erased; remaining records and the Auth identity survive.
+  assert.equal((await auth.getUser(retryUid)).uid, retryUid);
+  assert.equal((await db.collection("user_messages").where("userId", "==", retryUid).get()).size, 1);
+  assert.equal((await db.collection("purchase_verifications").where("uid", "==", retryUid).get()).size, 1);
+  assert.equal((await auth.getUser(otherUid)).uid, otherUid);
+
+  // The same verified request can be retried without touching unrelated UIDs.
+  const resumed = await rehearseDeletion(request);
+  assert.deepEqual(resumed.order, ["message", "purchase", "auth-last"]);
+  await assert.rejects(auth.getUser(retryUid), (error) => error.code === "auth/user-not-found");
+  assert.equal((await db.collection("user_messages").where("userId", "==", retryUid).get()).size, 0);
+  assert.equal((await db.collection("purchase_verifications").where("uid", "==", retryUid).get()).size, 0);
+  assert.equal((await db.collection("user_messages").where("userId", "==", otherUid).get()).size, 1);
+  assert.equal((await db.collection("purchase_verifications").where("uid", "==", otherUid).get()).size, 1);
   assert.equal((await db.collection("devices").doc("not-linked").get()).exists, true);
 });
