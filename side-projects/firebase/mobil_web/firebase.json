@@ -4,12 +4,8 @@
     "public": "public",
     "ignore": [
       "firebase.json",
-      "**/node_modules/**",
-      "**/.env*",
-      "**/.git/**",
-      "**/.firebase/**",
-      "**/.DS_Store",
-      "**/.secrets/**"
+      "**/.*",
+      "**/node_modules/**"
     ],
     "redirects": [
       {
