@@ -169,6 +169,7 @@ jobs:
           python3 scripts/ci/ci_load_policy_test.py
           python3 scripts/ci/check_ga4_bigquery_export_test.py
           python3 scripts/ci/bigquery_ad_funnel_contract_test.py
+          python3 scripts/ci/account_deletion_contract_test.py
           python3 -m unittest discover -s scripts/ci -p side_project_quality_contract_test.py -v
 
       - name: Validate Android toolchain config

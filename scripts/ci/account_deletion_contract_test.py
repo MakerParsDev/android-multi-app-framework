@@ -25,14 +25,23 @@ class StaticPageParser(HTMLParser):
     def __init__(self) -> None:
         super().__init__()
         self.sections: set[str] = set()
+        self.deletion_scopes: dict[str, int] = {}
+        self.current_section: str | None = None
         self.emails: list[str] = []
         self.canonicals: list[str] = []
         self.links: set[str] = set()
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "section":
+            self.current_section = None
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         values = dict(attrs)
         if tag == "section" and values.get("id"):
             self.sections.add(values["id"])
+            self.current_section = values["id"]
+        if values.get("data-deletion-scope") == "account-data" and self.current_section:
+            self.deletion_scopes[self.current_section] = self.deletion_scopes.get(self.current_section, 0) + 1
         if tag == "a" and values.get("href"):
             self.links.add(values["href"])
             if values["href"].startswith("mailto:"):
@@ -77,6 +86,25 @@ class AccountDeletionContractTest(unittest.TestCase):
         self.assertIn("automatically", page)
         self.assertNotIn("mailto:?to=", page)
         self.assertIn(EMAIL, page)
+
+    def test_all_locales_explain_account_data_retention_and_device_boundaries(self) -> None:
+        page = (WEB_ROOT / "account-deletion/index.html").read_text()
+        parser = StaticPageParser()
+        parser.feed(page)
+        self.assertEqual(parser.deletion_scopes, {"tr": 1, "en": 1, "de": 1})
+        for phrase in (
+            "Firebase Authentication",
+            "satın alma doğrulama kayıtları",
+            "Purchase-verification records",
+            "Kaufprüfungsdaten",
+            "Bildirim tokenları",
+            "Push tokens",
+            "Push-Tokens",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, page)
+        self.assertNotIn("automatically deleted within 90 days", page)
+        self.assertNotIn("90 gün içinde otomatik", page)
 
     def test_privacy_url_sources_are_synchronized_and_link_to_request(self) -> None:
         page = (WEB_ROOT / "privacy/index.html").read_bytes()
