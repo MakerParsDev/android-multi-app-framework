@@ -175,6 +175,29 @@ class AccountDeletionContractTest(unittest.TestCase):
         self.assertNotIn('firebase auth:delete', guide)
         self.assertNotIn('serviceAccountKey.json', guide)
 
+    def test_provider_erasure_does_not_infer_uid_to_device_or_analytics_ids(self) -> None:
+        guide = (ROOT / "docs/ACCOUNT_DELETION_REQUEST_OPERATIONS.md").read_text()
+        analytics = (ROOT / "core/firebase/src/main/java/com/parsfilo/contentapp/core/firebase/"
+                     "AppAnalytics.kt").read_text()
+        policy = (ROOT / "core/firebase/src/main/java/com/parsfilo/contentapp/core/firebase/"
+                  "AnalyticsPayloadPolicy.kt").read_text()
+        devices = (ROOT / "side-projects/firebase/functions/src/registerDevice.ts").read_text()
+        self.assertIn('userId.startsWith("anon_")', policy)
+        self.assertIn('opaque anon_* identifier', analytics)
+        self.assertIn('.doc(installationId)', devices)
+        for phrase in (
+            "Do not equate Firebase Auth UID",
+            "no supported",
+            "properties.submitUserDeletion",
+            "resetAnalyticsData()",
+            "not interchangeable",
+            "submission is not verified deletion",
+            "explicit approval",
+            "unresolved",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase.lower(), guide.lower())
+
     def test_page_is_static_and_never_auto_submits(self) -> None:
         html = (WEB_ROOT / "account-deletion/index.html").read_text().lower()
         self.assertNotIn("<form", html)

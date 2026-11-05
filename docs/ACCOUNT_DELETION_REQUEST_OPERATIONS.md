@@ -50,6 +50,37 @@ service-account credentials.
 | Firestore `devices/{installationId}` | `registerDevice.ts`: installation-ID document with FCM token, app and device data; **no reliable UID link is stored** | Do not join by email/UID or delete arbitrary devices. Only act on a separately verified installation identifier; otherwise record this as an unresolved identity-mapping limitation |
 | Google/Firebase/ads provider-held data | Firebase Installations, Messaging, Analytics, Crashlytics, Performance and Google Mobile Ads disclosures | Identify whether the provider can locate data for this user and the relevant provider deletion/retention mechanism. Do not promise per-user erasure without evidence |
 
+## Provider identity and erasure gate (5 November 2026)
+
+**Do not equate Firebase Auth UID, GA4 app instance ID, Firebase installation
+ID (FID), or the app-owned `devices/{installationId}` key.** Verified Auth
+ownership establishes only the UID. The current Android analytics gateway
+(`core/firebase/.../AppAnalytics.kt`, `AnalyticsPayloadPolicy.kt`) accepts
+only `anon_*` analytics user IDs, not Firebase UID or email. No supported
+UID-to-GA4-app-instance/FID mapping was established in this source audit.
+
+| Provider data | Supported route / evidence needed | Acceptance decision |
+| --- | --- | --- |
+| Google Analytics for Firebase / GA4 | Admin API `properties.submitUserDeletion` accepts **one verified** `userId`, `appInstanceId`, `clientId` or `userProvidedData` for the **correct property**; its response records request submission, not completed erasure. `resetAnalyticsData()` resets local on-device analytics state and app instance ID, **not** prior server data by itself. | Never submit another person's or guessed identifier. If no defensible match exists, record the provider limitation; do not certify full erasure. |
+| Firebase Installations / FCM / Remote Config / Performance | FID-specific deletion is documented by Firebase. App-owned `devices/{installationId}` and FID are **not interchangeable**. Deleting Firestore device records alone is not proof the Firebase installation was deleted, and deleting an FID can affect other Firebase features. | Require separately verified installation/FID ownership and relevant provider deletion acceptance; otherwise keep unresolved. |
+| Crashlytics | Firebase documents a service-specific crash-report retention period (90 days **before removal begins**), not a blanket account-data SLA. Clearing a Crashlytics user identifier, if one was set, does not erase earlier reports. | Review whether a user-specific request is technically possible for the relevant SDK/version; escalate provider support **only with the owner's explicit approval** if necessary. |
+| Google Mobile Ads / UMP | The Android Google Mobile Ads SDK declares automatic collection/sharing of IP address, interactions, diagnostics and identifiers. Collection/sharing and provider-side retention are separate from Firebase Auth deletion. | Verify the signed Mucize build and publisher configuration; document available provider erasure path or limitation before Play submission. Do not invent a per-user API. |
+
+For an individual request, record a private, **per-provider** status:
+`not_collected`, `verified_deleted`, `verified_request_submitted`,
+`documented_retention`, or `unresolved`. Preserve a provider confirmation or
+request timestamp when available; **submission is not verified deletion**.
+Do not publish account IDs or raw provider identifiers in GitHub or CI.
+Any missing identity linkage or legal retention decision is a **STOP gate**
+for an unqualified claim that all associated data was erased. This is a
+review procedure, not a new tracking database, Firebase service or deletion API.
+
+Official references: [GA4 user deletion API](https://developers.google.com/analytics/devguides/config/admin/v1/rest/v1alpha/properties/submitUserDeletion),
+[Firebase installations](https://firebase.google.com/docs/projects/manage-installations),
+[Firebase product retention](https://firebase.google.com/support/privacy/),
+[Crashlytics user IDs](https://firebase.google.com/docs/crashlytics/android/customize-crash-reports),
+[Google Mobile Ads disclosure](https://developers.google.com/admob/android/privacy/play-data-disclosure).
+
 **Important:** Deleting a Firebase Authentication account alone does not
 delete Firestore documents. Do not delete the authentication principal
 first, because it can destroy the reliable UID association required for
