@@ -122,6 +122,37 @@ class AccountDeletionContractTest(unittest.TestCase):
         privacy = (WEB_ROOT / "privacy/index.html").read_text()
         self.assertEqual(privacy.count("<code>com.parsfilo.imsakiye</code>"), 2)
 
+    def test_hosting_keeps_live_app_association_paths_without_exposing_hidden_files(self) -> None:
+        import json
+
+        hosting = json.loads(
+            (ROOT / "side-projects/firebase/mobil_web/firebase.json").read_text()
+        )["hosting"]
+        self.assertEqual(hosting["site"], "makerpars-oaslananka-mobil")
+        self.assertEqual(hosting["public"], "public")
+        self.assertNotIn("**/.*", hosting["ignore"])
+        for sensitive_pattern in ("**/.env*", "**/.git/**", "**/.firebase/**", "**/.secrets/**"):
+            self.assertIn(sensitive_pattern, hosting["ignore"])
+        well_known = WEB_ROOT / ".well-known"
+        assetlinks = json.loads((well_known / "assetlinks.json").read_text())
+        apple_association = json.loads((well_known / "apple-app-site-association").read_text())
+        self.assertIsInstance(assetlinks, list)
+        self.assertTrue(assetlinks)
+        self.assertTrue(any(
+            "delegate_permission/common.handle_all_urls" in item.get("relation", [])
+            for item in assetlinks
+        ))
+        self.assertIn("applinks", apple_association)
+        hidden = {
+            path.relative_to(WEB_ROOT).as_posix()
+            for path in WEB_ROOT.rglob("*")
+            if path.is_file() and any(part.startswith(".") for part in path.relative_to(WEB_ROOT).parts)
+        }
+        self.assertEqual(hidden, {
+            ".well-known/assetlinks.json",
+            ".well-known/apple-app-site-association",
+        })
+
     def test_page_is_static_and_never_auto_submits(self) -> None:
         html = (WEB_ROOT / "account-deletion/index.html").read_text().lower()
         self.assertNotIn("<form", html)
