@@ -8,11 +8,16 @@ import {
   initializeTestEnvironment,
 } from "@firebase/rules-unit-testing";
 import {
+  collection,
   deleteDoc,
   doc,
   getDoc,
+  getDocs,
+  orderBy,
+  query,
   setDoc,
   updateDoc,
+  where,
 } from "firebase/firestore";
 
 const PROJECT_ID = "demo-contentapp";
@@ -100,3 +105,100 @@ for (const [label, adminData] of [
     }));
   });
 }
+
+// #878: synthetic account-deletion ownership and retention boundaries.
+// These tests operate solely on the isolated demo-contentapp Firestore emulator.
+// They do not authenticate, delete, or even connect to production users.
+const OWNER_UID = "delete-request-owner";
+const OTHER_UID = "unrelated-account";
+
+async function seedDeletionFixture() {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const firestore = context.firestore();
+    await setDoc(doc(firestore, "user_messages", "owner-first"), {
+      userId: OWNER_UID,
+      userEmail: "owner@example.invalid",
+      userName: "Owner",
+      message: "Synthetic message A",
+      createdAt: new Date("2026-11-01T00:00:00Z"),
+    });
+    await setDoc(doc(firestore, "user_messages", "owner-second"), {
+      userId: OWNER_UID,
+      message: "Synthetic message B",
+      createdAt: new Date("2026-11-02T00:00:00Z"),
+    });
+    await setDoc(doc(firestore, "user_messages", "other-message"), {
+      userId: OTHER_UID,
+      message: "Must not erase another account",
+      createdAt: new Date("2026-11-03T00:00:00Z"),
+    });
+    await setDoc(doc(firestore, "purchase_verifications", "owner-purchase"), {
+      uid: OWNER_UID,
+      productId: "synthetic-product",
+    });
+    await setDoc(doc(firestore, "purchase_verifications", "other-purchase"), {
+      uid: OTHER_UID,
+      productId: "synthetic-product",
+    });
+  });
+}
+
+test("deletion workflow only accesses the verified UID's messages", async () => {
+  await seedDeletionFixture();
+  const owner = testEnv.authenticatedContext(OWNER_UID).firestore();
+  const messages = collection(owner, "user_messages");
+  const scoped = query(
+    messages,
+    where("userId", "==", OWNER_UID),
+    orderBy("createdAt", "desc"),
+  );
+  const own = await assertSucceeds(getDocs(scoped));
+  assert.deepEqual(own.docs.map((d) => d.id), ["owner-second", "owner-first"]);
+
+  // A broad collection listing or a forged UID selector cannot enumerate accounts.
+  await assertFails(getDocs(messages));
+  await assertFails(getDocs(query(messages, where("userId", "==", OTHER_UID))));
+  await assertFails(getDoc(doc(owner, "user_messages", "other-message")));
+  await assertFails(getDocs(query(
+    collection(testEnv.unauthenticatedContext().firestore(), "user_messages"),
+    where("userId", "==", OWNER_UID),
+  )));
+});
+
+test("deletion request cannot forge identity or erase another account", async () => {
+  await seedDeletionFixture();
+  const owner = testEnv.authenticatedContext(OWNER_UID).firestore();
+  await assertFails(setDoc(doc(owner, "user_messages", "forged-owner"), {
+    userId: OTHER_UID,
+    message: "Impersonation attempt",
+  }));
+  await assertFails(updateDoc(doc(owner, "user_messages", "owner-first"), {
+    userId: OTHER_UID,
+  }));
+  await assertFails(deleteDoc(doc(owner, "user_messages", "other-message")));
+
+  // The user's own data can be removed without deleting another user's data.
+  await assertSucceeds(deleteDoc(doc(owner, "user_messages", "owner-first")));
+  await assertSucceeds(deleteDoc(doc(owner, "user_messages", "owner-second")));
+  const other = testEnv.authenticatedContext(OTHER_UID).firestore();
+  const otherMessage = await assertSucceeds(getDoc(doc(other, "user_messages", "other-message")));
+  assert.equal(otherMessage.exists(), true);
+});
+
+test("purchase history and unlinked device records are not client-deletable", async () => {
+  await seedDeletionFixture();
+  const owner = testEnv.authenticatedContext(OWNER_UID).firestore();
+  const admin = testEnv.authenticatedContext("admin-user").firestore();
+  // Purchase verification records may require legal retention review; only
+  // trusted admin server operations are authorized to change them.
+  for (const firestore of [owner, admin]) {
+    await assertFails(deleteDoc(doc(firestore, "purchase_verifications", "owner-purchase")));
+    await assertFails(deleteDoc(doc(firestore, "devices", DEVICE_ID)));
+  }
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    assert.equal((await getDoc(doc(db, "purchase_verifications", "owner-purchase"))).exists(), true);
+    assert.equal((await getDoc(doc(db, "purchase_verifications", "other-purchase"))).exists(), true);
+    assert.equal((await getDoc(doc(db, "devices", DEVICE_ID))).exists(), true);
+  });
+});
