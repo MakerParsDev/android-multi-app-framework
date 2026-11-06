@@ -63,15 +63,28 @@ private enum class PreloadReason(val analyticsValue: String) {
 }
 
 /**
- * Bootstrap only the placement that the flavor's initial screen will consume.
- * Other placements are requested by their own slot after navigation.
+ * Choose eager inventory only if the flavor can render it at startup.
+ * Slot-specific, demand-aware requests keep their existing consent gate.
  */
-internal fun nativeBootstrapPlacement(family: ContentFamily): AdPlacement =
-    when (family) {
-        ContentFamily.CONTENT, ContentFamily.UNKNOWN -> AdPlacement.NATIVE_FEED_CONTENT
+internal fun nativeBootstrapPlacement(
+    family: ContentFamily,
+    demandAwarePreloadEnabled: Boolean,
+    noInlineNativeSlot: Boolean,
+): AdPlacement? {
+    if (demandAwarePreloadEnabled) return null
+    if (noInlineNativeSlot) return null
+    return when (family) {
+        ContentFamily.CONTENT -> AdPlacement.NATIVE_FEED_CONTENT
+        ContentFamily.PRAYER_LIBRARY -> AdPlacement.NATIVE_FEED_HOME
+        ContentFamily.MIRACLES -> AdPlacement.NATIVE_FEED_HOME
+        ContentFamily.PRAYER_TIMES -> AdPlacement.NATIVE_FEED_HOME
         ContentFamily.ZIKIR_COUNTER -> AdPlacement.NATIVE_FEED_ZIKIR
-        else -> AdPlacement.NATIVE_FEED_HOME
+        ContentFamily.QIBLA -> AdPlacement.NATIVE_FEED_HOME
+        ContentFamily.QURAN -> AdPlacement.NATIVE_FEED_HOME
+        ContentFamily.ESMA -> AdPlacement.NATIVE_FEED_HOME
+        ContentFamily.UNKNOWN -> AdPlacement.NATIVE_FEED_CONTENT
     }
+}
 
 @Singleton
 class AdOrchestrator
@@ -924,12 +937,13 @@ class AdOrchestrator
                 adSessionContext.activeRoute,
                 loadReason = reason.analyticsValue,
             )
-            if (
-                !policy.demandAwarePreloadEnabled &&
-                !AppProductDefinition.current.hasCapability("no_inline_native_slot")
-            ) {
-                val nativePlacement =
-                    nativeBootstrapPlacement(AppProductDefinition.current.contentFamily)
+            val nativePlacement =
+                nativeBootstrapPlacement(
+                    family = AppProductDefinition.current.contentFamily,
+                    demandAwarePreloadEnabled = policy.demandAwarePreloadEnabled,
+                    noInlineNativeSlot = AppProductDefinition.current.hasCapability("no_inline_native_slot"),
+                )
+            if (nativePlacement != null) {
                 nativeAdManager.loadAds(
                     context,
                     AppAdUnitIds.resolvePlacement(
