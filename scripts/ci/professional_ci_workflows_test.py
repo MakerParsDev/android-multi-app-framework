@@ -288,6 +288,10 @@ def test_managed_device_is_pinned_and_scheduled() -> None:
         for entry in dependency_policy["transitive_prerelease_allowlist"]
     }
     assert "com.google.testing.platform:*" in allowlist
+    audio_gate = named_step(job, "Require retained audio navigation JUnit PASS")
+    assert audio_gate["if"] == "${{ !inputs.quran_e2e_only }}"
+    assert "scripts/ci/assert_audio_nav_junit.py" in audio_gate["run"]
+    assert "app/build/outputs/androidTest-results/managedDevice/" in audio_gate["run"]
     upload = named_step(job, "Upload managed-device reports")
     assert upload["with"]["retention-days"] == 14
     assert upload["if"] == "always()"
