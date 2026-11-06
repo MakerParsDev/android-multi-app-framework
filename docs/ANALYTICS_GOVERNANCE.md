@@ -8,7 +8,7 @@
 - GA4 property: **526790653**
 - Target GA4 event retention (not automatically enforced): **14 months**
 - Declared events: **72**
-- Declared parameters: **85**
+- Declared parameters: **86**
 - User properties: **8**
 
 Event names and parameters are immutable within a schema version. Any rename requires a
@@ -38,6 +38,7 @@ schema-version increment, parallel reporting during migration, and an explicit G
 | `consent_trigger` | Consent Trigger | EVENT | low |
 | `ad_discard_reason` | Native Inventory Discard Reason | EVENT | low |
 | `ump_error_category` | UMP Error Category | EVENT | low |
+| `ad_waterfall_category` | Ad Waterfall Category | EVENT | low |
 
 ## Custom metrics
 
@@ -154,6 +155,7 @@ Retire from key-event status:
 | `ad_type` | string | none | not-registered |
 | `ad_unit_id` | string | none | not-registered |
 | `ad_value` | number | metric | not-registered |
+| `ad_waterfall_category` | string | dimension | low |
 | `adapter_name` | string | none | not-registered |
 | `age_bucket` | declared-only | none | not-registered |
 | `age_gate_result` | string | none | not-registered |
