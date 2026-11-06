@@ -1,13 +1,13 @@
 {
   "schema_version": 2,
-  "codeql_bundle_version": "2.27.1",
+  "codeql_bundle_version": "2.27.4",
   "kotlin": {
     "current_configured_version": "2.4.20",
     "supported_max_exclusive": "2.4.21",
     "owner": "platform-engineering/ci",
-    "checked_on": "2026-10-09",
-    "next_review_on": "2026-11-09",
-    "reference": "https://docs.github.com/en/code-security/code-scanning/creating-an-advanced-setup-for-code-scanning/supported-languages-and-frameworks#kotlin",
-    "rationale": "Live CodeQL CLI 2.27.1 was observed on main SHA 6d228137 (2026-10-07); its official 2026-09-22 changelog adds Kotlin 2.4.20 extraction support. This version bound is a source-level eligibility check, not a substitute for a successful exact-PR CodeQL run."
+    "checked_on": "2026-11-06",
+    "next_review_on": "2026-12-06",
+    "reference": "https://codeql.github.com/docs/codeql-overview/supported-languages-and-frameworks/",
+    "rationale": "Exact protected-main CodeQL run #42201281562 (2026-11-06, SHA dbb9d43) logs show Java/Kotlin analysis using CodeQL CLI 2.27.4. Official 2026-11-06 supported-language matrix still lists Kotlin 1.8.0 through 2.4.20; the CodeQL 2.27.4 changelog does not add 2.4.21 support. The exclusive 2.4.21 ceiling remains a static eligibility policy, not a replacement for exact-PR extractor success."
   }
 }
