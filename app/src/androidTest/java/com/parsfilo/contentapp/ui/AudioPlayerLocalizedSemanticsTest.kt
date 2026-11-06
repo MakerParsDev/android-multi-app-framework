@@ -12,13 +12,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -79,15 +82,17 @@ class AudioPlayerLocalizedSemanticsTest {
 
     @Test
     fun retainedNavigationDestinationObservesLiveAudioProgress() {
+        // Synthetic NavHost lifecycle test; not an end-to-end AppNavHost or MediaPlayer test.
         val source = MutableStateFlow(
             AudioPlayerState(assetReady = true, duration = 260_000L),
         )
+        lateinit var navController: NavHostController
         rule.setContent {
             AppTheme(flavorName = "fetihsuresi") {
-                val navController = rememberNavController()
+                navController = rememberNavController()
                 NavHost(navController = navController, startDestination = "player") {
                     composable("player") {
-                        // A retained navigation graph must read the flow in its destination.
+                        // Subscribe in the destination: it can be disposed and recreated.
                         val state by source.collectAsStateWithLifecycle()
                         InlineAudioPlayer(
                             state = state,
@@ -95,6 +100,9 @@ class AudioPlayerLocalizedSemanticsTest {
                             onStop = {},
                             onSeek = {},
                         )
+                    }
+                    composable("other") {
+                        Box(Modifier.testTag("other_destination"))
                     }
                 }
             }
@@ -110,10 +118,23 @@ class AudioPlayerLocalizedSemanticsTest {
             )
         }
         rule.onNodeWithText("02:22/04:20").assertExists()
+
+        // A retained navigation graph must not freeze the player's state
+        // while the destination is off-screen and its flow collector is stopped.
+        rule.runOnIdle { navController.navigate("other") }
+        rule.onNodeWithTag("other_destination").assertExists()
+        rule.onNodeWithText("02:22/04:20").assertDoesNotExist()
         rule.runOnIdle {
             source.value = source.value.copy(isPlaying = false, currentPosition = 145_000L)
         }
+        rule.runOnIdle { navController.popBackStack() }
         rule.onNodeWithText("02:25/04:20").assertExists()
+
+        // The recreated collector must also keep observing later progress.
+        rule.runOnIdle {
+            source.value = source.value.copy(isPlaying = true, currentPosition = 152_000L)
+        }
+        rule.onNodeWithText("02:32/04:20").assertExists()
     }
 
     private fun verifyAudio(
