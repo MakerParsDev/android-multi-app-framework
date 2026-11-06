@@ -45,15 +45,21 @@ object AppModule {
     fun providePurchaseVerificationUrl(): String = BuildConfig.PURCHASE_VERIFICATION_URL
 }
 
-// MIRACLES is text-only and excludes AudioService from its manifest. Never
-// initialize a MediaSession controller for a service absent from that app.
-// Other flavors keep the existing production and CI smoke startup contract.
+// These non-audio families remove AudioService from their merged manifest.
+// Do not create a MediaSession controller for a service absent from the app.
+// Audio families, including QURAN's streamed ayah playback, retain the service.
 internal fun shouldStartAudio(
     ciSmoke: Boolean,
     buildType: String,
     family: ContentFamily,
 ): Boolean =
-    family != ContentFamily.MIRACLES &&
+    family !in
+        setOf(
+            ContentFamily.MIRACLES,
+            ContentFamily.QIBLA,
+            ContentFamily.PRAYER_TIMES,
+            ContentFamily.ZIKIR_COUNTER,
+        ) &&
         (
             !ciSmoke ||
                 (
