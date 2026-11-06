@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import tomllib
 import unittest
+from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -48,8 +49,13 @@ class CodeqlKotlinCompatibilityTest(unittest.TestCase):
             "blocked_security_upgrade", policy["kotlin"],
             "A fixed advisory must not remain an active exception",
         )
-        self.assertEqual(policy["codeql_bundle_version"], "2.27.1")
-        self.assertEqual(policy["kotlin"]["checked_on"], "2026-10-09")
+        # Keep historical extractor baseline and review-date ordering enforceable
+        # without pinning tests to a particular monthly policy-review date.
+        self.assertGreaterEqual(numeric_version(policy["codeql_bundle_version"]), (2, 27, 1))
+        last_checked = date.fromisoformat(policy["kotlin"]["checked_on"])
+        next_review = date.fromisoformat(policy["kotlin"]["next_review_on"])
+        self.assertLessEqual(last_checked, date.today())
+        self.assertLess(last_checked, next_review)
 
     def test_buildsrc_does_not_reintroduce_vulnerable_kotlin_plugin(self) -> None:
         # A KGP upgrade in libs.versions.toml is insufficient: the versioned
