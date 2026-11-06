@@ -17,7 +17,7 @@ class AdsPlacementPolicyEvaluatorTest {
     }
 
     @Test
-    fun `interstitial blocks when consent is unavailable`() {
+    fun `interstitial blocks while consent is pending`() {
         val result = evaluator.evaluateInterstitial(
             baseContext(
                 format = AdFormat.INTERSTITIAL,
@@ -26,7 +26,7 @@ class AdsPlacementPolicyEvaluatorTest {
             ),
         )
 
-        assertThat(result).isEqualTo(AdEligibility.Blocked(AdSuppressReason.NO_CONSENT))
+        assertThat(result).isEqualTo(AdEligibility.Blocked(AdSuppressReason.CONSENT_PENDING))
     }
 
     @Test
