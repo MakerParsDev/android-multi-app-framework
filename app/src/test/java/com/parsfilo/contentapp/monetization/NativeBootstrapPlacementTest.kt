@@ -1,23 +1,20 @@
 package com.parsfilo.contentapp.monetization
 
-import com.google.common.truth.Truth.assertThat
 import com.parsfilo.contentapp.feature.ads.AdPlacement
 import com.parsfilo.contentapp.product.ContentFamily
+import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class NativeBootstrapPlacementTest {
     @Test
     fun contentHomeUsesContentPlacement() {
-        assertThat(nativeBootstrapPlacement(ContentFamily.CONTENT))
-            .isEqualTo(AdPlacement.NATIVE_FEED_CONTENT)
-        assertThat(nativeBootstrapPlacement(ContentFamily.UNKNOWN))
-            .isEqualTo(AdPlacement.NATIVE_FEED_CONTENT)
+        assertEquals(AdPlacement.NATIVE_FEED_CONTENT, nativeBootstrapPlacement(ContentFamily.CONTENT))
+        assertEquals(AdPlacement.NATIVE_FEED_CONTENT, nativeBootstrapPlacement(ContentFamily.UNKNOWN))
     }
 
     @Test
     fun zikirmatikHomeUsesZikirPlacement() {
-        assertThat(nativeBootstrapPlacement(ContentFamily.ZIKIR_COUNTER))
-            .isEqualTo(AdPlacement.NATIVE_FEED_ZIKIR)
+        assertEquals(AdPlacement.NATIVE_FEED_ZIKIR, nativeBootstrapPlacement(ContentFamily.ZIKIR_COUNTER))
     }
 
     @Test
@@ -31,8 +28,7 @@ class NativeBootstrapPlacementTest {
             ContentFamily.QURAN,
         )
         homeFamilies.forEach { family ->
-            assertThat(nativeBootstrapPlacement(family))
-                .isEqualTo(AdPlacement.NATIVE_FEED_HOME)
+            assertEquals(AdPlacement.NATIVE_FEED_HOME, nativeBootstrapPlacement(family))
         }
     }
 }
