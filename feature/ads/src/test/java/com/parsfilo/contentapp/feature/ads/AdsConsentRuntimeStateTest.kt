@@ -62,12 +62,23 @@ class AdsConsentRuntimeStateTest {
     }
 
     @Test
-    fun `unknown consent blocks ad requests`() {
+    fun `unknown consent blocks ads with a pending reason`() {
         AdsConsentRuntimeState.update(AdsPrivacyState.Unknown)
 
         assertThat(AdsConsentRuntimeState.canRequestAds.value).isFalse()
         assertThat(AdsConsentRuntimeState.state.value.suppressReasonWhenBlocked())
-            .isEqualTo(AdSuppressReason.NO_CONSENT)
+            .isEqualTo(AdSuppressReason.CONSENT_PENDING)
+    }
+
+    @Test
+    fun `gathering consent blocks ads with a pending reason`() {
+        AdsConsentRuntimeState.update(
+            AdsPrivacyState.Gathering(ageGateStatus = AdAgeGateStatus.AGE_16_OR_OVER),
+        )
+
+        assertThat(AdsConsentRuntimeState.canRequestAds.value).isFalse()
+        assertThat(AdsConsentRuntimeState.state.value.suppressReasonWhenBlocked())
+            .isEqualTo(AdSuppressReason.CONSENT_PENDING)
     }
 
     @Test
