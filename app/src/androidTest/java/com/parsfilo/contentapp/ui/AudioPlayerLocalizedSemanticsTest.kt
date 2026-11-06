@@ -18,10 +18,15 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.parsfilo.contentapp.core.designsystem.AppTheme
 import com.parsfilo.contentapp.feature.audio.ui.AudioPlayerState
 import com.parsfilo.contentapp.feature.audio.ui.InlineAudioPlayer
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -71,6 +76,45 @@ class AudioPlayerLocalizedSemanticsTest {
             missing = "Audiodatei nicht gefunden",
             retry = "Erneut versuchen",
         )
+
+    @Test
+    fun retainedNavigationDestinationObservesLiveAudioProgress() {
+        val source = MutableStateFlow(
+            AudioPlayerState(assetReady = true, duration = 260_000L),
+        )
+        rule.setContent {
+            AppTheme(flavorName = "fetihsuresi") {
+                val navController = rememberNavController()
+                NavHost(navController = navController, startDestination = "player") {
+                    composable("player") {
+                        // A retained navigation graph must read the flow in its destination.
+                        val state by source.collectAsStateWithLifecycle()
+                        InlineAudioPlayer(
+                            state = state,
+                            onPlayPause = {},
+                            onStop = {},
+                            onSeek = {},
+                        )
+                    }
+                }
+            }
+        }
+
+        rule.onNodeWithText("00:00/04:20").assertExists()
+        rule.runOnIdle {
+            source.value = AudioPlayerState(
+                assetReady = true,
+                isPlaying = true,
+                currentPosition = 142_000L,
+                duration = 260_000L,
+            )
+        }
+        rule.onNodeWithText("02:22/04:20").assertExists()
+        rule.runOnIdle {
+            source.value = source.value.copy(isPlaying = false, currentPosition = 145_000L)
+        }
+        rule.onNodeWithText("02:25/04:20").assertExists()
+    }
 
     private fun verifyAudio(
         locale: String,
