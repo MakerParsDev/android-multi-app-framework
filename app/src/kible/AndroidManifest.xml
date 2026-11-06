@@ -1,6 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- This flavor has no audio playback route; do not register Media3 playback. -->
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+        tools:node="remove" />
+
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <application>
+        <!-- Keep all unrelated receivers and foreground-service types unchanged. -->
+        <service
+            android:name="com.parsfilo.contentapp.feature.audio.service.AudioService"
+            tools:node="remove"
+            tools:ignore="Instantiatable" />
+    </application>
 </manifest>
 
