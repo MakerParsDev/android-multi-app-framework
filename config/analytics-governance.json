@@ -93,6 +93,13 @@
       "scope": "EVENT",
       "cardinality": "low",
       "description": "Bounded UMP SDK error class and callback stage without personal information."
+    },
+    {
+      "parameter_name": "ad_waterfall_category",
+      "display_name": "Ad Waterfall Category",
+      "scope": "EVENT",
+      "cardinality": "low",
+      "description": "Privacy-safe bounded mediation SDK failure summary: no_fill_only, sdk_technical, adapter_domain or unavailable."
     }
   ],
   "custom_metrics": [

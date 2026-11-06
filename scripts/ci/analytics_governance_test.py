@@ -27,8 +27,9 @@ class AnalyticsGovernanceTest(unittest.TestCase):
         dimensions = manifest["custom_dimensions"]
         names = [entry["parameter_name"] for entry in dimensions]
         self.assertEqual(len(names), len(set(names)), "Duplicate GA4 custom dimensions")
-        self.assertEqual(len(names), 12)
+        self.assertEqual(len(names), 13)
         required_diagnostics = {
+            "ad_waterfall_category",
             "ad_error_category",
             "suppress_reason",
             "consent_trigger",
