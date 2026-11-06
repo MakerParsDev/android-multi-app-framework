@@ -81,7 +81,6 @@ fun AppNavHost(
     onUpdateDebugResetSoftPrompt: () -> Unit = {},
     nativeAdViewModel: NativeAdViewModel = hiltViewModel(),
 ) {
-    val audioState by audioPlayerViewModel.playerState.collectAsStateWithLifecycle()
     val nativeAd by nativeAdViewModel.nativeAdState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val hostActivity = context as? MainActivity
@@ -457,6 +456,8 @@ fun AppNavHost(
                 }
             }
             composable(AppRoute.Content.route) {
+                // Read the live state inside the retained NavHost destination, not its graph builder.
+                val audioState by audioPlayerViewModel.playerState.collectAsStateWithLifecycle()
                 LaunchedEffect(Unit) {
                     nativeAdViewModel.setPlacement(AdPlacement.NATIVE_FEED_CONTENT)
                 }
@@ -583,6 +584,8 @@ fun AppNavHost(
                 route = AppRoute.PrayerDetail.route,
                 arguments = AppRoute.PrayerDetail.arguments,
             ) { _ ->
+                // Read the live state inside the retained NavHost destination, not its graph builder.
+                val audioState by audioPlayerViewModel.playerState.collectAsStateWithLifecycle()
                 LaunchedEffect(Unit) {
                     nativeAdViewModel.setPlacement(AdPlacement.NATIVE_FEED_CONTENT)
                 }
@@ -663,6 +666,8 @@ fun AppNavHost(
                 )
             }
             composable(AppRoute.MiraclesList.route) {
+                // Read the live state inside the retained NavHost destination, not its graph builder.
+                val audioState by audioPlayerViewModel.playerState.collectAsStateWithLifecycle()
                 LaunchedEffect(Unit) {
                     nativeAdViewModel.setPlacement(AdPlacement.NATIVE_FEED_HOME)
                 }
