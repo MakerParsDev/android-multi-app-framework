@@ -46,7 +46,7 @@ fun AdsPrivacyState.suppressReasonWhenBlocked(nowMillis: Long = SystemTimeProvid
 
         AdsPrivacyState.Unknown,
         is AdsPrivacyState.Gathering,
-        -> AdSuppressReason.NO_CONSENT
+        -> AdSuppressReason.CONSENT_PENDING
 
         is AdsPrivacyState.CanRequestAds -> AdSuppressReason.NO_CONSENT
     }
