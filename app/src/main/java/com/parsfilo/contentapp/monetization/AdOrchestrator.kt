@@ -30,6 +30,7 @@ import com.parsfilo.contentapp.feature.ads.RewardedInterstitialIntroSpec
 import com.parsfilo.contentapp.feature.ads.RewardedInterstitialLaunchToken
 import com.parsfilo.contentapp.feature.ads.SystemTimeProvider
 import com.parsfilo.contentapp.product.AppProductDefinition
+import com.parsfilo.contentapp.product.ContentFamily
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.SupervisorJob
@@ -59,6 +60,30 @@ private enum class PreloadReason(val analyticsValue: String) {
     NOT_LOADED_RECOVERY("not_loaded_recovery"),
     ROUTE_HINT("route_hint"),
     REFRESH_CONSENT("refresh_consent"),
+}
+
+/**
+ * Choose eager inventory only if the flavor can render it at startup.
+ * Slot-specific, demand-aware requests keep their existing consent gate.
+ */
+internal fun nativeBootstrapPlacement(
+    family: ContentFamily,
+    demandAwarePreloadEnabled: Boolean,
+    noInlineNativeSlot: Boolean,
+): AdPlacement? {
+    if (demandAwarePreloadEnabled) return null
+    if (noInlineNativeSlot) return null
+    return when (family) {
+        ContentFamily.CONTENT -> AdPlacement.NATIVE_FEED_CONTENT
+        ContentFamily.PRAYER_LIBRARY -> AdPlacement.NATIVE_FEED_HOME
+        ContentFamily.MIRACLES -> AdPlacement.NATIVE_FEED_HOME
+        ContentFamily.PRAYER_TIMES -> AdPlacement.NATIVE_FEED_HOME
+        ContentFamily.ZIKIR_COUNTER -> AdPlacement.NATIVE_FEED_ZIKIR
+        ContentFamily.QIBLA -> AdPlacement.NATIVE_FEED_HOME
+        ContentFamily.QURAN -> AdPlacement.NATIVE_FEED_HOME
+        ContentFamily.ESMA -> AdPlacement.NATIVE_FEED_HOME
+        ContentFamily.UNKNOWN -> AdPlacement.NATIVE_FEED_CONTENT
+    }
 }
 
 @Singleton
@@ -912,23 +937,26 @@ class AdOrchestrator
                 adSessionContext.activeRoute,
                 loadReason = reason.analyticsValue,
             )
-            if (
-                !policy.demandAwarePreloadEnabled &&
-                !AppProductDefinition.current.hasCapability("no_inline_native_slot")
-            ) {
+            val nativePlacement =
+                nativeBootstrapPlacement(
+                    family = AppProductDefinition.current.contentFamily,
+                    demandAwarePreloadEnabled = policy.demandAwarePreloadEnabled,
+                    noInlineNativeSlot = AppProductDefinition.current.hasCapability("no_inline_native_slot"),
+                )
+            if (nativePlacement != null) {
                 nativeAdManager.loadAds(
                     context,
                     AppAdUnitIds.resolvePlacement(
                         context,
-                        AdPlacement.NATIVE_FEED_HOME,
+                        nativePlacement,
                         BuildConfig.USE_TEST_ADS,
                     ),
-                    AdPlacement.NATIVE_FEED_HOME,
+                    nativePlacement,
                     policy.nativePoolMax,
                 )
             } else {
-                // Test cohort: wait until a native ad slot is actually composed.
-                Timber.d("Native bootstrap skipped: demand-aware cohort")
+                // Demand-aware slots and short-content flavors don't need eager inventory.
+                Timber.d("Native bootstrap skipped: deferred or no inline native slot")
             }
             if (includeAppOpenWarmup && !appOpenWarmupRequested) {
                 appOpenWarmupRequested = true
