@@ -60,6 +60,89 @@ class MaintenanceHealthControllerTest(unittest.TestCase):
         state, _ = health.check_github_ruleset_state("o/r")
         self.assertEqual(state, "HEALTHY")
 
+    def test_action_pin_health_validates_workflow_sha_not_only_manifest_count(self):
+        approved = "a" * 40
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            manifest = root / "config/pinned-github-actions.json"
+            manifest.parent.mkdir(parents=True)
+            manifest.write_text(
+                json.dumps({"actions/checkout": {"sha": approved, "version": "v1"}}),
+                encoding="utf-8",
+            )
+            workflow = root / ".github/workflows/example.yml"
+            workflow.parent.mkdir(parents=True)
+            workflow.write_text(
+                f"jobs:\n  test:\n    steps:\n      - uses: actions/checkout@{approved}\n",
+                encoding="utf-8",
+            )
+            with patch.object(health, "ROOT", root):
+                self.assertTrue(health.check_pinned_actions()[0])
+                workflow.write_text(
+                    f'jobs:\n  test:\n    steps:\n      - uses: "actions/checkout@{approved}" # pinned\n',
+                    encoding="utf-8",
+                )
+                self.assertTrue(health.check_pinned_actions()[0])
+
+                workflow.write_text(
+                    f"jobs:\n  test:\n    steps:\n      - uses: actions/checkout@{'b' * 40}\n",
+                    encoding="utf-8",
+                )
+                self.assertFalse(health.check_pinned_actions()[0])
+
+                workflow.write_text(
+                    "jobs:\n  test:\n    steps:\n      - uses: example/unknown@"
+                    + approved + "\n",
+                    encoding="utf-8",
+                )
+                self.assertFalse(health.check_pinned_actions()[0])
+
+                workflow.write_text(
+                    "jobs:\n  test:\n    steps:\n      - uses: actions/checkout@main\n",
+                    encoding="utf-8",
+                )
+                self.assertFalse(health.check_pinned_actions()[0])
+
+    def test_action_pin_health_rejects_empty_or_invalid_manifest(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            manifest = root / "config/pinned-github-actions.json"
+            manifest.parent.mkdir(parents=True)
+            manifest.write_text("{}", encoding="utf-8")
+            with patch.object(health, "ROOT", root):
+                self.assertFalse(health.check_pinned_actions()[0])
+                manifest.write_text(
+                    json.dumps({"actions/checkout": {"sha": "short", "version": "v1"}}),
+                    encoding="utf-8",
+                )
+                self.assertFalse(health.check_pinned_actions()[0])
+
+    def test_action_pin_health_checks_composite_action_refs(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            manifest = root / "config/pinned-github-actions.json"
+            manifest.parent.mkdir(parents=True)
+            approved = "a" * 40
+            manifest.write_text(
+                json.dumps({"actions/checkout": {"sha": approved, "version": "v1"}}),
+                encoding="utf-8",
+            )
+            composite = root / ".github/actions/example/action.yml"
+            composite.parent.mkdir(parents=True)
+            composite.write_text(
+                "name: Sample\nruns:\n  using: composite\n  steps:\n"
+                f"    - uses: actions/checkout@{approved}\n",
+                encoding="utf-8",
+            )
+            with patch.object(health, "ROOT", root):
+                self.assertTrue(health.check_pinned_actions()[0])
+                composite.write_text(
+                    "name: Sample\nruns:\n  using: composite\n  steps:\n"
+                    "    - uses: actions/checkout@bad\n",
+                    encoding="utf-8",
+                )
+                self.assertFalse(health.check_pinned_actions()[0])
+
     def test_codeql_dashboard_reports_exclusive_policy_boundary_not_live_probe(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

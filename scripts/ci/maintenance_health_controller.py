@@ -18,6 +18,7 @@ import argparse
 from datetime import date, datetime, timezone
 import json
 import os
+import re
 from pathlib import Path
 import subprocess  # nosec B404
 import sys
@@ -40,15 +41,66 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def check_pinned_actions() -> tuple[bool, str]:
+    """Verify external action references, not just the manifest entry count.
+
+    Keep the scheduled maintenance workflow dependency-free; CI's full YAML
+    validator remains the authoritative policy test for all YAML structures.
+    """
     manifest_path = ROOT / "config/pinned-github-actions.json"
     if not manifest_path.is_file():
         return False, "Pinned actions manifest missing"
     try:
         data = json.loads(manifest_path.read_text(encoding="utf-8"))
-        count = len(data)
-        return True, f"{count} external actions pinned and verified"
-    except Exception as err:
-        return False, f"Failed to parse pinned actions: {err}"
+        if not isinstance(data, dict) or not data:
+            return False, "Pinned actions manifest must be a non-empty object"
+
+        full_sha = re.compile(r"[0-9a-f]{40}")
+        for name, metadata in data.items():
+            if (
+                not isinstance(name, str)
+                or not isinstance(metadata, dict)
+                or not isinstance(metadata.get("sha"), str)
+                or full_sha.fullmatch(metadata["sha"]) is None
+                or not isinstance(metadata.get("version"), str)
+                or not metadata["version"].strip()
+            ):
+                return False, f"Invalid pinned action manifest entry: {name}"
+
+        paths = sorted(
+            [
+                *(ROOT / ".github/workflows").glob("*.y*ml"),
+                *(ROOT / ".github/actions").rglob("action.y*ml"),
+            ]
+        )
+        if not paths:
+            return False, "No GitHub workflow/action files found for pin validation"
+
+        # Match YAML uses keys at line starts, without depending on PyYAML
+        # being installed on the read-only scheduled health runners.
+        uses_line = re.compile(r"^[ \t]*(?:-[ \t]*)?uses:[ \t]*([^\s#]+)", re.MULTILINE)
+        checked = 0
+        for path in paths:
+            for raw_reference in uses_line.findall(path.read_text(encoding="utf-8")):
+                reference = raw_reference.strip('"').strip("'")
+                if reference.startswith("./"):
+                    continue
+                if "@" not in reference:
+                    return False, f"Unpinned external action in {path.relative_to(ROOT)}"
+                action_path, sha = reference.rsplit("@", 1)
+                action_name = "/".join(action_path.split("/")[:2])
+                approved = data.get(action_name)
+                if approved is None or approved["sha"] != sha:
+                    return False, (
+                        f"Unapproved external action pin {action_name} in "
+                        f"{path.relative_to(ROOT)}"
+                    )
+                checked += 1
+
+        if checked == 0:
+            return False, "No external action references found for pin validation"
+        return True, f"{len(data)} approved actions; {checked} workflow references match pinned SHAs"
+    except (OSError, ValueError, TypeError) as err:
+        return False, f"Failed to verify pinned actions: {err}"
 
 
 def check_codeql_kotlin_compatibility() -> tuple[bool, str]:
