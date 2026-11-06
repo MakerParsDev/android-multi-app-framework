@@ -87,6 +87,13 @@ jobs:
             --stacktrace \
             --max-workers=2
 
+      - name: Require retained audio navigation JUnit PASS
+        if: ${{ !inputs.quran_e2e_only }}
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/assert_audio_nav_junit.py \
+            app/build/outputs/androidTest-results/managedDevice/
+
       - name: Remove CI-only Firebase placeholder
         if: always()
         run: |
