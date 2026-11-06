@@ -571,7 +571,7 @@ fun AppNavHost(
                 ) {
                     NativeFeedAdSlot(
                         nativeAd = nativeAd,
-                        nativePlacement = AdPlacement.NATIVE_FEED_CONTENT,
+                        nativePlacement = AdPlacement.NATIVE_FEED_HOME,
                         nativeAdUnitId = adUnitIds.native,
                         bannerAdUnitId = adUnitIds.banner,
                         bannerPlacement = AdPlacement.BANNER_CONTENT_LIST,
@@ -703,7 +703,7 @@ fun AppNavHost(
                     nativeAdContent = {
                         NativeFeedAdSlot(
                             nativeAd = nativeAd,
-                            nativePlacement = AdPlacement.NATIVE_FEED_CONTENT,
+                            nativePlacement = AdPlacement.NATIVE_FEED_HOME,
                             nativeAdUnitId = adUnitIds.native,
                             bannerAdUnitId = adUnitIds.banner,
                             bannerPlacement = AdPlacement.BANNER_CONTENT_LIST,

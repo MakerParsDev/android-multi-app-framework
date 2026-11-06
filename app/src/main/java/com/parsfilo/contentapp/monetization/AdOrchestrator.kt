@@ -30,6 +30,7 @@ import com.parsfilo.contentapp.feature.ads.RewardedInterstitialIntroSpec
 import com.parsfilo.contentapp.feature.ads.RewardedInterstitialLaunchToken
 import com.parsfilo.contentapp.feature.ads.SystemTimeProvider
 import com.parsfilo.contentapp.product.AppProductDefinition
+import com.parsfilo.contentapp.product.ContentFamily
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.SupervisorJob
@@ -60,6 +61,17 @@ private enum class PreloadReason(val analyticsValue: String) {
     ROUTE_HINT("route_hint"),
     REFRESH_CONSENT("refresh_consent"),
 }
+
+/**
+ * Bootstrap only the placement that the flavor's initial screen will consume.
+ * Other placements are requested by their own slot after navigation.
+ */
+internal fun nativeBootstrapPlacement(family: ContentFamily): AdPlacement =
+    when (family) {
+        ContentFamily.CONTENT, ContentFamily.UNKNOWN -> AdPlacement.NATIVE_FEED_CONTENT
+        ContentFamily.ZIKIR_COUNTER -> AdPlacement.NATIVE_FEED_ZIKIR
+        else -> AdPlacement.NATIVE_FEED_HOME
+    }
 
 @Singleton
 class AdOrchestrator
@@ -916,19 +928,21 @@ class AdOrchestrator
                 !policy.demandAwarePreloadEnabled &&
                 !AppProductDefinition.current.hasCapability("no_inline_native_slot")
             ) {
+                val nativePlacement =
+                    nativeBootstrapPlacement(AppProductDefinition.current.contentFamily)
                 nativeAdManager.loadAds(
                     context,
                     AppAdUnitIds.resolvePlacement(
                         context,
-                        AdPlacement.NATIVE_FEED_HOME,
+                        nativePlacement,
                         BuildConfig.USE_TEST_ADS,
                     ),
-                    AdPlacement.NATIVE_FEED_HOME,
+                    nativePlacement,
                     policy.nativePoolMax,
                 )
             } else {
-                // Test cohort: wait until a native ad slot is actually composed.
-                Timber.d("Native bootstrap skipped: demand-aware cohort")
+                // Demand-aware slots and short-content flavors don't need eager inventory.
+                Timber.d("Native bootstrap skipped: deferred or no inline native slot")
             }
             if (includeAppOpenWarmup && !appOpenWarmupRequested) {
                 appOpenWarmupRequested = true
