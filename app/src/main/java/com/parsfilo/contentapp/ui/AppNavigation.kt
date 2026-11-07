@@ -456,8 +456,6 @@ fun AppNavHost(
                 }
             }
             composable(AppRoute.Content.route) {
-                // Read the live state inside the retained NavHost destination, not its graph builder.
-                val audioState by audioPlayerViewModel.playerState.collectAsStateWithLifecycle()
                 LaunchedEffect(Unit) {
                     nativeAdViewModel.setPlacement(AdPlacement.NATIVE_FEED_CONTENT)
                 }
@@ -482,6 +480,9 @@ fun AppNavHost(
                         }
                     },
                     audioPlayerContent = {
+                        // Subscribe in the rendered player slot so navigation and nested
+                        // content recompositions cannot retain a stale playback snapshot.
+                        val audioState by audioPlayerViewModel.playerState.collectAsStateWithLifecycle()
                         InlineAudioPlayer(
                             state = audioState,
                             onPlayPause = {
@@ -584,8 +585,6 @@ fun AppNavHost(
                 route = AppRoute.PrayerDetail.route,
                 arguments = AppRoute.PrayerDetail.arguments,
             ) { _ ->
-                // Read the live state inside the retained NavHost destination, not its graph builder.
-                val audioState by audioPlayerViewModel.playerState.collectAsStateWithLifecycle()
                 LaunchedEffect(Unit) {
                     nativeAdViewModel.setPlacement(AdPlacement.NATIVE_FEED_CONTENT)
                 }
@@ -610,6 +609,9 @@ fun AppNavHost(
                         }
                     },
                     audioPlayerContent = {
+                        // Subscribe in the rendered player slot so navigation and nested
+                        // content recompositions cannot retain a stale playback snapshot.
+                        val audioState by audioPlayerViewModel.playerState.collectAsStateWithLifecycle()
                         InlineAudioPlayer(
                             state = audioState,
                             onPlayPause = {
@@ -666,8 +668,6 @@ fun AppNavHost(
                 )
             }
             composable(AppRoute.MiraclesList.route) {
-                // Read the live state inside the retained NavHost destination, not its graph builder.
-                val audioState by audioPlayerViewModel.playerState.collectAsStateWithLifecycle()
                 LaunchedEffect(Unit) {
                     nativeAdViewModel.setPlacement(AdPlacement.NATIVE_FEED_HOME)
                 }
@@ -718,6 +718,7 @@ fun AppNavHost(
                     audioPlayerContent =
                         if (isEsmaFlavor) {
                             {
+                                val audioState by audioPlayerViewModel.playerState.collectAsStateWithLifecycle()
                                 InlineAudioPlayer(
                                     state = audioState,
                                     onPlayPause = audioPlayerViewModel::togglePlayPause,
