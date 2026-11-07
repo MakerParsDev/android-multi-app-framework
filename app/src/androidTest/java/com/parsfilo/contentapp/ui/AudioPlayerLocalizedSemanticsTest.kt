@@ -4,6 +4,7 @@ import android.content.res.Configuration
 import android.os.LocaleList
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -92,14 +93,18 @@ class AudioPlayerLocalizedSemanticsTest {
                 navController = rememberNavController()
                 NavHost(navController = navController, startDestination = "player") {
                     composable("player") {
-                        // Subscribe in the destination: it can be disposed and recreated.
-                        val state by source.collectAsStateWithLifecycle()
-                        InlineAudioPlayer(
-                            state = state,
-                            onPlayPause = {},
-                            onStop = {},
-                            onSeek = {},
-                        )
+                        // Model real AppNavHost: the content route renders a supplied
+                        // player slot. Keep subscription inside that slot, not outside.
+                        val playerSlot: @Composable () -> Unit = {
+                            val state by source.collectAsStateWithLifecycle()
+                            InlineAudioPlayer(
+                                state = state,
+                                onPlayPause = {},
+                                onStop = {},
+                                onSeek = {},
+                            )
+                        }
+                        Box { playerSlot() }
                     }
                     composable("other") {
                         Box(Modifier.testTag("other_destination"))
