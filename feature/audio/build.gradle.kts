@@ -50,4 +50,7 @@ dependencies {
     implementation(libs.play.asset.delivery.ktx)
     implementation(libs.okhttp)
     ksp(libs.hilt.compiler)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.mockk)
 }
