@@ -44,18 +44,23 @@ class NonAudioForegroundServiceContractTest(unittest.TestCase):
         ).read_text()
         self.assertIn("import dagger.Lazy", viewmodel)
         self.assertIn(
-            "private val assetPackManager: Lazy<AssetPackManager>",
+            "private val assetPackManagerProvider: Lazy<AssetPackManager>",
             viewmodel,
         )
         self.assertNotIn(
             "private val assetPackManager: AssetPackManager",
             viewmodel,
         )
+        self.assertIn(
+            "private val assetPackManager by lazy { assetPackManagerProvider.get() }",
+            viewmodel,
+        )
         self.assertIn("if (!useAssetPackAudio)", viewmodel)
         import re
+        self.assertEqual(1, viewmodel.count("assetPackManagerProvider.get()"))
         calls = re.findall(r"assetPackManager\.([a-zA-Z]+)", viewmodel)
         self.assertGreaterEqual(len(calls), 7)
-        self.assertEqual(["get"] * len(calls), calls)
+        self.assertNotIn("get", calls)
 
     def test_asset_pack_feature_is_globally_disabled_before_fgs_removal(self):
         import re
