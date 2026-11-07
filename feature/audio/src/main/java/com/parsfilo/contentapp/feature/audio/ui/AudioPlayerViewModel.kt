@@ -692,7 +692,10 @@ class AudioPlayerViewModel @Inject constructor(
 
     fun play() {
         Timber.d("AudioPlayer action=play")
-        player?.play()
+        player?.play() ?: return
+        // Do not rely only on a MediaController callback for the visible player state.
+        updateState()
+        startPositionTracking()
     }
 
     fun playFromUrl(url: String) {
@@ -719,7 +722,9 @@ class AudioPlayerViewModel @Inject constructor(
 
     fun pause() {
         Timber.d("AudioPlayer action=pause")
-        player?.pause()
+        player?.pause() ?: return
+        stopPositionTracking()
+        updateState()
     }
 
     fun stop() {
@@ -752,9 +757,14 @@ class AudioPlayerViewModel @Inject constructor(
         Timber.d("AudioPlayer action=togglePlayPause currentlyPlaying=%s", player.isPlaying)
         if (player.isPlaying) {
             player.pause()
+            stopPositionTracking()
         } else {
             player.play()
+            // A controller command can complete before a playback callback is delivered.
+            // Poll during the transition so the visible state follows the real player.
+            startPositionTracking()
         }
+        updateState()
     }
 
     fun seekTo(position: Long) {
