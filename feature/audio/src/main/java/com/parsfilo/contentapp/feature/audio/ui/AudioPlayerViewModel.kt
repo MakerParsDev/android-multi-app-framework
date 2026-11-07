@@ -731,13 +731,15 @@ class AudioPlayerViewModel @Inject constructor(
     }
 
     /**
-     * App arka plana alındığında sesi güvenli şekilde durdurur.
-     * Kullanıcı geri döndüğünde oynatma otomatik başlamaz.
+     * Preserve user-started playback when the app leaves the foreground.
+     * MediaSessionService keeps playing and exposes its media notification.
+     * Paused playback retains the existing reset-on-background behavior.
      */
     fun stopForAppBackground() {
         Timber.d("AudioPlayer action=stopForAppBackground")
         val player = this.player ?: return
-        if (player.isPlaying || player.currentPosition > 0L) {
+        if (player.isPlaying) return
+        if (player.currentPosition > 0L) {
             player.pause()
             player.seekTo(0)
         }

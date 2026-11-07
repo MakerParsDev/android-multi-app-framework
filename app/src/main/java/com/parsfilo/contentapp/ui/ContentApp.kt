@@ -202,7 +202,7 @@ fun ContentApp(
             LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_STOP) {
                     val isConfigChange = (context as? Activity)?.isChangingConfigurations == true
-                    if (shouldStopPlaybackOnAppBackground(productDefinition, isConfigChange)) {
+                    if (!isConfigChange) {
                         audioPlayerViewModel.stopForAppBackground()
                     }
                 }
