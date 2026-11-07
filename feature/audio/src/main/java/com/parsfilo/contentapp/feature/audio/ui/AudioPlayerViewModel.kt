@@ -19,6 +19,7 @@ import com.google.android.play.core.assetpacks.model.AssetPackStatus
 import com.google.common.util.concurrent.ListenableFuture
 import com.parsfilo.contentapp.core.firebase.config.EndpointsProvider
 import com.parsfilo.contentapp.feature.audio.service.AudioService
+import dagger.Lazy
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -61,7 +62,7 @@ private data class RemoteAudioSource(
 @HiltViewModel
 class AudioPlayerViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val assetPackManager: AssetPackManager,
+    private val assetPackManager: Lazy<AssetPackManager>,
     private val endpointsProvider: EndpointsProvider,
     private val okHttpClient: OkHttpClient,
     @javax.inject.Named("audioFileName") private val audioFileName: String,
@@ -185,7 +186,7 @@ class AudioPlayerViewModel @Inject constructor(
 
             // Try 6: Check if asset pack needs to be fetched (fast-follow/on-demand scenario).
             Timber.d("AssetPackManager.getPackStates() çağrılıyor...")
-            val packStates = assetPackManager.getPackStates(listOf(ASSET_PACK_NAME))
+            val packStates = assetPackManager.get().getPackStates(listOf(ASSET_PACK_NAME))
             packStates.addOnSuccessListener { state ->
                 val packState = state.packStates()[ASSET_PACK_NAME]
                 val status = packState?.status() ?: AssetPackStatus.UNKNOWN
@@ -277,7 +278,7 @@ class AudioPlayerViewModel @Inject constructor(
     }
 
     internal fun getAssetPackFilePath(targetFileName: String): String? {
-        val packLocation = assetPackManager.getPackLocation(ASSET_PACK_NAME)
+        val packLocation = assetPackManager.get().getPackLocation(ASSET_PACK_NAME)
         if (packLocation == null) {
             Timber.d("getPackLocation($ASSET_PACK_NAME) = null")
             return null
@@ -530,7 +531,7 @@ class AudioPlayerViewModel @Inject constructor(
             assetLoading = true,
             assetError = "Ses dosyası indiriliyor..."
         )
-        val request = assetPackManager.fetch(listOf(ASSET_PACK_NAME))
+        val request = assetPackManager.get().fetch(listOf(ASSET_PACK_NAME))
         request.addOnSuccessListener {
             Timber.i("✅ Fetch isteği kabul edildi, pack bekleniyor...")
             startAssetPackWait(targetFileName)
@@ -582,7 +583,7 @@ class AudioPlayerViewModel @Inject constructor(
                     when (state.status()) {
                         AssetPackStatus.COMPLETED -> {
                             val resolved = getAssetPackFilePath(targetFileName)
-                            assetPackManager.unregisterListener(this)
+                            assetPackManager.get().unregisterListener(this)
                             continuation.resume(resolved)
                         }
 
@@ -592,7 +593,7 @@ class AudioPlayerViewModel @Inject constructor(
                                 statusToString(state.status()),
                                 state.errorCode()
                             )
-                            assetPackManager.unregisterListener(this)
+                            assetPackManager.get().unregisterListener(this)
                             continuation.resume(null)
                         }
 
@@ -603,9 +604,9 @@ class AudioPlayerViewModel @Inject constructor(
                 }
             }
 
-            assetPackManager.registerListener(listener)
+            assetPackManager.get().registerListener(listener)
             continuation.invokeOnCancellation {
-                assetPackManager.unregisterListener(listener)
+                assetPackManager.get().unregisterListener(listener)
             }
         }
 
