@@ -34,6 +34,34 @@ class NonAudioForegroundServiceContractTest(unittest.TestCase):
              if node.get(TOOLS + "node") == "remove"],
         )
 
+    def test_disabled_asset_pack_manager_is_not_eagerly_injected(self):
+        # Play Asset Delivery enables ExtractionForegroundService when constructed.
+        # Our inactive asset pack has no manifest service, so it must never be
+        # instantiated as a side effect of Hilt creating the audio ViewModel.
+        viewmodel = (
+            ROOT / "feature/audio/src/main/java/com/parsfilo/"
+            "contentapp/feature/audio/ui/AudioPlayerViewModel.kt"
+        ).read_text()
+        self.assertIn("import dagger.Lazy", viewmodel)
+        self.assertIn(
+            "private val assetPackManagerProvider: Lazy<AssetPackManager>",
+            viewmodel,
+        )
+        self.assertNotIn(
+            "private val assetPackManager: AssetPackManager",
+            viewmodel,
+        )
+        self.assertIn(
+            "private val assetPackManager by lazy { assetPackManagerProvider.get() }",
+            viewmodel,
+        )
+        self.assertIn("if (!useAssetPackAudio)", viewmodel)
+        import re
+        self.assertEqual(1, viewmodel.count("assetPackManagerProvider.get()"))
+        calls = re.findall(r"assetPackManager\.([a-zA-Z]+)", viewmodel)
+        self.assertGreaterEqual(len(calls), 7)
+        self.assertNotIn("get", calls)
+
     def test_asset_pack_feature_is_globally_disabled_before_fgs_removal(self):
         import re
         gradle = (ROOT / "app/build.gradle.kts").read_text()

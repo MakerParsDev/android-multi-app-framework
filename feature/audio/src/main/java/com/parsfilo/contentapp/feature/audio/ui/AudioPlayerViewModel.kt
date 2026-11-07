@@ -19,6 +19,7 @@ import com.google.android.play.core.assetpacks.model.AssetPackStatus
 import com.google.common.util.concurrent.ListenableFuture
 import com.parsfilo.contentapp.core.firebase.config.EndpointsProvider
 import com.parsfilo.contentapp.feature.audio.service.AudioService
+import dagger.Lazy
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -61,7 +62,7 @@ private data class RemoteAudioSource(
 @HiltViewModel
 class AudioPlayerViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val assetPackManager: AssetPackManager,
+    private val assetPackManagerProvider: Lazy<AssetPackManager>,
     private val endpointsProvider: EndpointsProvider,
     private val okHttpClient: OkHttpClient,
     @javax.inject.Named("audioFileName") private val audioFileName: String,
@@ -72,6 +73,8 @@ class AudioPlayerViewModel @Inject constructor(
 
     private val _playerState = MutableStateFlow(AudioPlayerState())
     val playerState: StateFlow<AudioPlayerState> = _playerState.asStateFlow()
+
+    private val assetPackManager by lazy { assetPackManagerProvider.get() }
 
     private var playerListener: Player.Listener? = null
     private var positionTrackingJob: Job? = null
