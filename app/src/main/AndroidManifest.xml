@@ -8,6 +8,16 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="com.android.vending.BILLING" />
 
+    <!--
+        All flavors currently set USE_ASSET_PACK_AUDIO=false and ship no Play Asset
+        Delivery pack. Its transitive dataSync foreground permission/service are
+        inactive; keeping them creates a misleading Play FGS declaration requirement.
+        Revisit these removals if a real asset pack is enabled in a future release.
+    -->
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"
+        tools:node="remove" />
+
     <application
         android:name=".App"
         android:allowBackup="false"
@@ -23,6 +33,11 @@
         android:theme="@style/Theme.ContentApp"
         android:enableOnBackInvokedCallback="true"
         tools:targetApi="36">
+
+        <!-- Play Asset Delivery's unused dataSync foreground service is not shipped. -->
+        <service
+            android:name="com.google.android.play.core.assetpacks.ExtractionForegroundService"
+            tools:node="remove" />
 
         <activity
             android:name=".MainActivity"

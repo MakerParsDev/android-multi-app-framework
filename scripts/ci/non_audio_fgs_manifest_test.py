@@ -13,6 +13,45 @@ MEDIA_PERMISSION = "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
 
 
 class NonAudioForegroundServiceContractTest(unittest.TestCase):
+    def test_unused_asset_delivery_foreground_service_removed_for_all_flavors(self):
+        root = ET.parse(ROOT / "app/src/main/AndroidManifest.xml").getroot()
+        data_sync = [
+            node for node in root.findall("uses-permission")
+            if node.get(ANDROID + "name") == "android.permission.FOREGROUND_SERVICE_DATA_SYNC"
+        ]
+        self.assertEqual(1, len(data_sync))
+        self.assertEqual("remove", data_sync[0].get(TOOLS + "node"))
+        extraction = [
+            node for node in root.findall("./application/service")
+            if node.get(ANDROID + "name") ==
+            "com.google.android.play.core.assetpacks.ExtractionForegroundService"
+        ]
+        self.assertEqual(1, len(extraction))
+        self.assertEqual("remove", extraction[0].get(TOOLS + "node"))
+        self.assertNotIn(
+            "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+            [node.get(ANDROID + "name") for node in root.findall("uses-permission")
+             if node.get(TOOLS + "node") == "remove"],
+        )
+
+    def test_asset_pack_feature_is_globally_disabled_before_fgs_removal(self):
+        import re
+        gradle = (ROOT / "app/build.gradle.kts").read_text()
+        self.assertEqual(
+            1,
+            len(re.findall(
+                r'buildConfigField\("boolean",\s*"USE_ASSET_PACK_AUDIO",\s*"false"\)',
+                gradle,
+            )),
+        )
+        self.assertNotRegex(
+            gradle,
+            r'buildConfigField\("boolean",\s*"USE_ASSET_PACK_AUDIO",\s*"true"\)',
+        )
+        settings = (ROOT / "settings.gradle.kts").read_text()
+        self.assertNotIn('include(":audioassets")', settings)
+        self.assertNotIn('include(":assetpack")', settings)
+
     def test_shared_module_still_declares_real_audio_service(self):
         root = ET.parse(ROOT / "feature/audio/src/main/AndroidManifest.xml").getroot()
         names = [x.get(ANDROID + "name") for x in root.findall("uses-permission")]
