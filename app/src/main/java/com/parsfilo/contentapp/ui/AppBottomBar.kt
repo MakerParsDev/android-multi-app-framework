@@ -4,6 +4,7 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
@@ -76,20 +77,21 @@ fun AppBottomBarWithFab(
                     } == true
                 }?.id ?: AppRoute.HomeGraph.route
         }
-    val systemNavBottomInsetPx =
-        systemNavInsets?.bottom?.toFloat() ?: with(density) { 48.dp.toPx() }
+    // Reserve the system navigation area, but keep the app's five destinations
+    // compact. Material3's default bar is too tall on 360dp reading screens.
+    val systemNavBottomInsetDp = with(density) { (systemNavInsets?.bottom ?: 0).toDp() }
     NavigationBar(
         modifier =
             Modifier
                 .testTag("primary_navigation")
                 .fillMaxWidth()
+                .height(dimens.bottomBarHeight + systemNavBottomInsetDp)
                 .drawBehind {
                     val stroke = 1.dp.toPx()
-                    val insetTop = size.height - systemNavBottomInsetPx - (stroke / 2f)
                     drawLine(
-                        color = colorScheme.outlineVariant.copy(alpha = 0.5f),
-                        start = Offset(0f, insetTop),
-                        end = Offset(size.width, insetTop),
+                        color = colorScheme.outlineVariant.copy(alpha = 0.65f),
+                        start = Offset(0f, stroke / 2f),
+                        end = Offset(size.width, stroke / 2f),
                         strokeWidth = stroke,
                     )
                 },
