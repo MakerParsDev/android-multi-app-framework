@@ -9,6 +9,8 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import com.parsfilo.contentapp.core.designsystem.theme.ShapeDefaults.AppShapes
 
@@ -45,12 +47,35 @@ private fun buildLightScheme(t: FlavorColorTokens) = lightColorScheme(
 )
 
 // ─── Dark scheme ─────────────────────────────────────────────────────────────
+
+/**
+ * Some light-theme secondary colors are too dim for the dark primary button
+ * foreground. Preserve each flavor's hue, lifting luminance only as needed
+ * to meet WCAG AA (4.5:1) for text on the dark primary.
+ */
+internal fun accessibleDarkAccent(accent: Color): Color {
+    val onAccent = Color(0xFF08080F)
+
+    fun ratio(color: Color): Float {
+        val hi = maxOf(color.luminance(), onAccent.luminance())
+        val lo = minOf(color.luminance(), onAccent.luminance())
+        return (hi + 0.05f) / (lo + 0.05f)
+    }
+
+    if (ratio(accent) >= 4.5f) return accent
+    for (step in 1..20) {
+        val candidate = lerp(accent, Color.White, step / 20f)
+        if (ratio(candidate) >= 4.5f) return candidate
+    }
+    return Color.White
+}
+
 private fun buildDarkScheme(t: FlavorColorTokens) = darkColorScheme(
-    primary = t.secondary,
+    primary = accessibleDarkAccent(t.secondary),
     onPrimary = Color(0xFF08080F),
     primaryContainer = t.primary,
     onPrimaryContainer = Color(0xFFEEEAF8),
-    secondary = t.secondary.copy(alpha = 0.85f),
+    secondary = accessibleDarkAccent(t.secondary),
     onSecondary = Color(0xFF08080F),
     secondaryContainer = t.primaryDark,
     onSecondaryContainer = t.secondary.copy(alpha = 0.90f),
