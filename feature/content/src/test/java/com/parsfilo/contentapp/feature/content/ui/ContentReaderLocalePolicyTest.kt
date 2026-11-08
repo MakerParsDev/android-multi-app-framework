@@ -46,13 +46,15 @@ class ContentReaderLocalePolicyTest {
     }
 
     @Test
-    fun readerModesStackForNarrowScreensOrLargeSystemFont() {
-        assertTrue(shouldStackReaderModes(320f, 1f))
-        assertTrue(shouldStackReaderModes(360f, 2f))
-        assertTrue(shouldStackReaderModes(411f, 1.5f))
-        assertFalse(shouldStackReaderModes(360f, 1f))
-        assertFalse(shouldStackReaderModes(411f, 1f))
-        assertFalse(shouldStackReaderModes(731f, 2f))
-        assertTrue(shouldStackReaderModes(599f, 2f))
+    fun readerModesScrollForNarrowScreensOrLargeSystemFont() {
+        assertTrue(shouldScrollReaderModes(320f, 1f))
+        assertTrue(shouldScrollReaderModes(360f, 2f))
+        assertTrue(shouldScrollReaderModes(411f, 1.5f))
+        assertFalse(shouldScrollReaderModes(360f, 1f))
+        assertFalse(shouldScrollReaderModes(411f, 1f))
+        assertFalse(shouldScrollReaderModes(731f, 2f))
+        assertTrue(shouldScrollReaderModes(599f, 2f))
+        assertEquals(120f, scrollableReaderModeWidthDp(1f), 0f)
+        assertEquals(240f, scrollableReaderModeWidthDp(2f), 0f)
     }
 }

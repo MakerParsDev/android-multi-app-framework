@@ -2,14 +2,18 @@ package com.parsfilo.contentapp.feature.ads.ui
 
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -29,7 +33,6 @@ import com.parsfilo.contentapp.feature.ads.findActivity
 import com.parsfilo.contentapp.feature.ads.suppressReasonWhenBlocked
 import dagger.hilt.android.EntryPointAccessors
 import timber.log.Timber
-import kotlin.math.max
 
 @Composable
 fun BannerAd(
@@ -83,10 +86,19 @@ fun BannerAd(
     val adRequest = remember { AdRequest.Builder().build() }
 
     BoxWithConstraints(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().clipToBounds(),
+        contentAlignment = Alignment.Center,
     ) {
-        val adWidthDp = max(1, maxWidth.value.toInt())
         val sizingPolicy = remember(placement) { placement.bannerSizingPolicy() }
+        // Use the measured slot rather than physical screen width so split-screen,
+        // rotation and gesture insets cannot create an oversized request.
+        val availableWidthDp = maxWidth.value.toInt()
+        if (availableWidthDp <= 0) return@BoxWithConstraints
+
+        val adWidthDp = sizingPolicy.requestWidthDp(availableWidthDp)
+        // Standard banners require 320dp. Do not substitute a taller adaptive
+        // anchored creative on narrow windows: reading space takes precedence.
+        if (adWidthDp <= 0) return@BoxWithConstraints
         val adSize = remember(sizingPolicy, adWidthDp) {
             sizingPolicy.toAdSize(adWidthDp)
         }
@@ -225,7 +237,7 @@ fun BannerAd(
         }
 
         AndroidView(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.width(adWidthDp.dp),
             factory = { adView },
             update = { view ->
                 if (view.adUnitId != adUnitId) {

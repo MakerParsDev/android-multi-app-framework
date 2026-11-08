@@ -16,6 +16,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -40,8 +41,34 @@ class ContentReaderCompactLargeFontTest {
         showReader(2f)
         // Compact layout must provide the reader-tools shortcut to its scrollable modes.
         rule.onNodeWithTag("content_reader_tools").assertIsDisplayed().performClick()
+        rule.onNodeWithTag("content_show_reading_controls").assertIsDisplayed().performClick()
         rule.waitForIdle()
-        rule.onNodeWithText(translationLabel()).assertIsDisplayed().performClick()
+        rule.onNodeWithText(translationLabel()).performScrollTo().assertIsDisplayed().performClick()
+    }
+
+    @Test fun twoHundredPercentFontModesStayOnOneHorizontalRow() {
+        showReader(2f)
+        rule.onNodeWithTag("content_reader_tools").assertIsDisplayed().performClick()
+        rule.onNodeWithTag("content_show_reading_controls").assertIsDisplayed().performClick()
+        rule.waitForIdle()
+
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val labels = listOf(
+            R.string.content_mode_arabic,
+            R.string.content_mode_latin,
+            R.string.content_mode_turkish,
+        )
+        val tops = labels.map { label ->
+            rule.onNodeWithText(context.getString(label))
+                .performScrollTo()
+                .assertIsDisplayed()
+                .fetchSemanticsNode()
+                .boundsInRoot.top
+        }
+        // Large text must not force Arabic, Latin and translation into three
+        // permanent vertical rows; horizontal scrolling keeps them reachable.
+        org.junit.Assert.assertEquals(tops[0], tops[1], 1f)
+        org.junit.Assert.assertEquals(tops[1], tops[2], 1f)
     }
 
     @Test fun normalFontKeepsOrdinaryNonCompactReaderAtSameHeight() {

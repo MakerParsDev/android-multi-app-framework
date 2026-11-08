@@ -2,9 +2,12 @@ package com.parsfilo.contentapp.ui
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
@@ -21,9 +24,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -31,8 +32,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hierarchy
 import com.parsfilo.contentapp.R
@@ -50,23 +49,7 @@ fun AppBottomBarWithFab(
 ) {
     val dimens = LocalDimens.current
     val colorScheme = MaterialTheme.colorScheme
-    val configuration = LocalConfiguration.current
     val density = LocalDensity.current
-    val view = LocalView.current
-    val systemNavInsets =
-        ViewCompat
-            .getRootWindowInsets(view)
-            ?.getInsets(WindowInsetsCompat.Type.navigationBars())
-    val horizontalNavInsetDp =
-        with(density) {
-            ((systemNavInsets?.left ?: 0) + (systemNavInsets?.right ?: 0)).toDp().value
-        }
-    val showLabels =
-        shouldShowBottomBarLabels(
-            configuration.screenWidthDp,
-            configuration.fontScale,
-            horizontalNavInsetDp,
-        )
     val currentOnNavigateToDestination = rememberUpdatedState(onNavigateToDestination)
     val selectedId =
         remember(currentDestination) {
@@ -77,49 +60,59 @@ fun AppBottomBarWithFab(
                     } == true
                 }?.id ?: AppRoute.HomeGraph.route
         }
-    // Reserve the system navigation area, but keep the app's five destinations
-    // compact. Material3's default bar is too tall on 360dp reading screens.
-    val systemNavBottomInsetDp = with(density) { (systemNavInsets?.bottom ?: 0).toDp() }
-    NavigationBar(
-        modifier =
-            Modifier
-                .testTag("primary_navigation")
-                .fillMaxWidth()
-                .height(dimens.bottomBarHeight + systemNavBottomInsetDp)
-                .drawBehind {
-                    val stroke = 1.dp.toPx()
-                    drawLine(
-                        color = colorScheme.outlineVariant.copy(alpha = 0.65f),
-                        start = Offset(0f, stroke / 2f),
-                        end = Offset(size.width, stroke / 2f),
-                        strokeWidth = stroke,
-                    )
-                },
-        tonalElevation = dimens.elevationLow,
-        containerColor = colorScheme.surface,
-    ) {
-        bottomDestinations.forEach { destination ->
-            key(destination.id) {
-                val onClick =
-                    remember(destination.route) {
-                        {
-                            currentOnNavigateToDestination.value(destination.route)
+    // Apply system navigation insets to the measured container. The
+    // available width below is therefore the actual usable width, including
+    // landscape gesture/three-button insets and split-screen constraints.
+    BoxWithConstraints(Modifier.fillMaxWidth().navigationBarsPadding()) {
+        val showLabels =
+            shouldShowBottomBarLabels(
+                maxWidth.value.toInt(),
+                density.fontScale,
+            )
+        // The parent applies system navigation insets once. Disable the
+        // Material 3 default so the app bar keeps one predictable safe area.
+        NavigationBar(
+            modifier =
+                Modifier
+                    .testTag("primary_navigation")
+                    .fillMaxWidth()
+                    .height(dimens.bottomBarHeight)
+                    .drawBehind {
+                        val stroke = 1.dp.toPx()
+                        drawLine(
+                            color = colorScheme.outlineVariant.copy(alpha = 0.65f),
+                            start = Offset(0f, stroke / 2f),
+                            end = Offset(size.width, stroke / 2f),
+                            strokeWidth = stroke,
+                        )
+                    },
+            windowInsets = WindowInsets(0),
+            tonalElevation = dimens.elevationLow,
+            containerColor = colorScheme.surface,
+        ) {
+            bottomDestinations.forEach { destination ->
+                key(destination.id) {
+                    val onClick =
+                        remember(destination.route) {
+                            {
+                                currentOnNavigateToDestination.value(destination.route)
+                            }
                         }
-                    }
 
-                AppBottomNavigationItem(
-                    destination = destination,
-                    selected = destination.id == selectedId,
-                    showLabels = showLabels,
-                    badgeText =
-                        destination.badgeText(
-                            unreadNotificationCount = unreadNotificationCount,
-                            unreadMessageCount = unreadMessageCount,
-                            newOtherAppsCount = newOtherAppsCount,
-                            shouldShowSubscriptionBadge = shouldShowSubscriptionBadge,
-                        ),
-                    onClick = onClick,
-                )
+                    AppBottomNavigationItem(
+                        destination = destination,
+                        selected = destination.id == selectedId,
+                        showLabels = showLabels,
+                        badgeText =
+                            destination.badgeText(
+                                unreadNotificationCount = unreadNotificationCount,
+                                unreadMessageCount = unreadMessageCount,
+                                newOtherAppsCount = newOtherAppsCount,
+                                shouldShowSubscriptionBadge = shouldShowSubscriptionBadge,
+                            ),
+                        onClick = onClick,
+                    )
+                }
             }
         }
     }
