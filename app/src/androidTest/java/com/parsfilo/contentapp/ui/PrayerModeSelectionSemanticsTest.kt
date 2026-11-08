@@ -22,6 +22,7 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -122,13 +123,40 @@ class PrayerModeSelectionSemanticsTest {
             assertEquals("$label should remain one readable line", 1, layout.lineCount)
             assertEquals("$label must not be clipped", label.length, layout.getLineEnd(0, visibleEnd = true))
         }
-        val bounds = labels.map { rule.onNodeWithText(it).fetchSemanticsNode().boundsInRoot }
-        assertTrue("Arabic and Latin prayer modes should stack", bounds[0].bottom <= bounds[1].top)
-        assertTrue("Latin and Translation prayer modes should stack", bounds[1].bottom <= bounds[2].top)
+        // Offscreen Compose semantics bounds are clipped to the viewport, so
+        // their initial X coordinates cannot prove item order. Instead inspect
+        // the actual horizontal scroll axis as each label is brought into view.
+        val scrollable = rule.onNode(
+            SemanticsMatcher.keyIsDefined(SemanticsProperties.HorizontalScrollAxisRange),
+        )
+        val scrollKey = SemanticsProperties.HorizontalScrollAxisRange
+        assertTrue(
+            "Three 240dp mode chips must exceed this narrow reader viewport",
+            scrollable.fetchSemanticsNode().config[scrollKey].maxValue() > 0f,
+        )
+        val scrollPositions = mutableListOf<Float>()
+        val rowTops = mutableListOf<Float>()
         val minHeightPx = 48f * rule.density.density
-        bounds.forEachIndexed { index, rectangle ->
-            assertTrue("${labels[index]} must maintain 48dp touch height", rectangle.height >= minHeightPx)
+        labels.forEach { label ->
+            val mode = rule.onNodeWithText(label).performScrollTo()
+            val visibleBounds = mode.fetchSemanticsNode().boundsInRoot
+            rowTops += visibleBounds.top
+            scrollPositions += scrollable.fetchSemanticsNode().config[scrollKey].value()
+            assertTrue("$label must maintain 48dp touch height", visibleBounds.height >= minHeightPx)
+            assertTrue("$label should be reachable within the reader width", visibleBounds.left >= -1f)
+            assertTrue(
+                "$label must be fully reachable after horizontal scroll",
+                visibleBounds.right <= widthDp * rule.density.density + 1f,
+            )
         }
+        assertTrue(
+            "Arabic, Latin, Translation must advance left to right: $scrollPositions",
+            scrollPositions.zipWithNext().all { (first, second) -> second > first },
+        )
+        assertTrue(
+            "Reading modes must remain on one row instead of obscuring the reader",
+            rowTops.zipWithNext().all { (first, second) -> kotlin.math.abs(first - second) <= 1f },
+        )
     }
 
     private fun verifyModes(
@@ -177,9 +205,11 @@ class PrayerModeSelectionSemanticsTest {
         }
 
         assertSelection(arabic)
-        rule.onNodeWithText(latin).performClick()
+        // At 320dp and 200% font scale these are offscreen horizontally.
+        // A real user first scrolls them into view before tapping.
+        rule.onNodeWithText(latin).performScrollTo().performClick()
         assertSelection(latin)
-        rule.onNodeWithText(translated).performClick()
+        rule.onNodeWithText(translated).performScrollTo().performClick()
         assertSelection(translated)
         rule.runOnIdle {
             assertEquals(DisplayMode.TURKISH, mode)
