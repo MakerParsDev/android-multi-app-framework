@@ -8,6 +8,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -22,7 +23,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -63,8 +66,9 @@ import com.parsfilo.contentapp.core.model.DisplayMode
 import com.parsfilo.contentapp.core.model.Prayer
 import com.parsfilo.contentapp.core.model.PrayerVerse
 import com.parsfilo.contentapp.feature.content.R
+import com.parsfilo.contentapp.feature.content.ui.scrollableReaderModeWidthDp
 import com.parsfilo.contentapp.feature.content.ui.shouldInsertNativeAdAfterVerse
-import com.parsfilo.contentapp.feature.content.ui.shouldStackReaderModes
+import com.parsfilo.contentapp.feature.content.ui.shouldScrollReaderModes
 
 @Composable
 fun PrayerDetailRoute(
@@ -439,33 +443,28 @@ fun BottomModeSelector(
             .padding(horizontal = dimens.space6, vertical = dimens.space2)
             .padding(bottom = dimens.space48 + dimens.space2)
     ) {
-        if (shouldStackReaderModes(maxWidth.value, LocalDensity.current.fontScale)) {
-            Column(
-                modifier = Modifier.fillMaxWidth().selectableGroup(),
-                verticalArrangement = Arrangement.spacedBy(dimens.space8)
-            ) {
-                options.forEach { (mode, titleRes) ->
-                    ModeButton(
-                        text = stringResource(titleRes),
-                        isSelected = currentMode == mode,
-                        onClick = { onModeSelected(mode) },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-        } else {
-            Row(
-                modifier = Modifier.fillMaxWidth().selectableGroup(),
-                horizontalArrangement = Arrangement.spacedBy(dimens.space8)
-            ) {
-                options.forEach { (mode, titleRes) ->
-                    ModeButton(
-                        text = stringResource(titleRes),
-                        isSelected = currentMode == mode,
-                        onClick = { onModeSelected(mode) },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+        val scrollModes = shouldScrollReaderModes(maxWidth.value, LocalDensity.current.fontScale)
+        val scrollState = rememberScrollState()
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .then(if (scrollModes) Modifier.horizontalScroll(scrollState) else Modifier)
+                    .selectableGroup(),
+            horizontalArrangement = Arrangement.spacedBy(dimens.space8),
+        ) {
+            options.forEach { (mode, titleRes) ->
+                ModeButton(
+                    text = stringResource(titleRes),
+                    isSelected = currentMode == mode,
+                    onClick = { onModeSelected(mode) },
+                    modifier =
+                        if (scrollModes) {
+                            Modifier.width(scrollableReaderModeWidthDp(LocalDensity.current.fontScale).dp)
+                        } else {
+                            Modifier.weight(1f)
+                        },
+                )
             }
         }
     }
