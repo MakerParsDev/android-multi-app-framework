@@ -32,6 +32,7 @@ import com.parsfilo.contentapp.feature.audio.ui.AudioPlayerState
 import com.parsfilo.contentapp.feature.audio.ui.InlineAudioPlayer
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -185,6 +186,23 @@ class AudioPlayerLocalizedSemanticsTest {
                 }
             }
         }
+
+        // Regression guard for the new two-row player at 320dp / 200% font.
+        // Real semantics bounds prove touch targets, not just icon sizes.
+        val playBounds = rule.onNodeWithTag("audio_play_pause").fetchSemanticsNode().boundsInRoot
+        val stopBounds = rule.onNodeWithTag("audio_stop").fetchSemanticsNode().boundsInRoot
+        val seekBounds = rule.onNodeWithTag("audio_seek").fetchSemanticsNode().boundsInRoot
+        val minTargetPx = 48f * rule.runOnIdle {
+            androidx.test.platform.app.InstrumentationRegistry
+                .getInstrumentation().targetContext.resources.displayMetrics.density
+        }
+        assertTrue("Play target is smaller than 48dp", playBounds.width >= minTargetPx)
+        assertTrue("Stop target is smaller than 48dp", stopBounds.width >= minTargetPx)
+        assertTrue(
+            "Seek target " + seekBounds.height + "px is smaller than " + minTargetPx + "px",
+            seekBounds.height >= minTargetPx,
+        )
+        assertTrue("Seek control must be below transport controls", seekBounds.top >= playBounds.bottom)
 
         rule.onNodeWithContentDescription(play).performClick()
         rule.onNodeWithContentDescription(pause).assertExists()

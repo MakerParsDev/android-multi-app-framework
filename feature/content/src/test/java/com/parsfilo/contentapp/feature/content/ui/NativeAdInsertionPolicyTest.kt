@@ -15,14 +15,10 @@ class NativeAdInsertionPolicyTest {
     }
 
     @Test
-    fun `short-height readers keep banner after verses without removing ad placement`() {
-        assertThat(resolveReaderBannerPosition(showTopBanner = false, compactHeight = false))
+    fun `reader banner only appears after verse viewport when eligible`() {
+        assertThat(resolveReaderBannerPosition(showTopBanner = false))
             .isEqualTo(ReaderBannerPosition.HIDDEN)
-        assertThat(resolveReaderBannerPosition(showTopBanner = false, compactHeight = true))
-            .isEqualTo(ReaderBannerPosition.HIDDEN)
-        assertThat(resolveReaderBannerPosition(showTopBanner = true, compactHeight = false))
-            .isEqualTo(ReaderBannerPosition.ABOVE_VERSES)
-        assertThat(resolveReaderBannerPosition(showTopBanner = true, compactHeight = true))
+        assertThat(resolveReaderBannerPosition(showTopBanner = true))
             .isEqualTo(ReaderBannerPosition.AFTER_VERSES)
     }
 

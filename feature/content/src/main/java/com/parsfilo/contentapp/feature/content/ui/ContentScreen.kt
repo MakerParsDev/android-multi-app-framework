@@ -66,6 +66,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -201,7 +202,7 @@ fun ContentScreen(
                 heightDp = with(density) { LocalWindowInfo.current.containerSize.height.toDp().value },
                 fontScale = density.fontScale,
             )
-            val bannerPosition = resolveReaderBannerPosition(showTopBanner, compactHeight)
+            val bannerPosition = resolveReaderBannerPosition(showTopBanner)
             Column(
                 modifier = Modifier
                     .testTag("content_detail")
@@ -227,14 +228,6 @@ fun ContentScreen(
                             null
                         },
                 )
-
-                if (bannerPosition == ReaderBannerPosition.ABOVE_VERSES) {
-                    BannerAd(
-                        adUnitId = bannerAdUnitId,
-                        placement = AdPlacement.BANNER_CONTENT_DETAIL,
-                        showPlacementLabels = false,
-                    )
-                }
 
                 // Gold divider
                 HorizontalDivider(
@@ -470,8 +463,12 @@ fun ContentScreen(
                         )
                     }
 
-                    // On short windows, keep the live banner reachable after the verse viewport
-                    // rather than letting it consume the only visible reading area.
+                    if (compactHeight) {
+                        // Preserve keyboard/audio access before any ad on short windows.
+                        audioPlayerContent()
+                    }
+
+                    // Keep the consent-gated SDK banner mounted after reading/audio.
                     if (bannerPosition == ReaderBannerPosition.AFTER_VERSES) {
                         BannerAd(
                             adUnitId = bannerAdUnitId,
@@ -480,13 +477,11 @@ fun ContentScreen(
                         )
                     }
 
-                    // Bottom Mode Selector
                     BottomModeSelector(
                         currentMode = uiState.displayMode,
                         onModeSelected = onModeSelected
                     )
                     if (compactHeight) {
-                        audioPlayerContent()
                         TextButton(
                             modifier = Modifier.fillMaxWidth().testTag("content_back_to_reading"),
                             onClick = { scope.launch { readerScrollState.animateScrollTo(0) } },
@@ -519,13 +514,13 @@ fun AppHeader(
             bottomStart = dimens.radiusLarge,
             bottomEnd = dimens.radiusLarge
         ),
-        tonalElevation = dimens.elevationMedium,
-        shadowElevation = dimens.elevationHigh
+        tonalElevation = dimens.elevationLow,
+        shadowElevation = dimens.elevationLow
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = dimens.space6, vertical = dimens.space6),
+                .padding(horizontal = dimens.space6, vertical = dimens.space2),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -534,12 +529,7 @@ fun AppHeader(
                 onClick = onSettingsClick,
                 modifier = Modifier
                     .size(dimens.iconXl)
-                    .background(colorScheme.secondaryContainer.copy(alpha = 0.24f), CircleShape)
-                    .border(
-                        width = dimens.stroke,
-                        color = colorScheme.secondary.copy(alpha = 0.35f),
-                        shape = CircleShape
-                    )
+                    .background(colorScheme.secondaryContainer.copy(alpha = 0.18f), CircleShape)
             ) {
                 Icon(
                     imageVector = Icons.Filled.Settings,
@@ -553,12 +543,16 @@ fun AppHeader(
             Text(
                 text = appName,
                 style = MaterialTheme.typography.headlineMedium.copy(
-                    fontFamily = FontFamily.Serif,
-                    fontWeight = FontWeight.SemiBold
+                    fontFamily = FontFamily.Default,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 20.sp,
+                    lineHeight = 26.sp,
                 ),
                 color = colorScheme.onPrimaryContainer,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.weight(1f)
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f).padding(horizontal = dimens.space4)
             )
 
             if (onReaderToolsClick != null) {
@@ -579,12 +573,7 @@ fun AppHeader(
                 onClick = onRewardsClick,
                 modifier = Modifier
                     .size(dimens.iconXl)
-                    .background(colorScheme.secondaryContainer.copy(alpha = 0.24f), CircleShape)
-                    .border(
-                        width = dimens.stroke,
-                        color = colorScheme.secondary.copy(alpha = 0.35f),
-                        shape = CircleShape
-                    )
+                    .background(colorScheme.secondaryContainer.copy(alpha = 0.18f), CircleShape)
             ) {
                 Icon(
                     imageVector = Icons.Filled.CardGiftcard,
@@ -684,7 +673,7 @@ private fun ContentLoadingSkeleton(appName: String) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = dimens.space6, vertical = dimens.space4)
-                .height(dimens.topBarHeight + dimens.space20)
+                .height(dimens.topBarHeight + dimens.space8)
                 .clip(
                     RoundedCornerShape(
                         bottomStart = dimens.radiusLarge,
@@ -801,7 +790,7 @@ fun ModeButton(
         shape = shape,
         color = if (isSelected) colorScheme.primary else colorScheme.surfaceVariant,
         contentColor = if (isSelected) colorScheme.onPrimary else colorScheme.onSurfaceVariant,
-        shadowElevation = if (isSelected) dimens.space4 else dimens.elevationNone
+        shadowElevation = dimens.elevationNone
     ) {
         Box(
             modifier = Modifier

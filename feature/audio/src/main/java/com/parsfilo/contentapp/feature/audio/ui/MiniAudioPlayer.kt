@@ -1,9 +1,12 @@
 package com.parsfilo.contentapp.feature.audio.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -20,6 +23,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -37,7 +41,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.parsfilo.contentapp.core.designsystem.component.AppTextButton
 import com.parsfilo.contentapp.core.designsystem.tokens.LocalDimens
@@ -92,85 +95,108 @@ fun InlineAudioPlayer(
         0f
     }
 
-    // Normal player UI
-    Row(
+    // A two-row player gives every transport control a full 48dp target and
+    // separates the seek gesture from elapsed/duration text on narrow phones.
+    Surface(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = dimens.space8, vertical = dimens.space6)
-            .border(
-                width = dimens.stroke,
-                color = accent.copy(alpha = 0.7f),
-                shape = RoundedCornerShape(dimens.radiusPill)
-            )
-            .padding(horizontal = dimens.space4, vertical = 0.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(0.dp)
+            .padding(horizontal = dimens.space8, vertical = dimens.space4)
+            .testTag("audio_player"),
+        shape = RoundedCornerShape(dimens.radiusLarge),
+        color = colorScheme.surface,
+        border = BorderStroke(dimens.stroke, colorScheme.outlineVariant),
+        tonalElevation = dimens.elevationLow,
     ) {
-        // Play/Pause toggle
-        IconButton(
-            onClick = onPlayPause,
-            modifier =
-                Modifier
-                    .testTag("audio_play_pause")
-                    .size(dimens.iconXl),
+        Column(
+            modifier = Modifier.padding(
+                horizontal = dimens.space12,
+                vertical = dimens.space4,
+            ),
         ) {
-            Icon(
-                imageVector = if (state.isPlaying) {
-                    ImageVector.vectorResource(R.drawable.ic_pause)
-                } else {
-                    Icons.Filled.PlayArrow
-                },
-                contentDescription = stringResource(if (state.isPlaying) R.string.audio_pause else R.string.audio_play),
-                tint = accent,
-                modifier = Modifier.size(dimens.iconMd + dimens.space2)
-            )
-        }
-
-        // Stop button
-        IconButton(
-            onClick = onStop,
-            modifier = Modifier.size(dimens.iconXl)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Stop,
-                contentDescription = stringResource(R.string.audio_stop),
-                tint = accent,
-                modifier = Modifier.size(dimens.iconSm + dimens.space2)
-            )
-        }
-
-        // Seekbar (interactive Slider)
-        Slider(
-            value = if (isSeeking) seekValue else progress,
-            onValueChange = { value ->
-                isSeeking = true
-                seekValue = value
-            },
-            onValueChangeFinished = {
-                if (state.duration > 0) {
-                    onSeek((seekValue * state.duration).toLong())
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(dimens.space4),
+            ) {
+                IconButton(
+                    onClick = onPlayPause,
+                    modifier = Modifier
+                        .testTag("audio_play_pause")
+                        .size(dimens.iconXl),
+                ) {
+                    Icon(
+                        imageVector = if (state.isPlaying) {
+                            ImageVector.vectorResource(R.drawable.ic_pause)
+                        } else {
+                            Icons.Filled.PlayArrow
+                        },
+                        contentDescription = stringResource(
+                            if (state.isPlaying) R.string.audio_pause else R.string.audio_play
+                        ),
+                        tint = accent,
+                        modifier = Modifier.size(dimens.iconMd + dimens.space2),
+                    )
                 }
-                isSeeking = false
-            },
-            modifier = Modifier
-                .weight(1f)
-                .height(dimens.space32)
-                .semantics { contentDescription = seekAccessibleName },
-            colors = SliderDefaults.colors(
-                thumbColor = accent,
-                activeTrackColor = accent,
-                inactiveTrackColor = subdued.copy(alpha = 0.2f)
-            )
-        )
 
-        // Time display
-        Text(
-            text = "${formatTime(state.currentPosition)}/${formatTime(state.duration)}",
-            color = content.copy(alpha = 0.9f),
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(start = dimens.space4, end = dimens.space8)
-        )
+                IconButton(
+                    onClick = onStop,
+                    modifier = Modifier
+                        .testTag("audio_stop")
+                        .size(dimens.iconXl),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Stop,
+                        contentDescription = stringResource(R.string.audio_stop),
+                        tint = accent,
+                        modifier = Modifier.size(dimens.iconMd),
+                    )
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+                Text(
+                    text = formatTime(state.currentPosition) + "/" + formatTime(state.duration),
+                    color = content,
+                    style = MaterialTheme.typography.labelMedium,
+                    maxLines = 1,
+                    modifier = Modifier.testTag("audio_elapsed_duration"),
+                )
+            }
+
+            // Compose Slider exposes a 44dp inner semantics rectangle on API28
+            // even when its outer measured row is taller. Merge its adjustable
+            // action into a 64dp accessibility target without changing gestures.
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(dimens.iconXl + dimens.space16)
+                    .testTag("audio_seek")
+                    .semantics(mergeDescendants = true) {
+                        contentDescription = seekAccessibleName
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Slider(
+                    value = (if (isSeeking) seekValue else progress).coerceIn(0f, 1f),
+                    onValueChange = { value ->
+                        isSeeking = true
+                        seekValue = value
+                    },
+                    onValueChangeFinished = {
+                        if (state.duration > 0) {
+                            onSeek((seekValue * state.duration).toLong())
+                        }
+                        isSeeking = false
+                    },
+                    enabled = state.duration > 0,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = SliderDefaults.colors(
+                        thumbColor = accent,
+                        activeTrackColor = accent,
+                        inactiveTrackColor = subdued.copy(alpha = 0.25f),
+                    ),
+                )
+            }
+        }
     }
 }
 
