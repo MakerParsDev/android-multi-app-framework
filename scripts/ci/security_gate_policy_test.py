@@ -122,6 +122,17 @@ def supply_fixture(root: Path):
 
 
 class SecurityGatePolicyTest(unittest.TestCase):
+    def test_authenticated_official_release_fallback_stays_hash_pinned(self):
+        installer = (SCRIPT_DIR / "install_gitleaks.sh").read_text(encoding="utf-8")
+        workflow = (SCRIPT_DIR.parent.parent / ".github/workflows/security.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('[[ -n "${GH_TOKEN:-}" ]]', installer)
+        self.assertIn("gh api -H 'Accept: application/octet-stream'", installer)
+        self.assertIn('"${asset_api_url#https://api.github.com/}"', installer)
+        self.assertIn("sha256sum --check --status", installer)
+        self.assertIn("GH_TOKEN: ${{ github.token }}", workflow)
+
     def test_pinned_scanner_policy_and_empty_baseline_pass(self):
         tool, baseline, errors = validate_scan(scan_policy(), date(2026, 7, 12))
         self.assertEqual([], errors)

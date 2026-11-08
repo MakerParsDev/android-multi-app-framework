@@ -55,12 +55,34 @@ jobs:
           set -euo pipefail
           python3 scripts/ci/generate_ci_google_services.py --flavors kuran_kerim
 
+      # GitHub release asset URLs intermittently return 504 while the same
+      # immutable asset remains available through the official Releases API.
+      # Preserve the default CodeQL setup whenever its download path works.
+      - name: Resolve verified CodeQL bundle fallback
+        id: codeql-bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          bundle_url="https://github.com/github/codeql-action/releases/download/codeql-bundle-v2.27.4/codeql-bundle-java-linux64.tar.zst"
+          if curl --fail --silent --show-error --location --head --connect-timeout 5 --max-time 15 "$bundle_url" >/dev/null 2>&1; then
+            echo "CodeQL release URL reachable; using the action-managed bundle."
+            exit 0
+          fi
+
+          echo "CodeQL release URL unavailable; checking the official API asset."
+          bundle="$RUNNER_TEMP/codeql-bundle-java-linux64.tar.zst"
+          gh api -H 'Accept: application/octet-stream' repos/github/codeql-action/releases/assets/692239162 > "$bundle"
+          printf '%s  %s\n' 'dbeb8e2f4454bf4aad35fe16d8770dcc4a4ce0c3585d8952d57e41905396aff8' "$bundle" | sha256sum --check --status
+          echo "tools=$bundle" >> "$GITHUB_OUTPUT"
+
       - name: Initialize CodeQL
         uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           languages: java-kotlin
           build-mode: manual
           queries: security-extended
+          tools: ${{ steps.codeql-bundle.outputs.tools }}
 
       - name: Build representative flavor for CodeQL
         run: |
