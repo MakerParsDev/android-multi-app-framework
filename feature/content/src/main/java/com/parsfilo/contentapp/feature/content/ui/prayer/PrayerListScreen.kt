@@ -141,14 +141,6 @@ fun PrayerListScreen(
                     modifier = Modifier.padding(horizontal = dimens.space24)
                 )
 
-                if (showTopBanner) {
-                    // Banner reklam
-                    BannerAd(
-                        adUnitId = bannerAdUnitId,
-                        placement = AdPlacement.BANNER_CONTENT_LIST,
-                    )
-                }
-
                 // Liste
                 LazyColumn(
                     modifier = Modifier
@@ -179,6 +171,15 @@ fun PrayerListScreen(
                             }
                         }
                     }
+                }
+
+                // Keep the first prayer item visible before the consent-gated
+                // banner. Preserve the existing ad slot and premium gate.
+                if (showTopBanner) {
+                    BannerAd(
+                        adUnitId = bannerAdUnitId,
+                        placement = AdPlacement.BANNER_CONTENT_LIST,
+                    )
                 }
             }
         }
