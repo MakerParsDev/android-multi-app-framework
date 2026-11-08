@@ -239,10 +239,8 @@ fun CounterScreen(
                     onOpenZikirList = onZikirSelectorToggle,
                 )
 
-                if (!uiState.isPremium) {
-                    bannerAdContent?.invoke()
-                }
-
+                // The active counter, actions and progress take precedence
+                // over the monetization slot on the main counting screen.
                 if (uiState.isLoading) {
                     Box(
                         modifier = Modifier
@@ -327,6 +325,11 @@ fun CounterScreen(
                             )
                         }
 
+                        // Do not put an ad above the primary tap target.
+                        // Premium users continue to see no banner.
+                        if (!uiState.isPremium) {
+                            bannerAdContent?.invoke()
+                        }
                         Spacer(modifier = Modifier.height(d.space8))
                     }
                 }
