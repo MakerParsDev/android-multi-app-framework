@@ -145,6 +145,14 @@ class AdManagerUmpCallbacksTest {
         failure.captured.onConsentInfoUpdateFailure(FormError(2, "timeout"))
         idleMain()
 
+        verify(exactly = 1) {
+            analytics.logEvent(
+                "consent_flow_started",
+                withArg { params ->
+                    assertThat(params.getString(AnalyticsParamKey.CONSENT_TRIGGER)).isEqualTo("runtime")
+                },
+            )
+        }
         assertThat(eligible).isFalse()
         val result = manager.consentStatus.value
         assertThat(result).isInstanceOf(ConsentStatus.Error::class.java)
@@ -190,6 +198,14 @@ class AdManagerUmpCallbacksTest {
         success.captured.onConsentInfoUpdateSuccess()
         idleMain()
 
+        verify(exactly = 1) {
+            analytics.logEvent(
+                "consent_flow_started",
+                withArg { params ->
+                    assertThat(params.getString(AnalyticsParamKey.CONSENT_TRIGGER)).isEqualTo("runtime")
+                },
+            )
+        }
         assertThat(eligible).isFalse()
         assertThat(manager.consentStatus.value).isEqualTo(ConsentStatus.Denied)
         assertThat(manager.canRequestAds.value).isFalse()
@@ -263,6 +279,19 @@ class AdManagerUmpCallbacksTest {
     }
 
     @Test
+    fun privacyOptionsNotRequiredDoesNotCountAFormAttempt() {
+        every { consentInfo.privacyOptionsRequirementStatus } returns
+            ConsentInformation.PrivacyOptionsRequirementStatus.NOT_REQUIRED
+        var completed: Boolean? = null
+
+        manager.showPrivacyOptions(activity) { completed = it }
+        idleMain()
+
+        assertThat(completed).isFalse()
+        verify(exactly = 0) { analytics.logEvent("consent_flow_started", any()) }
+    }
+
+    @Test
     fun privacyOptionsFormFailureEmitsCategoryWithoutChangingPreviousRefusal() {
         setExplicitEeaRefusal()
         every { consentInfo.privacyOptionsRequirementStatus } returns
@@ -276,6 +305,12 @@ class AdManagerUmpCallbacksTest {
         var completed: Boolean? = null
         manager.showPrivacyOptions(activity) { completed = it }
         idleMain()
+        verify(exactly = 1) {
+            analytics.logEvent(
+                "consent_flow_started",
+                match { params -> params.getString(AnalyticsParamKey.CONSENT_TRIGGER) == "privacy_options" },
+            )
+        }
         privacyFormDismissed.captured.onConsentFormDismissed(
             FormError(FormError.ErrorCode.INTERNET_ERROR, "email person@example.com token=secret"),
         )
