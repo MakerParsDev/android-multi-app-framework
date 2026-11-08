@@ -123,25 +123,25 @@ class PrayerModeSelectionSemanticsTest {
             assertEquals("$label should remain one readable line", 1, layout.lineCount)
             assertEquals("$label must not be clipped", label.length, layout.getLineEnd(0, visibleEnd = true))
         }
-        // Compact reader modes intentionally scroll horizontally rather than stacking
-        // three tall buttons over reading content. A mode can be outside the viewport
-        // until it is brought into view, so assert both order and actual reachability.
-        val initialBounds = labels.map { rule.onNodeWithText(it).fetchSemanticsNode().boundsInRoot }
-        assertTrue(
-            "Reading modes should follow Arabic, Latin, Translation horizontally",
-            initialBounds.zipWithNext().all { (first, second) -> first.left < second.left },
+        // Offscreen Compose semantics bounds are clipped to the viewport, so
+        // their initial X coordinates cannot prove item order. Instead inspect
+        // the actual horizontal scroll axis as each label is brought into view.
+        val scrollable = rule.onNode(
+            SemanticsMatcher.keyIsDefined(SemanticsProperties.HorizontalScrollAxisRange),
         )
+        val scrollKey = SemanticsProperties.HorizontalScrollAxisRange
         assertTrue(
-            "Reading modes should share one row instead of obscuring the reader",
-            initialBounds.zipWithNext().all { (first, second) ->
-                kotlin.math.abs(first.top - second.top) <= 1f
-            },
+            "Three 240dp mode chips must exceed this narrow reader viewport",
+            scrollable.fetchSemanticsNode().config[scrollKey].maxValue() > 0f,
         )
-
+        val scrollPositions = mutableListOf<Float>()
+        val rowTops = mutableListOf<Float>()
         val minHeightPx = 48f * rule.density.density
         labels.forEach { label ->
             val mode = rule.onNodeWithText(label).performScrollTo()
             val visibleBounds = mode.fetchSemanticsNode().boundsInRoot
+            rowTops += visibleBounds.top
+            scrollPositions += scrollable.fetchSemanticsNode().config[scrollKey].value()
             assertTrue("$label must maintain 48dp touch height", visibleBounds.height >= minHeightPx)
             assertTrue("$label should be reachable within the reader width", visibleBounds.left >= -1f)
             assertTrue(
@@ -149,6 +149,14 @@ class PrayerModeSelectionSemanticsTest {
                 visibleBounds.right <= widthDp * rule.density.density + 1f,
             )
         }
+        assertTrue(
+            "Arabic, Latin, Translation must advance left to right: $scrollPositions",
+            scrollPositions.zipWithNext().all { (first, second) -> second > first },
+        )
+        assertTrue(
+            "Reading modes must remain on one row instead of obscuring the reader",
+            rowTops.zipWithNext().all { (first, second) -> kotlin.math.abs(first - second) <= 1f },
+        )
     }
 
     private fun verifyModes(
