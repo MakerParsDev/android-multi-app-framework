@@ -53,7 +53,7 @@ jsonJvm = "20260814"
 baselineProfile = "1.5.0"
 benchmark = "1.5.0"
 profileInstaller = "1.4.1"
-uiautomator = "2.4.0"
+uiautomator = "2.4.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
