@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -140,7 +140,9 @@ fun InlineAudioPlayer(
 
                 IconButton(
                     onClick = onStop,
-                    modifier = Modifier.size(dimens.iconXl),
+                    modifier = Modifier
+                        .testTag("audio_stop")
+                        .size(dimens.iconXl),
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Stop,
@@ -152,7 +154,7 @@ fun InlineAudioPlayer(
 
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
-                    text = formatTime(state.currentPosition) + " / " + formatTime(state.duration),
+                    text = formatTime(state.currentPosition) + "/" + formatTime(state.duration),
                     color = content,
                     style = MaterialTheme.typography.labelMedium,
                     maxLines = 1,
@@ -160,30 +162,40 @@ fun InlineAudioPlayer(
                 )
             }
 
-            Slider(
-                value = (if (isSeeking) seekValue else progress).coerceIn(0f, 1f),
-                onValueChange = { value ->
-                    isSeeking = true
-                    seekValue = value
-                },
-                onValueChangeFinished = {
-                    if (state.duration > 0) {
-                        onSeek((seekValue * state.duration).toLong())
-                    }
-                    isSeeking = false
-                },
-                enabled = state.duration > 0,
+            // Compose Slider exposes a 44dp inner semantics rectangle on API28
+            // even when its outer measured row is taller. Merge its adjustable
+            // action into a 64dp accessibility target without changing gestures.
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = dimens.iconXl)
+                    .height(dimens.iconXl + dimens.space16)
                     .testTag("audio_seek")
-                    .semantics { contentDescription = seekAccessibleName },
-                colors = SliderDefaults.colors(
-                    thumbColor = accent,
-                    activeTrackColor = accent,
-                    inactiveTrackColor = subdued.copy(alpha = 0.25f),
-                ),
-            )
+                    .semantics(mergeDescendants = true) {
+                        contentDescription = seekAccessibleName
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Slider(
+                    value = (if (isSeeking) seekValue else progress).coerceIn(0f, 1f),
+                    onValueChange = { value ->
+                        isSeeking = true
+                        seekValue = value
+                    },
+                    onValueChangeFinished = {
+                        if (state.duration > 0) {
+                            onSeek((seekValue * state.duration).toLong())
+                        }
+                        isSeeking = false
+                    },
+                    enabled = state.duration > 0,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = SliderDefaults.colors(
+                        thumbColor = accent,
+                        activeTrackColor = accent,
+                        inactiveTrackColor = subdued.copy(alpha = 0.25f),
+                    ),
+                )
+            }
         }
     }
 }
