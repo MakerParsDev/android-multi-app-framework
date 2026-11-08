@@ -11,9 +11,11 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -92,14 +94,16 @@ class ContentReaderLocaleAccessibilityTest {
             assertEquals("$label should fit on one readable line", 1, layout.lineCount)
             assertEquals("$label must not be truncated", label.length, layout.getLineEnd(0, visibleEnd = true))
         }
+        // Off-screen nodes in a horizontal scroller report clipped bounds (top=0).
+        // Bring each actual chip into view before comparing the vertical row.
         val arabic = rule.onNodeWithText("Arabisch", useUnmergedTree = true)
-            .fetchSemanticsNode().boundsInRoot
+            .performScrollTo().assertIsDisplayed().fetchSemanticsNode().boundsInRoot
         val latin = rule.onNodeWithText("Latein", useUnmergedTree = true)
-            .fetchSemanticsNode().boundsInRoot
+            .performScrollTo().assertIsDisplayed().fetchSemanticsNode().boundsInRoot
         val translation = rule.onNodeWithText("Übersetzung", useUnmergedTree = true)
-            .fetchSemanticsNode().boundsInRoot
-        assertTrue("Arabic and Latin modes should stack", arabic.bottom <= latin.top)
-        assertTrue("Latin and Translation modes should stack", latin.bottom <= translation.top)
+            .performScrollTo().assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        assertEquals("Arabic and Latin modes stay on one row", arabic.top, latin.top, 1f)
+        assertEquals("Latin and Translation modes stay on one row", latin.top, translation.top, 1f)
     }
 
     private fun showReader(locale: String, widthDp: Int, fontScale: Float) {

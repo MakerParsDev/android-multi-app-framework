@@ -8,6 +8,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -35,6 +37,8 @@ import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -180,6 +184,10 @@ fun ContentScreen(
             val hasLongContent = verses.size >= 15
             val showTopBanner = uiState.shouldShowAds && shouldShowTopBannerForScrollableContent(verses.size)
             val showInlineFeedAds = uiState.shouldShowAds && shouldPreferInlineFeedAds(verses.size)
+            val savedId = uiState.savedVerseId
+            val savedDestination = savedId?.let { id ->
+                contentLazyItemIndexForVerse(verses, id, showInlineFeedAds)
+            }
             LaunchedEffect(verses, showInlineFeedAds) {
                 if (verses.isNotEmpty()) {
                     contentLazyItemIndexForVerse(verses, initialViewportVerseId, showInlineFeedAds)
@@ -227,6 +235,54 @@ fun ContentScreen(
                         } else {
                             null
                         },
+                    onJumpToVerseClick =
+                        if (hasLongContent) {
+                            {
+                                verseQuery = ""
+                                showVerseJump = true
+                            }
+                        } else {
+                            null
+                        },
+                    onSaveReadingPlaceClick =
+                        if (hasLongContent) {
+                            {
+                                val layout = listState.layoutInfo
+                                val visible = layout.visibleItemsInfo.map { item ->
+                                    VisibleContentItem(item.key, item.offset, item.size)
+                                }
+                                val id = verseToSaveAfterJump(
+                                    visible = visible,
+                                    viewportStart = layout.viewportStartOffset,
+                                    viewportEnd = layout.viewportEndOffset,
+                                    firstVisibleItemIndex = listState.firstVisibleItemIndex,
+                                    firstVisibleItemScrollOffset = listState.firstVisibleItemScrollOffset,
+                                    jumpAnchor = jumpSaveAnchor,
+                                )
+                                if (id != null && verses.any { it.id == id }) onSavePlace(id)
+                                jumpSaveAnchor = null
+                            }
+                        } else {
+                            null
+                        },
+                    onResumeReadingPlaceClick =
+                        if (savedId != null && savedDestination != null) {
+                            {
+                                scope.launch {
+                                    listState.scrollToItem(savedDestination)
+                                    onVisibleVerseChanged(savedId)
+                                    jumpSaveAnchor = JumpSaveAnchor(
+                                        verseId = savedId,
+                                        firstVisibleItemIndex = listState.firstVisibleItemIndex,
+                                        firstVisibleItemScrollOffset = listState.firstVisibleItemScrollOffset,
+                                    )
+                                }
+                            }
+                        } else {
+                            null
+                        },
+                    savedReadingVerseId = if (hasLongContent) savedId else null,
+                    onClearReadingPlaceClick = if (hasLongContent && savedId != null) onClearPlace else null,
                 )
 
                 // Gold divider
@@ -276,103 +332,6 @@ fun ContentScreen(
                     if (!compactHeight) {
                         audioPlayerContent()
                         Spacer(modifier = Modifier.height(dimens.space4))
-                    }
-
-                    if (hasLongContent) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(dimens.space4),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            TextButton(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .testTag("content_go_to_verse"),
-                                onClick = {
-                                    verseQuery = ""
-                                    showVerseJump = true
-                                },
-                            ) {
-                                Text(
-                                    stringResource(R.string.content_jump_to_verse),
-                                    textAlign = TextAlign.Center,
-                                )
-                            }
-                            TextButton(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .testTag("content_save_current_verse"),
-                                onClick = {
-                                    val layout = listState.layoutInfo
-                                    val visible = layout.visibleItemsInfo.map { item ->
-                                        VisibleContentItem(item.key, item.offset, item.size)
-                                    }
-                                    val id = verseToSaveAfterJump(
-                                        visible = visible,
-                                        viewportStart = layout.viewportStartOffset,
-                                        viewportEnd = layout.viewportEndOffset,
-                                        firstVisibleItemIndex = listState.firstVisibleItemIndex,
-                                        firstVisibleItemScrollOffset = listState.firstVisibleItemScrollOffset,
-                                        jumpAnchor = jumpSaveAnchor,
-                                    )
-                                    if (id != null && verses.any { it.id == id }) onSavePlace(id)
-                                    jumpSaveAnchor = null
-                                },
-                            ) {
-                                Text(
-                                    stringResource(R.string.content_save_reading_place),
-                                    textAlign = TextAlign.Center,
-                                )
-                            }
-                        }
-                        val savedId = uiState.savedVerseId
-                        val savedDestination = savedId?.let { id ->
-                            contentLazyItemIndexForVerse(verses, id, showInlineFeedAds)
-                        }
-                        if (savedId != null) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(dimens.space4),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                if (savedDestination != null) {
-                                    TextButton(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .testTag("content_resume_reading"),
-                                        onClick = {
-                                            scope.launch {
-                                                listState.scrollToItem(savedDestination)
-                                                onVisibleVerseChanged(savedId)
-                                                jumpSaveAnchor = JumpSaveAnchor(
-                                                    verseId = savedId,
-                                                    firstVisibleItemIndex = listState.firstVisibleItemIndex,
-                                                    firstVisibleItemScrollOffset = listState.firstVisibleItemScrollOffset,
-                                                )
-                                            }
-                                        },
-                                    ) {
-                                        Text(
-                                            stringResource(R.string.content_resume_at_verse, savedId),
-                                            textAlign = TextAlign.Center,
-                                        )
-                                    }
-                                } else {
-                                    Text(
-                                        stringResource(R.string.content_saved_verse_missing),
-                                        modifier = Modifier.weight(1f),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                TextButton(
-                                    onClick = onClearPlace,
-                                    modifier = Modifier.testTag("content_clear_saved_place")
-                                ) {
-                                    Text(stringResource(R.string.content_clear_saved_place))
-                                }
-                            }
-                        }
                     }
 
                     // Verse Cards + Native Ads (her 5 ayetten sonra)
@@ -501,6 +460,11 @@ fun AppHeader(
     onSettingsClick: () -> Unit = {},
     onRewardsClick: () -> Unit = {},
     onReaderToolsClick: (() -> Unit)? = null,
+    onJumpToVerseClick: (() -> Unit)? = null,
+    onSaveReadingPlaceClick: (() -> Unit)? = null,
+    onResumeReadingPlaceClick: (() -> Unit)? = null,
+    savedReadingVerseId: Int? = null,
+    onClearReadingPlaceClick: (() -> Unit)? = null,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val dimens = LocalDimens.current
@@ -555,16 +519,87 @@ fun AppHeader(
                 modifier = Modifier.weight(1f).padding(horizontal = dimens.space4)
             )
 
-            if (onReaderToolsClick != null) {
-                IconButton(
-                    onClick = onReaderToolsClick,
-                    modifier = Modifier.size(dimens.iconXl).testTag("content_reader_tools")
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.MoreVert,
-                        contentDescription = stringResource(R.string.content_reader_tools),
-                        tint = colorScheme.onPrimaryContainer,
-                    )
+            if (
+                onReaderToolsClick != null ||
+                onJumpToVerseClick != null ||
+                onSaveReadingPlaceClick != null ||
+                onClearReadingPlaceClick != null
+            ) {
+                var readerMenuExpanded by remember { mutableStateOf(false) }
+                Box {
+                    IconButton(
+                        onClick = { readerMenuExpanded = true },
+                        modifier = Modifier.size(dimens.iconXl).testTag("content_reader_tools"),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.MoreVert,
+                            contentDescription = stringResource(R.string.content_reader_tools),
+                            tint = colorScheme.onPrimaryContainer,
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = readerMenuExpanded,
+                        onDismissRequest = { readerMenuExpanded = false },
+                    ) {
+                        if (onJumpToVerseClick != null) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.content_jump_to_verse)) },
+                                onClick = {
+                                    readerMenuExpanded = false
+                                    onJumpToVerseClick()
+                                },
+                                modifier = Modifier.testTag("content_go_to_verse"),
+                            )
+                        }
+                        if (onSaveReadingPlaceClick != null) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.content_save_reading_place)) },
+                                onClick = {
+                                    readerMenuExpanded = false
+                                    onSaveReadingPlaceClick()
+                                },
+                                modifier = Modifier.testTag("content_save_current_verse"),
+                            )
+                        }
+                        if (onResumeReadingPlaceClick != null && savedReadingVerseId != null) {
+                            DropdownMenuItem(
+                                text = {
+                                    Text(stringResource(R.string.content_resume_at_verse, savedReadingVerseId))
+                                },
+                                onClick = {
+                                    readerMenuExpanded = false
+                                    onResumeReadingPlaceClick()
+                                },
+                                modifier = Modifier.testTag("content_resume_reading"),
+                            )
+                        } else if (savedReadingVerseId != null) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.content_saved_verse_missing)) },
+                                onClick = {},
+                                enabled = false,
+                            )
+                        }
+                        if (onClearReadingPlaceClick != null) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.content_clear_saved_place)) },
+                                onClick = {
+                                    readerMenuExpanded = false
+                                    onClearReadingPlaceClick()
+                                },
+                                modifier = Modifier.testTag("content_clear_saved_place"),
+                            )
+                        }
+                        if (onReaderToolsClick != null) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.content_reader_tools)) },
+                                onClick = {
+                                    readerMenuExpanded = false
+                                    onReaderToolsClick()
+                                },
+                                modifier = Modifier.testTag("content_show_reading_controls"),
+                            )
+                        }
+                    }
                 }
             }
 
@@ -597,55 +632,40 @@ fun BottomModeSelector(
             .fillMaxWidth()
             .padding(horizontal = dimens.space6, vertical = dimens.space2)
     ) {
-        val stack = shouldStackReaderModes(maxWidth.value, LocalDensity.current.fontScale)
-        if (stack) {
-            Column(
-                modifier = Modifier.fillMaxWidth().selectableGroup(),
-                verticalArrangement = Arrangement.spacedBy(dimens.space8)
-            ) {
-                ModeButton(
-                    text = stringResource(R.string.content_mode_arabic),
-                    isSelected = currentMode == DisplayMode.ARABIC,
-                    onClick = { onModeSelected(DisplayMode.ARABIC) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                ModeButton(
-                    text = stringResource(R.string.content_mode_latin),
-                    isSelected = currentMode == DisplayMode.LATIN,
-                    onClick = { onModeSelected(DisplayMode.LATIN) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                ModeButton(
-                    text = stringResource(R.string.content_mode_turkish),
-                    isSelected = currentMode == DisplayMode.TURKISH,
-                    onClick = { onModeSelected(DisplayMode.TURKISH) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        } else {
-            Row(
-                modifier = Modifier.fillMaxWidth().selectableGroup(),
-                horizontalArrangement = Arrangement.spacedBy(dimens.space8)
-            ) {
-                ModeButton(
-                    text = stringResource(R.string.content_mode_arabic),
-                    isSelected = currentMode == DisplayMode.ARABIC,
-                    onClick = { onModeSelected(DisplayMode.ARABIC) },
-                    modifier = Modifier.weight(1f)
-                )
-                ModeButton(
-                    text = stringResource(R.string.content_mode_latin),
-                    isSelected = currentMode == DisplayMode.LATIN,
-                    onClick = { onModeSelected(DisplayMode.LATIN) },
-                    modifier = Modifier.weight(1f)
-                )
-                ModeButton(
-                    text = stringResource(R.string.content_mode_turkish),
-                    isSelected = currentMode == DisplayMode.TURKISH,
-                    onClick = { onModeSelected(DisplayMode.TURKISH) },
-                    modifier = Modifier.weight(1f)
-                )
-            }
+        val scrollModes = shouldScrollReaderModes(maxWidth.value, LocalDensity.current.fontScale)
+        val scrollState = rememberScrollState()
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .then(if (scrollModes) Modifier.horizontalScroll(scrollState) else Modifier)
+                    .selectableGroup(),
+            horizontalArrangement = Arrangement.spacedBy(dimens.space8),
+        ) {
+            val itemModifier =
+                if (scrollModes) {
+                    Modifier.width(scrollableReaderModeWidthDp(LocalDensity.current.fontScale).dp)
+                } else {
+                    Modifier.weight(1f)
+                }
+            ModeButton(
+                text = stringResource(R.string.content_mode_arabic),
+                isSelected = currentMode == DisplayMode.ARABIC,
+                onClick = { onModeSelected(DisplayMode.ARABIC) },
+                modifier = itemModifier,
+            )
+            ModeButton(
+                text = stringResource(R.string.content_mode_latin),
+                isSelected = currentMode == DisplayMode.LATIN,
+                onClick = { onModeSelected(DisplayMode.LATIN) },
+                modifier = itemModifier,
+            )
+            ModeButton(
+                text = stringResource(R.string.content_mode_turkish),
+                isSelected = currentMode == DisplayMode.TURKISH,
+                onClick = { onModeSelected(DisplayMode.TURKISH) },
+                modifier = itemModifier,
+            )
         }
     }
 }
@@ -655,8 +675,13 @@ fun BottomModeSelector(
 internal fun shouldUseCompactReader(heightDp: Float, fontScale: Float = 1f): Boolean =
     heightDp < 420f || (fontScale >= 1.5f && heightDp < 720f)
 
-internal fun shouldStackReaderModes(widthDp: Float, fontScale: Float): Boolean =
+// Horizontally scroll the mode selector instead of stacking three tall rows.
+// Preserve 48dp minimum touch targets and large-text accessibility.
+internal fun shouldScrollReaderModes(widthDp: Float, fontScale: Float): Boolean =
     widthDp < 360f || (fontScale >= 1.3f && widthDp < 600f)
+
+// Scrolled mode chips need enough width for translated labels at large font scales.
+internal fun scrollableReaderModeWidthDp(fontScale: Float): Float = 120f * fontScale.coerceAtLeast(1f)
 
 @Composable
 private fun ContentLoadingSkeleton(appName: String) {

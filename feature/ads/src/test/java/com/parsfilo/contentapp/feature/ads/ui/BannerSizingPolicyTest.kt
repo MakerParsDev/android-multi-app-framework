@@ -6,6 +6,28 @@ import org.junit.Test
 
 class BannerSizingPolicyTest {
     @Test
+    fun contentBannerNeverGrowsBeyondReaderWidth() {
+        val policy = AdPlacement.BANNER_CONTENT_DETAIL.bannerSizingPolicy()
+        assertThat(policy.requestWidthDp(280)).isEqualTo(280)
+        assertThat(policy.requestWidthDp(320)).isEqualTo(320)
+        assertThat(policy.requestWidthDp(360)).isEqualTo(360)
+        assertThat(policy.requestWidthDp(411)).isEqualTo(360)
+        assertThat(policy.requestWidthDp(840)).isEqualTo(360)
+    }
+
+    @Test
+    fun standardBannerStaysWithinActualViewport() {
+        val policy = AdPlacement.BANNER_DEFAULT.bannerSizingPolicy()
+        assertThat(policy.requestWidthDp(280)).isEqualTo(0)
+        assertThat(policy.requestWidthDp(319)).isEqualTo(0)
+        assertThat(policy.requestWidthDp(320)).isEqualTo(320)
+        assertThat(policy.requestWidthDp(411)).isEqualTo(320)
+        assertThat(policy.requestWidthDp(840)).isEqualTo(320)
+        assertThat(policy.requestWidthDp(0)).isEqualTo(0)
+        assertThat(policy.requestWidthDp(-1)).isEqualTo(0)
+    }
+
+    @Test
     fun `content placements use capped inline adaptive banners`() {
         val listPolicy = AdPlacement.BANNER_CONTENT_LIST.bannerSizingPolicy()
         val detailPolicy = AdPlacement.BANNER_CONTENT_DETAIL.bannerSizingPolicy()
@@ -17,7 +39,7 @@ class BannerSizingPolicyTest {
     }
 
     @Test
-    fun `non content placements use fixed standard banners`() {
+    fun `non content placements use bounded anchored standard policy`() {
         val anchoredPlacements = listOf(
             AdPlacement.BANNER_HOME,
             AdPlacement.BANNER_SETTINGS,
