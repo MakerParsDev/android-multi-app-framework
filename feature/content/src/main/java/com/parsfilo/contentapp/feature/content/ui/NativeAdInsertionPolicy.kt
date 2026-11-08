@@ -2,16 +2,12 @@ package com.parsfilo.contentapp.feature.content.ui
 
 internal enum class ReaderBannerPosition {
     HIDDEN,
-    ABOVE_VERSES,
     AFTER_VERSES,
 }
 
-internal fun resolveReaderBannerPosition(showTopBanner: Boolean, compactHeight: Boolean): ReaderBannerPosition =
-    when {
-        !showTopBanner -> ReaderBannerPosition.HIDDEN
-        compactHeight -> ReaderBannerPosition.AFTER_VERSES
-        else -> ReaderBannerPosition.ABOVE_VERSES
-    }
+/** Keep the content viewport before advertising and the SDK view stable. */
+internal fun resolveReaderBannerPosition(showTopBanner: Boolean): ReaderBannerPosition =
+    if (showTopBanner) ReaderBannerPosition.AFTER_VERSES else ReaderBannerPosition.HIDDEN
 
 private const val MIN_CONTENT_ITEMS_FOR_INLINE_FEED_ADS = 12
 private const val INLINE_FEED_AD_INTERVAL = 10
