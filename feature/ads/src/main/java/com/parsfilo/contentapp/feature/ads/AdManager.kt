@@ -316,6 +316,9 @@ class AdManager @Inject constructor(
             val consentInformation = UserMessagingPlatform.getConsentInformation(context)
             val params = buildConsentRequestParameters(ageGateStatus, _debugGeography.value)
 
+            // Count runtime UMP requests as attempts before their success or error callback.
+            // A cold-start-only denominator cannot measure runtime refresh failures.
+            appAnalytics.logConsentFlowStarted(trigger = "runtime")
             consentInformation.requestConsentInfoUpdate(
                 activity,
                 params,
@@ -421,6 +424,8 @@ class AdManager @Inject constructor(
             return
         }
 
+        // Form failures emit consent_error with this trigger; keep attempts attributable.
+        appAnalytics.logConsentFlowStarted(trigger = "privacy_options")
         UserMessagingPlatform.showPrivacyOptionsForm(activity) { formError ->
             if (formError != null) {
                 Timber.w("Privacy options form error: %s", formError.message)

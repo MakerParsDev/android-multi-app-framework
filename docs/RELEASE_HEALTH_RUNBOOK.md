@@ -80,11 +80,23 @@ workflow'u calistirdigini varsaymayin. `incomplete` karari exit code 2,
 | `new_error_affected_users` | Bu versionCode'da yeni crash/ANR issue'larindan etkilenen benzersiz kullanici |
 | `billing_verification_failure_rate` | Basarisiz server verification / toplam verification attempt |
 | `ad_technical_failure_rate` | Error code 3 haric teknik ad-load failure / toplam ad request |
-| `ump_consent_failure_rate` | `consent_error` / `consent_flow_started` |
+| `ump_consent_failure_rate` | Aynı uygulama/sürüm/tetikleyici için ölçülen UMP `consent_error` / karşılık gelen `consent_flow_started` girişimi; eski veya eşleşmeyen olaylarda `INCOMPLETE` |
 | `push_registration_failure_rate` | Final registration failure / registration sync attempt |
 | `remote_config_failure_rate` | Fetch-and-activate failure / fetch-and-activate attempt |
 
 Payda sifirsa metrigi `0` olarak uydurmayin. Snapshot'i eksik birakin; evaluator `INCOMPLETE` karari vererek rollout ilerlemesini engeller.
+
+UMP icin `consent_error` olaylari `cold_start`, `runtime`, `debug_menu` ve
+`privacy_options` gibi farkli asamalardan gelebilir. Bu asamalarin UMP
+`requestConsentInfoUpdate` ve form gosterimi tek bir kullanici oturumuna
+tekabül etmeyebilir. Oran icin pay ve paydayi **ayni uygulama, imzali
+surum, tarih penceresi ve `consent_trigger`** temelinde uzlastirin;
+GA4 olay sayilarini benzersiz kullanici veya SDK istek sayisi diye
+yorumlamayin. `refreshConsent` ve zorunlu gizlilik formu icin
+`consent_flow_started` sinyali bu degisiklikten sonra uretilir; eski
+imzali surumlerdeki eksik baslangic olaylari geriye donuk tamamlanamaz.
+Consent kaynakli GA4 olaylarinin iletilmemesi veya cift sayimi
+dislanamiyorsa yine `INCOMPLETE` karari verin.
 
 ## +24 saat kontrolu
 
