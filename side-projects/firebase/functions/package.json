@@ -31,7 +31,7 @@
         "googleapis": "^188.0.0"
     },
     "devDependencies": {
-        "eslint": "^10.13.0",
+        "eslint": "^10.14.0",
         "typescript": "^5.7.0",
         "typescript-eslint": "^8.72.1"
     },
