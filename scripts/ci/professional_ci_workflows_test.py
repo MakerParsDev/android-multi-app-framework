@@ -165,12 +165,20 @@ def test_codeql_uses_manual_kotlin_build_and_cleans_placeholder() -> None:
     job = workflow["jobs"]["analyze-java-kotlin"]
     assert job["permissions"] == {"contents": "read", "security-events": "write"}
     assert "if" not in job, "CodeQL required check must also run for Dependabot PRs"
+    fallback = named_step(job, "Resolve verified CodeQL bundle fallback")
+    assert fallback["env"] == {"GH_TOKEN": "${{ github.token }}"}
+    assert "curl --fail --silent --show-error --location --head" in fallback["run"]
+    assert "repos/github/codeql-action/releases/assets/692239162" in fallback["run"]
+    assert "dbeb8e2f4454bf4aad35fe16d8770dcc4a4ce0c3585d8952d57e41905396aff8" in fallback["run"]
+    assert "sha256sum --check --status" in fallback["run"]
+    assert 'echo "tools=$bundle" >> "$GITHUB_OUTPUT"' in fallback["run"]
     init = named_step(job, "Initialize CodeQL")
     assert init["uses"] == f"github/codeql-action/init@{CODEQL_SHA}"
     assert init["with"] == {
         "languages": "java-kotlin",
         "build-mode": "manual",
         "queries": "security-extended",
+        "tools": "${{ steps.codeql-bundle.outputs.tools }}",
     }
     build = named_step(job, "Build representative flavor for CodeQL")
     assert "assembleKuran_kerimDebug" in build["run"]

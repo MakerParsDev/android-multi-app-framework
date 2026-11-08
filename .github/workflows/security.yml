@@ -43,6 +43,8 @@ jobs:
         run: python3 scripts/ci/validate_tracked_sensitive_files.py
 
       - name: Run full-history secret scan
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: bash scripts/ci/run_secret_scan.sh --mode history --report-dir build/reports/security
 
       - name: Run synthetic leak self-test
