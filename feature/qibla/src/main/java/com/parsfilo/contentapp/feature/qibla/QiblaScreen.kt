@@ -445,7 +445,7 @@ private fun QiblaScreenContent(
                     onRewardsClick = onRewardsClick,
                 )
             }
-            item { bannerAdContent() }
+            // Keep location/sensor guidance and the compass ahead of advertising.
             item {
                 Card(
                     shape = RoundedCornerShape(20.dp),
@@ -662,6 +662,8 @@ private fun QiblaScreenContent(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            // Retain the consent-gated banner, but only after all guidance.
+            item { bannerAdContent() }
             item { nativeAdContent() }
         }
     }

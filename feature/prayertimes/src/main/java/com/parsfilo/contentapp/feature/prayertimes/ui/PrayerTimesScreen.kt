@@ -220,8 +220,7 @@ fun PrayerTimesScreen(
                         )
                     }
 
-                    item { bannerAdContent?.invoke() }
-
+                    // Always show the prayer schedule/controls ahead of ads.
                     if (uiState.days.isEmpty()) {
                         item {
                             Text(
@@ -371,6 +370,11 @@ fun PrayerTimesScreen(
                         }
                     }
 
+                    // Keep the existing ad slots available below actual
+                    // prayer information and alarm/location controls.
+                    if (bannerAdContent != null) {
+                        item { bannerAdContent.invoke() }
+                    }
                     if (nativeAdContent != null) {
                         item { nativeAdContent.invoke() }
                     }
