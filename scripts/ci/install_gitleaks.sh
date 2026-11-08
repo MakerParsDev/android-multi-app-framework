@@ -44,9 +44,35 @@ trap 'rm -rf -- "$tmp_dir"' EXIT
 archive="$tmp_dir/$asset"
 
 printf 'Downloading pinned Gitleaks %s\n' "$version" >&2
-curl --fail --location --silent --show-error --proto '=https' --tlsv1.2 \
-  --connect-timeout 10 --max-time 300 \
-  "$download_url" --output "$archive"
+if ! curl --fail --location --silent --show-error --proto '=https' --tlsv1.2 \
+  --connect-timeout 10 --max-time 300 --retry 2 --retry-all-errors --retry-delay 1 \
+  "$download_url" --output "$archive"; then
+  echo "Official release download unavailable; trying the GitHub Releases API." >&2
+  release_metadata="$tmp_dir/release.json"
+  curl --fail --location --silent --show-error --proto '=https' --tlsv1.2 \
+    --connect-timeout 10 --max-time 30 \
+    "https://api.github.com/repos/gitleaks/gitleaks/releases/tags/v${version}" \
+    --output "$release_metadata"
+  asset_api_url="$(python3 - "$release_metadata" "$asset" <<'PYASSET'
+import json
+import sys
+from pathlib import Path
+
+release = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assets = [entry for entry in release.get("assets", []) if entry.get("name") == sys.argv[2]]
+if len(assets) != 1:
+    raise SystemExit("Pinned Gitleaks asset missing or ambiguous in GitHub release")
+url = assets[0].get("url", "")
+prefix = "https://api.github.com/repos/gitleaks/gitleaks/releases/assets/"
+if not isinstance(url, str) or not url.startswith(prefix) or not url[len(prefix):].isdigit():
+    raise SystemExit("Pinned Gitleaks API asset URL is invalid")
+print(url)
+PYASSET
+  )"
+  curl --fail --location --silent --show-error --proto '=https' --tlsv1.2 \
+    --connect-timeout 10 --max-time 300 -H 'Accept: application/octet-stream' \
+    "$asset_api_url" --output "$archive"
+fi
 printf '%s  %s\n' "$expected_sha256" "$archive" | sha256sum --check --status
 
 tar -xzf "$archive" -C "$tmp_dir"
