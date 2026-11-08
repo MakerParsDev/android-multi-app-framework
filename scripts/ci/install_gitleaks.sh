@@ -49,10 +49,14 @@ if ! curl --fail --location --silent --show-error --proto '=https' --tlsv1.2 \
   "$download_url" --output "$archive"; then
   echo "Official release download unavailable; trying the GitHub Releases API." >&2
   release_metadata="$tmp_dir/release.json"
-  curl --fail --location --silent --show-error --proto '=https' --tlsv1.2 \
-    --connect-timeout 10 --max-time 30 \
-    "https://api.github.com/repos/gitleaks/gitleaks/releases/tags/v${version}" \
-    --output "$release_metadata"
+  if [[ -n "${GH_TOKEN:-}" ]] && command -v gh >/dev/null 2>&1; then
+    gh api "repos/gitleaks/gitleaks/releases/tags/v${version}" > "$release_metadata"
+  else
+    curl --fail --location --silent --show-error --proto '=https' --tlsv1.2 \
+      --connect-timeout 10 --max-time 30 \
+      "https://api.github.com/repos/gitleaks/gitleaks/releases/tags/v${version}" \
+      --output "$release_metadata"
+  fi
   asset_api_url="$(python3 - "$release_metadata" "$asset" <<'PYASSET'
 import json
 import sys
@@ -69,9 +73,14 @@ if not isinstance(url, str) or not url.startswith(prefix) or not url[len(prefix)
 print(url)
 PYASSET
   )"
-  curl --fail --location --silent --show-error --proto '=https' --tlsv1.2 \
-    --connect-timeout 10 --max-time 300 -H 'Accept: application/octet-stream' \
-    "$asset_api_url" --output "$archive"
+  if [[ -n "${GH_TOKEN:-}" ]] && command -v gh >/dev/null 2>&1; then
+    gh api -H 'Accept: application/octet-stream' \
+      "${asset_api_url#https://api.github.com/}" > "$archive"
+  else
+    curl --fail --location --silent --show-error --proto '=https' --tlsv1.2 \
+      --connect-timeout 10 --max-time 300 -H 'Accept: application/octet-stream' \
+      "$asset_api_url" --output "$archive"
+  fi
 fi
 printf '%s  %s\n' "$expected_sha256" "$archive" | sha256sum --check --status
 
