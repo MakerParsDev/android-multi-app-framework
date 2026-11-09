@@ -15,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -28,6 +29,8 @@ fun SuraListItem(
     medinanLabel: String,
     modifier: Modifier = Modifier,
 ) {
+    val largeText = LocalDensity.current.fontScale >= 1.3f
+    val revelationLabel = if (sura.revelationType == RevelationType.MECCAN) meccanLabel else medinanLabel
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -37,7 +40,7 @@ fun SuraListItem(
     ) {
         Box(
             modifier = Modifier
-                .size(36.dp)
+                .size(if (largeText) 48.dp else 36.dp)
                 .background(MaterialTheme.colorScheme.primary, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
@@ -66,24 +69,39 @@ fun SuraListItem(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodySmall,
             )
+            if (largeText) {
+                // Put noninteractive metadata beneath the title so large
+                // reader fonts do not squeeze the sura names into one word.
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = sura.ayahCount.toString(),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = revelationLabel,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         }
 
-        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                text = sura.ayahCount.toString(),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
-            AssistChip(
-                onClick = {},
-                enabled = false,
-                label = {
-                    Text(
-                        text = if (sura.revelationType == RevelationType.MECCAN) meccanLabel else medinanLabel,
-                        style = MaterialTheme.typography.labelSmall,
-                    )
-                },
-            )
+        if (!largeText) {
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = sura.ayahCount.toString(),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+                AssistChip(
+                    onClick = {},
+                    enabled = false,
+                    label = {
+                        Text(text = revelationLabel, style = MaterialTheme.typography.labelSmall)
+                    },
+                )
+            }
         }
     }
 }
