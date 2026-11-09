@@ -54,6 +54,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -491,6 +492,13 @@ fun MiraclesListHeader(
     }
 }
 
+// Large accessibility fonts should reveal each prayer's full name instead of a
+// truncated name plus a redundant excerpt. Its full explanation is one tap away.
+internal fun shouldPrioritizeMiraclesPrayerTitle(
+    variant: MiraclesContentVariant,
+    fontScale: Float,
+): Boolean = variant == MiraclesContentVariant.MUCIZEDUALAR && fontScale >= 1.3f
+
 @Composable
 fun MiraclesListItem(
     prayer: MiraclesPrayer,
@@ -501,6 +509,10 @@ fun MiraclesListItem(
 ) {
     val dimens = LocalDimens.current
     val colorScheme = MaterialTheme.colorScheme
+    val prioritizeTitle = shouldPrioritizeMiraclesPrayerTitle(
+        variant = variant,
+        fontScale = LocalDensity.current.fontScale,
+    )
 
     Row(
         modifier = modifier
@@ -548,17 +560,16 @@ fun MiraclesListItem(
                     color = colorScheme.onSurface,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
-                    maxLines = 2,
+                    maxLines = if (prioritizeTitle) Int.MAX_VALUE else 2,
                     overflow = TextOverflow.Ellipsis
                 )
-
-                Spacer(modifier = Modifier.height(dimens.space4))
 
                 val subtitle = when (variant) {
                     MiraclesContentVariant.MUCIZEDUALAR -> prayer.duaAciklama
                     MiraclesContentVariant.ESMAUL_HUSNA -> prayer.duaArapca
                 }
-                if (subtitle.isNotBlank()) {
+                if (subtitle.isNotBlank() && !prioritizeTitle) {
+                    Spacer(modifier = Modifier.height(dimens.space4))
                     Text(
                         text = subtitle,
                         color = colorScheme.onSurfaceVariant,
