@@ -46,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -102,6 +103,7 @@ fun QuranSuraListScreen(
 ) {
     val meccanLabel = stringResource(R.string.quran_revelation_meccan)
     val medinanLabel = stringResource(R.string.quran_revelation_medinan)
+    val largeText = LocalDensity.current.fontScale >= 1.3f
     var isSearchExpanded by rememberSaveable { mutableStateOf(state.query.isNotBlank()) }
 
     Scaffold(
@@ -154,31 +156,50 @@ fun QuranSuraListScreen(
                         .fillMaxWidth()
                         .clickable { onLastReadClick(lastRead.suraNumber, lastRead.ayahNumber) },
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.quran_last_read_title),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
+                    val reference = stringResource(
+                        R.string.quran_last_read_format,
+                        lastRead.suraNumber,
+                        lastRead.ayahNumber,
+                    )
+                    if (largeText) {
+                        // Keep both the action and the saved position readable
+                        // instead of ellipsizing "Last read" beside a long reference.
+                        Column(
                             modifier = Modifier
-                                .weight(1f)
-                                .padding(horizontal = 8.dp),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        Text(
-                            text = stringResource(
-                                R.string.quran_last_read_format,
-                                lastRead.suraNumber,
-                                lastRead.ayahNumber,
-                            ),
-                            style = MaterialTheme.typography.bodyMedium,
-                            textAlign = TextAlign.End,
-                        )
+                                .fillMaxWidth()
+                                .padding(horizontal = 22.dp, vertical = 10.dp),
+                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.quran_last_read_title),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Text(text = reference, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = stringResource(R.string.quran_last_read_title),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(horizontal = 8.dp),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                text = reference,
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.End,
+                            )
+                        }
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
