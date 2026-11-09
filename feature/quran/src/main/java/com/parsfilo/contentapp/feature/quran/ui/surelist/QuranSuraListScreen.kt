@@ -308,6 +308,12 @@ private fun QuranSuraListHeader(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val dimens = LocalDimens.current
+    val largeFont = LocalDensity.current.fontScale >= 1.3f
+    val titleTypography = if (largeFont) {
+        MaterialTheme.typography.titleMedium
+    } else {
+        MaterialTheme.typography.headlineSmall
+    }
     var menuExpanded by rememberSaveable { mutableStateOf(false) }
 
     Surface(
@@ -337,7 +343,7 @@ private fun QuranSuraListHeader(
 
             Text(
                 text = title,
-                style = MaterialTheme.typography.headlineSmall.copy(
+                style = titleTypography.copy(
                     fontFamily = FontFamily.Serif,
                     fontWeight = FontWeight.SemiBold,
                 ),
@@ -346,7 +352,9 @@ private fun QuranSuraListHeader(
                 modifier = Modifier
                     .weight(1f)
                     .padding(horizontal = 8.dp),
-                maxLines = 1,
+                // Keep the full page title readable at large font sizes
+                // without widening the bar or hiding its actions.
+                maxLines = if (largeFont) 2 else 1,
                 overflow = TextOverflow.Ellipsis,
             )
 
