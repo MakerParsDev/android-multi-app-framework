@@ -468,6 +468,17 @@ fun AppHeader(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val dimens = LocalDimens.current
+    val largeText = LocalDensity.current.fontScale >= 1.3f
+    val titleStyle = if (largeText) {
+        // Keep the full localized page title readable while prioritizing
+        // actual reading space at high system font scales.
+        MaterialTheme.typography.titleSmall
+    } else {
+        MaterialTheme.typography.headlineMedium.copy(
+            fontSize = 20.sp,
+            lineHeight = 26.sp,
+        )
+    }
 
     Surface(
         modifier = Modifier
@@ -506,15 +517,13 @@ fun AppHeader(
             // Orta: Başlık
             Text(
                 text = appName,
-                style = MaterialTheme.typography.headlineMedium.copy(
+                style = titleStyle.copy(
                     fontFamily = FontFamily.Default,
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 20.sp,
-                    lineHeight = 26.sp,
                 ),
                 color = colorScheme.onPrimaryContainer,
                 textAlign = TextAlign.Center,
-                maxLines = 1,
+                maxLines = if (largeText) 2 else 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f).padding(horizontal = dimens.space4)
             )
