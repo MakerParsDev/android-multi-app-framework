@@ -534,6 +534,26 @@ def test_workflow_audit_executes_regression_contracts() -> None:
 
 
 
+
+def test_doppler_official_fallback_verifies_archive_before_install() -> None:
+    """Pinned secondary source must fail closed before extracting executable code."""
+    installer = (ROOT / "scripts/ci/install_doppler_cli.sh").read_text(encoding="utf-8")
+    assert "version='3.76.1'" in installer
+    assert "https://packages.doppler.com/public/cli/deb/debian/" in installer
+    assert (
+        "deb_sha256='7dea74c3126c1b7f5d5dd69464a5a39aa33175f00872b5d0070c2398f22d15fa'"
+        in installer
+    )
+    primary = installer.index('if curl -fsSL')
+    fallback = installer.index('echo \'Doppler GitHub release unavailable;')
+    verify = installer.index('printf \'%s  %s\\n\' "$deb_sha256"')
+    extract = installer.index('dpkg-deb -x "$tmp/$deb_asset"')
+    install = installer.index('install -m 0755 "$binary"')
+    assert primary < fallback < verify < extract < install
+    assert 'binary="$tmp/deb-root/usr/bin/doppler"' in installer
+    assert 'printf \'DOPPLER_BIN=%q\\n\'' in installer
+
+
 def test_legacy_release_bootstrap_is_pinned_and_hash_verified() -> None:
     release = load(".github/workflows/release.yml")
     build = release["jobs"]["build-release"]
