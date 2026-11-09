@@ -128,6 +128,7 @@ private fun RowScope.AppBottomNavigationItem(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val title = stringResource(destination.titleRes)
+    val compactBadge = shouldUseCompactBottomBarBadge(LocalDensity.current.fontScale)
 
     NavigationBarItem(
         selected = selected,
@@ -136,18 +137,27 @@ private fun RowScope.AppBottomNavigationItem(
             BadgedBox(
                 badge = {
                     if (!badgeText.isNullOrBlank()) {
-                        Badge(
-                            containerColor = colorScheme.error,
-                            contentColor = colorScheme.onError,
-                        ) {
-                            Text(text = badgeText)
+                        if (compactBadge) {
+                            // A dot stays clear of adjacent navigation targets at large
+                            // text scales; the count remains in the icon semantics.
+                            Badge(
+                                containerColor = colorScheme.error,
+                                contentColor = colorScheme.onError,
+                            )
+                        } else {
+                            Badge(
+                                containerColor = colorScheme.error,
+                                contentColor = colorScheme.onError,
+                            ) {
+                                Text(text = badgeText, maxLines = 1, softWrap = false)
+                            }
                         }
                     }
                 },
             ) {
                 Icon(
                     painter = painterResource(destination.iconRes),
-                    contentDescription = title,
+                    contentDescription = bottomBarContentDescription(title, badgeText),
                 )
             }
         },
@@ -177,6 +187,15 @@ private fun RowScope.AppBottomNavigationItem(
             ),
     )
 }
+
+// Large system text must not let the badge cover another navigation icon.
+// Keep its count available in the icon's spoken accessibility description.
+internal fun shouldUseCompactBottomBarBadge(fontScale: Float): Boolean = fontScale >= 1.3f
+
+internal fun bottomBarContentDescription(
+    title: String,
+    badgeText: String?,
+): String = if (badgeText.isNullOrBlank()) title else "$title, $badgeText"
 
 // Keep full, localized titles visible when there is enough effective text space.
 // At narrow widths/high font scales, preserve all five 48dp+ destinations and

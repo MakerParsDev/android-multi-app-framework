@@ -35,6 +35,21 @@ class AppBottomBarTest {
     }
 
     @Test
+    fun `badges become compact dots at high system font scaling`() {
+        assertFalse(shouldUseCompactBottomBarBadge(1.0f))
+        assertFalse(shouldUseCompactBottomBarBadge(1.1f))
+        assertTrue(shouldUseCompactBottomBarBadge(1.3f))
+        assertTrue(shouldUseCompactBottomBarBadge(2.0f))
+    }
+
+    @Test
+    fun `navigation descriptions preserve badge counts for screen readers`() {
+        assertEquals("Ana Sayfa", bottomBarContentDescription("Ana Sayfa", null))
+        assertEquals("Ana Sayfa", bottomBarContentDescription("Ana Sayfa", ""))
+        assertEquals("Uygulamalar, 9+", bottomBarContentDescription("Uygulamalar", "9+"))
+    }
+
+    @Test
     fun `only enabled destination badges expose counts`() {
         val notifications = destination(AppRoute.NotificationsGraph)
         val otherApps = destination(AppRoute.OtherApps)
