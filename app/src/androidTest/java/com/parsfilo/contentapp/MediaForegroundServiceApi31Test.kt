@@ -1,5 +1,6 @@
 package com.parsfilo.contentapp
 
+import android.app.Instrumentation
 import android.app.Notification
 import android.app.NotificationManager
 import android.content.ComponentName
@@ -53,16 +54,20 @@ class MediaForegroundServiceApi31Test {
                 .setMediaMetadata(
                     MediaMetadata.Builder().setTitle("CI media playback test").build(),
                 ).build()
-            controller.setMediaItem(item)
-            controller.prepare()
-            controller.play()
-            assertEventually("Playable media should start while the app is foreground") {
-                controller.isPlaying
+            onMain(instrumentation) {
+                controller.setMediaItem(item)
+                controller.prepare()
+                controller.play()
             }
-            val initialPosition = controller.currentPosition
+            assertEventually("Playable media should start while the app is foreground") {
+                onMain(instrumentation) { controller.isPlaying }
+            }
+            val initialPosition = onMain(instrumentation) { controller.currentPosition }
             instrumentation.uiAutomation.executeShellCommand("input keyevent KEYCODE_HOME").close()
             assertEventually("Playback should continue and advance after pressing HOME") {
-                controller.isPlaying && controller.currentPosition > initialPosition + 500
+                onMain(instrumentation) {
+                    controller.isPlaying && controller.currentPosition > initialPosition + 500
+                }
             }
             val notifications =
                 context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -72,16 +77,24 @@ class MediaForegroundServiceApi31Test {
                         status.notification.category == Notification.CATEGORY_TRANSPORT
                 }
             }
-            controller.pause()
+            onMain(instrumentation) { controller.pause() }
             assertEventually("Pause must halt the playback without a crash") {
-                !controller.isPlaying
+                onMain(instrumentation) { !controller.isPlaying }
             }
-            controller.clearMediaItems()
+            onMain(instrumentation) { controller.clearMediaItems() }
         } finally {
-            MediaController.releaseFuture(future)
+            onMain(instrumentation) { MediaController.releaseFuture(future) }
             activity.close()
             fixture.delete()
         }
+    }
+
+    // Media3 MediaController methods (including releaseFuture) belong to its application looper.
+    // Preserve the original exception rather than hiding it behind a cleanup-thread failure.
+    private fun <T> onMain(instrumentation: Instrumentation, action: () -> T): T {
+        var result: Result<T>? = null
+        instrumentation.runOnMainSync { result = runCatching(action) }
+        return requireNotNull(result).getOrThrow()
     }
 
     private fun assertEventually(message: String, condition: () -> Boolean) {
