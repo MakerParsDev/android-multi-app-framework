@@ -192,6 +192,12 @@ private fun RowScope.AppBottomNavigationItem(
 // Keep its count available in the icon's spoken accessibility description.
 internal fun shouldUseCompactBottomBarBadge(fontScale: Float): Boolean = fontScale >= 1.3f
 
+// Adaptive navigation labels otherwise wrap one word across two lines at
+// large system text, obscuring reading content. Accessible icon titles and
+// badge counts remain available when the labels are hidden.
+internal fun shouldShowAdaptiveNavigationLabels(fontScale: Float): Boolean =
+    !shouldUseCompactBottomBarBadge(fontScale)
+
 internal fun bottomBarContentDescription(
     title: String,
     badgeText: String?,

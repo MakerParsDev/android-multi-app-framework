@@ -43,6 +43,14 @@ class AppBottomBarTest {
     }
 
     @Test
+    fun `adaptive navigation uses icon only at large text scale`() {
+        assertTrue(shouldShowAdaptiveNavigationLabels(1.0f))
+        assertTrue(shouldShowAdaptiveNavigationLabels(1.1f))
+        assertFalse(shouldShowAdaptiveNavigationLabels(1.3f))
+        assertFalse(shouldShowAdaptiveNavigationLabels(2.0f))
+    }
+
+    @Test
     fun `navigation descriptions preserve badge counts for screen readers`() {
         assertEquals("Ana Sayfa", bottomBarContentDescription("Ana Sayfa", null))
         assertEquals("Ana Sayfa", bottomBarContentDescription("Ana Sayfa", ""))
