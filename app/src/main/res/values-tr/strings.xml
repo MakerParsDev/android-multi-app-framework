@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Pin Turkish copy explicitly to override incorrect generated tr resources in release bundles. -->
 
     <!-- Bottom Navigation -->
@@ -70,75 +70,78 @@
     <string name="notification_detail_title">Bildirim Detayı</string>
 
     <!-- Preserve the verified Turkish reader, accessibility and safety copy.
-         Explicit tr entries override stale release-bundle translations. -->
+         Explicit tr entries override stale release-bundle translations.
+         Each key has a default in its feature module, which app-module lint
+         cannot resolve when checking app-level locale overlays. Suppress only
+         these verified cross-module ExtraTranslation false positives. -->
 
     <!-- Audio reader accessibility -->
-    <string name="audio_stop">Durdur</string>
-    <string name="audio_seek">Ses kaydında ilerleme</string>
+    <string name="audio_stop" tools:ignore="ExtraTranslation">Durdur</string>
+    <string name="audio_seek" tools:ignore="ExtraTranslation">Ses kaydında ilerleme</string>
 
     <!-- Subscriptions and billing -->
-    <string name="billing_subscription_description">Reklamsız erişim için ön ödemeli bir plan seçin. Uygulamayı abonelik olmadan reklamlı olarak kullanabilirsiniz.</string>
-    <string name="billing_error_connecting">Ödeme servisine bağlanılıyor, tekrar deneyin</string>
-    <string name="billing_error_reconnecting">Ödeme servisine yeniden bağlanılıyor, tekrar deneyin</string>
-    <string name="billing_error_unsupported">Bu cihazda abonelik satın alınamıyor. Google Play’i güncelleyin ve tekrar deneyin.</string>
-    <string name="billing_plans_loading">Planlar yükleniyor…</string>
-    <string name="billing_subscribe">Google Play ile satın al</string>
-    <string name="billing_feature_continuous">İçeriklere kesintisiz erişim</string>
-    <string name="billing_feature_cancel_anytime">Otomatik yenilenmez</string>
-    <string name="billing_error_timeout">Ödeme servisi beklenenden uzun sürdü. Google Play ve bağlantınızı kontrol edip tekrar deneyin.</string>
-    <string name="billing_continue_free">Abonelik olmadan uygulamayı kullanmaya devam edebilirsiniz. Geri dönmek için üstteki oku kullanın.</string>
+    <string name="billing_subscription_description" tools:ignore="ExtraTranslation">Reklamsız erişim için ön ödemeli bir plan seçin. Uygulamayı abonelik olmadan reklamlı olarak kullanabilirsiniz.</string>
+    <string name="billing_error_connecting" tools:ignore="ExtraTranslation">Ödeme servisine bağlanılıyor, tekrar deneyin</string>
+    <string name="billing_error_reconnecting" tools:ignore="ExtraTranslation">Ödeme servisine yeniden bağlanılıyor, tekrar deneyin</string>
+    <string name="billing_error_unsupported" tools:ignore="ExtraTranslation">Bu cihazda abonelik satın alınamıyor. Google Play’i güncelleyin ve tekrar deneyin.</string>
+    <string name="billing_plans_loading" tools:ignore="ExtraTranslation">Planlar yükleniyor…</string>
+    <string name="billing_subscribe" tools:ignore="ExtraTranslation">Google Play ile satın al</string>
+    <string name="billing_feature_continuous" tools:ignore="ExtraTranslation">İçeriklere kesintisiz erişim</string>
+    <string name="billing_feature_cancel_anytime" tools:ignore="ExtraTranslation">Otomatik yenilenmez</string>
+    <string name="billing_error_timeout" tools:ignore="ExtraTranslation">Ödeme servisi beklenenden uzun sürdü. Google Play ve bağlantınızı kontrol edip tekrar deneyin.</string>
+    <string name="billing_continue_free" tools:ignore="ExtraTranslation">Abonelik olmadan uygulamayı kullanmaya devam edebilirsiniz. Geri dönmek için üstteki oku kullanın.</string>
 
     <!-- Reader and prayer content -->
-    <string name="miracles_text_copied">Dua metni panoya kopyalandı</string>
-    <string name="miracles_section_latin_pronunciation">Latince Okunuş</string>
-    <string name="miracles_very_weak_hadith_source">Zayıf isnatla aktarılan dua; benzer kısa rivayet çok zayıf (sahih hadis veya uyku tedavisi değildir): %1$s (kaynağı aç)</string>
-    <string name="miracles_original_arabic_unverified">Özgün Arapça metin henüz doğrulanmadı. Aşağıda mevcut Latin okunuş gösteriliyor.</string>
-    <string name="miracles_play_all_audio">Tümünü Dinle</string>
-    <string name="content_translation_turkish_fallback">Türkçe meal (seçili dilde çeviri bulunamadı)</string>
-    <string name="esma_search_label">Esma ismi veya numarası ara</string>
-    <string name="content_verse_number">Ayet / bölüm numarası</string>
-    <string name="content_saved_verse_missing">Kaydedilen ayet bu içerikte bulunamadı.</string>
-    <string name="content_reader_tools">Okuma araçları ve ses</string>
+    <string name="miracles_text_copied" tools:ignore="ExtraTranslation">Dua metni panoya kopyalandı</string>
+    <string name="miracles_section_latin_pronunciation" tools:ignore="ExtraTranslation">Latince Okunuş</string>
+    <string name="miracles_very_weak_hadith_source" tools:ignore="ExtraTranslation">Zayıf isnatla aktarılan dua; benzer kısa rivayet çok zayıf (sahih hadis veya uyku tedavisi değildir): %1$s (kaynağı aç)</string>
+    <string name="miracles_original_arabic_unverified" tools:ignore="ExtraTranslation">Özgün Arapça metin henüz doğrulanmadı. Aşağıda mevcut Latin okunuş gösteriliyor.</string>
+    <string name="miracles_play_all_audio" tools:ignore="ExtraTranslation">Tümünü Dinle</string>
+    <string name="content_translation_turkish_fallback" tools:ignore="ExtraTranslation">Türkçe meal (seçili dilde çeviri bulunamadı)</string>
+    <string name="esma_search_label" tools:ignore="ExtraTranslation">Esma ismi veya numarası ara</string>
+    <string name="content_verse_number" tools:ignore="ExtraTranslation">Ayet / bölüm numarası</string>
+    <string name="content_saved_verse_missing" tools:ignore="ExtraTranslation">Kaydedilen ayet bu içerikte bulunamadı.</string>
+    <string name="content_reader_tools" tools:ignore="ExtraTranslation">Okuma araçları ve ses</string>
 
     <!-- Dhikr and session recovery -->
-    <string name="counter_empty_zikir_list_message">Yeni bir zikir eklemek için yukarıdaki “Zikir ekle” butonuna basın.</string>
-    <string name="counter_delete_confirm_message">Bu zikir listeden silinecek. Devam etmek istiyor musunuz?</string>
-    <string name="counter_delete_named">%1$s zikrini sil</string>
-    <string name="counter_session_saving">Kaydediliyor…</string>
-    <string name="counter_session_retry_save">Tekrar Dene</string>
-    <string name="counter_duration_minutes_seconds">%1$d dk %2$d sn</string>
-    <string name="counter_streak_reminder">Seri uyarısı (akşam 21:00)</string>
-    <string name="counter_first_session_reminder_prompt">📿 Hatırlatıcı kurmak ister misiniz?</string>
-    <string name="counter_history_premium_hint">Premium ile tüm geçmişi görün</string>
-    <string name="counter_checkpoint_failed">Kaydedilemedi! Son güvenli sayım: %1$d</string>
+    <string name="counter_empty_zikir_list_message" tools:ignore="ExtraTranslation">Yeni bir zikir eklemek için yukarıdaki “Zikir ekle” butonuna basın.</string>
+    <string name="counter_delete_confirm_message" tools:ignore="ExtraTranslation">Bu zikir listeden silinecek. Devam etmek istiyor musunuz?</string>
+    <string name="counter_delete_named" tools:ignore="ExtraTranslation">%1$s zikrini sil</string>
+    <string name="counter_session_saving" tools:ignore="ExtraTranslation">Kaydediliyor…</string>
+    <string name="counter_session_retry_save" tools:ignore="ExtraTranslation">Tekrar Dene</string>
+    <string name="counter_duration_minutes_seconds" tools:ignore="ExtraTranslation">%1$d dk %2$d sn</string>
+    <string name="counter_streak_reminder" tools:ignore="ExtraTranslation">Seri uyarısı (akşam 21:00)</string>
+    <string name="counter_first_session_reminder_prompt" tools:ignore="ExtraTranslation">📿 Hatırlatıcı kurmak ister misiniz?</string>
+    <string name="counter_history_premium_hint" tools:ignore="ExtraTranslation">Premium ile tüm geçmişi görün</string>
+    <string name="counter_checkpoint_failed" tools:ignore="ExtraTranslation">Kaydedilemedi! Son güvenli sayım: %1$d</string>
 
     <!-- Notifications -->
-    <string name="notifications_delete_all_confirm_title">Tüm bildirimler silinsin mi?</string>
+    <string name="notifications_delete_all_confirm_title" tools:ignore="ExtraTranslation">Tüm bildirimler silinsin mi?</string>
 
     <!-- Prayer times and alarms -->
-    <string name="prayertimes_alarm_enabled">Hatırlatıcı tercihi açık</string>
-    <string name="prayertimes_alarm_exact_enabled">Dakikaya yakın zamanlama etkin. Pil kısıtlamaları bildirimlerin teslimini yine etkileyebilir.</string>
-    <string name="prayertimes_alarm_schedule_unavailable">Hatırlatıcı tercihi kaydedildi fakat alarm planlanamadı. Vakit verilerini yenileyin.</string>
-    <string name="prayertimes_alarm_unverified">Hatırlatıcı tercihi açık; alarm planı henüz doğrulanmadı.</string>
-    <string name="prayertimes_alarm_sound_settings_unavailable">Bildirim sesi ayarları açılamadı. Uygulama bildirim ayarlarını cihazınızdan açın.</string>
-    <string name="prayertimes_step_country">⅓ Ülke seçimi</string>
-    <string name="prayertimes_step_city">⅔ Şehir seçimi</string>
-    <string name="prayertimes_no_locations_available">Bu adım için konum listesi bulunamadı. Geri dönüp yeniden deneyin.</string>
-    <string name="prayertimes_no_search_results">Sonuç bulunamadı. Farklı bir arama deneyin.</string>
-    <string name="prayer_alarm_channel_name">Namaz Vakti Hatırlatmaları</string>
-    <string name="prayertimes_picker_save_failed">Konum kaydedilemedi. Seçiminiz korundu; yeniden deneyin.</string>
+    <string name="prayertimes_alarm_enabled" tools:ignore="ExtraTranslation">Hatırlatıcı tercihi açık</string>
+    <string name="prayertimes_alarm_exact_enabled" tools:ignore="ExtraTranslation">Dakikaya yakın zamanlama etkin. Pil kısıtlamaları bildirimlerin teslimini yine etkileyebilir.</string>
+    <string name="prayertimes_alarm_schedule_unavailable" tools:ignore="ExtraTranslation">Hatırlatıcı tercihi kaydedildi fakat alarm planlanamadı. Vakit verilerini yenileyin.</string>
+    <string name="prayertimes_alarm_unverified" tools:ignore="ExtraTranslation">Hatırlatıcı tercihi açık; alarm planı henüz doğrulanmadı.</string>
+    <string name="prayertimes_alarm_sound_settings_unavailable" tools:ignore="ExtraTranslation">Bildirim sesi ayarları açılamadı. Uygulama bildirim ayarlarını cihazınızdan açın.</string>
+    <string name="prayertimes_step_country" tools:ignore="ExtraTranslation">⅓ Ülke seçimi</string>
+    <string name="prayertimes_step_city" tools:ignore="ExtraTranslation">⅔ Şehir seçimi</string>
+    <string name="prayertimes_no_locations_available" tools:ignore="ExtraTranslation">Bu adım için konum listesi bulunamadı. Geri dönüp yeniden deneyin.</string>
+    <string name="prayertimes_no_search_results" tools:ignore="ExtraTranslation">Sonuç bulunamadı. Farklı bir arama deneyin.</string>
+    <string name="prayer_alarm_channel_name" tools:ignore="ExtraTranslation">Namaz Vakti Hatırlatmaları</string>
+    <string name="prayertimes_picker_save_failed" tools:ignore="ExtraTranslation">Konum kaydedilemedi. Seçiminiz korundu; yeniden deneyin.</string>
 
     <!-- Qibla location safety -->
-    <string name="qibla_location_fallback">Konum doğrulanmadı; varsayılan bölge yönlendirme için kullanılmıyor.</string>
-    <string name="qibla_sensor_rotation_vector">Rotation Vector (gyro + ivme + manyetik)</string>
-    <string name="qibla_location_unavailable">Güncel konum alınamadı; kesin kıble yönü gösterilmiyor.</string>
-    <string name="qibla_waiting_for_location_hint">Konum doğrulanırken tahmini yönlendirme gösterilmez.</string>
-    <string name="qibla_location_unverified_hint">Güncel konum alınamadı. Varsayılan bölgeye göre bir açı göstermek yanıltıcı olabilir. Bağlantınızı kontrol edip yeniden deneyebilirsiniz.</string>
-    <string name="qibla_request_location_permission">Konum izni ver</string>
+    <string name="qibla_location_fallback" tools:ignore="ExtraTranslation">Konum doğrulanmadı; varsayılan bölge yönlendirme için kullanılmıyor.</string>
+    <string name="qibla_sensor_rotation_vector" tools:ignore="ExtraTranslation">Rotation Vector (gyro + ivme + manyetik)</string>
+    <string name="qibla_location_unavailable" tools:ignore="ExtraTranslation">Güncel konum alınamadı; kesin kıble yönü gösterilmiyor.</string>
+    <string name="qibla_waiting_for_location_hint" tools:ignore="ExtraTranslation">Konum doğrulanırken tahmini yönlendirme gösterilmez.</string>
+    <string name="qibla_location_unverified_hint" tools:ignore="ExtraTranslation">Güncel konum alınamadı. Varsayılan bölgeye göre bir açı göstermek yanıltıcı olabilir. Bağlantınızı kontrol edip yeniden deneyebilirsiniz.</string>
+    <string name="qibla_request_location_permission" tools:ignore="ExtraTranslation">Konum izni ver</string>
 
     <!-- Settings privacy diagnostics -->
-    <string name="settings_ads_debug_geo_effective_pending">Seçilen geography henüz UMP isteğine uygulanmadı: %1$s. Gerekliyse Rıza Formunu Göster veya consent yenile.</string>
-    <string name="settings_ads_debug_show_consent_form">Gerekliyse Rıza Formunu Göster</string>
-    <string name="settings_ads_debug_geo_set_reset_hint">UMP debug geography: %1$s. Consent sıfırlandı. Test için Gerekliyse Rıza Formunu Göster’e basın.</string>
-    <string name="settings_ads_debug_consent_form_done">Rıza akışı tamamlandı</string>
+    <string name="settings_ads_debug_geo_effective_pending" tools:ignore="ExtraTranslation">Seçilen geography henüz UMP isteğine uygulanmadı: %1$s. Gerekliyse Rıza Formunu Göster veya consent yenile.</string>
+    <string name="settings_ads_debug_show_consent_form" tools:ignore="ExtraTranslation">Gerekliyse Rıza Formunu Göster</string>
+    <string name="settings_ads_debug_geo_set_reset_hint" tools:ignore="ExtraTranslation">UMP debug geography: %1$s. Consent sıfırlandı. Test için Gerekliyse Rıza Formunu Göster’e basın.</string>
+    <string name="settings_ads_debug_consent_form_done" tools:ignore="ExtraTranslation">Rıza akışı tamamlandı</string>
 </resources>
