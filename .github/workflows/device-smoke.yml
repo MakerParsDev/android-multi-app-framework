@@ -10,17 +10,23 @@ on:
         type: boolean
         required: false
         default: false
+      audio_fgs_api31_only:
+        description: "Run isolated API31 Media3 foreground playback smoke on disposable emulator"
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: device-smoke-${{ github.ref }}-${{ inputs.quran_e2e_only && 'dedicated-quran-e2e' || 'shared' }}
+  group: device-smoke-${{ github.ref }}-${{ inputs.quran_e2e_only && 'dedicated-quran-e2e' || inputs.audio_fgs_api31_only && 'dedicated-audio-api31' || 'shared' }}
   cancel-in-progress: true
 
 jobs:
   managed-device-smoke:
     name: Managed Device Smoke
+    if: ${{ !inputs.audio_fgs_api31_only }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -110,3 +116,84 @@ jobs:
             app/build/outputs/androidTest-results/managedDevice/
           if-no-files-found: warn
           retention-days: 14
+
+  # Manual, bounded Android12 investigation; no extra scheduled emulator job.
+  # This is debug CI-smoke on a disposable emulator, never Play-signed acceptance.
+  audio-fgs-api31-smoke:
+    name: Media3 FGS (Android 12, manual)
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.audio_fgs_api31_only && !inputs.quran_e2e_only }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Java 21
+        uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: '21'
+          check-latest: false
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          cache-read-only: true
+
+      - name: Set up pinned Android SDK and Android 12 system image
+        run: |
+          set -euo pipefail
+          bash scripts/ci/setup-android-sdk.sh
+          source scripts/ci/android-toolchain.sh
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:?}}"
+          manager="$sdk_root/cmdline-tools/$ANDROID_CMDLINE_TOOLS_VERSION/bin/sdkmanager"
+          test -x "$manager"
+          set +o pipefail
+          yes | "$manager" --sdk_root="$sdk_root" --licenses >/dev/null
+          license_rc=$?
+          set -o pipefail
+          test "$license_rc" -eq 0
+          "$manager" --sdk_root="$sdk_root" emulator 'system-images;android-31;default;x86_64'
+
+      - name: Enable KVM
+        run: |
+          set -euo pipefail
+          if [[ ! -r /dev/kvm || ! -w /dev/kvm ]]; then
+            sudo chmod 0666 /dev/kvm
+          fi
+          test -r /dev/kvm && test -w /dev/kvm
+
+      - name: Generate CI-only Amen Firebase placeholder
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/generate_ci_google_services.py --flavors amenerrasulu
+
+      - name: Run isolated foreground media smoke
+        run: |
+          set -euo pipefail
+          chmod +x ./gradlew
+          ./gradlew \
+            ciPixel2Api31AmenerrasuluDebugAndroidTest \
+            -PciSmoke=true \
+            -Pandroid.testInstrumentationRunnerArguments.class=com.parsfilo.contentapp.MediaForegroundServiceApi31Test \
+            -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect \
+            --no-daemon --no-configuration-cache --stacktrace --max-workers=2
+
+      - name: Clean CI-only Firebase placeholder
+        if: always()
+        run: |
+          python3 scripts/ci/generate_ci_google_services.py --clean --flavors amenerrasulu
+
+      - name: Retain bounded API31 test reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: media-fgs-api31-${{ github.sha }}
+          path: |
+            app/build/reports/androidTests/managedDevice/
+            app/build/outputs/androidTest-results/managedDevice/
+          if-no-files-found: warn
+          retention-days: 7
