@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.material3.Badge
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -23,6 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -246,29 +248,23 @@ fun ContentApp(
                                     Icon(
                                         painter = painterResource(id = iconId),
                                         contentDescription =
-                                            when (route) {
-                                                AppRoute.Subscription ->
-                                                    stringResource(
-                                                        R.string.nav_premium,
-                                                    )
-                                                AppRoute.OtherApps ->
-                                                    stringResource(
-                                                        R.string.nav_apps,
-                                                    )
-                                                AppRoute.HomeGraph ->
-                                                    stringResource(
-                                                        R.string.nav_home,
-                                                    )
-                                                AppRoute.MessagesGraph ->
-                                                    stringResource(
-                                                        R.string.nav_messages,
-                                                    )
-                                                AppRoute.NotificationsGraph ->
-                                                    stringResource(
-                                                        R.string.nav_alerts,
-                                                    )
-                                                else -> stringResource(R.string.nav_home)
-                                            },
+                                            bottomBarContentDescription(
+                                                title =
+                                                    when (route) {
+                                                        AppRoute.Subscription ->
+                                                            stringResource(R.string.nav_premium)
+                                                        AppRoute.OtherApps ->
+                                                            stringResource(R.string.nav_apps)
+                                                        AppRoute.HomeGraph ->
+                                                            stringResource(R.string.nav_home)
+                                                        AppRoute.MessagesGraph ->
+                                                            stringResource(R.string.nav_messages)
+                                                        AppRoute.NotificationsGraph ->
+                                                            stringResource(R.string.nav_alerts)
+                                                        else -> stringResource(R.string.nav_home)
+                                                    },
+                                                badgeText = navBadgeText(route),
+                                            ),
                                     )
                                 },
                                 label = {
@@ -301,7 +297,17 @@ fun ContentApp(
                                 },
                                 badge =
                                     navBadgeText(route)?.let { badgeText ->
-                                        { Text(text = badgeText) }
+                                        {
+                                            val colors = MaterialTheme.colorScheme
+                                            if (shouldUseCompactBottomBarBadge(LocalDensity.current.fontScale)) {
+                                                // Keep count in the icon's accessible description.
+                                                Badge(containerColor = colors.error, contentColor = colors.onError)
+                                            } else {
+                                                Badge(containerColor = colors.error, contentColor = colors.onError) {
+                                                    Text(text = badgeText, maxLines = 1, softWrap = false)
+                                                }
+                                            }
+                                        }
                                     },
                             )
                         }
