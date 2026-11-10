@@ -182,6 +182,35 @@ class AdsPlacementPolicyEvaluatorTest {
     }
 
     @Test
+    fun `audio transport gestures never open full screen ads in reader`() {
+        for (trigger in listOf(InterstitialTriggerKind.AUDIO_PAUSE, InterstitialTriggerKind.AUDIO_STOP)) {
+            for (route in listOf("content", "prayer_detail")) {
+                val result = evaluator.evaluateInterstitial(
+                    baseContext(
+                        format = AdFormat.INTERSTITIAL,
+                        placement = AdPlacement.INTERSTITIAL_NAV_BREAK,
+                        route = route,
+                        interstitialTriggerKind = trigger,
+                    ),
+                )
+                assertThat(result).isEqualTo(AdEligibility.Blocked(AdSuppressReason.ROUTE_BLOCKED))
+            }
+        }
+    }
+
+    @Test
+    fun `eligible page navigation still permits full screen ads`() {
+        val result = evaluator.evaluateInterstitial(
+            baseContext(
+                format = AdFormat.INTERSTITIAL,
+                placement = AdPlacement.INTERSTITIAL_NAV_BREAK,
+                interstitialTriggerKind = InterstitialTriggerKind.NAV_BREAK,
+            ),
+        )
+        assertThat(result).isEqualTo(AdEligibility.Allowed)
+    }
+
+    @Test
     fun `app open blocks short resume spam`() {
         val result = evaluator.evaluateAppOpen(
             baseContext(
