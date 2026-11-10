@@ -537,20 +537,9 @@ fun AppNavHost(
                 }
                 PrayerListRoute(
                     onPrayerClick = { prayerId ->
-                        if (hostActivity == null) {
-                            navController.navigate(AppRoute.PrayerDetail.createRoute(prayerId))
-                        } else {
-                            requestInterstitialAd(
-                                placement = AdPlacement.INTERSTITIAL_NAV_BREAK,
-                                route = AppRoute.PrayerList.route,
-                                triggerKind = InterstitialTriggerKind.NAV_BREAK,
-                                onAdDismissed = {
-                                    navController.navigate(
-                                        AppRoute.PrayerDetail.createRoute(prayerId),
-                                    )
-                                },
-                            )
-                        }
+                        // Entering the selected prayer is the user's primary action:
+                        // never interrupt it with a full-screen navigation ad.
+                        navController.navigate(AppRoute.PrayerDetail.createRoute(prayerId))
                     },
                     onSettingsClick = {
                         navController.navigate(AppRoute.Settings.route)
