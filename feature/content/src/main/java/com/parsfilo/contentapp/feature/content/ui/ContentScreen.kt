@@ -206,11 +206,18 @@ fun ContentScreen(
             }
             // A short window must not let audio and actions consume the entire verse viewport.
             val density = LocalDensity.current
+            val windowSize = LocalWindowInfo.current.containerSize
             val compactHeight = shouldUseCompactReader(
-                heightDp = with(density) { LocalWindowInfo.current.containerSize.height.toDp().value },
+                heightDp = with(density) { windowSize.height.toDp().value },
                 fontScale = density.fontScale,
             )
-            val bannerPosition = resolveReaderBannerPosition(showTopBanner, compactHeight)
+            // Short portrait screens still need the top banner and single-row
+            // audio player before verses. Defer tools only in short landscape.
+            val compactLandscape = shouldDeferReaderControlsForLandscape(
+                compactHeight = compactHeight,
+                isLandscape = windowSize.width > windowSize.height,
+            )
+            val bannerPosition = resolveReaderBannerPosition(showTopBanner, compactLandscape)
             Column(
                 modifier = Modifier
                     .testTag("content_detail")
@@ -230,7 +237,7 @@ fun ContentScreen(
                     onSettingsClick = onSettingsClick,
                     onRewardsClick = onRewardsClick,
                     onReaderToolsClick =
-                        if (compactHeight) {
+                        if (compactLandscape) {
                             { scope.launch { readerScrollState.animateScrollTo(readerScrollState.maxValue) } }
                         } else {
                             null
@@ -338,8 +345,8 @@ fun ContentScreen(
                         }
                     }
                 } else {
-                    // Audio Player
-                    if (!compactHeight) {
+                    // Audio Player: keep controls with the top banner in portrait.
+                    if (!compactLandscape) {
                         audioPlayerContent()
                         Spacer(modifier = Modifier.height(dimens.space4))
                     }
@@ -432,8 +439,8 @@ fun ContentScreen(
                         )
                     }
 
-                    if (compactHeight) {
-                        // Preserve keyboard/audio access before any ad on short windows.
+                    if (compactLandscape) {
+                        // Keep the initial landscape viewport for verses.
                         audioPlayerContent()
                     }
 
@@ -463,6 +470,9 @@ fun ContentScreen(
         }
     }
 }
+
+internal fun shouldDeferReaderControlsForLandscape(compactHeight: Boolean, isLandscape: Boolean): Boolean =
+    compactHeight && isLandscape
 
 internal fun shouldStackContentHeaderTitle(fontScale: Float): Boolean = fontScale >= 1.3f
 

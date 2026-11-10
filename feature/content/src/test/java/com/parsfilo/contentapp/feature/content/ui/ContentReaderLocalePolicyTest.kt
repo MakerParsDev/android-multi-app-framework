@@ -17,6 +17,13 @@ class ContentReaderLocalePolicyTest {
     )
 
     @Test
+    fun `short portrait retains top audio and banner while short landscape defers them`() {
+        assertFalse(shouldDeferReaderControlsForLandscape(compactHeight = true, isLandscape = false))
+        assertTrue(shouldDeferReaderControlsForLandscape(compactHeight = true, isLandscape = true))
+        assertFalse(shouldDeferReaderControlsForLandscape(compactHeight = false, isLandscape = true))
+    }
+
+    @Test
     fun translatedContentUsesAvailableEnglishAndGerman() {
         assertEquals("English meaning", selectVerseTranslation(verse, "en").text)
         assertEquals("Deutsche Bedeutung", selectVerseTranslation(verse, "de").text)

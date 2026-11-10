@@ -202,6 +202,7 @@ class AudioPlayerLocalizedSemanticsTest {
             "Seek target " + seekBounds.height + "px is smaller than " + minTargetPx + "px",
             seekBounds.height >= minTargetPx,
         )
+        assertTrue("Seek target is narrower than 48dp", seekBounds.width >= minTargetPx)
         assertTrue("Seek must share the transport row", seekBounds.center.y in playBounds.top..playBounds.bottom)
         assertTrue("Seek must be to the right of Stop", seekBounds.left >= stopBounds.right)
         val timeBounds = rule.onNodeWithTag("audio_elapsed_duration").fetchSemanticsNode().boundsInRoot
