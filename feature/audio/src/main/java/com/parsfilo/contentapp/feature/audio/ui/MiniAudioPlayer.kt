@@ -4,9 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -95,8 +93,8 @@ fun InlineAudioPlayer(
         0f
     }
 
-    // A two-row player gives every transport control a full 48dp target and
-    // separates the seek gesture from elapsed/duration text on narrow phones.
+    // Keep Play/Stop, seek and time in one row as in the original reader.
+    // Preserve 48dp button targets and a 64dp seek accessibility target.
     Surface(
         modifier = modifier
             .fillMaxWidth()
@@ -107,67 +105,51 @@ fun InlineAudioPlayer(
         border = BorderStroke(dimens.stroke, colorScheme.outlineVariant),
         tonalElevation = dimens.elevationLow,
     ) {
-        Column(
+        Row(
             modifier = Modifier.padding(
-                horizontal = dimens.space12,
+                horizontal = dimens.space8,
                 vertical = dimens.space4,
             ),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(dimens.space4),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(dimens.space4),
+            IconButton(
+                onClick = onPlayPause,
+                modifier = Modifier
+                    .testTag("audio_play_pause")
+                    .size(dimens.iconXl),
             ) {
-                IconButton(
-                    onClick = onPlayPause,
-                    modifier = Modifier
-                        .testTag("audio_play_pause")
-                        .size(dimens.iconXl),
-                ) {
-                    Icon(
-                        imageVector = if (state.isPlaying) {
-                            ImageVector.vectorResource(R.drawable.ic_pause)
-                        } else {
-                            Icons.Filled.PlayArrow
-                        },
-                        contentDescription = stringResource(
-                            if (state.isPlaying) R.string.audio_pause else R.string.audio_play
-                        ),
-                        tint = accent,
-                        modifier = Modifier.size(dimens.iconMd + dimens.space2),
-                    )
-                }
-
-                IconButton(
-                    onClick = onStop,
-                    modifier = Modifier
-                        .testTag("audio_stop")
-                        .size(dimens.iconXl),
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Stop,
-                        contentDescription = stringResource(R.string.audio_stop),
-                        tint = accent,
-                        modifier = Modifier.size(dimens.iconMd),
-                    )
-                }
-
-                Spacer(modifier = Modifier.weight(1f))
-                Text(
-                    text = formatTime(state.currentPosition) + "/" + formatTime(state.duration),
-                    color = content,
-                    style = MaterialTheme.typography.labelMedium,
-                    maxLines = 1,
-                    modifier = Modifier.testTag("audio_elapsed_duration"),
+                Icon(
+                    imageVector = if (state.isPlaying) {
+                        ImageVector.vectorResource(R.drawable.ic_pause)
+                    } else {
+                        Icons.Filled.PlayArrow
+                    },
+                    contentDescription = stringResource(
+                        if (state.isPlaying) R.string.audio_pause else R.string.audio_play
+                    ),
+                    tint = accent,
+                    modifier = Modifier.size(dimens.iconMd + dimens.space2),
                 )
             }
 
-            // Compose Slider exposes a 44dp inner semantics rectangle on API28
-            // even when its outer measured row is taller. Merge its adjustable
-            // action into a 64dp accessibility target without changing gestures.
+            IconButton(
+                onClick = onStop,
+                modifier = Modifier
+                    .testTag("audio_stop")
+                    .size(dimens.iconXl),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Stop,
+                    contentDescription = stringResource(R.string.audio_stop),
+                    tint = accent,
+                    modifier = Modifier.size(dimens.iconMd),
+                )
+            }
+
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .weight(1f)
                     .height(dimens.iconXl + dimens.space16)
                     .testTag("audio_seek")
                     .semantics(mergeDescendants = true) {
@@ -196,6 +178,15 @@ fun InlineAudioPlayer(
                     ),
                 )
             }
+
+            Text(
+                text = formatTime(state.currentPosition) + "/" + formatTime(state.duration),
+                color = content,
+                fontSize = 10.sp,
+                maxLines = 1,
+                softWrap = false,
+                modifier = Modifier.testTag("audio_elapsed_duration"),
+            )
         }
     }
 }
