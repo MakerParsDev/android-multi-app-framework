@@ -187,8 +187,8 @@ class AudioPlayerLocalizedSemanticsTest {
             }
         }
 
-        // Regression guard for the new two-row player at 320dp / 200% font.
-        // Real semantics bounds prove touch targets, not just icon sizes.
+        // Regression guard: one-row audio at 320dp / 200% font with
+        // full-sized interactive semantics targets.
         val playBounds = rule.onNodeWithTag("audio_play_pause").fetchSemanticsNode().boundsInRoot
         val stopBounds = rule.onNodeWithTag("audio_stop").fetchSemanticsNode().boundsInRoot
         val seekBounds = rule.onNodeWithTag("audio_seek").fetchSemanticsNode().boundsInRoot
@@ -202,7 +202,10 @@ class AudioPlayerLocalizedSemanticsTest {
             "Seek target " + seekBounds.height + "px is smaller than " + minTargetPx + "px",
             seekBounds.height >= minTargetPx,
         )
-        assertTrue("Seek control must be below transport controls", seekBounds.top >= playBounds.bottom)
+        assertTrue("Seek must share the transport row", seekBounds.center.y in playBounds.top..playBounds.bottom)
+        assertTrue("Seek must be to the right of Stop", seekBounds.left >= stopBounds.right)
+        val timeBounds = rule.onNodeWithTag("audio_elapsed_duration").fetchSemanticsNode().boundsInRoot
+        assertTrue("Elapsed/duration must be next to seek on the same row", timeBounds.left >= seekBounds.right)
 
         rule.onNodeWithContentDescription(play).performClick()
         rule.onNodeWithContentDescription(pause).assertExists()
