@@ -454,6 +454,8 @@ fun ContentScreen(
     }
 }
 
+internal fun shouldStackContentHeaderTitle(fontScale: Float): Boolean = fontScale >= 1.3f
+
 @Composable
 fun AppHeader(
     appName: String,
@@ -468,7 +470,7 @@ fun AppHeader(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val dimens = LocalDimens.current
-    val largeText = LocalDensity.current.fontScale >= 1.3f
+    val largeText = shouldStackContentHeaderTitle(LocalDensity.current.fontScale)
     val titleStyle = if (largeText) {
         // Keep the full localized page title readable while prioritizing
         // actual reading space at high system font scales.
@@ -478,6 +480,139 @@ fun AppHeader(
             fontSize = 20.sp,
             lineHeight = 26.sp,
         )
+    }
+
+    val settingsAction: @Composable () -> Unit = {
+        IconButton(
+            onClick = onSettingsClick,
+            modifier = Modifier
+                .size(dimens.iconXl)
+                .background(colorScheme.secondaryContainer.copy(alpha = 0.18f), CircleShape)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Settings,
+                contentDescription = stringResource(R.string.content_open_settings),
+                tint = colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(dimens.iconMd)
+            )
+        }
+    }
+
+    val headerTitle: @Composable (Modifier) -> Unit = { modifier ->
+        Text(
+            text = appName,
+            style = titleStyle.copy(
+                fontFamily = FontFamily.Default,
+                fontWeight = FontWeight.SemiBold,
+            ),
+            color = colorScheme.onPrimaryContainer,
+            textAlign = TextAlign.Center,
+            maxLines = if (largeText) 2 else 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = modifier.testTag("content_header_title")
+        )
+    }
+
+    val readerAction: @Composable () -> Unit = {
+        if (
+            onReaderToolsClick != null ||
+            onJumpToVerseClick != null ||
+            onSaveReadingPlaceClick != null ||
+            onClearReadingPlaceClick != null
+        ) {
+            var readerMenuExpanded by remember { mutableStateOf(false) }
+            Box {
+                IconButton(
+                    onClick = { readerMenuExpanded = true },
+                    modifier = Modifier.size(dimens.iconXl).testTag("content_reader_tools"),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = stringResource(R.string.content_reader_tools),
+                        tint = colorScheme.onPrimaryContainer,
+                    )
+                }
+                DropdownMenu(
+                    expanded = readerMenuExpanded,
+                    onDismissRequest = { readerMenuExpanded = false },
+                ) {
+                    if (onJumpToVerseClick != null) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.content_jump_to_verse)) },
+                            onClick = {
+                                readerMenuExpanded = false
+                                onJumpToVerseClick()
+                            },
+                            modifier = Modifier.testTag("content_go_to_verse"),
+                        )
+                    }
+                    if (onSaveReadingPlaceClick != null) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.content_save_reading_place)) },
+                            onClick = {
+                                readerMenuExpanded = false
+                                onSaveReadingPlaceClick()
+                            },
+                            modifier = Modifier.testTag("content_save_current_verse"),
+                        )
+                    }
+                    if (onResumeReadingPlaceClick != null && savedReadingVerseId != null) {
+                        DropdownMenuItem(
+                            text = {
+                                Text(stringResource(R.string.content_resume_at_verse, savedReadingVerseId))
+                            },
+                            onClick = {
+                                readerMenuExpanded = false
+                                onResumeReadingPlaceClick()
+                            },
+                            modifier = Modifier.testTag("content_resume_reading"),
+                        )
+                    } else if (savedReadingVerseId != null) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.content_saved_verse_missing)) },
+                            onClick = {},
+                            enabled = false,
+                        )
+                    }
+                    if (onClearReadingPlaceClick != null) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.content_clear_saved_place)) },
+                            onClick = {
+                                readerMenuExpanded = false
+                                onClearReadingPlaceClick()
+                            },
+                            modifier = Modifier.testTag("content_clear_saved_place"),
+                        )
+                    }
+                    if (onReaderToolsClick != null) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.content_reader_tools)) },
+                            onClick = {
+                                readerMenuExpanded = false
+                                onReaderToolsClick()
+                            },
+                            modifier = Modifier.testTag("content_show_reading_controls"),
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    val rewardsAction: @Composable () -> Unit = {
+        IconButton(
+            onClick = onRewardsClick,
+            modifier = Modifier
+                .size(dimens.iconXl)
+                .background(colorScheme.secondaryContainer.copy(alpha = 0.18f), CircleShape)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.CardGiftcard,
+                contentDescription = stringResource(R.string.content_open_rewards),
+                tint = colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(dimens.iconMd)
+            )
+        }
     }
 
     Surface(
@@ -492,139 +627,42 @@ fun AppHeader(
         tonalElevation = dimens.elevationLow,
         shadowElevation = dimens.elevationLow
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = dimens.space6, vertical = dimens.space2),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            // Sol: Ayarlar ikonu
-            IconButton(
-                onClick = onSettingsClick,
+        if (largeText) {
+            // Keep 48dp action targets while giving long localized words the
+            // full header width at large accessibility font scales.
+            Column(
                 modifier = Modifier
-                    .size(dimens.iconXl)
-                    .background(colorScheme.secondaryContainer.copy(alpha = 0.18f), CircleShape)
+                    .fillMaxWidth()
+                    .padding(horizontal = dimens.space6, vertical = dimens.space2),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Icon(
-                    imageVector = Icons.Filled.Settings,
-                    contentDescription = stringResource(R.string.content_open_settings),
-                    tint = colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(dimens.iconMd)
-                )
-            }
-
-            // Orta: Başlık
-            Text(
-                text = appName,
-                style = titleStyle.copy(
-                    fontFamily = FontFamily.Default,
-                    fontWeight = FontWeight.SemiBold,
-                ),
-                color = colorScheme.onPrimaryContainer,
-                textAlign = TextAlign.Center,
-                maxLines = if (largeText) 2 else 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f).padding(horizontal = dimens.space4)
-            )
-
-            if (
-                onReaderToolsClick != null ||
-                onJumpToVerseClick != null ||
-                onSaveReadingPlaceClick != null ||
-                onClearReadingPlaceClick != null
-            ) {
-                var readerMenuExpanded by remember { mutableStateOf(false) }
-                Box {
-                    IconButton(
-                        onClick = { readerMenuExpanded = true },
-                        modifier = Modifier.size(dimens.iconXl).testTag("content_reader_tools"),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.MoreVert,
-                            contentDescription = stringResource(R.string.content_reader_tools),
-                            tint = colorScheme.onPrimaryContainer,
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = readerMenuExpanded,
-                        onDismissRequest = { readerMenuExpanded = false },
-                    ) {
-                        if (onJumpToVerseClick != null) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.content_jump_to_verse)) },
-                                onClick = {
-                                    readerMenuExpanded = false
-                                    onJumpToVerseClick()
-                                },
-                                modifier = Modifier.testTag("content_go_to_verse"),
-                            )
-                        }
-                        if (onSaveReadingPlaceClick != null) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.content_save_reading_place)) },
-                                onClick = {
-                                    readerMenuExpanded = false
-                                    onSaveReadingPlaceClick()
-                                },
-                                modifier = Modifier.testTag("content_save_current_verse"),
-                            )
-                        }
-                        if (onResumeReadingPlaceClick != null && savedReadingVerseId != null) {
-                            DropdownMenuItem(
-                                text = {
-                                    Text(stringResource(R.string.content_resume_at_verse, savedReadingVerseId))
-                                },
-                                onClick = {
-                                    readerMenuExpanded = false
-                                    onResumeReadingPlaceClick()
-                                },
-                                modifier = Modifier.testTag("content_resume_reading"),
-                            )
-                        } else if (savedReadingVerseId != null) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.content_saved_verse_missing)) },
-                                onClick = {},
-                                enabled = false,
-                            )
-                        }
-                        if (onClearReadingPlaceClick != null) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.content_clear_saved_place)) },
-                                onClick = {
-                                    readerMenuExpanded = false
-                                    onClearReadingPlaceClick()
-                                },
-                                modifier = Modifier.testTag("content_clear_saved_place"),
-                            )
-                        }
-                        if (onReaderToolsClick != null) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.content_reader_tools)) },
-                                onClick = {
-                                    readerMenuExpanded = false
-                                    onReaderToolsClick()
-                                },
-                                modifier = Modifier.testTag("content_show_reading_controls"),
-                            )
-                        }
-                    }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    settingsAction()
+                    Spacer(modifier = Modifier.weight(1f))
+                    readerAction()
+                    rewardsAction()
                 }
-            }
-
-            // Sağ: Ödüller ikonu
-            IconButton(
-                onClick = onRewardsClick,
-                modifier = Modifier
-                    .size(dimens.iconXl)
-                    .background(colorScheme.secondaryContainer.copy(alpha = 0.18f), CircleShape)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.CardGiftcard,
-                    contentDescription = stringResource(R.string.content_open_rewards),
-                    tint = colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(dimens.iconMd)
+                headerTitle(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = dimens.space4, vertical = dimens.space2),
                 )
+            }
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = dimens.space6, vertical = dimens.space2),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                settingsAction()
+                headerTitle(Modifier.weight(1f).padding(horizontal = dimens.space4))
+                readerAction()
+                rewardsAction()
             }
         }
     }
