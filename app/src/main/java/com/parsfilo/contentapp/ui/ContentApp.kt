@@ -31,6 +31,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.semantics.testTagsAsResourceId
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -71,6 +72,7 @@ fun ContentApp(
     val productDefinition = AppProductDefinition.current
     val dimens = LocalDimens.current
     val context = LocalContext.current
+    val systemFontScale = LocalDensity.current.fontScale
     val lifecycleOwner = LocalLifecycleOwner.current
     val navController = rememberNavController()
     val adaptiveInfo = currentWindowAdaptiveInfoV2()
@@ -267,34 +269,27 @@ fun ContentApp(
                                             ),
                                     )
                                 },
-                                label = {
-                                    Text(
-                                        text =
-                                            when (route) {
-                                                AppRoute.Subscription ->
-                                                    stringResource(
-                                                        R.string.nav_premium,
-                                                    )
-                                                AppRoute.OtherApps ->
-                                                    stringResource(
-                                                        R.string.nav_apps,
-                                                    )
-                                                AppRoute.HomeGraph ->
-                                                    stringResource(
-                                                        R.string.nav_home,
-                                                    )
-                                                AppRoute.MessagesGraph ->
-                                                    stringResource(
-                                                        R.string.nav_messages,
-                                                    )
-                                                AppRoute.NotificationsGraph ->
-                                                    stringResource(
-                                                        R.string.nav_alerts,
-                                                    )
-                                                else -> stringResource(R.string.nav_home)
-                                            },
-                                    )
-                                },
+                                label =
+                                    if (shouldShowAdaptiveNavigationLabels(systemFontScale)) {
+                                        {
+                                            Text(
+                                                text =
+                                                    when (route) {
+                                                        AppRoute.Subscription -> stringResource(R.string.nav_premium)
+                                                        AppRoute.OtherApps -> stringResource(R.string.nav_apps)
+                                                        AppRoute.HomeGraph -> stringResource(R.string.nav_home)
+                                                        AppRoute.MessagesGraph -> stringResource(R.string.nav_messages)
+                                                        AppRoute.NotificationsGraph -> stringResource(R.string.nav_alerts)
+                                                        else -> stringResource(R.string.nav_home)
+                                                    },
+                                                maxLines = 1,
+                                                softWrap = false,
+                                                overflow = TextOverflow.Ellipsis,
+                                            )
+                                        }
+                                    } else {
+                                        null
+                                    },
                                 badge =
                                     navBadgeText(route)?.let { badgeText ->
                                         {
