@@ -460,7 +460,7 @@ fun MiraclesListHeader(
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
             modifier = Modifier.weight(1f),
-            maxLines = 1,
+            maxLines = miraclesHeaderTitleMaxLines(LocalDensity.current.fontScale),
             overflow = TextOverflow.Ellipsis,
         )
 
@@ -491,6 +491,11 @@ fun MiraclesListHeader(
         }
     }
 }
+
+// Keep normal-size headers compact; at accessibility sizes, allow the full title
+// to wrap instead of truncating it behind the settings, search and rewards actions.
+internal fun miraclesHeaderTitleMaxLines(fontScale: Float): Int =
+    if (fontScale >= 1.3f) 2 else 1
 
 // Large accessibility fonts should reveal each prayer's full name instead of a
 // truncated name plus a redundant excerpt. Its full explanation is one tap away.
