@@ -449,6 +449,13 @@ android {
                     systemImageSource = "aosp-atd"
                     testedAbi = "x86_64"
                 }
+                // Manual Android 12 foreground-media lifecycle smoke only.
+                create("ciPixel2Api31") {
+                    device = "Pixel 2"
+                    apiLevel = 31
+                    systemImageSource = "aosp"
+                    testedAbi = "x86_64"
+                }
             }
         }
     }
@@ -665,6 +672,8 @@ dependencies {
     androidTestImplementation(libs.androidx.runner)
     androidTestImplementation(libs.androidx.rules)
     androidTestImplementation(libs.androidx.junit)
+    // MediaSessionService is exercised only in the dedicated API31 instrumented test.
+    androidTestImplementation(libs.androidx.media3.session)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.room.runtime)
     androidTestImplementation(platform(libs.androidx.compose.bom))
