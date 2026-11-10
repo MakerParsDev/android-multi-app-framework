@@ -6,11 +6,11 @@ internal enum class ReaderBannerPosition {
     AFTER_VERSES,
 }
 
-/** Show ads above the reader normally, after the verses only on very short windows. */
-internal fun resolveReaderBannerPosition(showTopBanner: Boolean, compactHeight: Boolean): ReaderBannerPosition =
+/** Keep portrait banners above the reader; only short landscape defers them. */
+internal fun resolveReaderBannerPosition(showTopBanner: Boolean, compactLandscape: Boolean): ReaderBannerPosition =
     when {
         !showTopBanner -> ReaderBannerPosition.HIDDEN
-        compactHeight -> ReaderBannerPosition.AFTER_VERSES
+        compactLandscape -> ReaderBannerPosition.AFTER_VERSES
         else -> ReaderBannerPosition.ABOVE_VERSES
     }
 
