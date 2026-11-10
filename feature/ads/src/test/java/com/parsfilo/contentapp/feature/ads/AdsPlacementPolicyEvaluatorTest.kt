@@ -151,7 +151,7 @@ class AdsPlacementPolicyEvaluatorTest {
     @Test
     fun `interstitial blocks route blacklist`() {
         every { adsPolicyProvider.getPolicy() } returns defaultPolicy(
-            interstitialRouteBlocklist = setOf(InterstitialTriggerKind.MODE_SWITCH.analyticsValue),
+            interstitialRouteBlocklist = setOf("content"),
         )
 
         val result = evaluator.evaluateInterstitial(
@@ -159,11 +159,26 @@ class AdsPlacementPolicyEvaluatorTest {
                 format = AdFormat.INTERSTITIAL,
                 placement = AdPlacement.INTERSTITIAL_NAV_BREAK,
                 route = "content/2",
-                interstitialTriggerKind = InterstitialTriggerKind.MODE_SWITCH,
+                interstitialTriggerKind = InterstitialTriggerKind.NAV_BREAK,
             ),
         )
 
         assertThat(result).isEqualTo(AdEligibility.Blocked(AdSuppressReason.ROUTE_BLOCKED))
+    }
+
+    @Test
+    fun `reader mode selection never opens an interstitial`() {
+        listOf("mode_switch_content", "mode_switch_prayer_detail").forEach { route ->
+            val result = evaluator.evaluateInterstitial(
+                baseContext(
+                    format = AdFormat.INTERSTITIAL,
+                    placement = AdPlacement.INTERSTITIAL_NAV_BREAK,
+                    route = route,
+                    interstitialTriggerKind = InterstitialTriggerKind.MODE_SWITCH,
+                ),
+            )
+            assertThat(result).isEqualTo(AdEligibility.Blocked(AdSuppressReason.ROUTE_BLOCKED))
+        }
     }
 
     @Test
