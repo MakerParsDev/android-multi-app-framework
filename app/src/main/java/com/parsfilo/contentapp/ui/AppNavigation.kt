@@ -24,7 +24,6 @@ import com.parsfilo.contentapp.core.firebase.logAudioPause
 import com.parsfilo.contentapp.core.firebase.logAudioPlay
 import com.parsfilo.contentapp.core.firebase.logAudioStop
 import com.parsfilo.contentapp.core.firebase.logScreenView
-import com.parsfilo.contentapp.core.model.DisplayMode
 import com.parsfilo.contentapp.feature.ads.AdPlacement
 import com.parsfilo.contentapp.feature.ads.InterstitialTriggerKind
 import com.parsfilo.contentapp.feature.ads.RewardedInterstitialIntroSpec
@@ -470,15 +469,6 @@ fun AppNavHost(
                     onRewardsClick = {
                         navController.navigate(AppRoute.Rewards.route)
                     },
-                    onModeChanged = { oldMode, newMode ->
-                        if (isDisplayModeSwitch(oldMode, newMode)) {
-                            requestInterstitialAd(
-                                placement = AdPlacement.INTERSTITIAL_NAV_BREAK,
-                                route = "mode_switch_content",
-                                triggerKind = InterstitialTriggerKind.MODE_SWITCH,
-                            )
-                        }
-                    },
                     audioPlayerContent = {
                         // Subscribe in the rendered player slot so navigation and nested
                         // content recompositions cannot retain a stale playback snapshot.
@@ -598,15 +588,6 @@ fun AppNavHost(
                     },
                     onAudioFileChanged = { mediaKey ->
                         audioPlayerViewModel.setOverrideAudioFileName(mediaKey)
-                    },
-                    onModeChanged = { oldMode, newMode ->
-                        if (isDisplayModeSwitch(oldMode, newMode)) {
-                            requestInterstitialAd(
-                                placement = AdPlacement.INTERSTITIAL_NAV_BREAK,
-                                route = "mode_switch_prayer_detail",
-                                triggerKind = InterstitialTriggerKind.MODE_SWITCH,
-                            )
-                        }
                     },
                     audioPlayerContent = {
                         // Subscribe in the rendered player slot so navigation and nested
@@ -933,11 +914,6 @@ private fun routeToContentType(route: String): String =
         route.startsWith(AppRoute.Qibla.route) -> "qibla"
         else -> "other"
     }
-
-private fun isDisplayModeSwitch(
-    oldMode: DisplayMode,
-    newMode: DisplayMode,
-): Boolean = oldMode != newMode
 
 private data class RewardedInterstitialIntroRequest(
     val placement: AdPlacement,
