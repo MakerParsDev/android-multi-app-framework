@@ -309,7 +309,7 @@ class AdOrchestrator
                             sessionCount = interstitialShownThisSession,
                             lastShownAtMs = prefs.lastInterstitialShown,
                             resumeGapMs = null,
-                            contentInProgress = isContentInProgress(screenRoute, triggerKind),
+                            contentInProgress = isContentInProgress(screenRoute),
                             interstitialTriggerKind = triggerKind,
                         ),
                     )
@@ -1074,15 +1074,7 @@ class AdOrchestrator
             )
         }
 
-        private fun isContentInProgress(
-            route: String?,
-            triggerKind: InterstitialTriggerKind? = null,
-        ): Boolean {
-            if (triggerKind == InterstitialTriggerKind.AUDIO_PAUSE ||
-                triggerKind == InterstitialTriggerKind.AUDIO_STOP
-            ) {
-                return false
-            }
+        private fun isContentInProgress(route: String?): Boolean {
             val normalizedRoute = route?.lowercase().orEmpty()
             return adSessionContext.audioPlayedThisSession &&
                 (

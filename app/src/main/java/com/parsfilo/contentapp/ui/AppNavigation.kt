@@ -481,11 +481,6 @@ fun AppNavHost(
                                         positionMs = audioState.currentPosition,
                                         durationMs = audioState.duration,
                                     )
-                                    requestInterstitialAd(
-                                        placement = AdPlacement.INTERSTITIAL_NAV_BREAK,
-                                        route = "audio_pause_content",
-                                        triggerKind = InterstitialTriggerKind.AUDIO_PAUSE,
-                                    )
                                 } else {
                                     hostActivity?.adOrchestrator?.updateSessionContext(
                                         audioPlayed = true,
@@ -502,13 +497,6 @@ fun AppNavHost(
                                     positionMs = audioState.currentPosition,
                                     durationMs = audioState.duration,
                                 )
-                                if (audioState.currentPosition > 0L || audioState.isPlaying) {
-                                    requestInterstitialAd(
-                                        placement = AdPlacement.INTERSTITIAL_NAV_BREAK,
-                                        route = "audio_stop_content",
-                                        triggerKind = InterstitialTriggerKind.AUDIO_STOP,
-                                    )
-                                }
                                 audioPlayerViewModel.stop()
                             },
                             onSeek = audioPlayerViewModel::seekTo,
@@ -590,11 +578,6 @@ fun AppNavHost(
                                         positionMs = audioState.currentPosition,
                                         durationMs = audioState.duration,
                                     )
-                                    requestInterstitialAd(
-                                        placement = AdPlacement.INTERSTITIAL_NAV_BREAK,
-                                        route = "audio_pause_prayer_detail",
-                                        triggerKind = InterstitialTriggerKind.AUDIO_PAUSE,
-                                    )
                                 } else {
                                     hostActivity?.adOrchestrator?.updateSessionContext(
                                         audioPlayed = true,
@@ -611,13 +594,6 @@ fun AppNavHost(
                                     positionMs = audioState.currentPosition,
                                     durationMs = audioState.duration,
                                 )
-                                if (audioState.currentPosition > 0L || audioState.isPlaying) {
-                                    requestInterstitialAd(
-                                        placement = AdPlacement.INTERSTITIAL_NAV_BREAK,
-                                        route = "audio_stop_prayer_detail",
-                                        triggerKind = InterstitialTriggerKind.AUDIO_STOP,
-                                    )
-                                }
                                 audioPlayerViewModel.stop()
                             },
                             onSeek = audioPlayerViewModel::seekTo,

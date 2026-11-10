@@ -32,9 +32,15 @@ class AdsPlacementPolicyEvaluator @Inject constructor(
     private val adsPolicyProvider: AdsPolicyProvider,
 ) {
     fun evaluateInterstitial(context: AdRequestContext): AdEligibility {
-        // A reading-mode switch must never interrupt the current text with a full-screen ad,
-        // even when a remote advertising policy does not block the event.
-        if (context.interstitialTriggerKind == InterstitialTriggerKind.MODE_SWITCH) {
+        // Reader mode and transport controls are not content transitions.
+        // Never show full-screen ads on these gestures, regardless of remote policy.
+        if (context.interstitialTriggerKind in
+            setOf(
+                InterstitialTriggerKind.MODE_SWITCH,
+                InterstitialTriggerKind.AUDIO_PAUSE,
+                InterstitialTriggerKind.AUDIO_STOP,
+            )
+        ) {
             return blocked("interstitial", AdSuppressReason.ROUTE_BLOCKED, context)
         }
         val policy = adsPolicyProvider.getPolicy()
