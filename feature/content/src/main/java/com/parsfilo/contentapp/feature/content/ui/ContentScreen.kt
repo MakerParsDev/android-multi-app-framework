@@ -210,7 +210,7 @@ fun ContentScreen(
                 heightDp = with(density) { LocalWindowInfo.current.containerSize.height.toDp().value },
                 fontScale = density.fontScale,
             )
-            val bannerPosition = resolveReaderBannerPosition(showTopBanner)
+            val bannerPosition = resolveReaderBannerPosition(showTopBanner, compactHeight)
             Column(
                 modifier = Modifier
                     .testTag("content_detail")
@@ -284,6 +284,16 @@ fun ContentScreen(
                     savedReadingVerseId = if (hasLongContent) savedId else null,
                     onClearReadingPlaceClick = if (hasLongContent && savedId != null) onClearPlace else null,
                 )
+
+                // Restore the top banner on normal screens, above audio and verses.
+                // On short windows, reserve the initial viewport for the reader.
+                if (bannerPosition == ReaderBannerPosition.ABOVE_VERSES) {
+                    BannerAd(
+                        adUnitId = bannerAdUnitId,
+                        placement = AdPlacement.BANNER_CONTENT_DETAIL,
+                        showPlacementLabels = false,
+                    )
+                }
 
                 // Gold divider
                 HorizontalDivider(
@@ -427,7 +437,7 @@ fun ContentScreen(
                         audioPlayerContent()
                     }
 
-                    // Keep the consent-gated SDK banner mounted after reading/audio.
+                    // Short windows retain a lower banner to prioritize readable verses.
                     if (bannerPosition == ReaderBannerPosition.AFTER_VERSES) {
                         BannerAd(
                             adUnitId = bannerAdUnitId,
