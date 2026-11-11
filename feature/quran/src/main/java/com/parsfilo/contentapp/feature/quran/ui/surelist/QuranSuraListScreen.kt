@@ -59,6 +59,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.parsfilo.contentapp.core.designsystem.component.AppButton
 import com.parsfilo.contentapp.core.designsystem.component.AppCard
 import com.parsfilo.contentapp.core.designsystem.tokens.LocalDimens
+import com.parsfilo.contentapp.feature.ads.ui.MAX_INLINE_BANNER_HEIGHT_DP
 import com.parsfilo.contentapp.feature.quran.R
 import com.parsfilo.contentapp.feature.quran.ui.component.SuraListItem
 
@@ -131,8 +132,23 @@ fun QuranSuraListScreen(
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding),
         ) {
-            if (state.shouldShowAds) {
-                bannerAdContent?.invoke()
+            if (
+                shouldReserveQuranListBannerSlot(
+                    hasBannerContent = bannerAdContent != null,
+                    eligibilityResolved = state.adEligibilityResolved,
+                    shouldShowAds = state.shouldShowAds,
+                )
+            ) {
+                // Reserve the eventual inline-banner height before SDK/consent fill.
+                // A late creative must never move the Last Read card under a tap.
+                Box(
+                    modifier = Modifier.fillMaxWidth().height(MAX_INLINE_BANNER_HEIGHT_DP.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (state.shouldShowAds) {
+                        bannerAdContent?.invoke()
+                    }
+                }
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
@@ -297,6 +313,17 @@ fun QuranSuraListScreen(
         }
     }
 }
+
+/**
+ * Keep the first interactive row stable while the entitlement Flow resolves
+ * and when a consented banner fills later. Once premium/ad-free is confirmed,
+ * it takes no space. Screens without a banner provider never reserve a slot.
+ */
+internal fun shouldReserveQuranListBannerSlot(
+    hasBannerContent: Boolean,
+    eligibilityResolved: Boolean,
+    shouldShowAds: Boolean,
+): Boolean = hasBannerContent && (!eligibilityResolved || shouldShowAds)
 
 @Composable
 private fun QuranSuraListHeader(
