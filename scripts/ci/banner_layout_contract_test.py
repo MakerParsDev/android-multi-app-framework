@@ -17,13 +17,26 @@ class BannerLayoutContractTest(unittest.TestCase):
         self.assertNotIn("LocalDimens", component)
         self.assertNotIn(".padding(horizontal = dimens.space6)", component)
 
-    def test_failed_banner_load_collapses_the_ad_slot(self) -> None:
-        component = (ROOT / "feature/ads/src/main/java/com/parsfilo/contentapp/feature/ads/ui/BannerAd.kt").read_text(encoding="utf-8")
+    def test_unfilled_banner_keeps_sdk_view_attached_for_refresh(self) -> None:
+        component = (ROOT / "feature/ads/src/main/java/com/parsfilo/contentapp/feature/ads/ui/BannerAd.kt").read_text()
+        self.assertIn("Keep the view attached after a failed load", component)
+        self.assertIn("Lifecycle.Event.ON_RESUME", component)
+        self.assertIn("AndroidView(", component)
+        self.assertNotIn("if (loadState == BannerLoadState.FAILED) return@BoxWithConstraints", component)
 
-        self.assertIn("BannerLoadState.FAILED", component)
-        self.assertIn("loadState = BannerLoadState.FAILED", component)
-        self.assertIn("loadState = BannerLoadState.LOADED", component)
-        self.assertIn("if (loadState == BannerLoadState.FAILED) return@BoxWithConstraints", component)
+    def test_reader_top_banner_reserves_stable_tap_safe_height(self) -> None:
+        source = (ROOT / "feature/content/src/main/java/com/parsfilo/contentapp/feature/content/ui/ContentScreen.kt").read_text()
+        policy = (ROOT / "feature/ads/src/main/java/com/parsfilo/contentapp/feature/ads/ui/BannerSizingPolicy.kt").read_text()
+
+        top = source.split("if (bannerPosition == ReaderBannerPosition.ABOVE_VERSES) {", 1)[1].split("// Gold divider", 1)[0]
+        bottom = source.split("if (bannerPosition == ReaderBannerPosition.AFTER_VERSES) {", 1)[1].split("BottomModeSelector(", 1)[0]
+
+        self.assertIn("const val MAX_INLINE_BANNER_HEIGHT_DP = 80", policy)
+        self.assertIn("val showTopBanner = uiState.shouldShowAds &&", source)
+        self.assertIn("Box(", top)
+        self.assertIn("Modifier.fillMaxWidth().height(MAX_INLINE_BANNER_HEIGHT_DP.dp)", top)
+        self.assertIn("BannerAd(", top)
+        self.assertNotIn("MAX_INLINE_BANNER_HEIGHT_DP", bottom)
 
     def test_long_content_keeps_a_top_banner_alongside_inline_ads(self) -> None:
         source = (ROOT / "feature/content/src/main/java/com/parsfilo/contentapp/feature/content/ui/NativeAdInsertionPolicy.kt").read_text(encoding="utf-8")

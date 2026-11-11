@@ -2,7 +2,7 @@ package com.parsfilo.contentapp.feature.ads.ui
 
 import com.parsfilo.contentapp.feature.ads.AdPlacement
 
-internal const val MAX_INLINE_BANNER_HEIGHT_DP = 80
+const val MAX_INLINE_BANNER_HEIGHT_DP = 80
 internal const val MAX_CONTENT_BANNER_WIDTH_DP = 360
 internal const val STANDARD_BANNER_WIDTH_DP = 320
 

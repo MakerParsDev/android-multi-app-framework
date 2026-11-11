@@ -84,6 +84,7 @@ import com.parsfilo.contentapp.core.model.DisplayMode
 import com.parsfilo.contentapp.core.model.Verse
 import com.parsfilo.contentapp.feature.ads.AdPlacement
 import com.parsfilo.contentapp.feature.ads.ui.BannerAd
+import com.parsfilo.contentapp.feature.ads.ui.MAX_INLINE_BANNER_HEIGHT_DP
 import com.parsfilo.contentapp.feature.content.R
 import kotlinx.coroutines.launch
 
@@ -295,11 +296,19 @@ fun ContentScreen(
                 // Restore the top banner on normal screens, above audio and verses.
                 // On short windows, reserve the initial viewport for the reader.
                 if (bannerPosition == ReaderBannerPosition.ABOVE_VERSES) {
-                    BannerAd(
-                        adUnitId = bannerAdUnitId,
-                        placement = AdPlacement.BANNER_CONTENT_DETAIL,
-                        showPlacementLabels = false,
-                    )
+                    // Reserve the maximum inline banner height before consent and ad loading.
+                    // Otherwise a late banner can move Play/Stop under an incoming tap.
+                    // The premium/ad-free path never enters this branch.
+                    Box(
+                        modifier = Modifier.fillMaxWidth().height(MAX_INLINE_BANNER_HEIGHT_DP.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        BannerAd(
+                            adUnitId = bannerAdUnitId,
+                            placement = AdPlacement.BANNER_CONTENT_DETAIL,
+                            showPlacementLabels = false,
+                        )
+                    }
                 }
 
                 // Gold divider
