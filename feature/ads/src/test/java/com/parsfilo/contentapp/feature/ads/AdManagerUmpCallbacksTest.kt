@@ -26,7 +26,14 @@ import io.mockk.slot
 import io.mockk.unmockkStatic
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -276,6 +283,45 @@ class AdManagerUmpCallbacksTest {
             )
         }
         verify(exactly = 0) { analytics.logEvent("consent_granted", any()) }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun lateMobileAdsCompletionAfterSoftTimeoutRestoresReadyState() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        try {
+            manager = AdManager(
+                context,
+                preferences,
+                analytics,
+                observability,
+                syncId,
+                policy,
+                dispatcher,
+            )
+            every { consentInfo.canRequestAds() } returns true
+            val sdkCallback = slot<OnInitializationCompleteListener>()
+            every { MobileAds.initialize(any<Context>(), capture(sdkCallback)) } just Runs
+            var readyCount = 0
+
+            manager.initialize(activity) { readyCount++ }
+            runCurrent()
+            assertThat(sdkCallback.isCaptured).isTrue()
+            assertThat(manager.isSdkReady.value).isFalse()
+
+            advanceTimeBy(10_001)
+            runCurrent()
+            assertThat(manager.isSdkReady.value).isFalse()
+            assertThat(readyCount).isEqualTo(0)
+
+            sdkCallback.captured.onInitializationComplete(mockk(relaxed = true))
+            runCurrent()
+            assertThat(manager.isSdkReady.value).isTrue()
+            assertThat(readyCount).isEqualTo(1)
+        } finally {
+            Dispatchers.resetMain()
+        }
     }
 
     @Test
