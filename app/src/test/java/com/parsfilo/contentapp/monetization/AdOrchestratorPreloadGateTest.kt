@@ -22,6 +22,7 @@ import com.parsfilo.contentapp.feature.ads.RewardedAdManager
 import com.parsfilo.contentapp.feature.ads.RewardedInterstitialAdManager
 import com.parsfilo.contentapp.feature.ads.RewardedInterstitialCoordinator
 import com.parsfilo.contentapp.product.AppProductDefinition
+import io.mockk.clearMocks
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -150,7 +151,7 @@ class AdOrchestratorPreloadGateTest {
 
     @Test
     fun routeHintPreloadRespectsAdFreeEntitlementsAndConsent() = runTest {
-        val routePolicy = mockk<AdsPolicyConfig>()
+        val routePolicy = mockk<AdsPolicyConfig>(relaxed = true)
         every { policies.getPolicy() } returns routePolicy
         every { routePolicy.isHotInterstitialRoute(any()) } returns true
         every { routePolicy.shouldUseAggressiveInterstitialPreload(any()) } returns true
@@ -190,17 +191,22 @@ class AdOrchestratorPreloadGateTest {
         verify(exactly = 0) { interstitial.loadAd(any(), any(), any(), any(), any()) }
         verify(exactly = 0) { appOpen.loadAd(any(), any(), any()) }
 
+        // The successful route-preload case requires an initialized SDK.
+        sdkReady.value = true
         adsAllowed.value = true
         orchestrator.updateSessionContext(activeRoute = "prayer_list")
         runCurrent()
-        verify(exactly = 1) { interstitial.loadAd(any(), any(), any(), any(), any()) }
-        verify(exactly = 1) { appOpen.loadAd(any(), any(), any()) }
+        // The SDK-ready observer and route-hint can each legitimately request a load.
+        verify(atLeast = 1) { interstitial.loadAd(any(), any(), any(), any(), any()) }
+        verify(atLeast = 1) { appOpen.loadAd(any(), any(), any()) }
 
+        // Isolate the revocation period: no *new* request is permitted.
+        clearMocks(interstitial, appOpen, recordedCalls = true, answers = false)
         AdsConsentRuntimeState.update(false)
         orchestrator.updateSessionContext(activeRoute = "prayer_detail")
         runCurrent()
-        verify(exactly = 1) { interstitial.loadAd(any(), any(), any(), any(), any()) }
-        verify(exactly = 1) { appOpen.loadAd(any(), any(), any()) }
+        verify(exactly = 0) { interstitial.loadAd(any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { appOpen.loadAd(any(), any(), any()) }
     }
 
     @Test
@@ -233,10 +239,132 @@ class AdOrchestratorPreloadGateTest {
         runCurrent()
         verify(exactly = 0) { appOpen.loadAd(any(), any(), any()) }
 
+        // Once the SDK has initialized, normal background warm-up is allowed.
+        sdkReady.value = true
         adsAllowed.value = true
         orchestrator.onAppPaused(context)
         runCurrent()
         verify(exactly = 1) { appOpen.loadAd(any(), any(), any()) }
+    }
+
+    @Test
+    fun consentRefreshWaitsForSdkReadyWithoutLosingConsentResult() = runTest {
+        // UMP callback can complete while GMA initialization is still asynchronous.
+        // Consent success must reach the UI, but no ad loaders should start early.
+        val activity = mockk<Activity>(relaxed = true)
+        val context = mockk<Context>(relaxed = true)
+        every { activity.applicationContext } returns context
+        every { context.getString(any()) } returns "test-ad-id"
+        every { context.packageName } returns "com.parsfilo.namazsurelerivedualarsesli"
+        every { manager.refreshConsent(any(), any()) } answers {
+            AdsConsentRuntimeState.update(true)
+            secondArg<(Boolean) -> Unit>().invoke(true)
+        }
+        val orchestrator =
+            AdOrchestrator(
+                manager, appOpen, interstitial, native, rewarded, rewardedInterstitial,
+                mockk<AdRevenueLogger>(relaxed = true),
+                gateChecker, policies,
+                mockk<PreferencesDataSource>(relaxed = true),
+                mockk<AdsPlacementPolicyEvaluator>(relaxed = true),
+                mockk<RewardedInterstitialCoordinator>(relaxed = true),
+                mockk<AppOpenEligibilityTracker>(relaxed = true),
+                mockk<AdsConfigValidator>(relaxed = true),
+            )
+        orchestrator.initialize(activity, this)
+        runCurrent()
+
+        var callbackResult: Boolean? = null
+        orchestrator.refreshConsent(activity, this) { callbackResult = it }
+        runCurrent()
+        assertEquals(true, callbackResult)
+        verify(exactly = 0) { interstitial.loadAd(any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { appOpen.loadAd(any(), any(), any()) }
+
+        // The existing gate observer should retry naturally as soon as SDK is ready.
+        sdkReady.value = true
+        runCurrent()
+        verify(exactly = 1) { interstitial.loadAd(any(), any(), any(), any(), any()) }
+        verify(exactly = 1) { appOpen.loadAd(any(), any(), any()) }
+    }
+
+    @Test
+    fun pauseCannotWarmAppOpenBeforeSdkReady() = runTest {
+        AdsConsentRuntimeState.update(true)
+        val orchestrator =
+            AdOrchestrator(
+                manager, appOpen, interstitial, native, rewarded, rewardedInterstitial,
+                mockk<AdRevenueLogger>(relaxed = true),
+                gateChecker, policies,
+                mockk<PreferencesDataSource>(relaxed = true),
+                mockk<AdsPlacementPolicyEvaluator>(relaxed = true),
+                mockk<RewardedInterstitialCoordinator>(relaxed = true),
+                mockk<AppOpenEligibilityTracker>(relaxed = true),
+                mockk<AdsConfigValidator>(relaxed = true),
+            )
+        val context = mockk<Context>(relaxed = true)
+        every { context.getString(any()) } returns "test-ad-id"
+        orchestrator.onAppPaused(context)
+        runCurrent()
+        verify(exactly = 0) { appOpen.loadAd(any(), any(), any()) }
+    }
+
+    @Test
+    fun routeHintCannotPreloadBeforeSdkReady() = runTest {
+        val routePolicy = mockk<AdsPolicyConfig>(relaxed = true)
+        every { policies.getPolicy() } returns routePolicy
+        every { routePolicy.isHotInterstitialRoute(any()) } returns true
+        every { routePolicy.shouldUseAggressiveInterstitialPreload(any()) } returns true
+        every { routePolicy.shouldUseAggressiveAppOpenPreload(any()) } returns true
+        every { routePolicy.isInterstitialPlacementEnabled(any()) } returns true
+        every { routePolicy.isAppOpenPlacementEnabled(any()) } returns true
+        every { routePolicy.isBlockedContext(any()) } returns false
+        val orchestrator =
+            AdOrchestrator(
+                manager, appOpen, interstitial, native, rewarded, rewardedInterstitial,
+                mockk<AdRevenueLogger>(relaxed = true),
+                gateChecker, policies,
+                mockk<PreferencesDataSource>(relaxed = true),
+                mockk<AdsPlacementPolicyEvaluator>(relaxed = true),
+                mockk<RewardedInterstitialCoordinator>(relaxed = true),
+                mockk<AppOpenEligibilityTracker>(relaxed = true),
+                mockk<AdsConfigValidator>(relaxed = true),
+            )
+        val context = mockk<Context>(relaxed = true)
+        every { context.getString(any()) } returns "test-ad-id"
+        every { context.packageName } returns "com.parsfilo.namazsurelerivedualarsesli"
+        val activity = mockk<Activity>(relaxed = true)
+        every { activity.applicationContext } returns context
+        orchestrator.initialize(activity, this)
+        runCurrent()
+        AdsConsentRuntimeState.update(true)
+        orchestrator.updateSessionContext(activeRoute = "prayer_list")
+        runCurrent()
+        verify(exactly = 0) { interstitial.loadAd(any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { appOpen.loadAd(any(), any(), any()) }
+    }
+
+    @Test
+    fun userInitiatedRewardedRequestIsNotDroppedWhileSdkInitializes() = runTest {
+        AdsConsentRuntimeState.update(true)
+        val orchestrator =
+            AdOrchestrator(
+                manager, appOpen, interstitial, native, rewarded, rewardedInterstitial,
+                mockk<AdRevenueLogger>(relaxed = true),
+                gateChecker, policies,
+                mockk<PreferencesDataSource>(relaxed = true),
+                mockk<AdsPlacementPolicyEvaluator>(relaxed = true),
+                mockk<RewardedInterstitialCoordinator>(relaxed = true),
+                mockk<AppOpenEligibilityTracker>(relaxed = true),
+                mockk<AdsConfigValidator>(relaxed = true),
+            )
+        val context = mockk<Context>(relaxed = true)
+        every { context.getString(any()) } returns "test-ad-id"
+        // Unlike automatic preloads this follows a direct tap, and the caller
+        // waits for the SDK load result. Silently dropping it makes the user wait 10s.
+        orchestrator.requestRewardedLoad(context)
+        runCurrent()
+        verify(exactly = 1) { rewarded.loadAd(any(), any(), any()) }
     }
 
     @Test
