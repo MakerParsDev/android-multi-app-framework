@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import yaml
@@ -512,9 +515,72 @@ def test_play_internal_builds_attests_and_publishes_one_exact_aab() -> None:
         '(cd dist && sha256sum "$artifact_name" > "${artifact_name}.sha256")' in prepare
     )
     assert 'sha256sum "$artifact" > "${artifact}.sha256"' not in prepare
-    upload = named_step(job, "Upload AAB, checksum, and publication report")
+    upload = named_step(job, "Archive signed AAB and checksum before Play")
     assert upload["uses"] == f"actions/upload-artifact@{UPLOAD_SHA}"
-    assert upload["if"] == "always()"
+    assert upload["with"]["if-no-files-found"] == "error"
+
+
+def test_play_internal_archives_signed_bundle_before_irreversible_publish() -> None:
+    workflow = load(".github/workflows/play-internal.yml")
+    steps = workflow["jobs"]["publish-internal"]["steps"]
+    names = [step.get("name") for step in steps]
+    attested = names.index("Attest exact signed AAB")
+    archived = names.index("Archive signed AAB and checksum before Play")
+    published = names.index("Publish exact attested AAB to Play internal")
+    assert attested < archived < published
+
+    archive = named_step({"steps": steps}, "Archive signed AAB and checksum before Play")
+    assert archive["uses"] == f"actions/upload-artifact@{UPLOAD_SHA}"
+    assert archive["with"]["if-no-files-found"] == "error"
+    assert "steps.release-inputs.outputs.retention_days" in str(archive["with"]["retention-days"])
+    assert "steps.artifact.outputs.subject_path" in archive["with"]["path"]
+    assert "steps.artifact.outputs.subject_path }}.sha256" in archive["with"]["path"]
+    assert "dist/play-internal-publication.json" not in archive["with"]["path"]
+    assert "continue-on-error" not in archive
+    assert "github.run_attempt" in archive["with"]["name"]
+    assert archive.get("if", "success()") != "always()"
+
+    publish = steps[published]
+    assert "GITHUB_STEP_SUMMARY" in publish["run"]
+    assert "play-internal-publication.json" in publish["run"]
+    assert not any("actions/upload-artifact@" in step.get("uses", "") for step in steps[published + 1 :])
+
+def test_play_internal_summary_uses_published_report_without_new_upload(tmp_path: Path) -> None:
+    workflow = load(".github/workflows/play-internal.yml")
+    publish = named_step(workflow["jobs"]["publish-internal"], "Publish exact attested AAB to Play internal")
+    summary_code = publish["run"].split("python3 - <<'PY_SUMMARY'\n", 1)[1].split(
+        "\nPY_SUMMARY", 1
+    )[0]
+    report = {
+        "packageName": "com.example.yasin",
+        "versionCode": 93,
+        "track": "internal",
+        "releaseName": "internal-test",
+        "sha256": "a" * 64,
+    }
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / "play-internal-publication.json").write_text(json.dumps(report), encoding="utf-8")
+    summary = tmp_path / "summary.md"
+    archive_url = "https://github.com/example/repo/actions/runs/42/artifacts/99"
+    result = subprocess.run(
+        [sys.executable, "-c", summary_code],
+        cwd=tmp_path,
+        env={
+            **os.environ,
+            "GITHUB_STEP_SUMMARY": str(summary),
+            "SIGNED_ARCHIVE_URL": archive_url,
+        },
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    markdown = summary.read_text(encoding="utf-8")
+    assert "Version code: 93" in markdown
+    assert "com.example.yasin" in markdown
+    assert archive_url in markdown
+    assert "a" * 64 in markdown
 
 
 def test_workflow_audit_executes_regression_contracts() -> None:

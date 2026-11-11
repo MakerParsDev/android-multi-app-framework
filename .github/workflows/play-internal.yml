@@ -136,12 +136,25 @@ jobs:
           subject-path: ${{ steps.artifact.outputs.subject_path }}
           create-storage-record: false
 
+      # The signed bundle must be recoverable before changing Google Play state.
+      - name: Archive signed AAB and checksum before Play
+        id: signed-evidence
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: play-internal-${{ steps.release-inputs.outputs.flavor }}-${{ github.sha }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: |
+            ${{ steps.artifact.outputs.subject_path }}
+            ${{ steps.artifact.outputs.subject_path }}.sha256
+          if-no-files-found: error
+          retention-days: ${{ steps.release-inputs.outputs.retention_days }}
+
       - name: Publish exact attested AAB to Play internal
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
           PACKAGE_NAME: ${{ steps.release-inputs.outputs.package_name }}
           AAB_PATH: ${{ steps.artifact.outputs.subject_path }}
           RELEASE_NAME: internal-${{ github.sha }}
+          SIGNED_ARCHIVE_URL: ${{ steps.signed-evidence.outputs.artifact-url }}
         run: |
           set -euo pipefail
           scripts/doppler-run.sh -- python3 scripts/ci/publish_play_internal.py \
@@ -150,15 +163,26 @@ jobs:
             --track internal \
             --release-name "$RELEASE_NAME" \
             --report dist/play-internal-publication.json
+          # Publishing finished: record the report without a second archive write.
+          python3 - <<'PY_SUMMARY'
+          import json
+          import os
+          from pathlib import Path
 
-      - name: Upload AAB, checksum, and publication report
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: play-internal-${{ steps.release-inputs.outputs.flavor }}-${{ github.sha }}
-          path: |
-            ${{ steps.artifact.outputs.subject_path }}
-            ${{ steps.artifact.outputs.subject_path }}.sha256
-            dist/play-internal-publication.json
-          if-no-files-found: warn
-          retention-days: ${{ steps.release-inputs.outputs.retention_days }}
+          report = json.loads(
+              Path("dist/play-internal-publication.json").read_text(encoding="utf-8")
+          )
+          details = [
+              "### Google Play INTERNAL publication",
+              "",
+              f"- Package: {report['packageName']}",
+              f"- Version code: {report['versionCode']}",
+              f"- Track: {report['track']}",
+              f"- Release: {report['releaseName']}",
+              f"- Signed AAB SHA-256: {report['sha256']}",
+              f"- Pre-publish evidence: {os.environ['SIGNED_ARCHIVE_URL']}",
+              "",
+          ]
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as output:
+              output.write("\n".join(details))
+          PY_SUMMARY
