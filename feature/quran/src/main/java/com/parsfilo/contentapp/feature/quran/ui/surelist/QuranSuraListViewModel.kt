@@ -24,6 +24,7 @@ data class SuraListViewModelState(
     val query: String = "",
     val lastRead: QuranLastReadEntity? = null,
     val shouldShowAds: Boolean = false,
+    val adEligibilityResolved: Boolean = false,
 ) {
     val filteredSuras: List<QuranSura>
         get() {
@@ -57,6 +58,7 @@ class QuranSuraListViewModel @Inject constructor(
             suras = suras,
             lastRead = lastRead,
             shouldShowAds = shouldShowAds,
+            adEligibilityResolved = true,
         )
     }.stateIn(
         scope = viewModelScope,
