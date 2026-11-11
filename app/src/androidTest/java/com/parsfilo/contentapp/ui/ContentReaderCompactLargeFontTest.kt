@@ -37,20 +37,17 @@ import org.junit.runner.RunWith
 class ContentReaderCompactLargeFontTest {
     @get:Rule val rule = createComposeRule()
 
-    @Test fun twoHundredPercentFontMakesReaderToolsAndTranslationReachable() {
+    @Test fun twoHundredPercentFontKeepsPortraitTranslationDirectlyReachable() {
         showReader(2f)
-        // Compact layout must provide the reader-tools shortcut to its scrollable modes.
-        rule.onNodeWithTag("content_reader_tools").assertIsDisplayed().performClick()
-        rule.onNodeWithTag("content_show_reading_controls").assertIsDisplayed().performClick()
-        rule.waitForIdle()
+        // Short portrait retains direct reading controls. The overflow shortcut
+        // is only needed for compact landscape, not for this 320dp portrait.
+        rule.onNodeWithTag("content_reader_tools").assertDoesNotExist()
         rule.onNodeWithText(translationLabel()).performScrollTo().assertIsDisplayed().performClick()
     }
 
     @Test fun twoHundredPercentFontModesStayOnOneHorizontalRow() {
         showReader(2f)
-        rule.onNodeWithTag("content_reader_tools").assertIsDisplayed().performClick()
-        rule.onNodeWithTag("content_show_reading_controls").assertIsDisplayed().performClick()
-        rule.waitForIdle()
+        rule.onNodeWithTag("content_reader_tools").assertDoesNotExist()
 
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val labels = listOf(

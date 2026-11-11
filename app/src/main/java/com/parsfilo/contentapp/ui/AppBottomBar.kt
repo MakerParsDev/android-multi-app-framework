@@ -179,11 +179,13 @@ private fun RowScope.AppBottomNavigationItem(
         alwaysShowLabel = true,
         colors =
             NavigationBarItemDefaults.colors(
-                selectedIconColor = colorScheme.onSecondaryContainer,
-                selectedTextColor = colorScheme.onSecondaryContainer,
+                // Selected and unselected labels must remain legible on the tinted
+                // indicator and on the surface. The indicator still marks selection.
+                selectedIconColor = colorScheme.onSurface,
+                selectedTextColor = colorScheme.onSurface,
                 indicatorColor = colorScheme.secondaryContainer,
                 unselectedIconColor = colorScheme.onSurfaceVariant,
-                unselectedTextColor = colorScheme.onSurfaceVariant,
+                unselectedTextColor = colorScheme.onSurface,
             ),
     )
 }

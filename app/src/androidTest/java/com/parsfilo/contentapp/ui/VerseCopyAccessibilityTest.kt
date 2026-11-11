@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.res.Configuration
 import android.os.LocaleList
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
@@ -51,7 +52,7 @@ class VerseCopyAccessibilityTest {
         checkCopy(
             mode = DisplayMode.ARABIC,
             language = "tr",
-            label = "Arapça metni kopyala",
+            label = "Ayet / bölüm 1: Arapça metni kopyala",
             expectedText = verse.arabic,
             fontScale = 2f,
         )
@@ -62,7 +63,7 @@ class VerseCopyAccessibilityTest {
         checkCopy(
             mode = DisplayMode.LATIN,
             language = "tr",
-            label = "Latince metni kopyala",
+            label = "Ayet / bölüm 1: Latince metni kopyala",
             expectedText = verse.latin,
         )
     }
@@ -72,7 +73,7 @@ class VerseCopyAccessibilityTest {
         checkCopy(
             mode = DisplayMode.TURKISH,
             language = "en",
-            label = "Copy translation",
+            label = "Verse / section 1: Copy translation",
             expectedText = verse.english,
         )
     }
@@ -82,9 +83,54 @@ class VerseCopyAccessibilityTest {
         checkCopy(
             mode = DisplayMode.TURKISH,
             language = "de",
-            label = "Übersetzung kopieren",
+            label = "Vers / Abschnitt 1: Übersetzung kopieren",
             expectedText = verse.german,
         )
+    }
+
+    @Test
+    fun twoVersesProvideDistinctLocalizedCopyTargets() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val second = verse.copy(id = 2, latin = "İkinci ayetin okunuşu")
+        try {
+            rule.setContent {
+                val density = LocalDensity.current
+                val baseContext = LocalContext.current
+                val config = Configuration(LocalConfiguration.current).apply {
+                    setLocales(LocaleList(Locale.forLanguageTag("tr")))
+                    screenWidthDp = 320
+                }
+                CompositionLocalProvider(
+                    LocalContext provides baseContext.createConfigurationContext(config),
+                    LocalConfiguration provides config,
+                    LocalDensity provides Density(density.density, config.fontScale),
+                ) {
+                    AppTheme(flavorName = "ayetelkursi") {
+                        Box(Modifier.width(320.dp)) {
+                            Column {
+                                VerseItem(verse = verse, displayMode = DisplayMode.LATIN, fontSize = 24)
+                                VerseItem(verse = second, displayMode = DisplayMode.LATIN, fontSize = 24)
+                            }
+                        }
+                    }
+                }
+            }
+
+            rule.onNodeWithContentDescription(
+                "Ayet / bölüm 1: Latince metni kopyala",
+                useUnmergedTree = true,
+            ).assertExists()
+            rule.onNodeWithContentDescription(
+                "Ayet / bölüm 2: Latince metni kopyala",
+                useUnmergedTree = true,
+            ).performClick()
+            rule.waitForIdle()
+            val actual = clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()
+            assertEquals(second.latin, actual)
+        } finally {
+            clipboard.clearPrimaryClip()
+        }
     }
 
     private fun checkCopy(
