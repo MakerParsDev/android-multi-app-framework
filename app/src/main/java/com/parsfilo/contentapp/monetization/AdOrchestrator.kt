@@ -172,8 +172,8 @@ class AdOrchestrator
                 return
             }
             orchestratorScope.launch {
-                if (!adGateChecker.shouldShowAds.first()) {
-                    Timber.d("AppOpen preload skipped on pause: premium or rewarded-ad-free")
+                if (!adGateChecker.shouldShowAds.first() || !adManager.isSdkReady.value) {
+                    Timber.d("AppOpen preload skipped on pause: ad gate closed or GMA SDK not ready")
                     return@launch
                 }
                 if (appOpenAdManager.isAdReady()) return@launch
@@ -902,6 +902,8 @@ class AdOrchestrator
             placement: AdPlacement = AdPlacement.REWARDED_REWARDS_SCREEN,
             route: String? = adSessionContext.activeRoute,
         ) {
+            // A user-tapped reward must not be dropped while the legacy GMA SDK
+            // initializes: RewardsViewModel only waits for this one request.
             if (!AdsConsentRuntimeState.canRequestAds.value) {
                 Timber.d("Rewarded load skipped: consent unavailable placement=%s", placement.analyticsValue)
                 return
@@ -994,6 +996,12 @@ class AdOrchestrator
             reason: PreloadReason,
             includeAppOpenWarmup: Boolean,
         ) {
+            // Initialization, consent refresh and the observer share the same gate.
+            // A successful UMP callback is not proof that the GMA SDK is initialized.
+            if (!AdsConsentRuntimeState.canRequestAds.value || !adManager.isSdkReady.value) {
+                Timber.d("Ad bootstrap deferred: consent unavailable or GMA SDK not ready reason=%s", reason.analyticsValue)
+                return
+            }
             Timber.d(
                 "Ad bootstrap requested reason=%s includeAppOpenWarmup=%s route=%s",
                 reason.analyticsValue,
@@ -1007,8 +1015,11 @@ class AdOrchestrator
             val context = applicationContextRef ?: return
             if (!AdsConsentRuntimeState.canRequestAds.value) return
             orchestratorScope.launch {
-                if (!adGateChecker.shouldShowAds.first() || !AdsConsentRuntimeState.canRequestAds.value) {
-                    Timber.d("Route-hint preload skipped: consent or ad-free entitlement gate closed")
+                if (!adGateChecker.shouldShowAds.first() ||
+                    !AdsConsentRuntimeState.canRequestAds.value ||
+                    !adManager.isSdkReady.value
+                ) {
+                    Timber.d("Route-hint preload skipped: consent/ad gate closed or GMA SDK not ready")
                     return@launch
                 }
                 val policy = adsPolicyProvider.getPolicy()
