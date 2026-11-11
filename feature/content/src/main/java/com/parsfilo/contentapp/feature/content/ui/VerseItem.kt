@@ -86,6 +86,13 @@ fun VerseItem(
         }
     )
 
+    // Keep repeated copy actions identifiable when several verses are visible to TalkBack.
+    val numberedCopyActionLabel = stringResource(
+        R.string.content_copy_numbered,
+        verse.id,
+        copyActionLabel,
+    )
+
     val textAlignment = when (displayMode) {
         DisplayMode.ARABIC -> TextAlign.End
         else -> TextAlign.Start
@@ -172,7 +179,7 @@ fun VerseItem(
                 ) {
                     Icon(
                         imageVector = Icons.Filled.ContentCopy,
-                        contentDescription = copyActionLabel,
+                        contentDescription = numberedCopyActionLabel,
                         tint = colorScheme.primary,
                     )
                 }
