@@ -27,6 +27,7 @@ import com.parsfilo.contentapp.feature.ads.AdPaidEventContext
 import com.parsfilo.contentapp.feature.ads.AdPlacement
 import com.parsfilo.contentapp.feature.ads.AdSuppressReason
 import com.parsfilo.contentapp.feature.ads.AdsConsentRuntimeState
+import com.parsfilo.contentapp.feature.ads.AdsPrivacyState
 import com.parsfilo.contentapp.feature.ads.AdsUiEntryPoint
 import com.parsfilo.contentapp.feature.ads.SystemTimeProvider
 import com.parsfilo.contentapp.feature.ads.findActivity
@@ -55,14 +56,17 @@ fun BannerAd(
     val revenueLogger = remember(entryPoint) { entryPoint.adRevenueLogger() }
     val adGateChecker = remember(entryPoint) { entryPoint.adGateChecker() }
     val adsPolicyProvider = remember(entryPoint) { entryPoint.adsPolicyProvider() }
+    val adManager = remember(entryPoint) { entryPoint.adManager() }
     val shouldShowAds by adGateChecker.shouldShowAds.collectAsState(initial = false)
+    val sdkReady by adManager.isSdkReady.collectAsState()
     val policy = adsPolicyProvider.getPolicy()
-    val suppressReason: AdSuppressReason? = when {
-        !canRequestAds -> privacyState.suppressReasonWhenBlocked()
-        !policy.isBannerPlacementEnabled(placement) -> AdSuppressReason.PLACEMENT_DISABLED
-        !shouldShowAds -> AdSuppressReason.AD_GATE
-        else -> null
-    }
+    val suppressReason = bannerSuppressionReason(
+        canRequestAds = canRequestAds,
+        privacyState = privacyState,
+        placementEnabled = policy.isBannerPlacementEnabled(placement),
+        shouldShowAds = shouldShowAds,
+        sdkReady = sdkReady,
+    )
     if (suppressReason != null) {
         LaunchedEffect(adUnitId, placement, route, suppressReason) {
             Timber.d(
@@ -254,6 +258,25 @@ fun BannerAd(
             },
         )
     }
+}
+
+/**
+ * Do not create an AdView before UMP, entitlements and GMA initialization
+ * have all settled. The observed SDK-ready StateFlow re-composes the slot
+ * and starts one request when initialization succeeds.
+ */
+internal fun bannerSuppressionReason(
+    canRequestAds: Boolean,
+    privacyState: AdsPrivacyState,
+    placementEnabled: Boolean,
+    shouldShowAds: Boolean,
+    sdkReady: Boolean,
+): AdSuppressReason? = when {
+    !canRequestAds -> privacyState.suppressReasonWhenBlocked()
+    !placementEnabled -> AdSuppressReason.PLACEMENT_DISABLED
+    !shouldShowAds -> AdSuppressReason.AD_GATE
+    !sdkReady -> AdSuppressReason.SDK_NOT_READY
+    else -> null
 }
 
 /** Identity shared by load state and SDK view, including callback attribution. */
