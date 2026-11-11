@@ -7,13 +7,13 @@ import org.junit.Test
 class MiraclesNavigationAdPolicyTest {
     @Test
     fun `first detail always opens without an interstitial`() {
-        assertFalse(shouldRequestMiraclesInterstitial(hasOpenedDetail = false, hasHostActivity = true))
-        assertFalse(shouldRequestMiraclesInterstitial(hasOpenedDetail = false, hasHostActivity = false))
+        assertFalse(shouldRequestFirstDetailInterstitial(hasOpenedDetail = false, hasHostActivity = true))
+        assertFalse(shouldRequestFirstDetailInterstitial(hasOpenedDetail = false, hasHostActivity = false))
     }
 
     @Test
     fun `later detail navigation remains eligible when host is available`() {
-        assertTrue(shouldRequestMiraclesInterstitial(hasOpenedDetail = true, hasHostActivity = true))
-        assertFalse(shouldRequestMiraclesInterstitial(hasOpenedDetail = true, hasHostActivity = false))
+        assertTrue(shouldRequestFirstDetailInterstitial(hasOpenedDetail = true, hasHostActivity = true))
+        assertFalse(shouldRequestFirstDetailInterstitial(hasOpenedDetail = true, hasHostActivity = false))
     }
 }
