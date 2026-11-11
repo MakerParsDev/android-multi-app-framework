@@ -76,9 +76,11 @@ fun ContentApp(
     val lifecycleOwner = LocalLifecycleOwner.current
     val navController = rememberNavController()
     val adaptiveInfo = currentWindowAdaptiveInfoV2()
-    val isMediumOrExpanded =
+    // Medium-width landscape phones need the same 68dp bottom bar as portrait.
+    // Keep the adaptive navigation suite (tablet rail) for expanded widths.
+    val isExpandedWidth =
         adaptiveInfo.windowSizeClass.isWidthAtLeastBreakpoint(
-            WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND,
+            WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND,
         )
     val unreadNotificationCount by viewModel.unreadNotificationCount.collectAsStateWithLifecycle(
         initialValue = 0,
@@ -229,7 +231,7 @@ fun ContentApp(
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.background),
         ) {
-            if (isMediumOrExpanded && showBottomBar) {
+            if (isExpandedWidth && showBottomBar) {
                 NavigationSuiteScaffold(
                     modifier = Modifier.testTag("primary_navigation"),
                     navigationSuiteItems = {
