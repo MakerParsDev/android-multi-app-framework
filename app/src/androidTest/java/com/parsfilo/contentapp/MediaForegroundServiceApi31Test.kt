@@ -27,7 +27,7 @@ import java.nio.ByteOrder
 import java.util.concurrent.TimeUnit
 
 /**
- * Disposable Android 12 CI smoke, not a signed Play/OEM reproduction of the v61 ANRs.
+ * Disposable Android 12+ CI smoke, not a signed Play/OEM reproduction of the v61 ANRs.
  * A media command initiated while the Activity is visible must keep foreground playback
  * and its native media notification when the user returns HOME.
  */
@@ -35,7 +35,7 @@ import java.util.concurrent.TimeUnit
 class MediaForegroundServiceApi31Test {
     @Test
     fun foregroundUserPlaybackContinuesWithNotificationAfterHome() {
-        assumeTrue("Dedicated API 31 emulator only", Build.VERSION.SDK_INT == 31)
+        assumeTrue("Android 12+ emulator smoke", Build.VERSION.SDK_INT >= 31)
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
         val fixture = File(context.cacheDir, "ci-audio-fgs-20s.wav")
@@ -82,6 +82,60 @@ class MediaForegroundServiceApi31Test {
                 onMain(instrumentation) { !controller.isPlaying }
             }
             onMain(instrumentation) { controller.clearMediaItems() }
+        } finally {
+            onMain(instrumentation) { MediaController.releaseFuture(future) }
+            activity.close()
+            fixture.delete()
+        }
+    }
+
+    /**
+     * A quick HOME transition may race with Media3's foreground-service promotion.
+     * Exercise this independently from the test that waits for playback first.
+     */
+    @Test
+    fun immediateHomeAfterPlayKeepsForegroundNotification() {
+        assumeTrue("Android 12+ emulator smoke", Build.VERSION.SDK_INT >= 31)
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val fixture = File(context.cacheDir, "ci-audio-quick-home-20s.wav")
+        writeSilentWav(fixture, seconds = 20)
+
+        val activity = ActivityScenario.launch(MainActivity::class.java)
+        val future = MediaController.Builder(
+            context,
+            SessionToken(context, ComponentName(context, AudioService::class.java)),
+        ).buildAsync()
+
+        try {
+            val controller = future.get(20, TimeUnit.SECONDS)
+            val item = MediaItem.Builder()
+                .setUri(Uri.fromFile(fixture))
+                .setMediaMetadata(
+                    MediaMetadata.Builder().setTitle("CI quick HOME playback test").build(),
+                ).build()
+            onMain(instrumentation) {
+                controller.setMediaItem(item)
+                controller.prepare()
+                controller.play()
+            }
+            instrumentation.uiAutomation.executeShellCommand("input keyevent KEYCODE_HOME").close()
+
+            assertEventually("Playback must survive immediate HOME after Play") {
+                onMain(instrumentation) { controller.isPlaying && controller.currentPosition > 500L }
+            }
+            val notifications =
+                context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            assertEventually("Immediate HOME playback must show a foreground media notification") {
+                notifications.activeNotifications.any { status ->
+                    status.notification.flags and Notification.FLAG_FOREGROUND_SERVICE != 0 &&
+                        status.notification.category == Notification.CATEGORY_TRANSPORT
+                }
+            }
+            onMain(instrumentation) {
+                controller.pause()
+                controller.clearMediaItems()
+            }
         } finally {
             onMain(instrumentation) { MediaController.releaseFuture(future) }
             activity.close()
