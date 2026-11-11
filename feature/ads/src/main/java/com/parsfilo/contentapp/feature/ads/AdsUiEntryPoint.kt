@@ -7,6 +7,8 @@ import dagger.hilt.components.SingletonComponent
 @EntryPoint
 @InstallIn(SingletonComponent::class)
 interface AdsUiEntryPoint {
+    fun adManager(): AdManager
+
     fun adRevenueLogger(): AdRevenueLogger
 
     fun adGateChecker(): AdGateChecker
