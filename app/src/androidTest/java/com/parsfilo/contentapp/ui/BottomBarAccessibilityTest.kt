@@ -70,18 +70,38 @@ class BottomBarAccessibilityTest {
     }
 
     @Test
-    fun at411dpAnd100PercentReadableLabelsRemainVisible() {
+    fun at411dpAnd100PercentLabelsRespectSystemNavInsetsWithoutLosingTargets() {
         showNavigation(widthDp = 411, fontScale = 1.0f)
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        listOf(
-            R.string.nav_premium,
-            R.string.nav_apps,
-            R.string.nav_home,
-            R.string.nav_messages,
-            R.string.nav_alerts,
-        ).forEach { titleRes ->
-            rule.onNodeWithText(context.getString(titleRes), useUnmergedTree = true).assertExists()
+        // The fake 411dp parent can have less usable width in three-button
+        // landscape with a display cutout. The bar measures AFTER nav insets.
+        val usableWidthDp =
+            rule.onNodeWithTag("primary_navigation").fetchSemanticsNode()
+                .boundsInRoot.width / context.resources.displayMetrics.density
+        val shouldShowLabels = shouldShowBottomBarLabels(usableWidthDp.toInt(), 1.0f)
+        val names =
+            listOf(
+                R.string.nav_premium,
+                R.string.nav_apps,
+                R.string.nav_home,
+                R.string.nav_messages,
+                R.string.nav_alerts,
+            ).map(context::getString)
+        names.forEach { title ->
+            rule.onNodeWithContentDescription(title, useUnmergedTree = true).assertExists()
+            if (shouldShowLabels) {
+                rule.onNodeWithText(title, useUnmergedTree = true).assertExists()
+            } else {
+                rule.onNodeWithText(title, useUnmergedTree = true).assertDoesNotExist()
+            }
         }
+        assertEquals(
+            5,
+            rule.onAllNodes(
+                hasClickAction() and hasAnyAncestor(hasTestTag("primary_navigation")),
+                useUnmergedTree = true,
+            ).fetchSemanticsNodes().size,
+        )
     }
 
     private fun showNavigation(widthDp: Int, fontScale: Float) {
