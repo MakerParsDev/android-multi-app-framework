@@ -24,4 +24,5 @@ enum class AdSuppressReason(val analyticsValue: String) {
     ACTIVITY_UNAVAILABLE("activity_unavailable"),
     APP_LIFECYCLE("app_lifecycle"),
     AD_GATE("ad_gate"),
+    SDK_NOT_READY("sdk_not_ready"),
 }
