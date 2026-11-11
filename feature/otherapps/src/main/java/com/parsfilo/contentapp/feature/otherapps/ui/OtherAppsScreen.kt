@@ -49,6 +49,11 @@ import com.parsfilo.contentapp.core.designsystem.tokens.LocalDimens
 import com.parsfilo.contentapp.feature.otherapps.R
 import com.parsfilo.contentapp.feature.otherapps.model.OtherApp
 
+internal object NewBadgeColors {
+    val background = Color(0xFFFF6F00)
+    val foreground = Color(0xFF1A100C)
+}
+
 @Composable
 fun OtherAppsRoute(
     viewModel: OtherAppsViewModel = hiltViewModel()
@@ -235,13 +240,13 @@ fun AppItem(app: OtherApp, onClick: () -> Unit) {
 
             if (app.isNew) {
                 Surface(
-                    color = Color(0xFFFF6F00),
+                    color = NewBadgeColors.background,
                     shape = RoundedCornerShape(dimens.radiusSmall),
                     modifier = Modifier.padding(end = dimens.space6)
                 ) {
                     Text(
                         text = stringResource(R.string.other_apps_new),
-                        color = Color.White,
+                        color = NewBadgeColors.foreground,
                         style = MaterialTheme.typography.labelSmall,
                         modifier = Modifier.padding(horizontal = dimens.space8, vertical = dimens.space4)
                     )
