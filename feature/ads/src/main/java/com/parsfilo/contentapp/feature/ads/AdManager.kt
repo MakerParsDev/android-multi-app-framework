@@ -672,18 +672,27 @@ class AdManager @Inject constructor(
                     MOBILE_ADS_INIT_SOFT_TIMEOUT_MS,
                 )
                 withContext(Dispatchers.Main.immediate) {
-                    _isSdkReady.value = false
+                    // A callback may have completed after the soft timeout.
+                    if (mobileAdsInitializationGate.currentState() != MobileAdsInitializationState.Ready) {
+                        _isSdkReady.value = false
+                    }
                 }
                 return@launch
             }
 
-            mobileAdsInitializationGate.markReady()
-            withContext(Dispatchers.Main.immediate) {
+            publishMobileAdsInitialized(initStatus)
+        }
+    }
+
+    private suspend fun publishMobileAdsInitialized(initStatus: InitializationStatus) {
+        mobileAdsInitializationGate.markReady()
+        withContext(Dispatchers.Main.immediate) {
+            if (!_isSdkReady.value) {
                 Timber.d("MobileAds initialized: %s", initStatus.adapterStatusMap)
                 _isSdkReady.value = true
-                onAdsInitialized?.invoke()
-                onAdsInitialized = null
             }
+            onAdsInitialized?.invoke()
+            onAdsInitialized = null
         }
     }
 
@@ -692,6 +701,10 @@ class AdManager @Inject constructor(
             MobileAds.initialize(context) { initStatus ->
                 if (continuation.isActive) {
                     continuation.resume(initStatus)
+                } else {
+                    // A soft timeout must not discard an eventual successful SDK callback.
+                    // The SDK is process-global, so a late completion is still authoritative.
+                    initScope.launch { publishMobileAdsInitialized(initStatus) }
                 }
             }
         }
