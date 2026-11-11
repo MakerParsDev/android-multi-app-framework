@@ -93,8 +93,9 @@ fun AppNavHost(
             resolveHomeStartDestination(productDefinition)
         }
     val coroutineScope = rememberCoroutineScope()
-    // Let the first prayer/name open immediately; later navigation may show a capped ad.
+    // First entry into reading content should never require watching an ad.
     var hasOpenedMiraclesDetail by remember { mutableStateOf(false) }
+    var hasOpenedQuranDetail by remember { mutableStateOf(false) }
     var rewardedInterstitialIntroRequest by remember {
         mutableStateOf<RewardedInterstitialIntroRequest?>(null)
     }
@@ -307,40 +308,29 @@ fun AppNavHost(
                     }
                     QuranSuraListRoute(
                         onSuraClick = { suraNumber ->
-                            if (hostActivity == null) {
-                                navController.navigate(
-                                    AppRoute.QuranSuraDetail.createRoute(suraNumber),
-                                )
+                            val destination = AppRoute.QuranSuraDetail.createRoute(suraNumber)
+                            val shouldRequestAd = shouldRequestFirstDetailInterstitial(
+                                hasOpenedDetail = hasOpenedQuranDetail,
+                                hasHostActivity = hostActivity != null,
+                            )
+                            hasOpenedQuranDetail = true
+                            if (!shouldRequestAd) {
+                                navController.navigate(destination)
                             } else {
                                 requestInterstitialAd(
                                     placement = AdPlacement.INTERSTITIAL_NAV_BREAK,
                                     route = AppRoute.QuranSuraList.route,
                                     triggerKind = InterstitialTriggerKind.NAV_BREAK,
-                                    onAdDismissed = {
-                                        navController.navigate(
-                                            AppRoute.QuranSuraDetail.createRoute(suraNumber),
-                                        )
-                                    },
+                                    onAdDismissed = { navController.navigate(destination) },
                                 )
                             }
                         },
                         onLastReadClick = { suraNumber, ayahNumber ->
-                            if (hostActivity == null) {
-                                navController.navigate(
-                                    AppRoute.QuranSuraDetail.createRoute(suraNumber, ayahNumber),
-                                )
-                            } else {
-                                requestInterstitialAd(
-                                    placement = AdPlacement.INTERSTITIAL_NAV_BREAK,
-                                    route = AppRoute.QuranSuraList.route,
-                                    triggerKind = InterstitialTriggerKind.NAV_BREAK,
-                                    onAdDismissed = {
-                                        navController.navigate(
-                                            AppRoute.QuranSuraDetail.createRoute(suraNumber, ayahNumber),
-                                        )
-                                    },
-                                )
-                            }
+                            // A user's saved reading position is a direct resume action, not an ad break.
+                            hasOpenedQuranDetail = true
+                            navController.navigate(
+                                AppRoute.QuranSuraDetail.createRoute(suraNumber, ayahNumber),
+                            )
                         },
                         onBookmarksClick = {
                             navController.navigate(
@@ -625,7 +615,7 @@ fun AppNavHost(
                 }
                 MiraclesListRoute(
                     onPrayerClick = { prayerIndex ->
-                        val shouldRequestAd = shouldRequestMiraclesInterstitial(
+                        val shouldRequestAd = shouldRequestFirstDetailInterstitial(
                             hasOpenedDetail = hasOpenedMiraclesDetail,
                             hasHostActivity = hostActivity != null,
                         )
@@ -888,8 +878,8 @@ private data class RewardedInterstitialIntroRequest(
     val onRewardEarned: () -> Unit,
 )
 
-/** A reader's first detail opening is uninterrupted; subsequent entries keep ad eligibility. */
-internal fun shouldRequestMiraclesInterstitial(
+/** First detail opening is uninterrupted; later navigation remains eligible for capped ads. */
+internal fun shouldRequestFirstDetailInterstitial(
     hasOpenedDetail: Boolean,
     hasHostActivity: Boolean,
 ): Boolean = hasOpenedDetail && hasHostActivity
