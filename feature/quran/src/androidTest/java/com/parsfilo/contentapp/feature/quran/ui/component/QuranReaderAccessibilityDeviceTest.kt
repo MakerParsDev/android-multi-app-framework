@@ -116,18 +116,21 @@ class QuranReaderAccessibilityDeviceTest {
 
     @Test
     fun longPressOnArabicGlyphCopiesSelectedWord() {
-        assertGlyphCopyWorks(QuranDisplayMode.ARABIC, ayah.arabic, "Synthetic")
+        val arabicAyah = ayah.copy(arabic = "بسم الله الرحمن الرحيم")
+        assertGlyphCopyWorks(QuranDisplayMode.ARABIC, arabicAyah, arabicAyah.arabic, "بسم", glyphIndex = 1)
     }
 
     @Test
     fun longPressOnTranslationGlyphCopiesSelectedWord() {
-        assertGlyphCopyWorks(QuranDisplayMode.TRANSLATION, ayah.turkish, "Synthetic")
+        assertGlyphCopyWorks(QuranDisplayMode.TRANSLATION, ayah, ayah.turkish, "Turkish", glyphIndex = 12)
     }
 
     private fun assertGlyphCopyWorks(
         displayMode: QuranDisplayMode,
+        testAyah: QuranAyah,
         targetText: String,
         expectedWord: String,
+        glyphIndex: Int,
     ) {
         verifyHost()
         val context = InstrumentationRegistry.getInstrumentation().targetContext
@@ -139,7 +142,7 @@ class QuranReaderAccessibilityDeviceTest {
                 AppTheme(flavorName = "kuran_kerim") {
                     AyahItem(
                         state = AyahDisplayState(
-                            ayah = ayah,
+                            ayah = testAyah,
                             isBookmarked = false,
                             isAudioDownloaded = false,
                             isAudioDownloading = false,
@@ -147,7 +150,7 @@ class QuranReaderAccessibilityDeviceTest {
                             isCurrentlyPlaying = false,
                         ),
                         displayMode = displayMode,
-                        translatedText = ayah.turkish,
+                        translatedText = testAyah.turkish,
                         fontSize = 26,
                         onPlayPauseClick = {},
                         onBookmarkClick = {},
@@ -157,7 +160,7 @@ class QuranReaderAccessibilityDeviceTest {
             val text = rule.onNodeWithText(targetText, useUnmergedTree = true)
             val layouts = mutableListOf<TextLayoutResult>()
             text.performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
-            val glyph = layouts.single().getBoundingBox(3).center
+            val glyph = layouts.single().getBoundingBox(glyphIndex).center
             // Long press an actual glyph, not the center of a wide, aligned Text box.
             text.performTouchInput { longClick(glyph) }
             // Android's standard selection Copy keyboard command is a deterministic
