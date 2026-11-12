@@ -3,6 +3,7 @@ package com.parsfilo.contentapp.feature.content.ui.miracles
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.parsfilo.contentapp.core.datastore.PreferencesDataSource
 import com.parsfilo.contentapp.core.model.MiraclesPrayer
 import com.parsfilo.contentapp.feature.ads.AdGateChecker
 import com.parsfilo.contentapp.feature.content.data.MiraclesPrayerRepository
@@ -11,6 +12,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -19,7 +21,8 @@ sealed interface MiraclesDetailUiState {
 
     data class Success(
         val prayer: MiraclesPrayer,
-        val shouldShowAds: Boolean
+        val shouldShowAds: Boolean,
+        val fontSize: Int = 20,
     ) : MiraclesDetailUiState
 
     data class Error(val throwable: Throwable) : MiraclesDetailUiState
@@ -29,7 +32,8 @@ sealed interface MiraclesDetailUiState {
 class MiraclesDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val prayerRepository: MiraclesPrayerRepository,
-    private val adGateChecker: AdGateChecker
+    private val adGateChecker: AdGateChecker,
+    private val preferencesDataSource: PreferencesDataSource,
 ) : ViewModel() {
 
     private val prayerIndex: Int = checkNotNull(savedStateHandle["prayerIndex"])
@@ -39,6 +43,12 @@ class MiraclesDetailViewModel @Inject constructor(
 
     init {
         loadPrayerDetail()
+    }
+
+    fun updateFontSize(fontSize: Int) {
+        viewModelScope.launch {
+            preferencesDataSource.setFontSize(fontSize.coerceIn(14, 40))
+        }
     }
 
     private fun loadPrayerDetail() {
@@ -55,11 +65,17 @@ class MiraclesDetailViewModel @Inject constructor(
                 return@launch
             }
 
-            adGateChecker.shouldShowAds.collect { shouldShowAds ->
-                _uiState.value = MiraclesDetailUiState.Success(
+            combine(
+                adGateChecker.shouldShowAds,
+                preferencesDataSource.userData,
+            ) { shouldShowAds, userData ->
+                MiraclesDetailUiState.Success(
                     prayer = prayer,
-                    shouldShowAds = shouldShowAds
+                    shouldShowAds = shouldShowAds,
+                    fontSize = userData.fontSize,
                 )
+            }.collect { state ->
+                _uiState.value = state
             }
         }
     }

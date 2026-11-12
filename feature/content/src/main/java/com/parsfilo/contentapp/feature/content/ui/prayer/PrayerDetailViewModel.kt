@@ -80,6 +80,12 @@ class PrayerDetailViewModel @Inject constructor(
         }
     }
 
+    fun updateFontSize(fontSize: Int) {
+        viewModelScope.launch {
+            preferencesDataSource.setFontSize(fontSize.coerceIn(14, 40))
+        }
+    }
+
     fun updateDisplayMode(mode: DisplayMode) {
         viewModelScope.launch {
             preferencesDataSource.setDisplayMode(mode.name)

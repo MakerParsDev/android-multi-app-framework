@@ -50,6 +50,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -78,6 +79,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.parsfilo.contentapp.core.designsystem.AppTheme
 import com.parsfilo.contentapp.core.designsystem.component.AppButton
+import com.parsfilo.contentapp.core.designsystem.component.readerPinchFontSize
 import com.parsfilo.contentapp.core.designsystem.tokens.LocalDimens
 import com.parsfilo.contentapp.core.designsystem.tokens.LocalMotion
 import com.parsfilo.contentapp.core.model.DisplayMode
@@ -113,6 +115,7 @@ fun ContentRoute(
                 }
             }
         },
+        onFontSizeChange = viewModel::updateFontSize,
         onSettingsClick = onSettingsClick,
         onRewardsClick = onRewardsClick,
         onSavePlace = viewModel::saveReadingPlace,
@@ -140,6 +143,7 @@ fun ContentScreen(
     nativeAdContent: @Composable () -> Unit = {},
     bannerAdUnitId: String,
     onRetry: () -> Unit = {},
+    onFontSizeChange: (Int) -> Unit = {},
     onSavePlace: (Int) -> Unit = {},
     onClearPlace: () -> Unit = {},
     initialViewportVerseId: Int = 0,
@@ -176,6 +180,7 @@ fun ContentScreen(
         is ContentUiState.Success -> {
             val colorScheme = MaterialTheme.colorScheme
             val verses = uiState.verses
+            var displayedFontSize by remember(uiState.fontSize) { mutableIntStateOf(uiState.fontSize) }
             val listState = rememberLazyListState()
             val readerScrollState = rememberScrollState()
             val scope = rememberCoroutineScope()
@@ -366,7 +371,13 @@ fun ContentScreen(
                         modifier = Modifier
                             .testTag("content_list")
                             .then(if (compactHeight) Modifier.height(260.dp) else Modifier.weight(1f))
-                            .fillMaxWidth(),
+                            .fillMaxWidth()
+                            .readerPinchFontSize(
+                                fontSize = displayedFontSize,
+                                fontSizeRange = 14..40,
+                                onPreview = { displayedFontSize = it },
+                                onCommitted = onFontSizeChange,
+                            ),
                         contentPadding = PaddingValues(horizontal = dimens.space6, vertical = dimens.space2)
                     ) {
                         verses.forEachIndexed { index, verse ->
@@ -374,7 +385,7 @@ fun ContentScreen(
                                 VerseItem(
                                     verse = verse,
                                     displayMode = uiState.displayMode,
-                                    fontSize = uiState.fontSize,
+                                    fontSize = displayedFontSize,
                                     modifier =
                                         if (index == 0) {
                                             Modifier.testTag("content_first_item")
