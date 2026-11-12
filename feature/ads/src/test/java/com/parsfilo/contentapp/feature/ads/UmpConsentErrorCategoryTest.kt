@@ -15,6 +15,10 @@ class UmpConsentErrorCategoryTest {
             .isEqualTo("runtime_refresh_timeout")
         assertThat(classifyUmpConsentError("privacy_options_form", FormError.ErrorCode.INVALID_OPERATION))
             .isEqualTo("privacy_options_form_invalid_operation")
+        assertThat(classifyUmpConsentError("settings_retry_form", FormError.ErrorCode.TIME_OUT))
+            .isEqualTo("settings_retry_form_timeout")
+        assertThat(classifyUmpConsentError("settings_retry_info_update", FormError.ErrorCode.INTERNET_ERROR))
+            .isEqualTo("settings_retry_info_update_network")
     }
 
     @Test

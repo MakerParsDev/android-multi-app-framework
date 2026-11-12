@@ -448,15 +448,34 @@ class AdManager @Inject constructor(
         }
     }
 
+    /**
+     * Retries a missing UMP consent choice only on an explicit Settings action.
+     * An error must not generate a second silent network request.
+     */
+    fun retryConsentFromSettings(activity: Activity, onUpdated: (Boolean) -> Unit = {}) {
+        requestConsentFormIfRequired(activity, trigger = "settings_retry") { result ->
+            onUpdated(result !is UmpConsentDebugResult.Error)
+        }
+    }
+
     fun showConsentFormIfRequired(
         activity: Activity,
         onCompleted: (UmpConsentDebugResult) -> Unit = {},
     ) {
-        Timber.d("AdManager showConsentFormIfRequired requested")
-        launchWithResolvedAgeGateStatus("showConsentFormIfRequired") { ageGateStatus ->
+        requestConsentFormIfRequired(activity, trigger = "debug_menu", onCompleted = onCompleted)
+    }
+
+    private fun requestConsentFormIfRequired(
+        activity: Activity,
+        trigger: String,
+        onCompleted: (UmpConsentDebugResult) -> Unit,
+    ) {
+        val settingsRetry = trigger == "settings_retry"
+        Timber.d("AdManager requestConsentFormIfRequired trigger=%s", trigger)
+        launchWithResolvedAgeGateStatus("requestConsentFormIfRequired") { ageGateStatus ->
             AdsConsentRuntimeState.update(AdsPrivacyState.Gathering(ageGateStatus))
-            ConsentFunnelDebugDashboard.onConsentStarted(trigger = "debug_menu")
-            appAnalytics.logConsentFlowStarted(trigger = "debug_menu")
+            ConsentFunnelDebugDashboard.onConsentStarted(trigger = trigger)
+            appAnalytics.logConsentFlowStarted(trigger = trigger)
             val params = buildConsentRequestParameters(ageGateStatus, _debugGeography.value)
             val consentInformation = UserMessagingPlatform.getConsentInformation(context)
             consentInformation.requestConsentInfoUpdate(
@@ -467,23 +486,31 @@ class AdManager @Inject constructor(
                     val expectedFormShown = !consentInformation.canRequestAds()
                     UserMessagingPlatform.loadAndShowConsentFormIfRequired(activity) { formError ->
                         if (formError != null) {
-                            Timber.w("Debug consent form error: %s", formError.message)
+                            Timber.w("Consent form error: %s", formError.message)
                             val result = UmpConsentDebugResult.Error(
-                                formError.message ?: "Debug consent form error",
+                                formError.message ?: "Consent form error",
                             )
-                            updateConsentDebugResult(result, consentInformation)
+                            if (!settingsRetry) updateConsentDebugResult(result, consentInformation)
                             appAnalytics.logConsentError(
-                                trigger = "debug_menu",
-                                message = formError.message ?: "Debug consent form error",
+                                trigger = trigger,
+                                message = formError.message ?: "Consent form error",
                                 ageGateResult = ageGateStatus.analyticsValue(),
-                                errorCategory = classifyUmpConsentError("debug_menu_form", formError.errorCode),
+                                errorCategory = classifyUmpConsentError(
+                                    if (settingsRetry) "settings_retry_form" else "debug_menu_form",
+                                    formError.errorCode,
+                                ),
                             )
                             ConsentFunnelDebugDashboard.onConsentOutcome(
                                 granted = consentInformation.canRequestAds() &&
                                     !isExplicitEeaConsentDenied(readConsentSignals()),
-                                trigger = "debug_menu_error",
+                                trigger = trigger + "_error",
                             )
-                            refreshConsent(activity) { onCompleted(result) }
+                            if (settingsRetry) {
+                                settleSettingsRetryFailure(consentInformation, ageGateStatus)
+                                onCompleted(result)
+                            } else {
+                                refreshConsent(activity) { onCompleted(result) }
+                            }
                         } else {
                             val result =
                                 if (expectedFormShown) {
@@ -494,34 +521,73 @@ class AdManager @Inject constructor(
                             applyConsentOutcome(
                                 consentInformation = consentInformation,
                                 ageGateStatus = ageGateStatus,
-                                trigger = "debug_menu",
+                                trigger = trigger,
                                 umpFormShown = expectedFormShown,
                             )
-                            updateConsentDebugResult(result, consentInformation)
-                            refreshConsent(activity) { onCompleted(result) }
+                            if (settingsRetry) {
+                                onCompleted(result)
+                            } else {
+                                updateConsentDebugResult(result, consentInformation)
+                                refreshConsent(activity) { onCompleted(result) }
+                            }
                         }
                     }
                 },
                 { requestError ->
-                    Timber.w("Debug consent request update error: %s", requestError.message)
+                    Timber.w("Consent request update error: %s", requestError.message)
                     val result = UmpConsentDebugResult.Error(
-                        requestError.message ?: "Debug consent request update error",
+                        requestError.message ?: "Consent request update error",
                     )
-                    updateConsentDebugResult(result, consentInformation)
+                    if (!settingsRetry) updateConsentDebugResult(result, consentInformation)
                     appAnalytics.logConsentError(
-                        trigger = "debug_menu",
-                        message = requestError.message ?: "Debug consent request update error",
+                        trigger = trigger,
+                        message = requestError.message ?: "Consent request update error",
                         ageGateResult = ageGateStatus.analyticsValue(),
-                        errorCategory = classifyUmpConsentError("debug_menu_info_update", requestError.errorCode),
+                        errorCategory = classifyUmpConsentError(
+                            if (settingsRetry) "settings_retry_info_update" else "debug_menu_info_update",
+                            requestError.errorCode,
+                        ),
                     )
                     ConsentFunnelDebugDashboard.onConsentOutcome(
                         granted = consentInformation.canRequestAds() &&
                             !isExplicitEeaConsentDenied(readConsentSignals()),
-                        trigger = "debug_menu_request_error",
+                        trigger = trigger + "_request_error",
                     )
-                    refreshConsent(activity) { onCompleted(result) }
+                    if (settingsRetry) {
+                        settleSettingsRetryFailure(consentInformation, ageGateStatus)
+                        onCompleted(result)
+                    } else {
+                        refreshConsent(activity) { onCompleted(result) }
+                    }
                 },
             )
+        }
+    }
+
+    /** Failed retries never grant ads without the UMP SDK eligibility signal. */
+    private fun settleSettingsRetryFailure(
+        consentInformation: ConsentInformation,
+        ageGateStatus: AdAgeGateStatus,
+    ) {
+        updatePrivacyOptionsState(consentInformation)
+        val canRequestAds = consentInformation.canRequestAds()
+        val signals = readConsentSignals()
+        val status =
+            when {
+                isExplicitEeaConsentDenied(signals) -> ConsentStatus.Denied
+                canRequestAds -> resolveCachedConsentStatus(_consentStatus.value, signals)
+                else -> ConsentStatus.Missing
+            }
+        applyConsentRuntimeState(
+            consentStatus = status,
+            ageGateStatus = ageGateStatus,
+            privacyOptionsRequired = _privacyOptionsRequired.value,
+            canRequestAds = canRequestAds,
+        )
+        if (canRequestAds) {
+            initializeMobileAdsSdk(ageGateStatus)
+        } else {
+            applyGlobalRequestConfiguration(ageGateStatus)
         }
     }
 
