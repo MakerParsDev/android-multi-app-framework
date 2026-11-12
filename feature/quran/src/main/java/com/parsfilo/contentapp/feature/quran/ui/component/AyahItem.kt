@@ -1,26 +1,24 @@
 package com.parsfilo.contentapp.feature.quran.ui.component
 
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.PauseCircle
 import androidx.compose.material.icons.filled.PlayCircle
-import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -35,7 +33,6 @@ import com.parsfilo.contentapp.core.model.QuranDisplayMode
 import com.parsfilo.contentapp.feature.quran.R
 import com.parsfilo.contentapp.feature.quran.ui.suradetail.AyahDisplayState
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AyahItem(
     state: AyahDisplayState,
@@ -43,13 +40,10 @@ fun AyahItem(
     translatedText: String,
     fontSize: Int,
     onPlayPauseClick: (QuranAyah) -> Unit,
-    onDownloadClick: (QuranAyah) -> Unit,
     onBookmarkClick: (QuranAyah) -> Unit,
-    onLongClick: (QuranAyah) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val ayahNumber = state.ayah.ayahNumber
-    val actionsLabel = stringResource(R.string.quran_ayah_open_actions, ayahNumber)
     val bookmarkLabel = stringResource(
         if (state.isBookmarked) R.string.quran_ayah_bookmark_remove else R.string.quran_ayah_bookmark_add,
         ayahNumber,
@@ -58,22 +52,12 @@ fun AyahItem(
         if (state.isCurrentlyPlaying) R.string.quran_ayah_pause else R.string.quran_ayah_play,
         ayahNumber,
     )
-    val downloadLabel = stringResource(
-        if (state.isAudioDownloaded) R.string.quran_ayah_downloaded else R.string.quran_ayah_download,
-        ayahNumber,
-    )
 
     Surface(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 6.dp)
-            .testTag("quran_ayah_${ayahNumber}_card")
-            .combinedClickable(
-                onClickLabel = actionsLabel,
-                onLongClickLabel = actionsLabel,
-                onClick = { onLongClick(state.ayah) },
-                onLongClick = { onLongClick(state.ayah) },
-            ),
+            .testTag("quran_ayah_" + ayahNumber + "_card"),
         shape = MaterialTheme.shapes.medium,
         tonalElevation = 2.dp,
     ) {
@@ -83,74 +67,63 @@ fun AyahItem(
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = state.ayah.ayahNumber.toString(),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.secondary,
-                )
-                IconButton(
-                    onClick = { onBookmarkClick(state.ayah) },
-                    modifier = Modifier.testTag("quran_ayah_${ayahNumber}_bookmark"),
+            // Physical left/right is intentionally stable even in Arabic text mode.
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(
-                        imageVector = if (state.isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                        contentDescription = bookmarkLabel,
+                    IconButton(
+                        onClick = { onBookmarkClick(state.ayah) },
+                        modifier = Modifier.testTag("quran_ayah_" + ayahNumber + "_bookmark"),
+                    ) {
+                        Icon(
+                            imageVector = if (state.isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                            contentDescription = bookmarkLabel,
+                        )
+                    }
+                    Text(
+                        text = ayahNumber.toString(),
+                        modifier = Modifier.weight(1f),
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.secondary,
                     )
+                    IconButton(
+                        onClick = { onPlayPauseClick(state.ayah) },
+                        modifier = Modifier.testTag("quran_ayah_" + ayahNumber + "_play"),
+                    ) {
+                        Icon(
+                            imageVector = if (state.isCurrentlyPlaying) Icons.Default.PauseCircle else Icons.Default.PlayCircle,
+                            contentDescription = playbackLabel,
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
                 }
             }
 
-            androidx.compose.runtime.CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                Text(
-                    text = state.ayah.arabic,
-                    fontSize = fontSize.sp,
-                    lineHeight = (fontSize + 8).sp,
-                    textAlign = TextAlign.End,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+            // Native text handles and Android's Copy action replace a separate modal.
+            SelectionContainer {
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                    Text(
+                        text = state.ayah.arabic,
+                        fontSize = fontSize.sp,
+                        lineHeight = (fontSize + 8).sp,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
 
             if (displayMode != QuranDisplayMode.ARABIC) {
-                Text(
-                    text = translatedText,
-                    fontSize = (fontSize - 8).coerceAtLeast(14).sp,
-                    lineHeight = (fontSize - 2).coerceAtLeast(18).sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(
-                    onClick = { onPlayPauseClick(state.ayah) },
-                    modifier = Modifier.testTag("quran_ayah_${ayahNumber}_play"),
-                ) {
-                    Icon(
-                        imageVector = if (state.isCurrentlyPlaying) Icons.Default.PauseCircle else Icons.Default.PlayCircle,
-                        contentDescription = playbackLabel,
-                        modifier = Modifier.size(24.dp),
-                    )
-                }
-                IconButton(
-                    onClick = { onDownloadClick(state.ayah) },
-                    modifier = Modifier.testTag("quran_ayah_${ayahNumber}_download"),
-                ) {
-                    Icon(
-                        imageVector = when {
-                            state.isAudioDownloaded -> Icons.Default.TaskAlt
-                            else -> Icons.Default.Download
-                        },
-                        contentDescription = downloadLabel,
-                        modifier = Modifier.size(22.dp),
-                        tint = if (state.isAudioDownloaded) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface,
+                SelectionContainer {
+                    Text(
+                        text = translatedText,
+                        fontSize = (fontSize - 8).coerceAtLeast(14).sp,
+                        lineHeight = (fontSize - 2).coerceAtLeast(18).sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
             }

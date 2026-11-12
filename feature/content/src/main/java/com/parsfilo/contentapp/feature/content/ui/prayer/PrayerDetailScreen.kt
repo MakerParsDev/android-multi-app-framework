@@ -29,6 +29,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CardGiftcard
@@ -41,6 +42,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,6 +64,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.parsfilo.contentapp.core.designsystem.AppTheme
+import com.parsfilo.contentapp.core.designsystem.component.readerPinchFontSize
 import com.parsfilo.contentapp.core.designsystem.tokens.LocalDimens
 import com.parsfilo.contentapp.core.designsystem.tokens.LocalMotion
 import com.parsfilo.contentapp.core.model.DisplayMode
@@ -99,6 +104,7 @@ fun PrayerDetailRoute(
                 }
             }
         },
+        onFontSizeChange = viewModel::updateFontSize,
         onSettingsClick = onSettingsClick,
         onRewardsClick = onRewardsClick,
         audioPlayerContent = audioPlayerContent,
@@ -112,6 +118,7 @@ fun PrayerDetailScreen(
     uiState: PrayerDetailUiState,
     onBackClick: () -> Unit = {},
     onModeSelected: (DisplayMode) -> Unit,
+    onFontSizeChange: (Int) -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onRewardsClick: () -> Unit = {},
     audioPlayerContent: @Composable () -> Unit = {},
@@ -146,6 +153,7 @@ fun PrayerDetailScreen(
             }
         }
         is PrayerDetailUiState.Success -> {
+            var displayedFontSize by remember(uiState.fontSize) { mutableIntStateOf(uiState.fontSize) }
             val prayerTitle = when {
                 language.startsWith("de") && uiState.prayer.sureAdiDE.isNotBlank() -> uiState.prayer.sureAdiDE
                 language.startsWith("en") && uiState.prayer.sureAdiEN.isNotBlank() -> uiState.prayer.sureAdiEN
@@ -187,7 +195,13 @@ fun PrayerDetailScreen(
                     modifier = Modifier
                         .testTag("content_detail")
                         .weight(1f)
-                        .fillMaxWidth(),
+                        .fillMaxWidth()
+                        .readerPinchFontSize(
+                            fontSize = displayedFontSize,
+                            fontSizeRange = 14..40,
+                            onPreview = { displayedFontSize = it },
+                            onCommitted = onFontSizeChange,
+                        ),
                     contentPadding = PaddingValues(horizontal = dimens.space6, vertical = dimens.space2)
                 ) {
                     val verses = uiState.prayer.ayetler
@@ -196,7 +210,7 @@ fun PrayerDetailScreen(
                             PrayerVerseItem(
                                 verse = verse,
                                 displayMode = uiState.displayMode,
-                                fontSize = uiState.fontSize
+                                fontSize = displayedFontSize
                             )
                         }
 
@@ -303,25 +317,29 @@ fun PrayerVerseItem(
     ) {
         when (displayMode) {
             DisplayMode.ARABIC -> {
-                Text(
-                    text = verse.ayetAR,
-                    fontSize = (fontSize + 4).sp,
-                    fontWeight = FontWeight.Medium,
-                    color = colorScheme.onSurface,
-                    textAlign = TextAlign.End,
-                    lineHeight = (fontSize + 8).sp,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                SelectionContainer {
+                    Text(
+                        text = verse.ayetAR,
+                        fontSize = (fontSize + 4).sp,
+                        fontWeight = FontWeight.Medium,
+                        color = colorScheme.onSurface,
+                        textAlign = TextAlign.End,
+                        lineHeight = (fontSize + 8).sp,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
             DisplayMode.LATIN -> {
-                Text(
-                    text = verse.ayetLAT,
-                    fontSize = fontSize.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = colorScheme.onSurfaceVariant,
-                    lineHeight = (fontSize + 4).sp,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                SelectionContainer {
+                    Text(
+                        text = verse.ayetLAT,
+                        fontSize = fontSize.sp,
+                        fontWeight = FontWeight.Normal,
+                        color = colorScheme.onSurfaceVariant,
+                        lineHeight = (fontSize + 4).sp,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
             DisplayMode.TURKISH -> {
                 val translationText = when {
@@ -329,14 +347,16 @@ fun PrayerVerseItem(
                     language.startsWith("en") && verse.ayetEN.isNotBlank() -> verse.ayetEN
                     else -> verse.ayetTR
                 }
-                Text(
-                    text = translationText,
-                    fontSize = fontSize.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = colorScheme.onSurfaceVariant,
-                    lineHeight = (fontSize + 4).sp,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                SelectionContainer {
+                    Text(
+                        text = translationText,
+                        fontSize = fontSize.sp,
+                        fontWeight = FontWeight.Normal,
+                        color = colorScheme.onSurfaceVariant,
+                        lineHeight = (fontSize + 4).sp,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
         }
     }

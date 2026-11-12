@@ -1,6 +1,5 @@
 package com.parsfilo.contentapp.feature.quran.ui.suradetail
 
-import android.content.ClipData
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -29,9 +28,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -39,7 +36,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -48,13 +44,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.platform.ClipEntry
-import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -63,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.parsfilo.contentapp.core.designsystem.component.AppButton
+import com.parsfilo.contentapp.core.designsystem.component.readerPinchFontSize
 import com.parsfilo.contentapp.core.model.QuranAyah
 import com.parsfilo.contentapp.core.model.QuranDisplayMode
 import com.parsfilo.contentapp.feature.quran.R
@@ -70,7 +65,6 @@ import com.parsfilo.contentapp.feature.quran.ui.component.AyahItem
 import com.parsfilo.contentapp.feature.quran.ui.component.DisplayModeSelector
 import com.parsfilo.contentapp.feature.quran.ui.component.ReciterSelectionSheet
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.launch
 import java.util.Locale
 
 @Composable
@@ -106,7 +100,6 @@ fun QuranSuraDetailRoute(
                 }
             }
         },
-        onDownloadAyah = { ayah -> viewModel.downloadAyah(ayah.ayahNumber) },
         onToggleBookmark = { ayah -> viewModel.toggleBookmark(ayah.ayahNumber) },
         onAyahVisible = { ayah ->
             viewModel.onAyahVisible(ayah.ayahNumber)
@@ -134,20 +127,25 @@ fun QuranSuraDetailScreen(
     onFontSizeChange: (Int) -> Unit,
     onReciterSelected: (String) -> Unit,
     onPlayPauseAyah: (QuranAyah, Boolean) -> Unit,
-    onDownloadAyah: (QuranAyah) -> Unit,
     onToggleBookmark: (QuranAyah) -> Unit,
     onAyahVisible: (QuranAyah) -> Unit,
     onInitialAyahRestored: (QuranAyah) -> Unit = onAyahVisible,
     bannerAdContent: (@Composable () -> Unit)? = null,
     nativeAdContent: (@Composable () -> Unit)? = null,
 ) {
-    val clipboard = LocalClipboard.current
-    val scope = rememberCoroutineScope()
     var showReciterSheet by remember { mutableStateOf(false) }
-    var actionAyah by remember { mutableStateOf<QuranAyah?>(null) }
-    var fontSliderValue by remember(state.fontSize) { mutableIntStateOf(state.fontSize) }
+    var displayedFontSize by remember(state.fontSize) { mutableIntStateOf(state.fontSize) }
     val language = LocalLocale.current.platformLocale.language.lowercase(Locale.ROOT)
     val listState = rememberLazyListState()
+    val increaseTextLabel = stringResource(R.string.quran_text_increase)
+    val decreaseTextLabel = stringResource(R.string.quran_text_decrease)
+    val changeReaderTextSize: (Int) -> Unit = { requested ->
+        val next = requested.coerceIn(22, 42)
+        if (displayedFontSize != next) {
+            displayedFontSize = next
+            onFontSizeChange(next)
+        }
+    }
     // Move keyboard focus from the last reader header action directly into
     // reading controls, rather than through the app-wide bottom navigation.
     val bookmarksFocusRequester = remember { FocusRequester() }
@@ -282,28 +280,6 @@ fun QuranSuraDetailScreen(
                 previousFocusRequester = bookmarksFocusRequester,
             )
 
-            Column(modifier = Modifier.padding(horizontal = 12.dp)) {
-                Text(
-                    text = state.currentReciter.displayName,
-                    style = MaterialTheme.typography.labelLarge,
-                )
-                val fontSizeLabel = stringResource(R.string.quran_text_size)
-                Text(
-                    text = fontSizeLabel,
-                    modifier = Modifier.clearAndSetSemantics {},
-                    style = MaterialTheme.typography.labelMedium,
-                )
-                Slider(
-                    modifier = Modifier
-                        .testTag("quran_text_size_slider")
-                        .semantics { contentDescription = fontSizeLabel },
-                    value = fontSliderValue.toFloat(),
-                    valueRange = 22f..42f,
-                    onValueChange = { fontSliderValue = it.toInt() },
-                    onValueChangeFinished = { onFontSizeChange(fontSliderValue) },
-                )
-            }
-
             if (state.isLoading && state.ayahs.isEmpty()) {
                 Column(
                     modifier = Modifier.fillMaxSize(),
@@ -339,7 +315,25 @@ fun QuranSuraDetailScreen(
                 modifier = Modifier
                     .testTag("quran_detail")
                     .fillMaxWidth()
-                    .weight(1f),
+                    .weight(1f)
+                    .readerPinchFontSize(
+                        fontSize = displayedFontSize,
+                        fontSizeRange = 22..42,
+                        onPreview = { displayedFontSize = it },
+                        onCommitted = onFontSizeChange,
+                    )
+                    .semantics {
+                        customActions = listOf(
+                            CustomAccessibilityAction(increaseTextLabel) {
+                                changeReaderTextSize(displayedFontSize + 2)
+                                true
+                            },
+                            CustomAccessibilityAction(decreaseTextLabel) {
+                                changeReaderTextSize(displayedFontSize - 2)
+                                true
+                            },
+                        )
+                    },
                 contentPadding = PaddingValues(bottom = 0.dp),
             ) {
                 state.ayahs.forEachIndexed { index, ayahState ->
@@ -357,11 +351,9 @@ fun QuranSuraDetailScreen(
                             state = ayahState,
                             displayMode = state.displayMode,
                             translatedText = translatedText,
-                            fontSize = state.fontSize,
+                            fontSize = displayedFontSize,
                             onPlayPauseClick = { ayah -> onPlayPauseAyah(ayah, ayahState.isCurrentlyPlaying) },
-                            onDownloadClick = onDownloadAyah,
                             onBookmarkClick = onToggleBookmark,
-                            onLongClick = { ayah -> actionAyah = ayah },
                         )
                     }
 
@@ -384,41 +376,6 @@ fun QuranSuraDetailScreen(
             onSelect = onReciterSelected,
             onDismiss = { showReciterSheet = false },
         )
-    }
-
-    actionAyah?.let { ayah ->
-        val isBookmarked = state.ayahs.firstOrNull { it.ayah.ayahNumber == ayah.ayahNumber }?.isBookmarked == true
-        ModalBottomSheet(onDismissRequest = { actionAyah = null }) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                AppButton(
-                    text = stringResource(R.string.quran_copy),
-                    onClick = {
-                        scope.launch {
-                            clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("ayah", ayah.arabic)))
-                        }
-                        actionAyah = null
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                AppButton(
-                    text = if (isBookmarked) {
-                        stringResource(R.string.quran_remove_bookmark)
-                    } else {
-                        stringResource(R.string.quran_add_bookmark)
-                    },
-                    onClick = {
-                        onToggleBookmark(ayah)
-                        actionAyah = null
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
     }
 }
 
@@ -446,6 +403,20 @@ private fun QuranSuraDetailHeader(
             )
         }
 
+        IconButton(
+            onClick = onOpenBookmarks,
+            modifier = Modifier
+                .size(40.dp)
+                .focusRequester(bookmarksFocusRequester)
+                .focusProperties { next = readerModeFocusRequester },
+        ) {
+            Icon(
+                imageVector = Icons.Default.Bookmark,
+                contentDescription = stringResource(R.string.quran_open_bookmarks),
+                tint = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+
         Text(
             text = title,
             modifier = Modifier.weight(1f),
@@ -463,19 +434,6 @@ private fun QuranSuraDetailHeader(
                 Icon(
                     imageVector = Icons.Default.LibraryMusic,
                     contentDescription = stringResource(R.string.quran_select_reciter),
-                    tint = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-            IconButton(
-                onClick = onOpenBookmarks,
-                modifier = Modifier
-                    .size(40.dp)
-                    .focusRequester(bookmarksFocusRequester)
-                    .focusProperties { next = readerModeFocusRequester },
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Bookmark,
-                    contentDescription = stringResource(R.string.quran_open_bookmarks),
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
             }

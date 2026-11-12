@@ -35,6 +35,8 @@
     <string name="quran_loading">Loading…</string>
     <string name="quran_toggle_search">Search</string>
     <string name="quran_more_options">More options</string>
+    <string name="quran_text_increase">Increase text size</string>
+    <string name="quran_text_decrease">Decrease text size</string>
     <string name="quran_text_size">Text size</string>
     <string name="quran_back">Back</string>
     <string name="quran_ayah_open_actions">Actions for ayah %1$d</string>

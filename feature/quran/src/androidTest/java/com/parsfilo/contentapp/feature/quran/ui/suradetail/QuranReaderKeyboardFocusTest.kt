@@ -59,7 +59,6 @@ class QuranReaderKeyboardFocusTest {
                             onFontSizeChange = {},
                             onReciterSelected = {},
                             onPlayPauseAyah = { _, _ -> },
-                            onDownloadAyah = {},
                             onToggleBookmark = {},
                             onAyahVisible = {},
                         )

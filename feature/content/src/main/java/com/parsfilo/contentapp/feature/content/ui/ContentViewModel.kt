@@ -88,6 +88,12 @@ class ContentViewModel @Inject constructor(
         viewModelScope.launch { preferencesDataSource.setContentSavedVerseId(null) }
     }
 
+    fun updateFontSize(fontSize: Int) {
+        viewModelScope.launch {
+            preferencesDataSource.setFontSize(fontSize.coerceIn(14, 40))
+        }
+    }
+
     fun updateDisplayMode(mode: DisplayMode) {
         val oldMode = (uiState.value as? ContentUiState.Success)?.displayMode
         viewModelScope.launch {

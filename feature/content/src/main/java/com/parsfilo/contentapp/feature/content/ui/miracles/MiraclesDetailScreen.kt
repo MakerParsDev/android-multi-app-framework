@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CardGiftcard
@@ -37,6 +38,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,6 +60,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.parsfilo.contentapp.core.designsystem.AppTheme
+import com.parsfilo.contentapp.core.designsystem.component.readerPinchFontSize
 import com.parsfilo.contentapp.core.designsystem.tokens.LocalDimens
 import com.parsfilo.contentapp.core.designsystem.tokens.LocalMotion
 import com.parsfilo.contentapp.core.model.MiraclesPrayer
@@ -77,6 +82,7 @@ fun MiraclesDetailRoute(
         onSettingsClick = onSettingsClick,
         onRewardsClick = onRewardsClick,
         variant = variant,
+        onFontSizeChange = viewModel::updateFontSize,
     ) {
         content()
     }
@@ -89,6 +95,7 @@ fun MiraclesDetailScreen(
     onSettingsClick: () -> Unit = {},
     onRewardsClick: () -> Unit = {},
     variant: MiraclesContentVariant = MiraclesContentVariant.MUCIZEDUALAR,
+    onFontSizeChange: (Int) -> Unit = {},
     content: @Composable () -> Unit = {},
 ) {
     val dimens = LocalDimens.current
@@ -125,6 +132,8 @@ fun MiraclesDetailScreen(
             }
         }
         is MiraclesDetailUiState.Success -> {
+            var displayedFontSize by remember(uiState.fontSize) { mutableIntStateOf(uiState.fontSize) }
+            val readingScale = displayedFontSize / 20f
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -156,7 +165,13 @@ fun MiraclesDetailScreen(
                     modifier = Modifier
                         .testTag("miracles_detail")
                         .weight(1f)
-                        .fillMaxWidth(),
+                        .fillMaxWidth()
+                        .readerPinchFontSize(
+                            fontSize = displayedFontSize,
+                            fontSizeRange = 14..40,
+                            onPreview = { displayedFontSize = it },
+                            onCommitted = onFontSizeChange,
+                        ),
                     contentPadding = PaddingValues(horizontal = dimens.space12, vertical = dimens.space12)
                 ) {
                     if (
@@ -190,8 +205,8 @@ fun MiraclesDetailScreen(
                                         )
                                         Text(
                                             text = verse.arabic,
-                                            fontSize = 22.sp,
-                                            lineHeight = 38.sp,
+                                            fontSize = (22 * readingScale).coerceAtLeast(12f).sp,
+                                            lineHeight = (38 * readingScale).coerceAtLeast(16f).sp,
                                             color = colorScheme.onSurface,
                                             textAlign = TextAlign.End,
                                             modifier = Modifier.fillMaxWidth(),
@@ -244,8 +259,8 @@ fun MiraclesDetailScreen(
                                         )
                                         Text(
                                             text = supplication.arabic,
-                                            fontSize = 22.sp,
-                                            lineHeight = 38.sp,
+                                            fontSize = (22 * readingScale).coerceAtLeast(12f).sp,
+                                            lineHeight = (38 * readingScale).coerceAtLeast(16f).sp,
                                             color = colorScheme.onSurface,
                                             textAlign = TextAlign.End,
                                             modifier = Modifier.fillMaxWidth(),
@@ -268,8 +283,8 @@ fun MiraclesDetailScreen(
                                 Text(
                                     text = uiState.prayer.duaAciklama,
                                     color = colorScheme.onSurface,
-                                    fontSize = 14.sp,
-                                    lineHeight = 20.sp
+                                    fontSize = (14 * readingScale).coerceAtLeast(12f).sp,
+                                    lineHeight = (20 * readingScale).coerceAtLeast(16f).sp
                                 )
                             }
                             Spacer(modifier = Modifier.height(dimens.space12))
@@ -285,11 +300,11 @@ fun MiraclesDetailScreen(
                             ) {
                                 Text(
                                     text = uiState.prayer.duaBesmele,
-                                    fontSize = 18.sp,
+                                    fontSize = (18 * readingScale).coerceAtLeast(12f).sp,
                                     fontWeight = FontWeight.Medium,
                                     color = colorScheme.onSurface,
                                     textAlign = TextAlign.Center,
-                                    lineHeight = 26.sp,
+                                    lineHeight = (26 * readingScale).coerceAtLeast(16f).sp,
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
@@ -304,11 +319,11 @@ fun MiraclesDetailScreen(
                             ) {
                                 Text(
                                     text = uiState.prayer.duaArapca,
-                                    fontSize = 22.sp,
+                                    fontSize = (22 * readingScale).coerceAtLeast(12f).sp,
                                     fontWeight = FontWeight.Medium,
                                     color = colorScheme.onSurface,
                                     textAlign = TextAlign.End,
-                                    lineHeight = 34.sp,
+                                    lineHeight = (34 * readingScale).coerceAtLeast(16f).sp,
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
@@ -323,11 +338,11 @@ fun MiraclesDetailScreen(
                             ) {
                                 Text(
                                     text = uiState.prayer.duaLatinOkunus.ifBlank { uiState.prayer.duaBesmele },
-                                    fontSize = 18.sp,
+                                    fontSize = (18 * readingScale).coerceAtLeast(12f).sp,
                                     fontWeight = FontWeight.Medium,
                                     color = colorScheme.onSurface,
                                     textAlign = TextAlign.Center,
-                                    lineHeight = 26.sp,
+                                    lineHeight = (26 * readingScale).coerceAtLeast(16f).sp,
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
@@ -368,19 +383,19 @@ fun MiraclesDetailScreen(
                                 }
                                 Text(
                                     text = uiState.prayer.duaArapca,
-                                    fontSize = 20.sp,
+                                    fontSize = (20 * readingScale).coerceAtLeast(12f).sp,
                                     fontWeight = FontWeight.Medium,
                                     color = colorScheme.onSurface,
                                     textAlign = if (uiState.prayer.hasArabicScript) TextAlign.End else TextAlign.Start,
-                                    lineHeight = 32.sp,
+                                    lineHeight = (32 * readingScale).coerceAtLeast(16f).sp,
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             } else {
                                 Text(
                                     text = uiState.prayer.duaAciklama,
                                     color = colorScheme.onSurface,
-                                    fontSize = 14.sp,
-                                    lineHeight = 20.sp
+                                    fontSize = (14 * readingScale).coerceAtLeast(12f).sp,
+                                    lineHeight = (20 * readingScale).coerceAtLeast(16f).sp
                                 )
                             }
                         }
@@ -458,7 +473,7 @@ private fun MiraclesDetailSectionCard(
             }
         }
         Spacer(modifier = Modifier.height(dimens.space12))
-        content()
+        SelectionContainer { content() }
     }
 }
 
