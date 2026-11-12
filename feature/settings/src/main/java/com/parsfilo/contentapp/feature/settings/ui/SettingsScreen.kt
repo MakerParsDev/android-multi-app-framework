@@ -175,7 +175,7 @@ fun SettingsScreen(
     var systemNotificationsEnabled by remember {
         mutableStateOf(isNotificationPermissionEnabled(context))
     }
-    var isPrivacyOptionsRequired by remember { mutableStateOf(false) }
+    val isPrivacyOptionsRequired by adManager.privacyOptionsRequired.collectAsStateWithLifecycle()
     val notificationPermissionLauncher =
         rememberLauncherForActivityResult(
             ActivityResultContracts.RequestPermission(),
@@ -189,8 +189,6 @@ fun SettingsScreen(
             LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_RESUME) {
                     systemNotificationsEnabled = isNotificationPermissionEnabled(context)
-                    val status = adManager.privacyOptionsRequired.value
-                    isPrivacyOptionsRequired = status
                 }
             }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -263,10 +261,6 @@ fun SettingsScreen(
             AppCompatDelegate.getApplicationLocales().toLanguageTags()
         }
     val effectiveLanguageTag = appLocaleTags.ifBlank { LocalLocale.current.platformLocale.toLanguageTag() }
-
-    LaunchedEffect(Unit) {
-        isPrivacyOptionsRequired = adManager.privacyOptionsRequired.value
-    }
 
     Box(
         modifier =
@@ -542,8 +536,6 @@ fun SettingsScreen(
                                                 } else {
                                                     showMessage(privacyOptionsErrorText)
                                                 }
-                                                isPrivacyOptionsRequired =
-                                                    adManager.privacyOptionsRequired.value
                                             }
                                         },
                                     ) {
@@ -640,8 +632,6 @@ fun SettingsScreen(
                                                     adManager.onAdsConfigChanged(activity) { _ ->
                                                         onPrivacyOptionsUpdated()
                                                         showMessage(adsConfigUpdatedText)
-                                                        isPrivacyOptionsRequired =
-                                                            adManager.privacyOptionsRequired.value
                                                     }
                                                 }
                                             },
@@ -1029,8 +1019,6 @@ fun SettingsScreen(
                                             if (activity != null) {
                                                 adManager.onAdsConfigChanged(activity) {
                                                     onPrivacyOptionsUpdated()
-                                                    isPrivacyOptionsRequired =
-                                                        adManager.privacyOptionsRequired.value
                                                 }
                                             }
                                         },
@@ -1063,8 +1051,6 @@ fun SettingsScreen(
                                                             consentFormShownText
                                                     },
                                                 )
-                                                isPrivacyOptionsRequired =
-                                                    adManager.privacyOptionsRequired.value
                                             }
                                         },
                                         modifier = Modifier.fillMaxWidth(),
@@ -1084,8 +1070,6 @@ fun SettingsScreen(
                                                 if (activity != null) {
                                                     adManager.onAdsConfigChanged(activity) {
                                                         onPrivacyOptionsUpdated()
-                                                        isPrivacyOptionsRequired =
-                                                            adManager.privacyOptionsRequired.value
                                                     }
                                                 }
                                                 showMessage(
@@ -1111,8 +1095,6 @@ fun SettingsScreen(
                                                 if (activity != null) {
                                                     adManager.onAdsConfigChanged(activity) {
                                                         onPrivacyOptionsUpdated()
-                                                        isPrivacyOptionsRequired =
-                                                            adManager.privacyOptionsRequired.value
                                                     }
                                                 }
                                                 showMessage(
