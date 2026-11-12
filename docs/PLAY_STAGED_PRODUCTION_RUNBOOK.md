@@ -14,29 +14,29 @@ single-device FCM test is **not** production approval.
    Missing or delayed data = INCOMPLETE, never zero. Record health decisions
    and explicit accepted risks in the release issue.
 3. Release a **single canonical flavor** and **no listing changes**.
-4. The release.yml workflow permits an explicitly selected **5%** canary
-   or owner-approved **100%** release for one canonical flavor at a time,
+4. The release.yml workflow permits only an explicitly selected
+   owner-approved **100%** release for one canonical flavor at a time,
    with the manual protected production GitHub environment.
    Missing or invalid rollout percentage fails closed. Internal/build jobs
    must set the rollout percent to 0.
 5. The legacy release.yml workflow **builds a new artifact and auto-bumps
    its versionCode**. It is **not** promotion of an already accepted internal
    APK. To ship precisely the same internal-track artifact, use a separately
-   reviewed Play Console **Promote release** operation at **5% staged
-   rollout**, or a separately verified promotion-only workflow. Verify the
+   reviewed Play Console **Promote release** operation to **100%**,
+   or a separately verified promotion-only workflow. Verify the
    versionCode and Play-signed artifact identity. Never use a new build while
    claiming to promote an already tested version.
 
 ## Stage, pause and recover
 
-- Play Console > Production: verify the requested release is either
-  **In progress** at 5% or **Completed** at the explicitly authorized 100%.
+- Play Console > Production: verify the requested release is
+  **Completed** at the explicitly authorized 100%.
   Record the release versionCode, fraction/status and reviewer.
 - Monitor release-specific Vitals, Crashlytics, consent, ads, push, billing
   and Remote Config signals. If a safety threshold is crossed, **Halt
   rollout** in Play Console. Halting prevents *further* exposure but does
   not downgrade devices already updated.
-- Review fresh evidence before resuming/increasing staged percentages.
+- Review fresh evidence before publishing or resuming any production release.
   **100% completion** requires existing owner authorization and a deliberate
   full-release selection. Never infer it from CI success alone.
 - Confirm Play Console's remote release status and fraction after each
@@ -58,8 +58,8 @@ CI/CodeQL, signing, duplicate-release checks, protected production environment,
 Play credentials, or live release verification.
 
 A 100% release uses Play ReleaseStatus.COMPLETED without userFraction=1.0,
-which is invalid. A 5% release uses IN_PROGRESS at 0.05. Publish one app
-using explicit Release build/quality, do_publish=true, do_internal_test=false,
+which is invalid. New 5% staged production releases are not permitted.
+Publish one app using explicit Release build/quality, do_publish=true, do_internal_test=false,
 update_play_listing=false and production_rollout_percent=100. No code or
 listing changes are implied for other apps.
 

@@ -582,23 +582,18 @@ play {
     // Default to internal; pipelines can still override with -PPLAY_TRACK=production/beta/etc.
     track.set(releaseTrackValue)
     if (releaseTrackValue == "production") {
-        // Never default production to 100%: an explicit protected workflow
-        // selection is required. The workflow scopes 100% to one canonical flavor.
+        // Require an explicit protected workflow selection for 100% publication.
+        // The workflow scopes each full release to one canonical flavor.
         val productionPercent = providers.gradleProperty("PLAY_ROLLOUT_PERCENT").orNull
-        require(productionPercent == "5" || productionPercent == "100") {
-            "Production requires explicit -PPLAY_ROLLOUT_PERCENT=5 or 100 and protected environment approval."
+        require(productionPercent == "100") {
+            "Production requires explicit -PPLAY_ROLLOUT_PERCENT=100 and protected environment approval."
         }
-        if (productionPercent == "5") {
-            userFraction.set(0.05)
-            releaseStatus.set(com.github.triplet.gradle.androidpublisher.ReleaseStatus.IN_PROGRESS)
-        } else {
-            val selectedFlavor = providers.gradleProperty("PLAY_PRODUCTION_FLAVOR").orNull
-            require(AppFlavors.all.any { it.name == selectedFlavor }) {
-                "100% production publication requires an explicit canonical flavor."
-            }
-            // A 100% release is COMPLETED; userFraction=1.0 is invalid in Play API.
-            releaseStatus.set(com.github.triplet.gradle.androidpublisher.ReleaseStatus.COMPLETED)
+        val selectedFlavor = providers.gradleProperty("PLAY_PRODUCTION_FLAVOR").orNull
+        require(AppFlavors.all.any { it.name == selectedFlavor }) {
+            "100% production publication requires an explicit canonical flavor."
         }
+        // A 100% release is COMPLETED; userFraction=1.0 is invalid in Play API.
+        releaseStatus.set(com.github.triplet.gradle.androidpublisher.ReleaseStatus.COMPLETED)
     }
     defaultToAppBundles.set(true)
 }
