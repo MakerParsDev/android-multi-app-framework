@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 import yaml
@@ -38,7 +39,7 @@ def rejected(**changes: str) -> bool:
 
 def test_build_only_does_not_call_github() -> None:
     result = subprocess.run(
-        ["python3", str(SCRIPT)], env={**os.environ, **BASE},
+        [sys.executable, str(SCRIPT)], env={**os.environ, **BASE},
         capture_output=True, text=True,
     )
     assert result.returncode == 0, result.stderr
@@ -52,7 +53,7 @@ def test_production_and_internal_publish_need_quality() -> None:
             {"RELEASE_BUILD_TYPE": "Debug"},
             {"GITHUB_REF": "refs/heads/feature/unsafe"},
         ):
-            selected = {"RELEASE_PRODUCTION_ROLLOUT_PERCENT": "5"} if flag == "RELEASE_DO_PUBLISH" else {}
+            selected = {"RELEASE_PRODUCTION_ROLLOUT_PERCENT": "100"} if flag == "RELEASE_DO_PUBLISH" else {}
             assert rejected(**{flag: "true", **selected, **change}), (flag, change)
 
 
@@ -64,7 +65,7 @@ def test_reject_ambiguous_track_and_listing_without_publish() -> None:
 
 def test_production_requires_explicit_scoped_rollout() -> None:
     assert rejected(RELEASE_DO_PUBLISH="true")
-    for fraction in ("", "0", "1", "10", "25", "05", "5.0", "-5", "99", "100.0"):
+    for fraction in ("", "0", "1", "5", "10", "25", "05", "5.0", "-5", "99", "100.0"):
         assert rejected(
             RELEASE_DO_PUBLISH="true",
             RELEASE_PRODUCTION_ROLLOUT_PERCENT=fraction,
@@ -72,11 +73,11 @@ def test_production_requires_explicit_scoped_rollout() -> None:
     for target in ("all", "amenerrasulu,another", "", "amenerrasulu,"):
         assert rejected(
             RELEASE_DO_PUBLISH="true",
-            RELEASE_PRODUCTION_ROLLOUT_PERCENT="5",
+            RELEASE_PRODUCTION_ROLLOUT_PERCENT="100",
             RELEASE_TARGET_FLAVORS=target,
         ), target
     assert rejected(RELEASE_DO_PUBLISH="true",
-                    RELEASE_PRODUCTION_ROLLOUT_PERCENT="5",
+                    RELEASE_PRODUCTION_ROLLOUT_PERCENT="100",
                     RELEASE_UPDATE_PLAY_LISTING="true")
     assert rejected(RELEASE_PRODUCTION_ROLLOUT_PERCENT="5")
     assert rejected(RELEASE_DO_INTERNAL_TEST="true",
@@ -97,7 +98,7 @@ def test_production_requires_explicit_scoped_rollout() -> None:
     assert rejected(RELEASE_DO_PUBLISH="true",
                     RELEASE_PRODUCTION_ROLLOUT_PERCENT="100",
                     RELEASE_UPDATE_PLAY_LISTING="true")
-    for percent in ("5", "100"):
+    for percent in ("100",):
         assert validate_release_inputs({
             **BASE,
             "RELEASE_DO_PUBLISH": "true",
@@ -106,7 +107,7 @@ def test_production_requires_explicit_scoped_rollout() -> None:
 
 
 def test_production_accepts_only_known_underscore_flavor() -> None:
-    for percent in ("5", "100"):
+    for percent in ("100",):
         assert validate_release_inputs({
             **BASE,
             "RELEASE_DO_PUBLISH": "true",
@@ -128,6 +129,14 @@ def test_production_accepts_only_known_underscore_flavor() -> None:
             RELEASE_PRODUCTION_ROLLOUT_PERCENT="100",
             RELEASE_TARGET_FLAVORS=invalid,
         ), invalid
+
+
+def test_full_production_requires_completed_release_not_staged_fraction() -> None:
+    assert rejected(RELEASE_DO_PUBLISH="true", RELEASE_PRODUCTION_ROLLOUT_PERCENT="5")
+    gradle = (ROOT / "app/build.gradle.kts").read_text(encoding="utf-8")
+    assert 'require(productionPercent == "100")' in gradle
+    assert 'ReleaseStatus.COMPLETED' in gradle
+    assert 'userFraction.set(0.05)' not in gradle
 
 
 def test_success_requires_exact_main_push_commit() -> None:
@@ -210,11 +219,11 @@ def test_production_publish_requires_manual_protected_environment() -> None:
     publish = next(x for x in release["steps"] if x.get("name") == "Publish to Play")
     assert "PRODUCTION_ROLLOUT_PERCENT" in publish["env"]
     assert "ROLLOUT_FLAGS=(-PPLAY_ROLLOUT_PERCENT=" in publish["run"]
-    assert '"$PRODUCTION_ROLLOUT_PERCENT" = "100"' in publish["run"]
+    assert 'if [[ "$PRODUCTION_ROLLOUT_PERCENT" != "100" ]] ||' in publish["run"]
     assert '"${#FLAVORS[@]}" -ne 1' in publish["run"]
     assert 'ROLLOUT_FLAGS+=(-PPLAY_PRODUCTION_FLAVOR="${FLAVORS[0]}")' in publish["run"]
     options = workflow["on"]["workflow_dispatch"]["inputs"]["production_rollout_percent"]["options"] if "on" in workflow else workflow[True]["workflow_dispatch"]["inputs"]["production_rollout_percent"]["options"]
-    assert options == ["0", "5", "100"]
+    assert options == ["0", "100"]
     assert '"${ROLLOUT_FLAGS[@]}"' in publish["run"]
     security = next(x for x in workflow["jobs"]["security-gate"]["steps"]
                     if x.get("name") == "Validate release publication prerequisites")
