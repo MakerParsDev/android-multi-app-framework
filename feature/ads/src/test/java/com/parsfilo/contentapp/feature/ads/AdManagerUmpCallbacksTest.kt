@@ -411,4 +411,100 @@ class AdManagerUmpCallbacksTest {
         }
         verify(exactly = 0) { analytics.logEvent("consent_granted", any()) }
     }
+
+    @Test
+    fun settingsRetryNetworkFailureStaysBlockedWithoutAutomaticSecondRequest() {
+        var completed: Boolean? = null
+        manager.retryConsentFromSettings(activity) { completed = it }
+        idleMain()
+
+        failure.captured.onConsentInfoUpdateFailure(
+            FormError(FormError.ErrorCode.INTERNET_ERROR, "synthetic network error"),
+        )
+        idleMain()
+
+        assertThat(completed).isFalse()
+        assertThat(manager.consentStatus.value).isEqualTo(ConsentStatus.Missing)
+        assertThat(manager.canRequestAds.value).isFalse()
+        verify(exactly = 1) {
+            consentInfo.requestConsentInfoUpdate(any(), any(), any(), any())
+        }
+        verify(exactly = 1) {
+            analytics.logEvent(
+                "consent_error",
+                withArg { params ->
+                    assertThat(params.getString(AnalyticsParamKey.UMP_ERROR_CATEGORY))
+                        .isEqualTo("settings_retry_info_update_network")
+                    assertThat(params.getString(AnalyticsParamKey.CONSENT_TRIGGER))
+                        .isEqualTo("settings_retry")
+                },
+            )
+        }
+        verify(exactly = 0) { analytics.logEvent("consent_granted", any()) }
+    }
+
+    @Test
+    fun settingsRetryReopensRequiredFormAndRestoresEligibilityOnlyAfterUmpAllowsIt() {
+        var completed: Boolean? = null
+        manager.retryConsentFromSettings(activity) { completed = it }
+        idleMain()
+        assertThat(manager.canRequestAds.value).isFalse()
+
+        success.captured.onConsentInfoUpdateSuccess()
+        idleMain()
+        assertThat(formDismissed.isCaptured).isTrue()
+        assertThat(completed).isNull()
+        assertThat(manager.canRequestAds.value).isFalse()
+
+        every { consentInfo.canRequestAds() } returns true
+        formDismissed.captured.onConsentFormDismissed(null)
+        idleMain()
+
+        assertThat(completed).isTrue()
+        assertThat(manager.canRequestAds.value).isTrue()
+        assertThat(manager.consentStatus.value).isEqualTo(ConsentStatus.Obtained)
+        verify(exactly = 1) { consentInfo.requestConsentInfoUpdate(any(), any(), any(), any()) }
+        verify(exactly = 1) {
+            analytics.logEvent(
+                "consent_flow_started",
+                match { params ->
+                    params.getString(AnalyticsParamKey.CONSENT_TRIGGER) == "settings_retry"
+                },
+            )
+        }
+        verify(exactly = 0) { analytics.logEvent("consent_debug_result", any()) }
+    }
+
+    @Test
+    fun settingsRetryFormFailureDoesNotGrantAdsOrRepeatConsentRequest() {
+        var completed: Boolean? = null
+        manager.retryConsentFromSettings(activity) { completed = it }
+        idleMain()
+
+        success.captured.onConsentInfoUpdateSuccess()
+        idleMain()
+        assertThat(formDismissed.isCaptured).isTrue()
+
+        formDismissed.captured.onConsentFormDismissed(
+            FormError(FormError.ErrorCode.TIME_OUT, "synthetic form timeout"),
+        )
+        idleMain()
+
+        assertThat(completed).isFalse()
+        assertThat(manager.consentStatus.value).isEqualTo(ConsentStatus.Missing)
+        assertThat(manager.canRequestAds.value).isFalse()
+        verify(exactly = 1) { consentInfo.requestConsentInfoUpdate(any(), any(), any(), any()) }
+        verify(exactly = 1) {
+            analytics.logEvent(
+                "consent_error",
+                withArg { params ->
+                    assertThat(params.getString(AnalyticsParamKey.UMP_ERROR_CATEGORY))
+                        .isEqualTo("settings_retry_form_timeout")
+                    assertThat(params.getString(AnalyticsParamKey.CONSENT_TRIGGER))
+                        .isEqualTo("settings_retry")
+                },
+            )
+        }
+        verify(exactly = 0) { analytics.logEvent("consent_granted", any()) }
+    }
 }

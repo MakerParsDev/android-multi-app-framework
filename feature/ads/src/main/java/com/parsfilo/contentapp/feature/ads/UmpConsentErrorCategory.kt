@@ -18,6 +18,8 @@ internal fun classifyUmpConsentError(
             "privacy_options_form",
             "debug_menu_form",
             "debug_menu_info_update",
+            "settings_retry_form",
+            "settings_retry_info_update",
             -> operation
             else -> "other"
         }
