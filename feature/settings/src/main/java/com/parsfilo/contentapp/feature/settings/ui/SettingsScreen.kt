@@ -93,6 +93,7 @@ import com.parsfilo.contentapp.core.designsystem.theme.app_transparent
 import com.parsfilo.contentapp.core.designsystem.tokens.LocalDimens
 import com.parsfilo.contentapp.feature.ads.AdAgeGateStatus
 import com.parsfilo.contentapp.feature.ads.AdManager
+import com.parsfilo.contentapp.feature.ads.ConsentStatus
 import com.parsfilo.contentapp.feature.ads.UmpConsentDebugResult
 import com.parsfilo.contentapp.feature.ads.UmpDebugGeography
 import com.parsfilo.contentapp.feature.settings.R
@@ -176,6 +177,8 @@ fun SettingsScreen(
         mutableStateOf(isNotificationPermissionEnabled(context))
     }
     val isPrivacyOptionsRequired by adManager.privacyOptionsRequired.collectAsStateWithLifecycle()
+    val consentStatus by adManager.consentStatus.collectAsStateWithLifecycle()
+    var isConsentRetryInProgress by remember { mutableStateOf(false) }
     val notificationPermissionLauncher =
         rememberLauncherForActivityResult(
             ActivityResultContracts.RequestPermission(),
@@ -208,6 +211,7 @@ fun SettingsScreen(
         stringResource(R.string.settings_privacy_options_unavailable)
     val privacyOptionsErrorText = stringResource(R.string.settings_privacy_options_error)
     val privacyOptionsSavedText = stringResource(R.string.settings_privacy_options_saved)
+    val privacyRetryErrorText = stringResource(R.string.settings_privacy_retry_error)
     val accountDeletionUnavailableText = stringResource(R.string.settings_account_deletion_unavailable)
     val adInspectorOpenedText = stringResource(R.string.settings_ads_debug_ad_inspector_opened)
     val adInspectorErrorText = stringResource(R.string.settings_ads_debug_ad_inspector_error)
@@ -508,6 +512,51 @@ fun SettingsScreen(
                             },
                             colors = listItemColors,
                         )
+
+                        if (consentStatus == ConsentStatus.Missing) {
+                            HorizontalDivider(
+                                color = colorScheme.outline.copy(alpha = 0.3f),
+                                modifier = Modifier.padding(horizontal = dimens.space16),
+                            )
+
+                            ListItem(
+                                headlineContent = {
+                                    Text(stringResource(R.string.settings_privacy_retry_title))
+                                },
+                                supportingContent = {
+                                    Text(stringResource(R.string.settings_privacy_retry_desc))
+                                },
+                                trailingContent = {
+                                    TextButton(
+                                        enabled = !isConsentRetryInProgress,
+                                        onClick = {
+                                            if (activity == null) {
+                                                showMessage(privacyOptionsUnavailableText)
+                                                return@TextButton
+                                            }
+                                            isConsentRetryInProgress = true
+                                            adManager.retryConsentFromSettings(activity) { success ->
+                                                isConsentRetryInProgress = false
+                                                if (success) {
+                                                    onPrivacyOptionsUpdated()
+                                                    showMessage(privacyOptionsSavedText)
+                                                } else {
+                                                    showMessage(privacyRetryErrorText)
+                                                }
+                                            }
+                                        },
+                                    ) {
+                                        Text(stringResource(R.string.settings_privacy_retry_button))
+                                    }
+                                },
+                                colors = listItemColors,
+                            )
+
+                            HorizontalDivider(
+                                color = colorScheme.outline.copy(alpha = 0.3f),
+                                modifier = Modifier.padding(horizontal = dimens.space16),
+                            )
+                        }
 
                         if (isPrivacyOptionsRequired) {
                             HorizontalDivider(

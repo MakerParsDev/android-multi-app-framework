@@ -55,6 +55,10 @@
     <string name="settings_privacy_options_unavailable">Diese Aktion ist derzeit nicht verfügbar</string>
     <string name="settings_privacy_options_error">Datenschutzoptionen konnten nicht geöffnet werden</string>
     <string name="settings_privacy_options_saved">Datenschutzeinstellungen aktualisiert</string>
+    <string name="settings_privacy_retry_title">Datenschutzeinstellungen nicht verfügbar</string>
+    <string name="settings_privacy_retry_desc">Prüfen Sie Ihre Verbindung und laden Sie Ihre Werbedatenschutzeinstellungen erneut.</string>
+    <string name="settings_privacy_retry_button">Erneut versuchen</string>
+    <string name="settings_privacy_retry_error">Datenschutzeinstellungen konnten nicht geladen werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.</string>
     <string name="settings_privacy_options_not_required_now">Datenschutzoptionen sind in Ihrer Region derzeit nicht erforderlich.</string>
 
     <string name="settings_ads_age_gate_title">Altersangabe für Werbung</string>
