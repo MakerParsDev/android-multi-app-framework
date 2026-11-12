@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CardGiftcard
@@ -60,6 +59,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.parsfilo.contentapp.core.designsystem.AppTheme
+import com.parsfilo.contentapp.core.designsystem.component.ReaderSelectionContainer
 import com.parsfilo.contentapp.core.designsystem.component.readerPinchFontSize
 import com.parsfilo.contentapp.core.designsystem.tokens.LocalDimens
 import com.parsfilo.contentapp.core.designsystem.tokens.LocalMotion
@@ -473,7 +473,7 @@ private fun MiraclesDetailSectionCard(
             }
         }
         Spacer(modifier = Modifier.height(dimens.space12))
-        SelectionContainer { content() }
+        ReaderSelectionContainer { content() }
     }
 }
 

@@ -3,6 +3,7 @@ package com.parsfilo.contentapp.feature.quran.ui.component
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.os.Build
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -112,6 +113,53 @@ class QuranReaderAccessibilityDeviceTest {
         rule.onNodeWithTag("quran_ayah_1_play")
             .assertContentDescriptionEquals(ctx.getString(R.string.quran_ayah_pause, 1))
         rule.onNodeWithTag("quran_ayah_1_download").assertDoesNotExist()
+    }
+
+    @Test
+    fun android9ShowsTransientCopyActionAndCopiesSelectedArabicWordOnTap() {
+        verifyHost()
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) return
+
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val original = clipboard.primaryClip
+        val arabicAyah = ayah.copy(arabic = "بسم الله الرحمن الرحيم")
+        try {
+            clipboard.setPrimaryClip(ClipData.newPlainText("before", "reader-before"))
+            rule.setContent {
+                AppTheme(flavorName = "kuran_kerim") {
+                    AyahItem(
+                        state = AyahDisplayState(
+                            ayah = arabicAyah,
+                            isBookmarked = false,
+                            isAudioDownloaded = false,
+                            isAudioDownloading = false,
+                            audioDownloadProgress = 0f,
+                            isCurrentlyPlaying = false,
+                        ),
+                        displayMode = QuranDisplayMode.ARABIC,
+                        translatedText = "",
+                        fontSize = 26,
+                        onPlayPauseClick = {},
+                        onBookmarkClick = {},
+                    )
+                }
+            }
+            rule.onNodeWithTag("reader_copy_action").assertDoesNotExist()
+            val text = rule.onNodeWithText(arabicAyah.arabic, useUnmergedTree = true)
+            val layouts = mutableListOf<TextLayoutResult>()
+            text.performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+            text.performTouchInput { longClick(layouts.single().getBoundingBox(1).center) }
+            rule.onNodeWithTag("reader_copy_action").assertExists().performClick()
+            rule.waitForIdle()
+            rule.runOnIdle {
+                val actual = clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()
+                assertTrue("Touch Copy must copy the selected Arabic word", actual?.contains("بسم") == true)
+            }
+            rule.onNodeWithTag("reader_copy_action").assertDoesNotExist()
+        } finally {
+            if (original != null) clipboard.setPrimaryClip(original) else clipboard.clearPrimaryClip()
+        }
     }
 
     @Test

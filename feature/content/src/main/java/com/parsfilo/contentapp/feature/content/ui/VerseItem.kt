@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.CardDefaults
@@ -42,6 +41,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.parsfilo.contentapp.core.designsystem.component.AppCard
+import com.parsfilo.contentapp.core.designsystem.component.ReaderSelectionContainer
 import com.parsfilo.contentapp.core.designsystem.theme.ExtendedQuranMarkFontFamily
 import com.parsfilo.contentapp.core.designsystem.tokens.LocalDimens
 import com.parsfilo.contentapp.core.model.DisplayMode
@@ -152,7 +152,7 @@ fun VerseItem(
                             color = colorScheme.onSurfaceVariant
                         )
                     }
-                    SelectionContainer {
+                    ReaderSelectionContainer {
                         Text(
                             text = verseText,
                             style = MaterialTheme.typography.bodyLarge.copy(
