@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
@@ -28,6 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.parsfilo.contentapp.core.designsystem.component.ReaderSelectionContainer
 import com.parsfilo.contentapp.core.model.QuranAyah
 import com.parsfilo.contentapp.core.model.QuranDisplayMode
 import com.parsfilo.contentapp.feature.quran.R
@@ -104,7 +104,7 @@ fun AyahItem(
             }
 
             // Native text handles and Android's Copy action replace a separate modal.
-            SelectionContainer {
+            ReaderSelectionContainer {
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                     Text(
                         text = state.ayah.arabic,
@@ -117,7 +117,7 @@ fun AyahItem(
             }
 
             if (displayMode != QuranDisplayMode.ARABIC) {
-                SelectionContainer {
+                ReaderSelectionContainer {
                     Text(
                         text = translatedText,
                         fontSize = (fontSize - 8).coerceAtLeast(14).sp,

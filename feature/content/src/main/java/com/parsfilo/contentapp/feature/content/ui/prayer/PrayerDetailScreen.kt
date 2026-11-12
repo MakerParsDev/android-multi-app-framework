@@ -29,7 +29,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CardGiftcard
@@ -64,6 +63,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.parsfilo.contentapp.core.designsystem.AppTheme
+import com.parsfilo.contentapp.core.designsystem.component.ReaderSelectionContainer
 import com.parsfilo.contentapp.core.designsystem.component.readerPinchFontSize
 import com.parsfilo.contentapp.core.designsystem.tokens.LocalDimens
 import com.parsfilo.contentapp.core.designsystem.tokens.LocalMotion
@@ -317,7 +317,7 @@ fun PrayerVerseItem(
     ) {
         when (displayMode) {
             DisplayMode.ARABIC -> {
-                SelectionContainer {
+                ReaderSelectionContainer {
                     Text(
                         text = verse.ayetAR,
                         fontSize = (fontSize + 4).sp,
@@ -330,7 +330,7 @@ fun PrayerVerseItem(
                 }
             }
             DisplayMode.LATIN -> {
-                SelectionContainer {
+                ReaderSelectionContainer {
                     Text(
                         text = verse.ayetLAT,
                         fontSize = fontSize.sp,
@@ -347,7 +347,7 @@ fun PrayerVerseItem(
                     language.startsWith("en") && verse.ayetEN.isNotBlank() -> verse.ayetEN
                     else -> verse.ayetTR
                 }
-                SelectionContainer {
+                ReaderSelectionContainer {
                     Text(
                         text = translationText,
                         fontSize = fontSize.sp,
