@@ -58,7 +58,7 @@
     <string name="settings_privacy_retry_title">Privacy settings unavailable</string>
     <string name="settings_privacy_retry_desc">Check your connection and try loading your ad privacy settings again.</string>
     <string name="settings_privacy_retry_button">Try again</string>
-    <string name="settings_privacy_retry_error">Couldn't load privacy settings. Check your connection and try again.</string>
+    <string name="settings_privacy_retry_error">Unable to load privacy settings. Check your connection and try again.</string>
     <string name="settings_privacy_options_not_required_now">Privacy options aren’t required in your region right now.</string>
 
     <string name="settings_ads_age_gate_title">Ad age preference</string>
