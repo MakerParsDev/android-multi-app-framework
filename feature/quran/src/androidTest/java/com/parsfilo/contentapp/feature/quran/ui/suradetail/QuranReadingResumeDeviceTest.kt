@@ -80,7 +80,6 @@ class QuranReadingResumeDeviceTest {
                     onFontSizeChange = {},
                     onReciterSelected = {},
                     onPlayPauseAyah = { _, _ -> },
-                    onDownloadAyah = {},
                     onToggleBookmark = {},
                     onAyahVisible = { reported.add(it.ayahNumber) },
                 )
@@ -110,7 +109,6 @@ class QuranReadingResumeDeviceTest {
                     onFontSizeChange = {},
                     onReciterSelected = {},
                     onPlayPauseAyah = { _, _ -> },
-                    onDownloadAyah = {},
                     onToggleBookmark = {},
                     onAyahVisible = { reported.add(it.ayahNumber) },
                 )
@@ -137,7 +135,6 @@ class QuranReadingResumeDeviceTest {
                     onFontSizeChange = {},
                     onReciterSelected = {},
                     onPlayPauseAyah = { _, _ -> },
-                    onDownloadAyah = {},
                     onToggleBookmark = {},
                     onAyahVisible = { reported.add(it.ayahNumber) },
                 )
@@ -166,7 +163,6 @@ class QuranReadingResumeDeviceTest {
                     onFontSizeChange = {},
                     onReciterSelected = {},
                     onPlayPauseAyah = { _, _ -> },
-                    onDownloadAyah = {},
                     onToggleBookmark = {},
                     onAyahVisible = { reported.add(it.ayahNumber) },
                 )
@@ -198,7 +194,6 @@ class QuranReadingResumeDeviceTest {
                     onFontSizeChange = {},
                     onReciterSelected = {},
                     onPlayPauseAyah = { _, _ -> },
-                    onDownloadAyah = {},
                     onToggleBookmark = {},
                     onAyahVisible = { reported.add(it.ayahNumber) },
                     nativeAdContent = { androidx.compose.material3.Text("Synthetic Native Ad") },
@@ -226,7 +221,6 @@ class QuranReadingResumeDeviceTest {
                     onFontSizeChange = {},
                     onReciterSelected = {},
                     onPlayPauseAyah = { _, _ -> },
-                    onDownloadAyah = {},
                     onToggleBookmark = {},
                     onAyahVisible = { reported.add(it.ayahNumber) },
                 )
@@ -256,7 +250,6 @@ class QuranReadingResumeDeviceTest {
                     onFontSizeChange = {},
                     onReciterSelected = {},
                     onPlayPauseAyah = { _, _ -> },
-                    onDownloadAyah = {},
                     onToggleBookmark = {},
                     onAyahVisible = { reported.add(it.ayahNumber) },
                 )
@@ -298,7 +291,6 @@ class QuranReadingResumeDeviceTest {
                     onFontSizeChange = {},
                     onReciterSelected = {},
                     onPlayPauseAyah = { _, _ -> },
-                    onDownloadAyah = {},
                     onToggleBookmark = {},
                     onAyahVisible = { reported.add(it.ayahNumber) },
                 )

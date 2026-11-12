@@ -8,7 +8,6 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertContentDescriptionEquals
-import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -24,6 +23,7 @@ import com.parsfilo.contentapp.feature.quran.R
 import com.parsfilo.contentapp.feature.quran.config.QuranApiConfig
 import com.parsfilo.contentapp.feature.quran.ui.suradetail.AyahDisplayState
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -73,9 +73,7 @@ class QuranReaderAccessibilityDeviceTest {
                     translatedText = "",
                     fontSize = 26,
                     onPlayPauseClick = { actions += "play" },
-                    onDownloadClick = { actions += "download" },
                     onBookmarkClick = { actions += "bookmark" },
-                    onLongClick = { actions += "actions" },
                 )
             }
         }
@@ -85,14 +83,14 @@ class QuranReaderAccessibilityDeviceTest {
         rule.onNodeWithTag("quran_ayah_1_play")
             .assertContentDescriptionEquals(ctx.getString(R.string.quran_ayah_play, 1))
             .performClick()
-        rule.onNodeWithTag("quran_ayah_1_download")
-            .assertContentDescriptionEquals(ctx.getString(R.string.quran_ayah_download, 1))
-            .performClick()
-        rule.onNodeWithTag("quran_ayah_1_card")
-            .assertHasClickAction()
-            .performClick()
+        rule.onNodeWithTag("quran_ayah_1_download").assertDoesNotExist()
+        // Physical left/right positions match users' reading expectations.
+        val bookmark = rule.onNodeWithTag("quran_ayah_1_bookmark").fetchSemanticsNode().boundsInRoot
+        val play = rule.onNodeWithTag("quran_ayah_1_play").fetchSemanticsNode().boundsInRoot
+        assertTrue(bookmark.left < play.left)
+        rule.onNodeWithText(ayah.arabic, useUnmergedTree = true).assertExists()
         rule.runOnIdle {
-            assertEquals(listOf("bookmark", "play", "download", "actions"), actions)
+            assertEquals(listOf("bookmark", "play"), actions)
             state = state.copy(
                 isBookmarked = true,
                 isCurrentlyPlaying = true,
@@ -103,8 +101,7 @@ class QuranReaderAccessibilityDeviceTest {
             .assertContentDescriptionEquals(ctx.getString(R.string.quran_ayah_bookmark_remove, 1))
         rule.onNodeWithTag("quran_ayah_1_play")
             .assertContentDescriptionEquals(ctx.getString(R.string.quran_ayah_pause, 1))
-        rule.onNodeWithTag("quran_ayah_1_download")
-            .assertContentDescriptionEquals(ctx.getString(R.string.quran_ayah_downloaded, 1))
+        rule.onNodeWithTag("quran_ayah_1_download").assertDoesNotExist()
     }
 
     @Test
