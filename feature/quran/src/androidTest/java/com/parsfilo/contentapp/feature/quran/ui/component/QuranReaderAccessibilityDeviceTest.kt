@@ -1,9 +1,14 @@
 package com.parsfilo.contentapp.feature.quran.ui.component
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
@@ -11,9 +16,14 @@ import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.parsfilo.contentapp.core.designsystem.AppTheme
@@ -102,6 +112,73 @@ class QuranReaderAccessibilityDeviceTest {
         rule.onNodeWithTag("quran_ayah_1_play")
             .assertContentDescriptionEquals(ctx.getString(R.string.quran_ayah_pause, 1))
         rule.onNodeWithTag("quran_ayah_1_download").assertDoesNotExist()
+    }
+
+    @Test
+    fun longPressOnArabicGlyphCopiesSelectedWord() {
+        assertGlyphCopyWorks(QuranDisplayMode.ARABIC, ayah.arabic, "Synthetic")
+    }
+
+    @Test
+    fun longPressOnTranslationGlyphCopiesSelectedWord() {
+        assertGlyphCopyWorks(QuranDisplayMode.TRANSLATION, ayah.turkish, "Synthetic")
+    }
+
+    private fun assertGlyphCopyWorks(
+        displayMode: QuranDisplayMode,
+        targetText: String,
+        expectedWord: String,
+    ) {
+        verifyHost()
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val originalClip = clipboard.primaryClip
+        try {
+            clipboard.setPrimaryClip(ClipData.newPlainText("test sentinel", "reader-copy-before"))
+            rule.setContent {
+                AppTheme(flavorName = "kuran_kerim") {
+                    AyahItem(
+                        state = AyahDisplayState(
+                            ayah = ayah,
+                            isBookmarked = false,
+                            isAudioDownloaded = false,
+                            isAudioDownloading = false,
+                            audioDownloadProgress = 0f,
+                            isCurrentlyPlaying = false,
+                        ),
+                        displayMode = displayMode,
+                        translatedText = ayah.turkish,
+                        fontSize = 26,
+                        onPlayPauseClick = {},
+                        onBookmarkClick = {},
+                    )
+                }
+            }
+            val text = rule.onNodeWithText(targetText, useUnmergedTree = true)
+            val layouts = mutableListOf<TextLayoutResult>()
+            text.performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+            val glyph = layouts.single().getBoundingBox(3).center
+            // Long press an actual glyph, not the center of a wide, aligned Text box.
+            text.performTouchInput { longClick(glyph) }
+            // Android's standard selection Copy keyboard command is a deterministic
+            // way to verify clipboard results without depending on a platform popup.
+            text.performKeyInput {
+                keyDown(Key.CtrlLeft)
+                keyDown(Key.C)
+                keyUp(Key.C)
+                keyUp(Key.CtrlLeft)
+            }
+            rule.runOnIdle {
+                val actual = clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()
+                assertTrue("A long-pressed reader word must be copyable", actual?.contains(expectedWord) == true)
+            }
+        } finally {
+            if (originalClip != null) {
+                clipboard.setPrimaryClip(originalClip)
+            } else {
+                clipboard.clearPrimaryClip()
+            }
+        }
     }
 
     @Test
