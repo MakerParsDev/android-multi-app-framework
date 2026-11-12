@@ -26,7 +26,7 @@ def test_retry_uses_same_ump_form_flow_and_keeps_failed_eligibility_blocked() ->
 
 
 def test_retry_copy_is_localized() -> None:
-    for locale in ("values", "values-en", "values-de"):
+    for locale in ("values", "values-tr", "values-en", "values-de"):
         source = (ROOT / f"feature/settings/src/main/res/{locale}/strings.xml").read_text(encoding="utf8")
         for key in ("settings_privacy_retry_title", "settings_privacy_retry_desc", "settings_privacy_retry_button", "settings_privacy_retry_error"):
             assert f'name="{key}"' in source
