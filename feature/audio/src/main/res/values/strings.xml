@@ -1,4 +1,5 @@
 <resources>
+    <string name="audio_controls">Ses kontrolleri</string>
     <string name="audio_play">Oynat</string>
     <string name="audio_pause">Duraklat</string>
     <string name="audio_stop">Durdur</string>

@@ -175,7 +175,8 @@ fun PrayerDetailScreen(
                     prayerName = prayerTitle,
                     onBackClick = onBackClick,
                     onSettingsClick = onSettingsClick,
-                    onRewardsClick = onRewardsClick
+                    onRewardsClick = onRewardsClick,
+                    audioHeaderContent = audioPlayerContent,
                 )
 
                 // Gold divider
@@ -184,9 +185,6 @@ fun PrayerDetailScreen(
                     color = dividerColor,
                     modifier = Modifier.padding(horizontal = dimens.space24)
                 )
-
-                // Audio Player
-                audioPlayerContent()
 
                 Spacer(modifier = Modifier.height(dimens.space4))
 
@@ -238,7 +236,8 @@ fun PrayerDetailHeader(
     prayerName: String,
     onBackClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
-    onRewardsClick: () -> Unit = {}
+    onRewardsClick: () -> Unit = {},
+    audioHeaderContent: @Composable () -> Unit = {},
 ) {
     val dimens = LocalDimens.current
 
@@ -275,6 +274,8 @@ fun PrayerDetailHeader(
         )
 
         // Sağ: Ödüller ikonu
+        audioHeaderContent()
+
         IconButton(
             onClick = onRewardsClick,
             modifier = Modifier.size(dimens.iconXl)

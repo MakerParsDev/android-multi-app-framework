@@ -1,4 +1,5 @@
 <resources>
+    <string name="audio_controls">Audio controls</string>
     <string name="audio_play">Play</string>
     <string name="audio_pause">Pause</string>
     <string name="audio_stop">Stop</string>
