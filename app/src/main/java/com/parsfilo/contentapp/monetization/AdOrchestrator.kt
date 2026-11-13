@@ -29,6 +29,7 @@ import com.parsfilo.contentapp.feature.ads.RewardedInterstitialCoordinator
 import com.parsfilo.contentapp.feature.ads.RewardedInterstitialIntroSpec
 import com.parsfilo.contentapp.feature.ads.RewardedInterstitialLaunchToken
 import com.parsfilo.contentapp.feature.ads.SystemTimeProvider
+import com.parsfilo.contentapp.navigation.AppRoute
 import com.parsfilo.contentapp.product.AppProductDefinition
 import com.parsfilo.contentapp.product.ContentFamily
 import kotlinx.coroutines.CoroutineScope
@@ -51,6 +52,21 @@ data class AdSessionContext(
     val audioPlayedThisSession: Boolean = false,
     val sessionStartedAtMs: Long = System.currentTimeMillis(),
 )
+
+/**
+ * Keep an existing reading task visible after a brief app/background switch.
+ * App-open ads remain eligible on lists, settings and other real breakpoints.
+ */
+private val appOpenReadingRoutes =
+    setOf(
+        AppRoute.Content.route,
+        AppRoute.MiraclesDetail.route.substringBefore('/'),
+        AppRoute.PrayerDetail.route.substringBefore('/'),
+        AppRoute.QuranSuraDetail.route.substringBefore('/'),
+    )
+
+internal fun isReadingSurfaceForAppOpenResume(route: String?): Boolean =
+    route?.substringBefore('/')?.substringBefore('?') in appOpenReadingRoutes
 
 private enum class PreloadReason(val analyticsValue: String) {
     INITIALIZE("initialize"),
@@ -449,7 +465,7 @@ class AdOrchestrator
                                     resumeSnapshot.resumeGapMs
                                 },
                             isColdStart = resumeSnapshot.isColdStart,
-                            contentInProgress = isContentInProgress(route),
+                            contentInProgress = isContentInProgress(route) || isReadingSurfaceForAppOpenResume(route),
                             appOpenTriggerReason = triggerReason,
                         ),
                     )
