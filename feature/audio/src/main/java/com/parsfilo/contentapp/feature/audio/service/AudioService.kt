@@ -165,7 +165,7 @@ internal fun isResumableAudioUri(uri: String?, filesDir: File): Boolean {
         return false
     }
     val privateCache = File(filesDir, "audio_cache").canonicalFile
-    return file.isFile && file.toPath().startsWith(privateCache.toPath())
+    return file.isFile && file.parentFile == privateCache
 }
 
 private data class AudioResumeBookmark(val uri: Uri, val positionMs: Long)
