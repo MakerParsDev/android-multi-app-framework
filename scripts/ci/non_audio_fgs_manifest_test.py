@@ -89,6 +89,40 @@ class NonAudioForegroundServiceContractTest(unittest.TestCase):
         self.assertEqual(".service.AudioService", service.get(ANDROID + "name"))
         self.assertEqual("mediaPlayback", service.get(ANDROID + "foregroundServiceType"))
 
+    def test_cold_resumption_receiver_is_scoped_to_amen_audio_flavor(self):
+        receiver_name = "androidx.media3.session.MediaButtonReceiver"
+        amen = ET.parse(
+            ROOT / "app/src/amenerrasulu/AndroidManifest.xml"
+        ).getroot()
+        receiver = [
+            node for node in amen.findall("./application/receiver")
+            if node.get(ANDROID + "name") == receiver_name
+        ]
+        self.assertEqual(1, len(receiver))
+        self.assertEqual("true", receiver[0].get(ANDROID + "exported"))
+        self.assertEqual(
+            ["android.intent.action.MEDIA_BUTTON"],
+            [item.get(ANDROID + "name")
+             for item in receiver[0].findall("./intent-filter/action")],
+        )
+        shared = ET.parse(
+            ROOT / "feature/audio/src/main/AndroidManifest.xml"
+        ).getroot()
+        self.assertNotIn(
+            receiver_name,
+            [node.get(ANDROID + "name")
+             for node in shared.findall("./application/receiver")],
+        )
+        for flavor in NON_AUDIO:
+            with self.subTest(flavor=flavor):
+                root = ET.parse(
+                    ROOT / f"app/src/{flavor}/AndroidManifest.xml"
+                ).getroot()
+                self.assertNotIn(
+                    receiver_name,
+                    [node.get(ANDROID + "name")
+                     for node in root.findall("./application/receiver")],
+                )
     def test_utility_flavors_remove_only_unused_audio_permission_and_service(self):
         for flavor in NON_AUDIO:
             with self.subTest(flavor=flavor):

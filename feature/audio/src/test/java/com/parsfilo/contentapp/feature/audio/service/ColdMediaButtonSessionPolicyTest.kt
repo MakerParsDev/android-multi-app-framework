@@ -22,6 +22,28 @@ class ColdMediaButtonSessionPolicyTest {
     }
 
     @Test
+    fun coldMediaButtonMayConnectWhenLocalResumptionIsAvailable() {
+        assertTrue(
+            shouldExposeSessionForMediaButton(
+                Intent.ACTION_MEDIA_BUTTON,
+                mediaItemCount = 0,
+                hasResumableMedia = true,
+            ),
+        )
+    }
+
+    @Test
+    fun coldMediaButtonWithoutLocalResumptionStillStopsCleanly() {
+        assertFalse(
+            shouldExposeSessionForMediaButton(
+                Intent.ACTION_MEDIA_BUTTON,
+                mediaItemCount = 0,
+                hasResumableMedia = false,
+            ),
+        )
+    }
+
+    @Test
     fun otherConnectionHintTypesKeepTheirExistingBehavior() {
         assertTrue(shouldExposeSessionForMediaButton("android.media.browse.MediaBrowserService", 0))
     }
