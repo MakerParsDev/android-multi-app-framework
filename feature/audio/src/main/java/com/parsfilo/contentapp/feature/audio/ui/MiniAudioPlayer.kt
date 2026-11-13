@@ -9,12 +9,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,6 +42,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.parsfilo.contentapp.core.designsystem.component.AppTextButton
 import com.parsfilo.contentapp.core.designsystem.tokens.LocalDimens
@@ -53,7 +57,61 @@ fun InlineAudioPlayer(
     onSeek: (Long) -> Unit,
     modifier: Modifier = Modifier,
     onRetry: () -> Unit = {},
+    compactInHeader: Boolean = false,
 ) {
+    if (compactInHeader) {
+        var transportExpanded by remember { mutableStateOf(false) }
+        Row(
+            modifier = modifier.testTag("audio_header_controls"),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(
+                onClick = onPlayPause,
+                enabled = state.assetReady && !state.assetLoading,
+                modifier = Modifier.size(48.dp).testTag("audio_compact_play_pause"),
+            ) {
+                Icon(
+                    imageVector = if (state.isPlaying) {
+                        ImageVector.vectorResource(R.drawable.ic_pause)
+                    } else {
+                        Icons.Filled.PlayArrow
+                    },
+                    contentDescription = stringResource(
+                        if (state.isPlaying) R.string.audio_pause else R.string.audio_play,
+                    ),
+                    tint = MaterialTheme.colorScheme.secondary,
+                )
+            }
+            Box {
+                IconButton(
+                    onClick = { transportExpanded = true },
+                    modifier = Modifier.size(48.dp).testTag("audio_expand_controls"),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = stringResource(R.string.audio_controls),
+                        tint = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+                DropdownMenu(
+                    expanded = transportExpanded,
+                    onDismissRequest = { transportExpanded = false },
+                ) {
+                    Box(modifier = Modifier.width(300.dp)) {
+                        InlineAudioPlayer(
+                            state = state,
+                            onPlayPause = onPlayPause,
+                            onStop = onStop,
+                            onSeek = onSeek,
+                            modifier = Modifier.fillMaxWidth(),
+                            onRetry = onRetry,
+                        )
+                    }
+                }
+            }
+        }
+        return
+    }
     val dimens = LocalDimens.current
     val colorScheme = MaterialTheme.colorScheme
     val accent = colorScheme.secondary

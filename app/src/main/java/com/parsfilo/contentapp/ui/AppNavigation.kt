@@ -491,6 +491,7 @@ fun AppNavHost(
                             },
                             onSeek = audioPlayerViewModel::seekTo,
                             onRetry = audioPlayerViewModel::retryAssetLoad,
+                            compactInHeader = true,
                         )
                     },
                     nativeAdContent = {
@@ -588,6 +589,7 @@ fun AppNavHost(
                             },
                             onSeek = audioPlayerViewModel::seekTo,
                             onRetry = audioPlayerViewModel::retryAssetLoad,
+                            compactInHeader = true,
                         )
                     },
                     nativeAdContent = {
