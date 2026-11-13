@@ -513,7 +513,7 @@ fun SettingsScreen(
                             colors = listItemColors,
                         )
 
-                        if (consentStatus == ConsentStatus.Missing) {
+                        if (consentStatus == ConsentStatus.Missing || consentStatus is ConsentStatus.Error) {
                             HorizontalDivider(
                                 color = colorScheme.outline.copy(alpha = 0.3f),
                                 modifier = Modifier.padding(horizontal = dimens.space16),
