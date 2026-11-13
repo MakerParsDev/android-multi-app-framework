@@ -12,12 +12,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -117,14 +116,16 @@ class VerseCopyAccessibilityTest {
                 }
             }
 
-            rule.onNodeWithContentDescription(
-                "Ayet / bölüm 1: Latince metni kopyala",
-                useUnmergedTree = true,
-            ).assertExists()
-            rule.onNodeWithContentDescription(
-                "Ayet / bölüm 2: Latince metni kopyala",
-                useUnmergedTree = true,
-            ).performClick()
+            // No persistent Copy icons; individual verse actions stay available to TalkBack.
+            rule.onNodeWithTag("verse_copy_button", useUnmergedTree = true).assertDoesNotExist()
+            val first = rule.onNodeWithTag("verse_copy_action_1", useUnmergedTree = true)
+                .fetchSemanticsNode().config[SemanticsActions.CustomActions].single()
+            val secondAction = rule.onNodeWithTag("verse_copy_action_2", useUnmergedTree = true)
+                .fetchSemanticsNode().config[SemanticsActions.CustomActions].single()
+            assertTrue(first.label.contains("1"))
+            assertTrue(secondAction.label.contains("2"))
+            assertTrue(first.label != secondAction.label)
+            rule.runOnIdle { assertTrue(secondAction.action()) }
             rule.waitForIdle()
             val actual = clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()
             assertEquals(second.latin, actual)
@@ -167,18 +168,15 @@ class VerseCopyAccessibilityTest {
             }
 
             rule.onNodeWithText(expectedText, useUnmergedTree = true).assertExists()
-            rule.onNodeWithContentDescription(label, useUnmergedTree = true).assertExists()
-
-            // The former card-wide onClick={} must not remain in the semantics tree.
+            rule.onNodeWithTag("verse_copy_button", useUnmergedTree = true).assertDoesNotExist()
             val clickTargets = rule.onAllNodes(hasClickAction(), useUnmergedTree = true).fetchSemanticsNodes()
-            assertEquals(1, clickTargets.size)
-            val target = rule.onNodeWithTag("verse_copy_button", useUnmergedTree = true)
-            val bounds = target.fetchSemanticsNode().boundsInRoot
-            val minimumPixels = 48f * context.resources.displayMetrics.density
-            assertTrue(bounds.width >= minimumPixels)
-            assertTrue(bounds.height >= minimumPixels)
-
-            target.performClick()
+            assertEquals(0, clickTargets.size)
+            val action = rule.onNodeWithTag(
+                "verse_copy_action_1",
+                useUnmergedTree = true,
+            ).fetchSemanticsNode().config[SemanticsActions.CustomActions].single()
+            assertEquals(label, action.label)
+            rule.runOnIdle { assertTrue(action.action()) }
             rule.waitForIdle()
             val actual = clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()
             // Do not include sensitive clipboard contents in assertion failure logs.

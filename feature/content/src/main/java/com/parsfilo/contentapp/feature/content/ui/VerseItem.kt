@@ -1,9 +1,5 @@
 package com.parsfilo.contentapp.feature.content.ui
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -16,11 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,18 +22,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.parsfilo.contentapp.core.designsystem.component.AppCard
-import com.parsfilo.contentapp.core.designsystem.component.ReaderSelectionContainer
 import com.parsfilo.contentapp.core.designsystem.theme.ExtendedQuranMarkFontFamily
 import com.parsfilo.contentapp.core.designsystem.tokens.LocalDimens
 import com.parsfilo.contentapp.core.model.DisplayMode
@@ -55,8 +43,6 @@ fun VerseItem(
     fontSize: Int,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-    val view = LocalView.current
     val dimens = LocalDimens.current
     val colorScheme = MaterialTheme.colorScheme
     val isLightTheme = colorScheme.background.luminance() > 0.5f
@@ -152,7 +138,12 @@ fun VerseItem(
                             color = colorScheme.onSurfaceVariant
                         )
                     }
-                    ReaderSelectionContainer {
+                    ReaderCopyContent(
+                        modifier = Modifier.testTag("verse_copy_action_" + verse.id),
+                        copyText = verseText,
+                        copyLabel = numberedCopyActionLabel,
+                        copiedMessage = copySuccessMessage,
+                    ) {
                         Text(
                             text = verseText,
                             style = MaterialTheme.typography.bodyLarge.copy(
@@ -170,22 +161,6 @@ fun VerseItem(
                         )
                     }
                 }
-
-                IconButton(
-                    onClick = {
-                        copyToClipboard(context, verseText, copySuccessMessage)
-                        view.announceForAccessibility(copySuccessMessage)
-                    },
-                    modifier = Modifier
-                        .size(48.dp)
-                        .testTag("verse_copy_button"),
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.ContentCopy,
-                        contentDescription = numberedCopyActionLabel,
-                        tint = colorScheme.primary,
-                    )
-                }
             }
         }
     }
@@ -193,9 +168,3 @@ fun VerseItem(
 
 internal fun requiresExtendedQifFont(displayMode: DisplayMode, text: String): Boolean =
     displayMode == DisplayMode.ARABIC && '\u08DE' in text
-
-private fun copyToClipboard(context: Context, verseText: String, successMessage: String) {
-    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
-    clipboard.setPrimaryClip(ClipData.newPlainText("verse_text", verseText))
-    Toast.makeText(context, successMessage, Toast.LENGTH_SHORT).show()
-}

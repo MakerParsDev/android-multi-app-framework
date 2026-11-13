@@ -9,6 +9,7 @@
     <string name="content_retry">Tekrar dene</string>
     <string name="content_copy_arabic">Arapça metni kopyala</string>
     <string name="content_copy_numbered">Ayet / bölüm %1$d: %2$s</string>
+    <string name="content_copy_menu">Kopyala</string>
     <string name="content_copy_latin">Latince metni kopyala</string>
     <string name="content_copy_translation">Meali kopyala</string>
     <string name="content_verse_copied">Ayet panoya kopyalandı</string>

@@ -4,11 +4,10 @@ import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.unit.Density
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -80,18 +79,24 @@ class MiraclesCopyAccessibilityTest {
 
             val reader = rule.onNodeWithTag("miracles_detail")
             reader.performScrollToNode(hasTestTag("miracles_copy_arabic"))
-            rule.onNodeWithContentDescription(
-                context.getString(com.parsfilo.contentapp.feature.content.R.string.content_copy_arabic)
-            ).assertExists()
-            rule.onNodeWithTag("miracles_copy_arabic").performClick()
+            val arabicCopy = rule.onNodeWithTag("miracles_copy_arabic", useUnmergedTree = true)
+                .fetchSemanticsNode().config[SemanticsActions.CustomActions].single()
+            assertEquals(
+                context.getString(com.parsfilo.contentapp.feature.content.R.string.content_copy_arabic),
+                arabicCopy.label,
+            )
+            rule.runOnIdle { assertTrue(arabicCopy.action()) }
             rule.waitForIdle()
             assertTrue(clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString() == originalArabic)
 
             reader.performScrollToNode(hasTestTag("miracles_copy_latin"))
-            rule.onNodeWithContentDescription(
-                context.getString(com.parsfilo.contentapp.feature.content.R.string.content_copy_latin)
-            ).assertExists()
-            rule.onNodeWithTag("miracles_copy_latin").performClick()
+            val latinCopy = rule.onNodeWithTag("miracles_copy_latin", useUnmergedTree = true)
+                .fetchSemanticsNode().config[SemanticsActions.CustomActions].single()
+            assertEquals(
+                context.getString(com.parsfilo.contentapp.feature.content.R.string.content_copy_latin),
+                latinCopy.label,
+            )
+            rule.runOnIdle { assertTrue(latinCopy.action()) }
             rule.waitForIdle()
             assertEquals(prayer.duaArapca, clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString())
         } finally {

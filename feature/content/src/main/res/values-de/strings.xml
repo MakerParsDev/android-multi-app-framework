@@ -9,6 +9,7 @@
     <string name="content_retry">Erneut versuchen</string>
     <string name="content_copy_arabic">Arabischen Text kopieren</string>
     <string name="content_copy_numbered">Vers / Abschnitt %1$d: %2$s</string>
+    <string name="content_copy_menu">Kopieren</string>
     <string name="content_copy_latin">Lateinische Umschrift kopieren</string>
     <string name="content_copy_translation">Übersetzung kopieren</string>
     <string name="content_verse_copied">Vers in die Zwischenablage kopiert</string>

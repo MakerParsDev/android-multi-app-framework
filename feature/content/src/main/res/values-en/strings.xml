@@ -9,6 +9,7 @@
     <string name="content_retry">Retry</string>
     <string name="content_copy_arabic">Copy Arabic text</string>
     <string name="content_copy_numbered">Verse / section %1$d: %2$s</string>
+    <string name="content_copy_menu">Copy</string>
     <string name="content_copy_latin">Copy Latin transliteration</string>
     <string name="content_copy_translation">Copy translation</string>
     <string name="content_verse_copied">Verse copied to clipboard</string>
