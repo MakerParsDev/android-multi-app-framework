@@ -7,10 +7,10 @@ SETTINGS = ROOT / "feature/settings/src/main/java/com/parsfilo/contentapp/featur
 AD_MANAGER = ROOT / "feature/ads/src/main/java/com/parsfilo/contentapp/feature/ads/AdManager.kt"
 
 
-def test_settings_shows_single_retry_only_for_missing_consent() -> None:
+def test_settings_shows_explicit_retry_for_missing_and_recoverable_ump_error() -> None:
     source = SETTINGS.read_text(encoding="utf8")
     assert "val consentStatus by adManager.consentStatus.collectAsStateWithLifecycle()" in source
-    assert "if (consentStatus == ConsentStatus.Missing)" in source
+    assert "if (consentStatus == ConsentStatus.Missing || consentStatus is ConsentStatus.Error)" in source
     assert "adManager.retryConsentFromSettings(activity)" in source
     assert "isConsentRetryInProgress" in source
     assert "enabled = !isConsentRetryInProgress" in source
