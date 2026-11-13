@@ -657,6 +657,7 @@ dependencies {
 
     implementation(libs.firebase.crashlytics)
     implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.session)
     implementation(libs.timber)
 
     testImplementation(libs.junit)
