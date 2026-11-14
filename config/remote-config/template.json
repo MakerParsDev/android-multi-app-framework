@@ -788,7 +788,7 @@
       "valueType": "STRING",
       "conditionalValues": {
         "app_amenerrasulu": {
-          "value": "52"
+          "value": "61"
         },
         "app_ayetelkursi": {
           "value": "80"
@@ -870,7 +870,7 @@
     },
     "update_button_tr": {
       "defaultValue": {
-        "value": "Güncelle"
+        "value": "G�ncelle"
       },
       "description": "Localized update-dialog copy.",
       "valueType": "STRING"
@@ -951,7 +951,7 @@
     },
     "update_message_tr": {
       "defaultValue": {
-        "value": "Devam etmek için lütfen uygulamayı güncelleyin."
+        "value": "Devam etmek i�in l�tfen uygulamay� g�ncelleyin."
       },
       "description": "Localized update-dialog copy.",
       "valueType": "STRING"
@@ -972,7 +972,7 @@
     },
     "update_title_tr": {
       "defaultValue": {
-        "value": "Güncelleme gerekli"
+        "value": "G�ncelleme gerekli"
       },
       "description": "Localized update-dialog copy.",
       "valueType": "STRING"
