@@ -870,7 +870,7 @@
     },
     "update_button_tr": {
       "defaultValue": {
-        "value": "G�ncelle"
+        "value": "Güncelle"
       },
       "description": "Localized update-dialog copy.",
       "valueType": "STRING"
@@ -951,7 +951,7 @@
     },
     "update_message_tr": {
       "defaultValue": {
-        "value": "Devam etmek i�in l�tfen uygulamay� g�ncelleyin."
+        "value": "Devam etmek için lütfen uygulamayı güncelleyin."
       },
       "description": "Localized update-dialog copy.",
       "valueType": "STRING"
@@ -972,7 +972,7 @@
     },
     "update_title_tr": {
       "defaultValue": {
-        "value": "G�ncelleme gerekli"
+        "value": "Güncelleme gerekli"
       },
       "description": "Localized update-dialog copy.",
       "valueType": "STRING"
