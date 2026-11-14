@@ -160,12 +160,16 @@ class MediaForegroundServiceApi31Test {
             Intent(Intent.ACTION_MEDIA_BUTTON).setPackage(context.packageName),
             0,
         )
-        assertTrue("Amen should register the guarded receiver", registered.any {
-            it.activityInfo?.name == currentReceiver
-        })
-        assertFalse("The unconditional Media3 receiver must not remain registered", registered.any {
-            it.activityInfo?.name == "androidx.media3.session.MediaButtonReceiver"
-        })
+        assertTrue(
+            "Amen should register the guarded receiver",
+            registered.any { it.activityInfo?.name == currentReceiver },
+        )
+        assertFalse(
+            "The unconditional Media3 receiver must not remain registered",
+            registered.any {
+                it.activityInfo?.name == "androidx.media3.session.MediaButtonReceiver"
+            },
+        )
 
         val prefs = context.getSharedPreferences("audio_playback_resumption", Context.MODE_PRIVATE)
         val originalUri = prefs.getString("last_played_local_uri", null)
