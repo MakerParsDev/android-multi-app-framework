@@ -68,6 +68,19 @@ private val appOpenReadingRoutes =
 internal fun isReadingSurfaceForAppOpenResume(route: String?): Boolean =
     route?.substringBefore('/')?.substringBefore('?') in appOpenReadingRoutes
 
+/** Do not show a previously approved app-open ad after navigation or reading starts. */
+internal fun appOpenLatePresentationBlockReason(
+    evaluatedRoute: String?,
+    currentRoute: String?,
+    contentInProgress: Boolean,
+): AdSuppressReason? =
+    when {
+        contentInProgress || isReadingSurfaceForAppOpenResume(currentRoute) ->
+            AdSuppressReason.CONTENT_IN_PROGRESS
+        evaluatedRoute != currentRoute -> AdSuppressReason.APP_LIFECYCLE
+        else -> null
+    }
+
 private enum class PreloadReason(val analyticsValue: String) {
     INITIALIZE("initialize"),
     GATE_OPENED("gate_opened"),
@@ -518,6 +531,14 @@ class AdOrchestrator
                 activity = activity,
                 route = route,
                 triggerReason = triggerReason,
+                presentationBlockReason = {
+                    val currentRoute = adSessionContext.activeRoute
+                    appOpenLatePresentationBlockReason(
+                        evaluatedRoute = route,
+                        currentRoute = currentRoute,
+                        contentInProgress = isContentInProgress(currentRoute),
+                    )
+                },
                 onAdImpression = { adUnitId ->
                     appOpenEligibilityTracker.onShown()
                     Timber.d("AppOpen impression route=%s adUnit=%s", route, adUnitId)

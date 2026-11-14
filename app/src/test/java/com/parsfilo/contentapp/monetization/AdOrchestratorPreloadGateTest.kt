@@ -106,11 +106,11 @@ class AdOrchestratorPreloadGateTest {
             val adManager = mockk<AppOpenAdManager>(relaxed = true)
             var closeGateOnCompletion = true
             var revokeConsentOnCompletion = false
-            coEvery { adManager.showAdIfAvailable(any(), any(), any(), any(), any()) } coAnswers {
+            coEvery { adManager.showAdIfAvailable(any(), any(), any(), any(), any(), any()) } coAnswers {
                 // Entitlement or UMP consent can change while the full-screen ad is finishing.
                 if (closeGateOnCompletion) adsAllowed.value = false
                 if (revokeConsentOnCompletion) AdsConsentRuntimeState.update(false)
-                arg<(ShowCompletionReason) -> Unit>(4)(reason)
+                arg<(ShowCompletionReason) -> Unit>(5)(reason)
             }
             val orchestrator = AdOrchestrator(
                 manager,
