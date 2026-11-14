@@ -13,6 +13,10 @@ sealed class AppRoute(
 
     data object Subscription : AppRoute("subscription")
 
+    // A distinct route keeps billing sign-in separate from the Messages graph.
+    // The subscription/ prefix inherits the existing no-fullscreen-ad route policy.
+    data object SubscriptionAuth : AppRoute("subscription/auth")
+
     data object OtherApps : AppRoute("other_apps")
 
     data object MessagesGraph : AppRoute("messages_graph")

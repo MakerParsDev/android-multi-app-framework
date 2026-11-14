@@ -32,6 +32,7 @@ import com.parsfilo.contentapp.feature.ads.ui.NativeAdViewModel
 import com.parsfilo.contentapp.feature.ads.ui.NativeFeedAdSlot
 import com.parsfilo.contentapp.feature.audio.ui.AudioPlayerViewModel
 import com.parsfilo.contentapp.feature.audio.ui.InlineAudioPlayer
+import com.parsfilo.contentapp.feature.auth.ui.AuthPurpose
 import com.parsfilo.contentapp.feature.auth.ui.AuthRoute
 import com.parsfilo.contentapp.feature.billing.ui.SubscriptionRoute
 import com.parsfilo.contentapp.feature.content.ui.ContentRoute
@@ -746,7 +747,14 @@ fun AppNavHost(
         composable(AppRoute.Subscription.route) {
             SubscriptionRoute(
                 onBackClick = { navController.popBackStack() },
-                onSignInRequired = { navController.navigate(AppRoute.Auth.route) },
+                onSignInRequired = { navController.navigate(AppRoute.SubscriptionAuth.route) },
+            )
+        }
+        composable(AppRoute.SubscriptionAuth.route) {
+            AuthRoute(
+                purpose = AuthPurpose.SUBSCRIPTION,
+                onBackClick = { navController.popBackStack() },
+                onSignInSuccess = { navController.popBackStack() },
             )
         }
 
@@ -766,13 +774,8 @@ fun AppNavHost(
             composable(AppRoute.Auth.route) {
                 AuthRoute(
                     onSignInSuccess = {
-                        // Resume the paywall after an explicit sign-in from Subscription.
-                        if (navController.previousBackStackEntry?.destination?.route == AppRoute.Subscription.route) {
-                            navController.popBackStack()
-                        } else {
-                            navController.navigate(AppRoute.MessageList.route) {
-                                popUpTo(AppRoute.Auth.route) { inclusive = true }
-                            }
+                        navController.navigate(AppRoute.MessageList.route) {
+                            popUpTo(AppRoute.Auth.route) { inclusive = true }
                         }
                     },
                 )
