@@ -149,6 +149,48 @@ class AdOrchestratorPreloadGateTest {
         }
     }
 
+
+    @Test
+    fun coldStartBootstrapSkipsAppOpenWarmupButBackgroundResumePreloads() = runTest {
+        val routePolicy = mockk<AdsPolicyConfig>(relaxed = true)
+        every { policies.getPolicy() } returns routePolicy
+        val context = mockk<Context>(relaxed = true)
+        every { context.getString(any()) } returns "test-ad-unit"
+        every { context.packageName } returns "com.parsfilo.ismiazamduasi"
+        val activity = mockk<Activity>(relaxed = true)
+        every { activity.applicationContext } returns context
+        val orchestrator =
+            AdOrchestrator(
+                manager,
+                appOpen,
+                interstitial,
+                native,
+                rewarded,
+                rewardedInterstitial,
+                mockk<AdRevenueLogger>(relaxed = true),
+                gateChecker,
+                policies,
+                mockk<PreferencesDataSource>(relaxed = true),
+                mockk<AdsPlacementPolicyEvaluator>(relaxed = true),
+                mockk<RewardedInterstitialCoordinator>(relaxed = true),
+                mockk<AppOpenEligibilityTracker>(relaxed = true),
+                mockk<AdsConfigValidator>(relaxed = true),
+            )
+        orchestrator.initialize(activity, this)
+        runCurrent()
+
+        // Cold-start app-open display is forbidden by the placement evaluator.
+        AdsConsentRuntimeState.update(true)
+        sdkReady.value = true
+        runCurrent()
+        verify(exactly = 0) { appOpen.loadAd(any(), any(), any()) }
+
+        // Background preparation must still ready ads for a later eligible resume.
+        orchestrator.onAppPaused(context)
+        runCurrent()
+        verify(exactly = 1) { appOpen.loadAd(any(), any(), any()) }
+    }
+
     @Test
     fun routeHintPreloadRespectsAdFreeEntitlementsAndConsent() = runTest {
         val routePolicy = mockk<AdsPolicyConfig>(relaxed = true)
@@ -281,11 +323,12 @@ class AdOrchestratorPreloadGateTest {
         verify(exactly = 0) { interstitial.loadAd(any(), any(), any(), any(), any()) }
         verify(exactly = 0) { appOpen.loadAd(any(), any(), any()) }
 
-        // The existing gate observer should retry naturally as soon as SDK is ready.
+        // SDK readiness still enables interstitials, but a cold-start app-open
+        // request cannot be shown and must wait for the background-resume path.
         sdkReady.value = true
         runCurrent()
         verify(exactly = 1) { interstitial.loadAd(any(), any(), any(), any(), any()) }
-        verify(exactly = 1) { appOpen.loadAd(any(), any(), any()) }
+        verify(exactly = 0) { appOpen.loadAd(any(), any(), any()) }
     }
 
     @Test

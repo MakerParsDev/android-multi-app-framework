@@ -165,7 +165,7 @@ class AdOrchestrator
                     requestAdBootstrap(
                         context = activity.applicationContext,
                         reason = PreloadReason.INITIALIZE,
-                        includeAppOpenWarmup = true,
+                        includeAppOpenWarmup = false,
                     )
                 }
             }
@@ -874,7 +874,7 @@ class AdOrchestrator
                             requestAdBootstrap(
                                 context = context,
                                 reason = PreloadReason.GATE_OPENED,
-                                includeAppOpenWarmup = true,
+                                includeAppOpenWarmup = false,
                             )
                         } else {
                             clearPreloadedAds()
