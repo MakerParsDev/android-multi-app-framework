@@ -38,4 +38,7 @@
     <string name="billing_error_unavailable">Der Zahlungsdienst ist derzeit nicht verfügbar. Prüfe Google Play und deine Verbindung und versuche es erneut.</string>
     <string name="billing_retry">Erneut versuchen</string>
     <string name="billing_continue_free">Du kannst die App ohne Abonnement weiternutzen. Über Zurück gelangst du zur App.</string>
+    <string name="billing_guest_catalog_info">Du kannst Tarife ohne Anmeldung ansehen. Zum Kauf ist für die sichere Kaufprüfung eine Anmeldung erforderlich.</string>
+    <string name="billing_restore_sign_in_action">Frühere Käufe wiederherstellen</string>
+    <string name="billing_sign_in_to_purchase_action">Zum Kauf anmelden</string>
 </resources>
