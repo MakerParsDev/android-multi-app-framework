@@ -18,7 +18,7 @@ Known production apps must match exactly one `app.id` condition.
 
 | Flavor | Package | Play production | Repo | RC min | RC latest | Mode | Condition |
 |---|---|---:|---:|---:|---:|---|---|
-| amenerrasulu | `com.parsfilo.amenerrasulu` | 52 | 53 | 1 | 52 | `none` | `app_amenerrasulu` |
+| amenerrasulu | `com.parsfilo.amenerrasulu` | 61 | 73 | 1 | 61 | `none` | `app_amenerrasulu` |
 | ayetelkursi | `com.parsfilo.ayetelkursi` | 80 | 81 | 1 | 80 | `none` | `app_ayetelkursi` |
 | bereketduasi | `com.parsfilo.bereketduasi` | 29 | 30 | 1 | 29 | `none` | `app_bereketduasi` |
 | esmaulhusna | `com.parsfilo.esmaulhusna` | 48 | 49 | 1 | 48 | `none` | `app_esmaulhusna` |
