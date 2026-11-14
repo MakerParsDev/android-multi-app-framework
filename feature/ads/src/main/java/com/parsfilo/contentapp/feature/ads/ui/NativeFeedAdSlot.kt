@@ -31,7 +31,8 @@ fun NativeFeedAdSlot(
     }
     val canRequestAds by AdsConsentRuntimeState.canRequestAds.collectAsState()
     val canShowAds by entryPoint.adGateChecker().shouldShowAds.collectAsState(initial = false)
-    val eligible = nativeFeedSlotEligible(canRequestAds, canShowAds)
+    val sdkReady by entryPoint.adManager().isSdkReady.collectAsState()
+    val eligible = nativeFeedSlotEligible(canRequestAds, canShowAds, sdkReady)
     val policy = entryPoint.adsPolicyProvider().getPolicy()
     LaunchedEffect(nativeAd, nativePlacement, nativeAdUnitId, eligible, policy.demandAwarePreloadEnabled) {
         if (policy.demandAwarePreloadEnabled && nativeAd == null && eligible) {
@@ -68,8 +69,9 @@ fun NativeFeedAdSlot(
     )
 }
 
-/** Shared eligibility for native rendering and demand-aware slot preloads. */
+/** Native requests and rendering need consent, entitlement, and completed SDK initialization. */
 internal fun nativeFeedSlotEligible(
     canRequestAds: Boolean,
     canShowAds: Boolean,
-): Boolean = canRequestAds && canShowAds
+    sdkReady: Boolean,
+): Boolean = canRequestAds && canShowAds && sdkReady
