@@ -10,6 +10,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.MediaButtonReceiver
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.google.common.util.concurrent.Futures
@@ -214,4 +215,17 @@ private class LocalAudioResumeStore(private val context: Context) {
             false
         }
     }
+}
+
+/**
+ * Media3's default receiver always starts an FGS, even for a cold media key
+ * without playable media. When onGetSession rejects that empty start, Android
+ * 12+ can terminate the app with ForegroundServiceDidNotStartInTimeException.
+ * Only allow cold service starts if the same validated local bookmark that
+ * AudioService.onPlaybackResumption uses is available.
+ */
+@OptIn(UnstableApi::class)
+open class ResumableAudioMediaButtonReceiver : MediaButtonReceiver() {
+    override fun shouldStartForegroundService(context: Context, intent: Intent): Boolean =
+        LocalAudioResumeStore(context).load() != null
 }

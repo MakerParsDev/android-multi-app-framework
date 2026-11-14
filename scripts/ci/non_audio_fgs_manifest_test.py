@@ -90,7 +90,9 @@ class NonAudioForegroundServiceContractTest(unittest.TestCase):
         self.assertEqual("mediaPlayback", service.get(ANDROID + "foregroundServiceType"))
 
     def test_cold_resumption_receiver_is_scoped_to_amen_audio_flavor(self):
-        receiver_name = "androidx.media3.session.MediaButtonReceiver"
+        receiver_name = (
+            "com.parsfilo.contentapp.feature.audio.service.ResumableAudioMediaButtonReceiver"
+        )
         amen = ET.parse(
             ROOT / "app/src/amenerrasulu/AndroidManifest.xml"
         ).getroot()
@@ -99,6 +101,10 @@ class NonAudioForegroundServiceContractTest(unittest.TestCase):
             if node.get(ANDROID + "name") == receiver_name
         ]
         self.assertEqual(1, len(receiver))
+        self.assertNotIn(
+            "androidx.media3.session.MediaButtonReceiver",
+            [node.get(ANDROID + "name") for node in amen.findall("./application/receiver")],
+        )
         self.assertEqual("true", receiver[0].get(ANDROID + "exported"))
         self.assertEqual(
             ["android.intent.action.MEDIA_BUTTON"],
