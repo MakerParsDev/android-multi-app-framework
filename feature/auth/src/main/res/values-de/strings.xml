@@ -4,5 +4,9 @@
     <string name="auth_value_short">Nach der Anmeldung kannst du deinen Nachrichtenverlauf verfolgen und Antworten auf einem Bildschirm sehen.</string>
     <string name="auth_sign_in_google">Mit Google anmelden</string>
     <string name="auth_sign_in_failed">Anmeldung fehlgeschlagen. Bitte erneut versuchen.</string>
+    <string name="auth_subscription_title">Für Abonnements anmelden</string>
+    <string name="auth_subscription_description">Melde dich mit Google an, um ein Abo zu kaufen oder frühere Käufe wiederherzustellen.</string>
+    <string name="auth_subscription_value_short">Nach der Anmeldung kehrst du zur Abo-Übersicht zurück. Du kannst die Angebote auch ohne Anmeldung ansehen.</string>
+    <string name="auth_subscription_back_to_plans">Zurück zu den Angeboten</string>
 </resources>
 
