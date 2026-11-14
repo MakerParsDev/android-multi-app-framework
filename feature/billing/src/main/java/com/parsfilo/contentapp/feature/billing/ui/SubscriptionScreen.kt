@@ -33,6 +33,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -106,15 +107,13 @@ fun SubscriptionScreen(
     val scrollState = rememberScrollState()
     var retryAttempt by remember { mutableIntStateOf(0) }
     var didTimeOut by remember { mutableStateOf(false) }
-    val awaitingBilling = uiState.isSignedIn &&
-        (
-            uiState.subscriptionState is SubscriptionState.Loading ||
-                (
-                    uiState.subscriptionState !is SubscriptionState.Active &&
-                        uiState.subscriptionState !is SubscriptionState.Error &&
-                        uiState.productDetails.isEmpty()
-                )
-        )
+    val awaitingBilling =
+        uiState.subscriptionState is SubscriptionState.Loading ||
+            (
+                uiState.subscriptionState !is SubscriptionState.Active &&
+                    uiState.subscriptionState !is SubscriptionState.Error &&
+                    uiState.productDetails.isEmpty()
+            )
     LaunchedEffect(awaitingBilling, uiState.subscriptionState, retryAttempt) {
         didTimeOut = false
         if (awaitingBilling) {
@@ -130,6 +129,11 @@ fun SubscriptionScreen(
         retryAttempt++
         didTimeOut = false
         onRetry()
+    }
+    // A Play catalog can be browsed without an app account; checkout still needs
+    // the identity used by the server-side entitlement verifier.
+    val selectPlan: (BillingProduct) -> Unit = { plan ->
+        routeSubscriptionCheckout(uiState.isSignedIn, plan, onSignInClick, onPlanSelected)
     }
 
     Column(
@@ -183,101 +187,98 @@ fun SubscriptionScreen(
 
         if (!uiState.isSignedIn) {
             Text(
-                text = stringResource(R.string.billing_sign_in_required),
-                color = colorScheme.onSurface,
-                style = MaterialTheme.typography.bodyLarge,
+                text = stringResource(R.string.billing_guest_catalog_info),
+                color = colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
             )
+            TextButton(onClick = onSignInClick) {
+                Text(text = stringResource(R.string.billing_restore_sign_in_action))
+            }
             Spacer(modifier = Modifier.height(dimens.space16))
-            AppButton(
-                text = stringResource(R.string.billing_sign_in_action),
-                onClick = onSignInClick,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        } else {
-            when (uiState.subscriptionState) {
-                is SubscriptionState.Active -> {
-                    // Aktif abonelik
-                    AppCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
-                        shape = RoundedCornerShape(dimens.radiusLarge)
+        }
+        when (uiState.subscriptionState) {
+            is SubscriptionState.Active -> {
+                // Aktif abonelik
+                AppCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
+                    shape = RoundedCornerShape(dimens.radiusLarge)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(dimens.space20),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(dimens.space20),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.CheckCircle,
-                                contentDescription = null,
-                                tint = colorScheme.primary,
-                                modifier = Modifier.size(dimens.iconLg)
+                        Icon(
+                            imageVector = Icons.Filled.CheckCircle,
+                            contentDescription = null,
+                            tint = colorScheme.primary,
+                            modifier = Modifier.size(dimens.iconLg)
+                        )
+                        Spacer(modifier = Modifier.size(dimens.space12))
+                        Column {
+                            Text(
+                                text = stringResource(R.string.billing_active_title),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = colorScheme.onSurface,
+                                fontWeight = FontWeight.Bold
                             )
-                            Spacer(modifier = Modifier.size(dimens.space12))
-                            Column {
-                                Text(
-                                    text = stringResource(R.string.billing_active_title),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = colorScheme.onSurface,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = stringResource(R.string.billing_active_subtitle),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = colorScheme.onSurfaceVariant
-                                )
-                            }
+                            Text(
+                                text = stringResource(R.string.billing_active_subtitle),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
+            }
 
-                is SubscriptionState.Loading -> {
-                    if (contentMode == SubscriptionContent.AVAILABILITY_ERROR) {
-                        BillingUnavailable(
-                            billingAvailabilityDescription(uiState.availabilityError),
-                            retry
-                        )
-                    } else if (contentMode == SubscriptionContent.TIMED_OUT) {
-                        BillingUnavailable(stringResource(R.string.billing_error_timeout), retry)
-                    } else {
-                        SubscriptionLoadingSkeleton()
-                    }
-                }
-
-                is SubscriptionState.Error -> {
-                    val resolvedMessage = when (uiState.subscriptionState.message) {
-                        BillingErrorKeys.CONNECTING -> stringResource(R.string.billing_error_connecting)
-                        BillingErrorKeys.RECONNECTING -> stringResource(R.string.billing_error_reconnecting)
-                        BillingErrorKeys.UNSUPPORTED -> stringResource(R.string.billing_error_unsupported)
-                        BillingErrorKeys.AUTH_REQUIRED -> stringResource(R.string.billing_sign_in_required)
-                        BillingErrorKeys.VERIFICATION_UNAVAILABLE -> stringResource(R.string.billing_error_verification_unavailable)
-                        BillingErrorKeys.UNAVAILABLE -> stringResource(R.string.billing_error_unavailable)
-                        BillingErrorKeys.NO_PRODUCTS -> stringResource(R.string.billing_error_no_products)
-                        else -> stringResource(R.string.billing_error_unavailable)
-                    }
-                    Text(
-                        text = stringResource(
-                            R.string.billing_error_prefix,
-                            resolvedMessage
-                        ),
-                        color = colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium
+            is SubscriptionState.Loading -> {
+                if (contentMode == SubscriptionContent.AVAILABILITY_ERROR) {
+                    BillingUnavailable(
+                        billingAvailabilityDescription(uiState.availabilityError),
+                        retry
                     )
-                    Spacer(modifier = Modifier.height(dimens.space16))
-                    BillingRetry(retry)
+                } else if (contentMode == SubscriptionContent.TIMED_OUT) {
+                    BillingUnavailable(stringResource(R.string.billing_error_timeout), retry)
+                } else {
+                    SubscriptionLoadingSkeleton()
                 }
+            }
 
-                else -> {
-                    when (contentMode) {
-                        SubscriptionContent.AVAILABILITY_ERROR ->
-                            BillingUnavailable(billingAvailabilityDescription(uiState.availabilityError), retry)
-                        SubscriptionContent.LOADING -> SubscriptionLoadingSkeleton()
-                        SubscriptionContent.TIMED_OUT ->
-                            BillingUnavailable(stringResource(R.string.billing_error_timeout), retry)
-                        else -> PlansList(uiState.productDetails, onPlanSelected)
-                    }
+            is SubscriptionState.Error -> {
+                val resolvedMessage = when (uiState.subscriptionState.message) {
+                    BillingErrorKeys.CONNECTING -> stringResource(R.string.billing_error_connecting)
+                    BillingErrorKeys.RECONNECTING -> stringResource(R.string.billing_error_reconnecting)
+                    BillingErrorKeys.UNSUPPORTED -> stringResource(R.string.billing_error_unsupported)
+                    BillingErrorKeys.AUTH_REQUIRED -> stringResource(R.string.billing_sign_in_required)
+                    BillingErrorKeys.VERIFICATION_UNAVAILABLE -> stringResource(R.string.billing_error_verification_unavailable)
+                    BillingErrorKeys.UNAVAILABLE -> stringResource(R.string.billing_error_unavailable)
+                    BillingErrorKeys.NO_PRODUCTS -> stringResource(R.string.billing_error_no_products)
+                    else -> stringResource(R.string.billing_error_unavailable)
+                }
+                Text(
+                    text = stringResource(
+                        R.string.billing_error_prefix,
+                        resolvedMessage
+                    ),
+                    color = colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(dimens.space16))
+                BillingRetry(retry)
+            }
+
+            else -> {
+                when (contentMode) {
+                    SubscriptionContent.AVAILABILITY_ERROR ->
+                        BillingUnavailable(billingAvailabilityDescription(uiState.availabilityError), retry)
+                    SubscriptionContent.LOADING -> SubscriptionLoadingSkeleton()
+                    SubscriptionContent.TIMED_OUT ->
+                        BillingUnavailable(stringResource(R.string.billing_error_timeout), retry)
+                    else -> PlansList(uiState.productDetails, selectPlan, requiresSignIn = !uiState.isSignedIn)
                 }
             }
         }
@@ -306,6 +307,16 @@ internal fun resolveSubscriptionContent(
     hasProducts -> SubscriptionContent.PLANS
     didTimeOut -> SubscriptionContent.TIMED_OUT
     else -> SubscriptionContent.LOADING
+}
+
+/** Do not start BillingClient checkout until the server verifier has an app user identity. */
+internal fun routeSubscriptionCheckout(
+    isSignedIn: Boolean,
+    plan: BillingProduct,
+    onSignInClick: () -> Unit,
+    onPlanSelected: (BillingProduct) -> Unit,
+) {
+    if (isSignedIn) onPlanSelected(plan) else onSignInClick()
 }
 
 @Composable
@@ -433,7 +444,8 @@ private fun rememberSkeletonBrush(): Brush {
 @Composable
 private fun PlansList(
     productDetails: List<BillingProduct>,
-    onPlanSelected: (BillingProduct) -> Unit
+    onPlanSelected: (BillingProduct) -> Unit,
+    requiresSignIn: Boolean = false,
 ) {
     val dimens = LocalDimens.current
 
@@ -512,7 +524,9 @@ private fun PlansList(
     Spacer(modifier = Modifier.height(dimens.space16))
 
     AppButton(
-        text = stringResource(R.string.billing_subscribe),
+        text = stringResource(
+            if (requiresSignIn) R.string.billing_sign_in_to_purchase_action else R.string.billing_subscribe
+        ),
         onClick = {
             val selectedPackage = productDetails.firstOrNull { it.id == selectedPackageId }
             if (selectedPackage != null) {
@@ -532,7 +546,9 @@ private fun PlansList(
         shape = RoundedCornerShape(dimens.radiusMedium)
     ) {
         Text(
-            text = stringResource(R.string.billing_subscribe),
+            text = stringResource(
+                if (requiresSignIn) R.string.billing_sign_in_to_purchase_action else R.string.billing_subscribe
+            ),
             fontWeight = FontWeight.Bold,
             fontSize = 16.sp,
             color = MaterialTheme.colorScheme.onPrimary
