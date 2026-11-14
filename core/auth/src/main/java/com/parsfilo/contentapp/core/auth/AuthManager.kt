@@ -12,7 +12,6 @@ import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.FirebaseException
@@ -37,7 +36,6 @@ class AuthManager
         private val firebaseAuth: FirebaseAuth,
     ) {
         companion object {
-            private const val REAUTH_REQUIRED_CODE = 16
             private const val MASK_SHORT_THRESHOLD = 8
             private const val MASK_SHORT_SUFFIX = 2
             private const val MASK_VISIBLE_PREFIX = 4
@@ -93,200 +91,41 @@ class AuthManager
                     activityContext::class.java.simpleName,
                 )
 
-                val allAccountsResult = trySignIn(
+                // This method is invoked by an explicit, visible Sign in with Google button.
+                // Unlike GetGoogleIdOption's automatic bottom sheet, the button credential
+                // flow supports accounts that need Google reauthentication.
+                val buttonResult = trySignInWithGoogleButton(
                     attemptId = attemptId,
                     activityContext = activityContext,
                     credentialManager = credentialManager,
-                    filterByAuthorizedAccounts = false,
                 )
 
-                return when (allAccountsResult) {
+                return when (buttonResult) {
                     SignInResult.Success -> {
                         reauthStateCleared.set(false)
-                        Timber.i("[Auth][$attemptId] Sign-in SUCCESS (all accounts)")
+                        Timber.i("[Auth][$attemptId] Sign-in SUCCESS (button flow)")
                         SignInResult.Success
                     }
 
                     SignInResult.ReauthRequired -> {
-                        Timber.w("[Auth][$attemptId] Reauth required (all accounts). Clearing credential state…")
+                        Timber.w("[Auth][$attemptId] Reauth required (button flow). Clearing credential state…")
                         clearCredentialStateOnce(attemptId, credentialManager)
                         SignInResult.ReauthRequired
                     }
 
                     SignInResult.NoCredential -> {
-                        Timber.i("[Auth][$attemptId] NoCredential (all accounts). Trying explicit Google button flow…")
-                        val explicitResult = trySignInWithGoogleButton(
-                            attemptId = attemptId,
-                            activityContext = activityContext,
-                            credentialManager = credentialManager,
-                        )
-
-                        when (explicitResult) {
-                            SignInResult.Success -> {
-                                reauthStateCleared.set(false)
-                                Timber.i("[Auth][$attemptId] Sign-in SUCCESS (button flow)")
-                                SignInResult.Success
-                            }
-
-                            SignInResult.ReauthRequired -> {
-                                Timber.w("[Auth][$attemptId] Reauth required (button flow). Clearing credential state…")
-                                clearCredentialStateOnce(attemptId, credentialManager)
-                                SignInResult.ReauthRequired
-                            }
-
-                            SignInResult.NoCredential -> {
-                                Timber.w("[Auth][$attemptId] No Google credentials available on this device")
-                                SignInResult.NoCredential
-                            }
-
-                            else -> {
-                                Timber.i(
-                                    "[Auth][$attemptId] Button flow finished with %s",
-                                    explicitResult.logLabel(),
-                                )
-                                explicitResult
-                            }
-                        }
+                        Timber.w("[Auth][$attemptId] No Google credentials available on this device")
+                        SignInResult.NoCredential
                     }
 
                     else -> {
-                        Timber.i(
-                            "[Auth][$attemptId] Sign-in finished with %s",
-                            allAccountsResult.logLabel(),
-                        )
-                        allAccountsResult
+                        Timber.i("[Auth][$attemptId] Button flow finished with %s", buttonResult.logLabel())
+                        buttonResult
                     }
                 }
             } finally {
                 signInInProgress.set(false)
                 Timber.i("[Auth][$attemptId] Sign-in finished. inProgress reset.")
-            }
-        }
-
-        private suspend fun trySignIn(
-            attemptId: Long,
-            activityContext: Activity,
-            credentialManager: CredentialManager,
-            filterByAuthorizedAccounts: Boolean,
-        ): SignInResult {
-            val serverClientId = resolveServerClientId()
-            val maskedClientId = maskClientId(serverClientId)
-
-            if (serverClientId.isBlank()) {
-                Timber.e("[Auth][$attemptId] MISCONFIG: missing serverClientId (web_client_id)")
-                return SignInResult.Failure
-            }
-
-            Timber.i(
-                "[Auth][$attemptId] trySignIn(filterByAuthorizedAccounts=%s) serverClientId=%s",
-                filterByAuthorizedAccounts,
-                maskedClientId,
-            )
-
-            return try {
-                val googleIdOption = GetGoogleIdOption.Builder().setFilterByAuthorizedAccounts(filterByAuthorizedAccounts).setAutoSelectEnabled(false).setServerClientId(serverClientId).build()
-
-                val request = GetCredentialRequest.Builder().addCredentialOption(googleIdOption).build()
-
-                Timber.i("[Auth][$attemptId] Calling CredentialManager.getCredential()…")
-
-                val result = credentialManager.getCredential(activityContext, request)
-
-                Timber.i(
-                    "[Auth][$attemptId] getCredential() returned. credentialClass=%s",
-                    result.credential::class.java.name,
-                )
-
-                when (val credential = result.credential) {
-                    is CustomCredential -> {
-                        Timber.d(
-                            "[Auth][$attemptId] CustomCredential received. type=%s",
-                            credential.type,
-                        )
-
-                        if (credential.type != GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-                            Timber.e(
-                                "[Auth][$attemptId] Unexpected CustomCredential.type=%s",
-                                credential.type,
-                            )
-                            return SignInResult.Failure
-                        }
-
-                        val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
-                        Timber.d("[Auth][$attemptId] GoogleIdTokenCredential parsed")
-
-                        val firebaseCredential = GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
-
-                        Timber.i("[Auth][$attemptId] Signing in to Firebase with Google credential…")
-                        firebaseAuth.signInWithCredential(firebaseCredential).await()
-                        Timber.i("[Auth][$attemptId] Firebase signInWithCredential SUCCESS")
-                        SignInResult.Success
-                    }
-
-                    else -> {
-                        Timber.e(
-                            "[Auth][$attemptId] Unexpected credential type: %s",
-                            result.credential::class.java.name,
-                        )
-                        SignInResult.Failure
-                    }
-                }
-            } catch (_: NoCredentialException) {
-                Timber.i("[Auth][$attemptId] NoCredentialException")
-                SignInResult.NoCredential
-            } catch (e: GetCredentialCancellationException) {
-                val code = parseBracketCode(e.message)
-                val isReauth = isAccountReauthFailure(e)
-
-                if (isReauth) {
-                    Timber.w(
-                        "[Auth][$attemptId] REAUTH required. code=%s msg=%s",
-                        code ?: "n/a",
-                        e.message,
-                    )
-                    SignInResult.ReauthRequired
-                } else {
-                    Timber.i(
-                        "[Auth][$attemptId] CANCELLED by user/system. code=%s msg=%s",
-                        code ?: "n/a",
-                        e.message,
-                    )
-                    SignInResult.Cancelled
-                }
-            } catch (e: GetCredentialException) {
-                val code = parseBracketCode(e.message)
-                Timber.e(
-                    e,
-                    "[Auth][$attemptId] GetCredentialException. code=%s msg=%s",
-                    code ?: "n/a",
-                    e.message,
-                )
-                SignInResult.Failure
-            } catch (e: IllegalArgumentException) {
-                Timber.e(e, "[Auth][$attemptId] Invalid sign-in credential payload. msg=%s", e.message)
-                SignInResult.Failure
-            } catch (e: IllegalStateException) {
-                Timber.e(e, "[Auth][$attemptId] Illegal auth state during sign-in. msg=%s", e.message)
-                SignInResult.Failure
-            } catch (e: FirebaseException) {
-                Timber.e(e, "[Auth][$attemptId] Firebase sign-in failed. msg=%s", e.message)
-                SignInResult.Failure
-            } catch (e: SecurityException) {
-                Timber.e(e, "[Auth][$attemptId] Security exception during sign-in. msg=%s", e.message)
-                SignInResult.Failure
-            } catch (e: CancellationException) {
-                Timber.i(e, "[Auth][$attemptId] Sign-in coroutine cancelled")
-                SignInResult.Cancelled
-            } catch (e: java.util.concurrent.ExecutionException) {
-                Timber.e(e, "[Auth][$attemptId] Credential execution failed. msg=%s", e.message)
-                SignInResult.Failure
-            } catch (e: InterruptedException) {
-                Thread.currentThread().interrupt()
-                Timber.e(e, "[Auth][$attemptId] Sign-in interrupted")
-                SignInResult.Failure
-            } catch (e: UnsupportedOperationException) {
-                Timber.e(e, "[Auth][$attemptId] Unexpected exception during sign-in. msg=%s", e.message)
-                SignInResult.Failure
             }
         }
 
@@ -441,12 +280,12 @@ class AuthManager
                 credentialManager.clearCredentialState(ClearCredentialStateRequest())
                 Timber.i("[Auth][$attemptId] Credential state CLEARED after reauth failure")
             } catch (e: ClearCredentialException) {
-                // Sen istedin: warning değil ERROR
+                // Preserve failure severity when credential state cannot be cleared.
                 Timber.e(e, "[Auth][$attemptId] Failed to clear credential state")
             } catch (e: IllegalStateException) {
                 Timber.e(e, "[Auth][$attemptId] Failed to clear credential state")
             } catch (e: SecurityException) {
-                // Sen istedin: warning değil ERROR
+                // Preserve failure severity when credential state cannot be cleared.
                 Timber.e(e, "[Auth][$attemptId] Failed to clear credential state")
             }
         }
@@ -460,17 +299,13 @@ class AuthManager
         }
 
         private fun isAccountReauthFailure(e: GetCredentialCancellationException): Boolean {
-            // Daha sağlam: [16] gibi kodu yakala
-            val code = parseBracketCode(e.message)
-            if (code == REAUTH_REQUIRED_CODE) return true
-
-            // Fallback: mesaj kontrolü
-            val msg = e.message?.lowercase().orEmpty()
-            return msg.contains("reauth") || msg.contains("account reauth failed")
+            // Code [16] can mean either an account reauth failure or user cancellation.
+            // Only show reauth instructions when the provider actually says reauth.
+            return e.message?.contains("reauth", ignoreCase = true) == true
         }
 
         private fun parseBracketCode(message: String?): Int? {
-            // örnek message: "[16] Account reauth failed." veya "[28444] Developer console is not set up correctly."
+            // Example: "[16] Account reauth failed." or "[28444] Developer console is not set up correctly."
             if (message.isNullOrBlank()) return null
             val start = message.indexOf('[')
             val end = message.indexOf(']')
