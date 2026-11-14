@@ -149,7 +149,6 @@ class AdOrchestratorPreloadGateTest {
         }
     }
 
-
     @Test
     fun coldStartBootstrapSkipsAppOpenWarmupButBackgroundResumePreloads() = runTest {
         val routePolicy = mockk<AdsPolicyConfig>(relaxed = true)
