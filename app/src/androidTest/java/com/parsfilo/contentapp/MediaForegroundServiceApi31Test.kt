@@ -5,6 +5,7 @@ import android.app.Notification
 import android.app.NotificationManager
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.SystemClock
@@ -16,6 +17,8 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.parsfilo.contentapp.feature.audio.service.AudioService
+import com.parsfilo.contentapp.feature.audio.service.ResumableAudioMediaButtonReceiver
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
@@ -140,6 +143,64 @@ class MediaForegroundServiceApi31Test {
             onMain(instrumentation) { MediaController.releaseFuture(future) }
             activity.close()
             fixture.delete()
+        }
+    }
+
+    /**
+     * Check the actual Media3 receiver override with Android SharedPreferences
+     * and a private, locally playable fixture. No service is started here:
+     * this isolates the pre-FGS decision from Media3's playback timing.
+     */
+    @Test
+    fun coldMediaButtonOnlyStartsForAnExistingLocalBookmark() {
+        assumeTrue("Android 12+ emulator smoke", Build.VERSION.SDK_INT >= 31)
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val currentReceiver = ResumableAudioMediaButtonReceiver::class.java.name
+        val registered = context.packageManager.queryBroadcastReceivers(
+            Intent(Intent.ACTION_MEDIA_BUTTON).setPackage(context.packageName),
+            0,
+        )
+        assertTrue(
+            "Amen should register the guarded receiver",
+            registered.any { it.activityInfo?.name == currentReceiver },
+        )
+        assertFalse(
+            "The unconditional Media3 receiver must not remain registered",
+            registered.any {
+                it.activityInfo?.name == "androidx.media3.session.MediaButtonReceiver"
+            },
+        )
+
+        val prefs = context.getSharedPreferences("audio_playback_resumption", Context.MODE_PRIVATE)
+        val originalUri = prefs.getString("last_played_local_uri", null)
+        val originalPosition = prefs.getLong("last_played_position_ms", 0L)
+        val fixture = File(context.filesDir, "audio_cache/ci-receiver-resume.wav")
+        val receiver = object : ResumableAudioMediaButtonReceiver() {
+            fun canStart(): Boolean = shouldStartForegroundService(
+                context, Intent(Intent.ACTION_MEDIA_BUTTON),
+            )
+        }
+        try {
+            val audioDirectory = requireNotNull(fixture.parentFile)
+            assertTrue("Create disposable audio directory", audioDirectory.isDirectory || audioDirectory.mkdirs())
+            prefs.edit().clear().commit()
+            assertFalse("An empty cold media button cannot start an FGS", receiver.canStart())
+
+            writeSilentWav(fixture, seconds = 20)
+            prefs.edit().putString("last_played_local_uri", Uri.fromFile(fixture).toString())
+                .putLong("last_played_position_ms", 1_000L).commit()
+            assertTrue("A real local resume bookmark must still work", receiver.canStart())
+
+            fixture.delete()
+            assertFalse("A missing private file cannot restart an FGS", receiver.canStart())
+        } finally {
+            fixture.delete()
+            val edit = prefs.edit().clear()
+            if (originalUri != null) {
+                edit.putString("last_played_local_uri", originalUri)
+                    .putLong("last_played_position_ms", originalPosition)
+            }
+            edit.commit()
         }
     }
 
