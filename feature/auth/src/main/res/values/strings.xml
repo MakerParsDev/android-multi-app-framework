@@ -4,4 +4,8 @@
     <string name="auth_value_short">Giriş yaptıktan sonra mesaj geçmişinizi takip edebilir, yanıtları tek ekranda görebilirsiniz.</string>
     <string name="auth_sign_in_google">Google ile Giriş Yap</string>
     <string name="auth_sign_in_failed">Giriş başarısız oldu. Lütfen tekrar deneyin.</string>
+    <string name="auth_subscription_title">Abonelik için giriş</string>
+    <string name="auth_subscription_description">Abonelik satın almak veya önceki satın alımlarınızı geri yüklemek için Google hesabınızla giriş yapın.</string>
+    <string name="auth_subscription_value_short">Girişten sonra abonelik ekranına döneceksiniz. Planları giriş yapmadan incelemeye devam edebilirsiniz.</string>
+    <string name="auth_subscription_back_to_plans">Planlara geri dön</string>
 </resources>

@@ -4,5 +4,9 @@
     <string name="auth_value_short">After signing in, you can track your message history and see replies on a single screen.</string>
     <string name="auth_sign_in_google">Sign in with Google</string>
     <string name="auth_sign_in_failed">Sign in failed. Please try again.</string>
+    <string name="auth_subscription_title">Sign in for subscriptions</string>
+    <string name="auth_subscription_description">Sign in with Google to purchase a subscription or restore previous purchases.</string>
+    <string name="auth_subscription_value_short">After signing in, you will return to your subscription plans. You can browse plans without signing in.</string>
+    <string name="auth_subscription_back_to_plans">Back to plans</string>
 </resources>
 
