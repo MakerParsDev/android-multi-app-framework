@@ -19,7 +19,7 @@ class BillingAuthenticationGateTest {
     @get:Rule val rule = createComposeRule()
 
     @Test
-    fun signedOutPaywallRequiresGoogleSignInBeforeCheckout() {
+    fun signedOutPaywallShowsGuestInfoAndRestoreWithoutCheckout() {
         var signInRequests = 0
         var purchaseRequests = 0
         rule.setContent {
@@ -35,9 +35,20 @@ class BillingAuthenticationGateTest {
             }
         }
 
-        val actionText = InstrumentationRegistry.getInstrumentation()
-            .targetContext.getString(com.parsfilo.contentapp.feature.billing.R.string.billing_sign_in_action)
-        rule.onNodeWithText(actionText).performClick()
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val guestText = context.getString(
+            com.parsfilo.contentapp.feature.billing.R.string.billing_guest_catalog_info
+        )
+        val restoreAction = context.getString(
+            com.parsfilo.contentapp.feature.billing.R.string.billing_restore_sign_in_action
+        )
+        rule.onNodeWithText(guestText).assertExists()
+        rule.runOnIdle {
+            assertEquals(0, signInRequests)
+            assertEquals(0, purchaseRequests)
+        }
+        // Explicit restore is the only sign-in action, not merely opening the paywall.
+        rule.onNodeWithText(restoreAction).performClick()
         rule.runOnIdle {
             assertEquals(1, signInRequests)
             assertEquals(0, purchaseRequests)

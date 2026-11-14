@@ -38,4 +38,7 @@
     <string name="billing_error_unavailable">Billing is currently unavailable. Check Google Play and your connection, then try again.</string>
     <string name="billing_retry">Try again</string>
     <string name="billing_continue_free">You can continue using the app without a subscription. Use Back to return.</string>
+    <string name="billing_guest_catalog_info">Browse plans without signing in. When you choose to buy, sign-in is required for secure purchase verification.</string>
+    <string name="billing_restore_sign_in_action">Restore earlier purchases</string>
+    <string name="billing_sign_in_to_purchase_action">Sign in to purchase</string>
 </resources>
