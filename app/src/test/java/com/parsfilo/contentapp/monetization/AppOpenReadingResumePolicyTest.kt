@@ -1,10 +1,44 @@
 package com.parsfilo.contentapp.monetization
 
+import com.parsfilo.contentapp.feature.ads.AdSuppressReason
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AppOpenReadingResumePolicyTest {
+    @Test
+    fun staleAppOpenCannotInterruptNewReadingRoute() {
+        assertEquals(
+            AdSuppressReason.CONTENT_IN_PROGRESS,
+            appOpenLatePresentationBlockReason("quran_sura_list", "quran_sura_detail/4?ayahNumber=1", false),
+        )
+        assertEquals(
+            AdSuppressReason.CONTENT_IN_PROGRESS,
+            appOpenLatePresentationBlockReason("miracles_list", "miracles_detail/2", false),
+        )
+    }
+
+    @Test
+    fun navigationChangeOrNewActiveReadingInvalidatesPendingAppOpen() {
+        assertEquals(
+            AdSuppressReason.APP_LIFECYCLE,
+            appOpenLatePresentationBlockReason("quran_sura_list", "quran_bookmarks", false),
+        )
+        assertEquals(
+            AdSuppressReason.CONTENT_IN_PROGRESS,
+            appOpenLatePresentationBlockReason("content_list", "content_list", true),
+        )
+    }
+
+    @Test
+    fun unchangedNonReadingRouteKeepsUsualAppOpenEligibility() {
+        assertNull(appOpenLatePresentationBlockReason("quran_sura_list", "quran_sura_list", false))
+        assertNull(appOpenLatePresentationBlockReason(null, null, false))
+        assertNull(appOpenLatePresentationBlockReason("miracles_list", "miracles_list", false))
+    }
+
     @Test
     fun returningToVisibleReadingSurfacesDoesNotRequestAppOpenAds() {
         listOf(

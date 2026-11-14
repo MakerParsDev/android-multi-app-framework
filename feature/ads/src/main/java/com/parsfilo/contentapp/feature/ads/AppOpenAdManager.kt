@@ -221,6 +221,7 @@ class AppOpenAdManager @Inject constructor(
         route: String? = null,
         triggerReason: AppOpenTriggerReason = AppOpenTriggerReason.RESUME,
         onAdImpression: (String) -> Unit = {},
+        presentationBlockReason: () -> AdSuppressReason? = { null },
         onShowComplete: (ShowCompletionReason) -> Unit,
     ) {
         if (isShowingAd) {
@@ -362,6 +363,29 @@ class AppOpenAdManager @Inject constructor(
                 diagnostics = currentDiagnostics(),
             )
             onShowComplete(ShowCompletionReason.NOT_LOADED)
+            return
+        }
+
+        // The route can change while waiting for the latest entitlement/policy state.
+        // Reject a now-stale show before reserving or presenting any full-screen ad.
+        presentationBlockReason()?.let { reason ->
+            Timber.d("AppOpen show cancelled after route/state change reason=%s", reason.analyticsValue)
+            adRevenueLogger.logSuppressed(
+                adFormat = AdFormat.APP_OPEN,
+                placement = currentPlacement,
+                adUnitId = currentAdUnitId ?: "unknown",
+                suppressReason = reason,
+                route = route,
+            )
+            adRevenueLogger.logShowBlocked(
+                adFormat = AdFormat.APP_OPEN,
+                placement = currentPlacement,
+                suppressReason = reason,
+                route = route,
+                trigger = triggerReason.analyticsValue,
+                diagnostics = currentDiagnostics(),
+            )
+            onShowComplete(ShowCompletionReason.BLOCKED)
             return
         }
 
