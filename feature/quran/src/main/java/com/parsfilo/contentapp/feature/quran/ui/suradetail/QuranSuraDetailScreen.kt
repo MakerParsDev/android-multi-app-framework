@@ -395,7 +395,7 @@ private fun QuranSuraDetailHeader(
             .padding(horizontal = 6.dp, vertical = 0.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
+        IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = stringResource(R.string.quran_back),
@@ -406,7 +406,7 @@ private fun QuranSuraDetailHeader(
         IconButton(
             onClick = onOpenBookmarks,
             modifier = Modifier
-                .size(40.dp)
+                .size(48.dp)
                 .focusRequester(bookmarksFocusRequester)
                 .focusProperties { next = readerModeFocusRequester },
         ) {
@@ -430,7 +430,7 @@ private fun QuranSuraDetailHeader(
         )
 
         Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-            IconButton(onClick = onOpenReciter, modifier = Modifier.size(40.dp)) {
+            IconButton(onClick = onOpenReciter, modifier = Modifier.size(48.dp)) {
                 Icon(
                     imageVector = Icons.Default.LibraryMusic,
                     contentDescription = stringResource(R.string.quran_select_reciter),

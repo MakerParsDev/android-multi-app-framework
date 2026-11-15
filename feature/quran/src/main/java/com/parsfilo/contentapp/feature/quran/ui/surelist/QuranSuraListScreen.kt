@@ -434,7 +434,7 @@ private fun HeaderIconButton(
     IconButton(
         onClick = onClick,
         modifier = Modifier
-            .size(40.dp)
+            .size(48.dp)
             .background(colorScheme.secondaryContainer.copy(alpha = 0.24f), CircleShape)
             .border(
                 width = dimens.stroke,
