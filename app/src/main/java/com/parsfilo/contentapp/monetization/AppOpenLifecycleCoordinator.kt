@@ -9,7 +9,10 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.parsfilo.contentapp.feature.ads.AdSuppressReason
 import com.parsfilo.contentapp.feature.ads.AdsConsentRuntimeState
+import com.parsfilo.contentapp.feature.ads.AdsPrivacyState
 import com.parsfilo.contentapp.feature.ads.AppOpenTriggerReason
+import com.parsfilo.contentapp.feature.ads.ConsentStatus
+import com.parsfilo.contentapp.feature.ads.SystemTimeProvider
 import com.parsfilo.contentapp.feature.ads.suppressReasonWhenBlocked
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -135,8 +138,14 @@ class AppOpenLifecycleCoordinator
             // AdManager.initialize() already requests UMP consent for this launch;
             // an extra refresh here races that request without showing an ad.
             if (!shouldRefreshAppOpenConsent(triggerReason)) {
-                Timber.d("AppOpen cold-start suppressed; leaving UMP to initial consent flow")
-                recordSuppression(requestActivity, AdSuppressReason.COLD_START, triggerReason)
+                val reason =
+                    if (triggerReason == AppOpenTriggerReason.COLD_START) {
+                        AdSuppressReason.COLD_START
+                    } else {
+                        foregroundSuppressionReason()
+                    }
+                Timber.d("AppOpen suppressed before UMP refresh: %s", reason)
+                recordSuppression(requestActivity, reason, triggerReason)
                 return
             }
             adOrchestrator.refreshConsent(
@@ -198,6 +207,14 @@ class AppOpenLifecycleCoordinator
             this != null && !isFinishing && !isDestroyed
     }
 
-/** Cold-start app-open is blocked by policy; resume refresh must remain enabled. */
-internal fun shouldRefreshAppOpenConsent(reason: AppOpenTriggerReason): Boolean =
-    reason != AppOpenTriggerReason.COLD_START
+/** Keep the cold-start UMP request; skip repeated automatic retries while a failed refresh backs off. */
+internal fun shouldRefreshAppOpenConsent(
+    reason: AppOpenTriggerReason,
+    privacyState: AdsPrivacyState = AdsConsentRuntimeState.state.value,
+    nowMillis: Long = SystemTimeProvider.nowMillis(),
+): Boolean {
+    if (reason == AppOpenTriggerReason.COLD_START) return false
+    val limited = privacyState as? AdsPrivacyState.DeniedOrLimited ?: return true
+    val error = limited.consentStatus as? ConsentStatus.Error ?: return true
+    return error.retryEligibleAtMillis <= nowMillis
+}
