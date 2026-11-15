@@ -1,5 +1,8 @@
 package com.parsfilo.contentapp.feature.quran.ui.component
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -7,7 +10,9 @@ import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.parsfilo.contentapp.core.designsystem.AppTheme
+import com.parsfilo.contentapp.core.model.QuranAyah
 import com.parsfilo.contentapp.feature.quran.R
+import com.parsfilo.contentapp.feature.quran.ui.suradetail.AyahDisplayState
 import com.parsfilo.contentapp.feature.quran.ui.suradetail.QuranSuraDetailScreen
 import com.parsfilo.contentapp.feature.quran.ui.suradetail.QuranSuraDetailUiState
 import com.parsfilo.contentapp.feature.quran.ui.surelist.QuranSuraListScreen
@@ -63,6 +68,70 @@ class QuranHeaderTouchTargetDeviceTest {
         rule.runOnIdle {
             assertEquals(1, backCalls)
             assertEquals(1, bookmarkCalls)
+        }
+    }
+
+    @Test
+    fun detailHeaderPlayPauseTargetsCurrentAyahAndPreservesReciterAccess() {
+        val ayahs = listOf(1, 2).map { number ->
+            val ayah = QuranAyah(
+                suraNumber = 4,
+                ayahNumber = number,
+                arabic = "Synthetic Arabic",
+                latin = "Synthetic Latin",
+                turkish = "Synthetic Turkish",
+                english = "Synthetic English",
+                german = "Synthetic German",
+            )
+            AyahDisplayState(
+                ayah = ayah,
+                isBookmarked = false,
+                isAudioDownloaded = false,
+                isAudioDownloading = false,
+                audioDownloadProgress = 0f,
+                isCurrentlyPlaying = false,
+            )
+        }
+        var screenState by mutableStateOf(
+            QuranSuraDetailUiState(isLoading = false, ayahs = ayahs),
+        )
+        val callbacks = mutableListOf<Pair<Int, Boolean>>()
+
+        rule.setContent {
+            AppTheme(flavorName = "kuran_kerim") {
+                QuranSuraDetailScreen(
+                    state = screenState,
+                    onBack = {},
+                    onRetry = {},
+                    onDisplayModeSelected = {},
+                    onFontSizeChange = {},
+                    onReciterSelected = {},
+                    onPlayPauseAyah = { ayah, wasPlaying ->
+                        callbacks += ayah.ayahNumber to wasPlaying
+                    },
+                    onToggleBookmark = {},
+                    onAyahVisible = {},
+                )
+            }
+        }
+
+        assertMinimumTouchTarget(context.getString(R.string.quran_audio_play))
+        assertMinimumTouchTarget(context.getString(R.string.quran_select_reciter))
+        rule.onNodeWithContentDescription(context.getString(R.string.quran_audio_play)).performClick()
+        rule.runOnIdle {
+            assertEquals(listOf(1 to false), callbacks)
+            screenState = screenState.copy(
+                isPlaying = true,
+                currentPlayingAyah = 2,
+                ayahs = ayahs.map { it.copy(isCurrentlyPlaying = it.ayah.ayahNumber == 2) },
+            )
+        }
+
+        rule.onNodeWithContentDescription(context.getString(R.string.quran_audio_pause))
+            .assertHasClickAction()
+            .performClick()
+        rule.runOnIdle {
+            assertEquals(listOf(1 to false, 2 to true), callbacks)
         }
     }
 
