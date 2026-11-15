@@ -558,6 +558,18 @@ fun AppHeader(
 
     val readerAction: @Composable () -> Unit = {
         var readerMenuExpanded by remember { mutableStateOf(false) }
+        val jumpToVerseLabel = stringResource(R.string.content_jump_to_verse)
+        val saveReadingPlaceLabel = stringResource(R.string.content_save_reading_place)
+        val savedVerseMissingLabel = stringResource(R.string.content_saved_verse_missing)
+        val clearSavedPlaceLabel = stringResource(R.string.content_clear_saved_place)
+        val openSettingsLabel = stringResource(R.string.content_open_settings)
+        val rewardsLabel = stringResource(R.string.content_open_rewards)
+        val readerToolsLabel = stringResource(R.string.content_reader_tools)
+        val resumeAtVerseLabel = if (savedReadingVerseId != null) {
+            stringResource(R.string.content_resume_at_verse, savedReadingVerseId)
+        } else {
+            ""
+        }
         Box {
             IconButton(
                 onClick = { readerMenuExpanded = true },
@@ -575,7 +587,7 @@ fun AppHeader(
             ) {
                 if (onJumpToVerseClick != null) {
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.content_jump_to_verse)) },
+                        text = { Text(jumpToVerseLabel) },
                         onClick = {
                             readerMenuExpanded = false
                             onJumpToVerseClick()
@@ -585,7 +597,7 @@ fun AppHeader(
                 }
                 if (onSaveReadingPlaceClick != null) {
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.content_save_reading_place)) },
+                        text = { Text(saveReadingPlaceLabel) },
                         onClick = {
                             readerMenuExpanded = false
                             onSaveReadingPlaceClick()
@@ -596,7 +608,7 @@ fun AppHeader(
                 if (onResumeReadingPlaceClick != null && savedReadingVerseId != null) {
                     DropdownMenuItem(
                         text = {
-                            Text(stringResource(R.string.content_resume_at_verse, savedReadingVerseId))
+                            Text(resumeAtVerseLabel)
                         },
                         onClick = {
                             readerMenuExpanded = false
@@ -606,14 +618,14 @@ fun AppHeader(
                     )
                 } else if (savedReadingVerseId != null) {
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.content_saved_verse_missing)) },
+                        text = { Text(savedVerseMissingLabel) },
                         onClick = {},
                         enabled = false,
                     )
                 }
                 if (onClearReadingPlaceClick != null) {
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.content_clear_saved_place)) },
+                        text = { Text(clearSavedPlaceLabel) },
                         onClick = {
                             readerMenuExpanded = false
                             onClearReadingPlaceClick()
@@ -623,7 +635,7 @@ fun AppHeader(
                 }
                 if (onSaveReadingPlaceClick != null) {
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.content_open_settings)) },
+                        text = { Text(openSettingsLabel) },
                         onClick = {
                             readerMenuExpanded = false
                             onSettingsClick()
@@ -634,7 +646,7 @@ fun AppHeader(
                 DropdownMenuItem(
                     text = {
                         Text(
-                            text = stringResource(R.string.content_open_rewards),
+                            text = rewardsLabel,
                             // Keep long localized labels readable at large system text scales.
                             // Constrain the text, not the 48dp menu tap target, so it can wrap.
                             modifier = Modifier.widthIn(max = 220.dp),
@@ -649,7 +661,7 @@ fun AppHeader(
                 )
                 if (onReaderToolsClick != null) {
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.content_reader_tools)) },
+                        text = { Text(readerToolsLabel) },
                         onClick = {
                             readerMenuExpanded = false
                             onReaderToolsClick()
