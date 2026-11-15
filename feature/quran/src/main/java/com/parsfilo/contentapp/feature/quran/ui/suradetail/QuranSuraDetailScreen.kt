@@ -23,6 +23,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -249,11 +251,39 @@ fun QuranSuraDetailScreen(
             WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
         ),
         topBar = {
+            val headerPlayPause: (() -> Unit)? = if (state.ayahs.isEmpty()) {
+                null
+            } else {
+                {
+                    val layout = listState.layoutInfo
+                    val visibleIndex = firstMeaningfullyVisibleAyahIndex(
+                        items = layout.visibleItemsInfo.mapNotNull { item ->
+                            val ayahIndex = lazyRowAyahIndices.getOrNull(item.index) ?: return@mapNotNull null
+                            QuranVisibleItem(index = ayahIndex, offset = item.offset, size = item.size)
+                        },
+                        viewportStart = layout.viewportStartOffset,
+                        viewportEnd = layout.viewportEndOffset,
+                    )
+                    val targetNumber = quranHeaderPlaybackTarget(
+                        ayahNumbers = state.ayahs.map { it.ayah.ayahNumber },
+                        visibleAyahNumber = visibleIndex?.let { state.ayahs.getOrNull(it)?.ayah?.ayahNumber },
+                        playingAyahNumber = state.currentPlayingAyah,
+                        isPlaying = state.isPlaying,
+                        pendingRestoreAyahNumber = initialAyahNumber.takeIf { !initialPositionReady },
+                    )
+                    state.ayahs.firstOrNull { it.ayah.ayahNumber == targetNumber }?.let { target ->
+                        val targetWasPlaying = state.isPlaying && state.currentPlayingAyah == target.ayah.ayahNumber
+                        onPlayPauseAyah(target.ayah, targetWasPlaying)
+                    }
+                }
+            }
             QuranSuraDetailHeader(
                 title = state.sura?.nameTurkish ?: stringResource(R.string.quran_title),
                 onBack = onBack,
                 onOpenReciter = { showReciterSheet = true },
                 onOpenBookmarks = onBookmarksClick,
+                onHeaderPlayPause = headerPlayPause,
+                isAudioPlaying = state.isPlaying && state.ayahs.any { it.ayah.ayahNumber == state.currentPlayingAyah },
                 bookmarksFocusRequester = bookmarksFocusRequester,
                 readerModeFocusRequester = readerModeFocusRequester,
             )
@@ -385,6 +415,8 @@ private fun QuranSuraDetailHeader(
     onBack: () -> Unit,
     onOpenReciter: () -> Unit,
     onOpenBookmarks: () -> Unit,
+    onHeaderPlayPause: (() -> Unit)?,
+    isAudioPlaying: Boolean,
     bookmarksFocusRequester: FocusRequester,
     readerModeFocusRequester: FocusRequester,
 ) {
@@ -437,8 +469,39 @@ private fun QuranSuraDetailHeader(
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
+            IconButton(
+                onClick = { onHeaderPlayPause?.invoke() },
+                enabled = onHeaderPlayPause != null,
+                modifier = Modifier.size(48.dp),
+            ) {
+                Icon(
+                    imageVector = if (isAudioPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = stringResource(
+                        if (isAudioPlaying) R.string.quran_audio_pause else R.string.quran_audio_play,
+                    ),
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
+            }
         }
     }
+}
+
+/**
+ * A header pause must always target the actively playing verse, even after scrolling.
+ * An idle header play starts the visible verse, except during pending last-read restore.
+ */
+internal fun quranHeaderPlaybackTarget(
+    ayahNumbers: List<Int>,
+    visibleAyahNumber: Int?,
+    playingAyahNumber: Int?,
+    isPlaying: Boolean,
+    pendingRestoreAyahNumber: Int? = null,
+): Int? {
+    if (ayahNumbers.isEmpty()) return null
+    if (isPlaying && playingAyahNumber in ayahNumbers) return playingAyahNumber
+    if (pendingRestoreAyahNumber in ayahNumbers) return pendingRestoreAyahNumber
+    if (visibleAyahNumber in ayahNumbers) return visibleAyahNumber
+    return ayahNumbers.first()
 }
 
 private fun shouldInsertNativeAdAfterAyah(
