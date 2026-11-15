@@ -62,6 +62,7 @@ class PushRegistrationSyncWorker(
         private const val DEFAULT_PERIODIC_REASON = "periodic_worker"
         private const val REPEAT_INTERVAL_HOURS = 24L
         private const val FLEX_INTERVAL_HOURS = 6L
+
         // A permanently rejected App Check attestation must not keep an immediate job
         // retrying indefinitely. The separate daily periodic sync remains eligible.
         private const val MAX_IMMEDIATE_ATTEMPTS = 5
