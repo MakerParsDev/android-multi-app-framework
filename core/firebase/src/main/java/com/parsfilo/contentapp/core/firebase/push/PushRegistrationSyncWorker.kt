@@ -44,14 +44,13 @@ class PushRegistrationSyncWorker(
             )
             if (synced) {
                 Timber.d("PushRegistrationSyncWorker finished: success")
-                Result.success()
             } else {
                 Timber.w("Push registration worker sync did not succeed (reason=%s).", reason)
-                Result.retry()
             }
+            resultForAttempt(synced, inputData.getBoolean(KEY_IS_IMMEDIATE, false), runAttemptCount)
         }.getOrElse { throwable ->
             Timber.w(throwable, "Push registration worker sync failed (reason=%s).", reason)
-            Result.retry()
+            resultForAttempt(false, inputData.getBoolean(KEY_IS_IMMEDIATE, false), runAttemptCount)
         }
     }
 
@@ -63,6 +62,21 @@ class PushRegistrationSyncWorker(
         private const val DEFAULT_PERIODIC_REASON = "periodic_worker"
         private const val REPEAT_INTERVAL_HOURS = 24L
         private const val FLEX_INTERVAL_HOURS = 6L
+
+        // A permanently rejected App Check attestation must not keep an immediate job
+        // retrying indefinitely. The separate daily periodic sync remains eligible.
+        private const val MAX_IMMEDIATE_ATTEMPTS = 5
+
+        internal fun resultForAttempt(
+            synced: Boolean,
+            isImmediate: Boolean,
+            attempt: Int,
+        ): Result =
+            when {
+                synced -> Result.success()
+                isImmediate && attempt >= MAX_IMMEDIATE_ATTEMPTS - 1 -> Result.failure()
+                else -> Result.retry()
+            }
 
         fun scheduleImmediate(
             context: Context,
