@@ -57,6 +57,36 @@ class RuntimeHealthPolicyTest(unittest.TestCase):
         self.assertEqual("rollback", result["decision"])
         self.assertEqual("anr_rate", result["breaches"][1]["metric"])
 
+    def test_invalid_rate_values_do_not_pass_release_gate(self) -> None:
+        for value in (float("nan"), float("inf"), float("-inf"), -0.01, 1.01, True):
+            with self.subTest(value=value):
+                snapshot = copy.deepcopy(self.snapshot)
+                snapshot["metrics"]["anr_rate"] = value
+                result = evaluate_snapshot(self.policy, snapshot, self.flavors)
+                self.assertEqual("incomplete", result["decision"])
+                self.assertTrue(any("anr_rate" in error for error in result["errors"]))
+
+    def test_invalid_affected_user_counts_do_not_pass_release_gate(self) -> None:
+        for value in (-1, 1.5, float("nan"), float("inf")):
+            with self.subTest(value=value):
+                snapshot = copy.deepcopy(self.snapshot)
+                snapshot["metrics"]["new_error_affected_users"] = value
+                result = evaluate_snapshot(self.policy, snapshot, self.flavors)
+                self.assertEqual("incomplete", result["decision"])
+
+    def test_nonfinite_or_out_of_range_policy_thresholds_are_rejected(self) -> None:
+        for invalid in (float("nan"), float("inf"), 1.1, -0.01):
+            with self.subTest(value=invalid):
+                policy = copy.deepcopy(self.policy)
+                policy["metrics"]["anr_rate"]["rollback"] = invalid
+                self.assertTrue(validate_policy(policy))
+
+    def test_anr_one_percent_is_rollback_threshold(self) -> None:
+        snapshot = copy.deepcopy(self.snapshot)
+        snapshot["metrics"]["anr_rate"] = 0.01
+        result = evaluate_snapshot(self.policy, snapshot, self.flavors)
+        self.assertEqual("rollback", result["decision"])
+
     def test_missing_metric_is_incomplete(self) -> None:
         snapshot = copy.deepcopy(self.snapshot)
         del snapshot["metrics"]["remote_config_failure_rate"]

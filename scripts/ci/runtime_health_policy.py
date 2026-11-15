@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import math
 import re
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Sequence, Tuple
@@ -126,6 +127,8 @@ def _validate_metric(metric: str, raw: Any) -> List[str]:
         errors.append("metric %s has invalid direction" % metric)
     if len(thresholds) == 3:
         errors.extend(_validate_threshold_order(metric, direction, thresholds))
+        if raw.get("unit") == "ratio" and any(not 0 <= value <= 1 for value in thresholds):
+            errors.append("metric %s ratio thresholds must be between 0 and 1" % metric)
     return errors
 
 
@@ -256,7 +259,9 @@ def evaluate_snapshot(
     checkpoint_policy = _resolve_checkpoint_policy(policy, snapshot, errors)
     metrics_payload = _resolve_metrics_payload(snapshot, errors)
     required_metrics = checkpoint_policy.get("required_metrics", [])
-    missing_metrics = _missing_required_metrics(required_metrics, metrics_payload)
+    missing_metrics = _missing_required_metrics(
+        required_metrics, metrics_payload, policy.get("metrics", {})
+    )
     if missing_metrics:
         errors.append("required metrics missing or non-numeric: %s" % ", ".join(missing_metrics))
 
@@ -314,10 +319,25 @@ def _resolve_metrics_payload(
 def _missing_required_metrics(
     required_metrics: Sequence[str],
     metrics_payload: Mapping[str, Any],
+    metric_policy: Any,
 ) -> List[str]:
+    definitions = metric_policy if isinstance(metric_policy, dict) else {}
     return sorted(
-        name for name in required_metrics if not _is_number(metrics_payload.get(name))
+        name
+        for name in required_metrics
+        if not _is_valid_metric_value(metrics_payload.get(name), definitions.get(name))
     )
+
+
+def _is_valid_metric_value(value: Any, definition: Any) -> bool:
+    if not _is_number(value) or not isinstance(definition, dict):
+        return False
+    unit = definition.get("unit")
+    if unit == "ratio":
+        return 0 <= value <= 1
+    if unit == "users":
+        return value >= 0 and float(value).is_integer()
+    return value >= 0
 
 
 def _evaluate_metric_breaches(
@@ -375,7 +395,12 @@ def _metric_level(value: float, entry: Mapping[str, Any]) -> str:
 
 
 def _is_number(value: Any) -> bool:
-    return not isinstance(value, bool) and isinstance(value, (int, float))
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    try:
+        return math.isfinite(value)
+    except OverflowError:
+        return False
 
 
 def report_markdown(result: Mapping[str, Any]) -> str:
