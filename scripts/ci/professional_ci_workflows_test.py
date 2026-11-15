@@ -645,6 +645,25 @@ def test_legacy_release_bootstrap_is_pinned_and_hash_verified() -> None:
     )["run"]
 
 
+def test_play_publisher_lock_matches_direct_requirement_pins() -> None:
+    requirements = (
+        ROOT / "scripts/ci/requirements-play-publisher.txt"
+    ).read_text(encoding="utf-8")
+    lock = (
+        ROOT / "scripts/ci/requirements-play-publisher.lock"
+    ).read_text(encoding="utf-8")
+    direct_pins = [
+        line.strip()
+        for line in requirements.splitlines()
+        if "==" in line and not line.lstrip().startswith("#")
+    ]
+    assert direct_pins, "Play publisher must have direct package pins"
+    for pin in direct_pins:
+        assert any(line.startswith(pin + " ") for line in lock.splitlines()), (
+            f"Play publisher lock is stale: {pin}"
+        )
+
+
 def main() -> int:
     tests = [value for key, value in globals().items() if key.startswith("test_") and callable(value)]
     for test in tests:
