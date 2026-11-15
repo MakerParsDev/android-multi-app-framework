@@ -14,7 +14,9 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
@@ -37,6 +39,7 @@ import java.util.Locale
 @RunWith(AndroidJUnit4::class)
 class ContentReaderLocaleAccessibilityTest {
     @get:Rule val rule = createComposeRule()
+    private var rewardsOpened = 0
 
     @Test
     fun germanFullModeLabelsRemainVisibleAt320dpAnd200Percent() {
@@ -60,7 +63,7 @@ class ContentReaderLocaleAccessibilityTest {
     fun localizedHeaderActionsAndTurkishFallbackAreExposedInEnglish() {
         showReader("en-US", 320, 2f)
         rule.onNodeWithContentDescription("Open settings").assertExists()
-        rule.onNodeWithContentDescription("Open rewards").assertExists()
+        assertLocalizedRewardsAction("Open rewards")
         rule.onNodeWithText("Turkish translation (not available in this language)").assertExists()
         rule.onNodeWithText("Türkçe anlam").assertExists()
     }
@@ -69,7 +72,7 @@ class ContentReaderLocaleAccessibilityTest {
     fun localizedHeaderActionsAndTurkishFallbackAreExposedInGerman() {
         showReader("de-DE", 320, 2f)
         rule.onNodeWithContentDescription("Einstellungen öffnen").assertExists()
-        rule.onNodeWithContentDescription("Belohnungen öffnen").assertExists()
+        assertLocalizedRewardsAction("Belohnungen öffnen")
         rule.onNodeWithText("Türkische Übersetzung (in dieser Sprache nicht verfügbar)").assertExists()
         rule.onNodeWithText("Türkçe anlam").assertExists()
     }
@@ -78,9 +81,18 @@ class ContentReaderLocaleAccessibilityTest {
     fun turkishHeaderActionsDoNotExposeForeignLanguageFallback() {
         showReader("tr-TR", 320, 2f)
         rule.onNodeWithContentDescription("Ayarları aç").assertExists()
-        rule.onNodeWithContentDescription("Ödülleri aç").assertExists()
+        assertLocalizedRewardsAction("Ödülleri aç")
         rule.onNodeWithText("Türkçe anlam").assertExists()
         rule.onNodeWithText("Türkçe meal (seçili dilde çeviri bulunamadı)").assertDoesNotExist()
+    }
+
+    private fun assertLocalizedRewardsAction(label: String) {
+        // The accessible overflow menu keeps secondary actions available at 200% text.
+        rule.onNodeWithTag("content_reader_tools").assertIsDisplayed().performClick()
+        rule.onNodeWithTag("content_rewards_menu").assertIsDisplayed()
+        rule.onNodeWithText(label).assertIsDisplayed()
+        rule.onNodeWithTag("content_rewards_menu").performClick()
+        rule.runOnIdle { assertEquals("Rewards action must fire", 1, rewardsOpened) }
     }
 
     private fun assertGermanModeFits() {
@@ -107,6 +119,7 @@ class ContentReaderLocaleAccessibilityTest {
     }
 
     private fun showReader(locale: String, widthDp: Int, fontScale: Float) {
+        rewardsOpened = 0
         rule.setContent {
             val baseContext = LocalContext.current
             val density = LocalDensity.current
@@ -123,7 +136,7 @@ class ContentReaderLocaleAccessibilityTest {
                 AppTheme(flavorName = "fetihsuresi") {
                     Box(Modifier.width(widthDp.dp)) {
                         Column {
-                            AppHeader(appName = "Reader")
+                            AppHeader(appName = "Reader", onRewardsClick = { rewardsOpened++ })
                             BottomModeSelector(
                                 currentMode = DisplayMode.TURKISH,
                                 onModeSelected = {},
