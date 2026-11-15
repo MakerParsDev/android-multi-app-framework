@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -631,7 +632,15 @@ fun AppHeader(
                     )
                 }
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.content_open_rewards)) },
+                    text = {
+                        Text(
+                            text = stringResource(R.string.content_open_rewards),
+                            // Keep long localized labels readable at large system text scales.
+                            // Constrain the text, not the 48dp menu tap target, so it can wrap.
+                            modifier = Modifier.widthIn(max = 220.dp),
+                            softWrap = true,
+                        )
+                    },
                     onClick = {
                         readerMenuExpanded = false
                         onRewardsClick()
