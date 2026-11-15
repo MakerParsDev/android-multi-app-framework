@@ -39,15 +39,15 @@ class ContentReaderCompactLargeFontTest {
 
     @Test fun twoHundredPercentFontKeepsPortraitTranslationDirectlyReachable() {
         showReader(2f)
-        // Short portrait retains direct reading controls. The overflow shortcut
-        // is only needed for compact landscape, not for this 320dp portrait.
-        rule.onNodeWithTag("content_reader_tools").assertDoesNotExist()
+        // The accessible secondary-actions menu stays visible in portrait, while
+        // reading-mode selection remains directly reachable at 200% font scale.
+        rule.onNodeWithTag("content_reader_tools").assertIsDisplayed()
         rule.onNodeWithText(translationLabel()).performScrollTo().assertIsDisplayed().performClick()
     }
 
     @Test fun twoHundredPercentFontModesStayOnOneHorizontalRow() {
         showReader(2f)
-        rule.onNodeWithTag("content_reader_tools").assertDoesNotExist()
+        rule.onNodeWithTag("content_reader_tools").assertIsDisplayed()
 
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val labels = listOf(
@@ -70,7 +70,7 @@ class ContentReaderCompactLargeFontTest {
 
     @Test fun normalFontKeepsOrdinaryNonCompactReaderAtSameHeight() {
         showReader(1f)
-        rule.onNodeWithTag("content_reader_tools").assertDoesNotExist()
+        rule.onNodeWithTag("content_reader_tools").assertIsDisplayed()
         rule.onNodeWithText(translationLabel()).assertIsDisplayed()
     }
 
