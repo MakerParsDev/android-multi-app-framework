@@ -89,7 +89,9 @@ class ContentReaderLocaleAccessibilityTest {
     private fun assertLocalizedRewardsAction(label: String) {
         // The accessible overflow menu keeps secondary actions available at 200% text.
         rule.onNodeWithTag("content_reader_tools").assertIsDisplayed().performClick()
-        rule.onNodeWithTag("content_rewards_menu").assertIsDisplayed()
+        // Long localized entries may start below the visible menu viewport.
+        // Scroll to the actionable menu item before checking that its label is readable.
+        rule.onNodeWithTag("content_rewards_menu").performScrollTo().assertIsDisplayed()
         rule.onNodeWithText(label).assertIsDisplayed()
         rule.onNodeWithTag("content_rewards_menu").performClick()
         rule.runOnIdle { assertEquals("Rewards action must fire", 1, rewardsOpened) }
