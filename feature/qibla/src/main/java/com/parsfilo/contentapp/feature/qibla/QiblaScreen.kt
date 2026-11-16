@@ -445,7 +445,8 @@ private fun QiblaScreenContent(
                     onRewardsClick = onRewardsClick,
                 )
             }
-            // Keep location/sensor guidance and the compass ahead of advertising.
+            // The banner is directly after the header, never below the compass.
+            item { bannerAdContent() }
             item {
                 Card(
                     shape = RoundedCornerShape(20.dp),
@@ -662,8 +663,7 @@ private fun QiblaScreenContent(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            // Retain the consent-gated banner, but only after all guidance.
-            item { bannerAdContent() }
+            // Native feed stays inline; the banner is always near the top.
             item { nativeAdContent() }
         }
     }

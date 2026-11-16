@@ -2,11 +2,13 @@ package com.parsfilo.contentapp.feature.quran.ui.bookmarks
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -28,6 +30,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.parsfilo.contentapp.core.designsystem.component.AppCard
 import com.parsfilo.contentapp.core.designsystem.component.AppTopBar
+import com.parsfilo.contentapp.feature.ads.ui.MAX_INLINE_BANNER_HEIGHT_DP
 import com.parsfilo.contentapp.feature.quran.R
 
 @Composable
@@ -60,16 +63,22 @@ fun QuranBookmarksScreen(
 ) {
     Scaffold(
         topBar = {
-            AppTopBar(
-                title = stringResource(R.string.quran_bookmarks_title),
-                navigationIcon = Icons.AutoMirrored.Filled.ArrowBack,
-                navigationIconContentDescription = stringResource(R.string.quran_back),
-                onNavigationClick = onBack,
-            )
-        },
-        bottomBar = {
-            if (state.shouldShowAds) {
-                bannerAdContent?.invoke()
+            Column {
+                AppTopBar(
+                    title = stringResource(R.string.quran_bookmarks_title),
+                    navigationIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                    navigationIconContentDescription = stringResource(R.string.quran_back),
+                    onNavigationClick = onBack,
+                )
+                if (state.shouldShowAds) {
+                    // A stable slot prevents a late creative from moving bookmark taps.
+                    Box(
+                        modifier = Modifier.fillMaxWidth().height(MAX_INLINE_BANNER_HEIGHT_DP.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        bannerAdContent?.invoke()
+                    }
+                }
             }
         },
     ) { innerPadding ->
@@ -95,7 +104,7 @@ fun QuranBookmarksScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding),
-            contentPadding = PaddingValues(bottom = 90.dp),
+            contentPadding = PaddingValues(bottom = 0.dp),
         ) {
             itemsIndexed(
                 items = state.items,

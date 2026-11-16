@@ -224,7 +224,7 @@ fun ContentScreen(
                 compactHeight = compactHeight,
                 isLandscape = windowSize.width > windowSize.height,
             )
-            val bannerPosition = resolveReaderBannerPosition(showTopBanner, compactLandscape)
+            val bannerPosition = resolveReaderBannerPosition(showTopBanner)
             Column(
                 modifier = Modifier
                     .testTag("content_detail")
@@ -300,8 +300,8 @@ fun ContentScreen(
                     onClearReadingPlaceClick = if (hasLongContent && savedId != null) onClearPlace else null,
                 )
 
-                // Restore the top banner on normal screens, above audio and verses.
-                // On short windows, reserve the initial viewport for the reader.
+                // Keep the banner above verses even on short landscape windows.
+                // Reserve a stable slot so late ads never move the controls.
                 if (bannerPosition == ReaderBannerPosition.ABOVE_VERSES) {
                     // Reserve the maximum inline banner height before consent and ad loading.
                     // Otherwise a late banner can move Play/Stop under an incoming tap.
@@ -452,15 +452,6 @@ fun ContentScreen(
                                     Text(stringResource(R.string.content_jump_cancel))
                                 }
                             },
-                        )
-                    }
-
-                    // Short windows retain a lower banner to prioritize readable verses.
-                    if (bannerPosition == ReaderBannerPosition.AFTER_VERSES) {
-                        BannerAd(
-                            adUnitId = bannerAdUnitId,
-                            placement = AdPlacement.BANNER_CONTENT_DETAIL,
-                            showPlacementLabels = false,
                         )
                     }
 

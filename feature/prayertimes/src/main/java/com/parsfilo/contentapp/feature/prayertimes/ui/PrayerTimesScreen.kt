@@ -220,7 +220,11 @@ fun PrayerTimesScreen(
                         )
                     }
 
-                    // Always show the prayer schedule/controls ahead of ads.
+                    // Banner placement is consistent even when no schedule is loaded.
+                    if (bannerAdContent != null) {
+                        item { bannerAdContent.invoke() }
+                    }
+
                     if (uiState.days.isEmpty()) {
                         item {
                             Text(
@@ -370,11 +374,7 @@ fun PrayerTimesScreen(
                         }
                     }
 
-                    // Keep the existing ad slots available below actual
-                    // prayer information and alarm/location controls.
-                    if (bannerAdContent != null) {
-                        item { bannerAdContent.invoke() }
-                    }
+                    // Native feed ads remain in the scrollable feed.
                     if (nativeAdContent != null) {
                         item { nativeAdContent.invoke() }
                     }

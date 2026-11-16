@@ -19,10 +19,7 @@ fun NativeFeedAdSlot(
     nativeAd: NativeAd?,
     nativePlacement: AdPlacement,
     nativeAdUnitId: String,
-    bannerAdUnitId: String,
-    bannerPlacement: AdPlacement,
     modifier: Modifier = Modifier,
-    route: String? = null,
     useSmallFormat: Boolean = true,
 ) {
     val appContext = LocalContext.current.applicationContext
@@ -47,26 +44,13 @@ fun NativeFeedAdSlot(
             }
         }
     }
-    // The ViewModel also clears transferred ads on gate changes, but that
-    // collection is asynchronous. Never render a retained native ad (or the
-    // banner fallback) during the gap after consent or entitlement closes.
+    // Consent can close before the ViewModel clears a retained native ad.
+    // Feed slots render native creative only; banners use the screen-top slot.
     if (!eligible) return
 
     if (nativeAd != null) {
         NativeAdItem(nativeAd = nativeAd, isSmallFormat = useSmallFormat, modifier = modifier)
-        return
     }
-
-    if (!policy.shouldUseNativeBannerFallback(appContext.packageName)) {
-        return
-    }
-
-    BannerAd(
-        adUnitId = bannerAdUnitId,
-        placement = bannerPlacement,
-        route = route,
-        modifier = modifier,
-    )
 }
 
 /** Native requests and rendering need consent, entitlement, and completed SDK initialization. */

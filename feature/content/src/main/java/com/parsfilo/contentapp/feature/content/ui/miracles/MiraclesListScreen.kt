@@ -202,6 +202,14 @@ fun MiraclesListScreen(
                     modifier = Modifier.padding(horizontal = dimens.space24)
                 )
 
+                // Keep the consent-gated banner above the list and playback controls.
+                if (showTopBanner && (!isEsmaSearchOpen || visible.isNotEmpty())) {
+                    BannerAd(
+                        adUnitId = bannerAdUnitId,
+                        placement = AdPlacement.BANNER_CONTENT_LIST,
+                    )
+                }
+
                 if (isEsmaSearchOpen) {
                     OutlinedTextField(
                         value = searchQuery,
@@ -329,14 +337,6 @@ fun MiraclesListScreen(
                             }
                         }
                     }
-                }
-                // Keep the ad below the list viewport, not ahead of the content
-                // and (for Esma) not ahead of the primary audio action.
-                if (showTopBanner && (!isEsmaSearchOpen || visible.isNotEmpty())) {
-                    BannerAd(
-                        adUnitId = bannerAdUnitId,
-                        placement = AdPlacement.BANNER_CONTENT_LIST,
-                    )
                 }
             }
         }
