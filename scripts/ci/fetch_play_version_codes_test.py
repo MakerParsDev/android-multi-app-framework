@@ -90,5 +90,17 @@ class FetchPlayVersionCodesTest(unittest.TestCase):
         self.assertTrue(result.passed)
 
 
+    def test_signed_internal_release_requires_strict_play_lookup(self) -> None:
+        release_helper = (
+            pathlib.Path(__file__).resolve().parents[2]
+            / "scripts/ci/build_play_internal_release.sh"
+        )
+        script = release_helper.read_text(encoding="utf-8")
+        version_lookup = script.split(
+            "python3 scripts/ci/fetch_play_version_codes.py", 1
+        )[1].split("bash scripts/ci/restore_firebase_configs.sh", 1)[0]
+        self.assertIn("--verify-greater-than-play", version_lookup)
+
+
 if __name__ == "__main__":
     unittest.main()
