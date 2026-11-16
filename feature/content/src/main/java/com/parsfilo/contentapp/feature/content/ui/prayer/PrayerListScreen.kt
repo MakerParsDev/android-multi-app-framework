@@ -180,7 +180,6 @@ fun PrayerListScreen(
                         }
                     }
                 }
-
             }
         }
     }
