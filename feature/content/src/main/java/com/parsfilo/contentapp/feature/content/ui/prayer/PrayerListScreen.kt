@@ -141,6 +141,14 @@ fun PrayerListScreen(
                     modifier = Modifier.padding(horizontal = dimens.space24)
                 )
 
+                // Place the single consent-gated banner directly under the header.
+                if (showTopBanner) {
+                    BannerAd(
+                        adUnitId = bannerAdUnitId,
+                        placement = AdPlacement.BANNER_CONTENT_LIST,
+                    )
+                }
+
                 // Liste
                 LazyColumn(
                     modifier = Modifier
@@ -171,15 +179,6 @@ fun PrayerListScreen(
                             }
                         }
                     }
-                }
-
-                // Keep the first prayer item visible before the consent-gated
-                // banner. Preserve the existing ad slot and premium gate.
-                if (showTopBanner) {
-                    BannerAd(
-                        adUnitId = bannerAdUnitId,
-                        placement = AdPlacement.BANNER_CONTENT_LIST,
-                    )
                 }
             }
         }

@@ -15,15 +15,11 @@ class NativeAdInsertionPolicyTest {
     }
 
     @Test
-    fun `reader banner stays above portrait and moves below only on compact landscape`() {
-        assertThat(resolveReaderBannerPosition(showTopBanner = false, compactLandscape = false))
+    fun readerBannerIsAlwaysAboveVerses() {
+        assertThat(resolveReaderBannerPosition(showTopBanner = false))
             .isEqualTo(ReaderBannerPosition.HIDDEN)
-        assertThat(resolveReaderBannerPosition(showTopBanner = false, compactLandscape = true))
-            .isEqualTo(ReaderBannerPosition.HIDDEN)
-        assertThat(resolveReaderBannerPosition(showTopBanner = true, compactLandscape = false))
+        assertThat(resolveReaderBannerPosition(showTopBanner = true))
             .isEqualTo(ReaderBannerPosition.ABOVE_VERSES)
-        assertThat(resolveReaderBannerPosition(showTopBanner = true, compactLandscape = true))
-            .isEqualTo(ReaderBannerPosition.AFTER_VERSES)
     }
 
     @Test
