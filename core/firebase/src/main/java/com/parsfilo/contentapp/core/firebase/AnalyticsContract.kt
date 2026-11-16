@@ -1,6 +1,6 @@
 package com.parsfilo.contentapp.core.firebase
 
-const val ANALYTICS_SCHEMA_VERSION: Int = 2
+const val ANALYTICS_SCHEMA_VERSION: Int = 3
 
 /**
  * Analytics contract:
@@ -62,6 +62,18 @@ object AnalyticsEventName {
     const val CONSENT_DEBUG_RESULT = "consent_debug_result"
     const val PRIVACY_OPTIONS_OPENED = "privacy_options_opened"
     const val AGE_GATE_COMPLETED = "age_gate_completed"
+
+    // Release-health attempt/outcome events; reportable by signed app version.
+    // Never attach purchase tokens, account identifiers, or error strings.
+    const val BILLING_VERIFY_ATTEMPT = "billing_verification_attempt"
+    const val BILLING_VERIFY_SUCCESS = "billing_verification_success"
+    const val BILLING_VERIFY_FAILURE = "billing_verification_failure"
+    const val PUSH_SYNC_ATTEMPT = "push_registration_attempt"
+    const val PUSH_SYNC_SUCCESS = "push_registration_success"
+    const val PUSH_SYNC_FAILURE = "push_registration_failure"
+    const val REMOTE_CONFIG_ATTEMPT = "remote_config_fetch_attempt"
+    const val REMOTE_CONFIG_SUCCESS = "remote_config_fetch_success"
+    const val REMOTE_CONFIG_FAILURE = "remote_config_fetch_failure"
 
     const val PUSH_RECEIVED = "push_received"
     const val PUSH_OPEN = "push_open"
