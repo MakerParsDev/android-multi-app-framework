@@ -27,6 +27,23 @@ class RuntimeHealthPolicyTest(unittest.TestCase):
     def test_repository_policy_is_valid(self) -> None:
         self.assertEqual([], validate_policy(self.policy))
 
+    def test_ga4_attempt_outcomes_are_authoritative_for_operational_rates(self) -> None:
+        sources = (
+            ("billing_purchase_verification_failure", "billing_verification_failure_rate"),
+            ("push_registration_sync_failed", "push_registration_failure_rate"),
+            ("remote_config_fetch_failure", "remote_config_failure_rate"),
+        )
+        for signal, metric in sources:
+            with self.subTest(metric=metric):
+                self.assertEqual(
+                    "ga4_and_firebase_crashlytics",
+                    self.policy["required_signals"][signal]["source"],
+                )
+                self.assertEqual(
+                    "ga4_and_firebase_crashlytics",
+                    self.policy["metrics"][metric]["source"],
+                )
+
     def test_flavor_and_firebase_catalogs_match(self) -> None:
         firebase_apps = load_json(ROOT / "config/firebase-apps.json")
         self.assertEqual([], validate_catalogs(self.flavors, firebase_apps))
