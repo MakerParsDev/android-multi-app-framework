@@ -110,6 +110,13 @@ internal fun MacrobenchmarkScope.clickTagIfPresent(
     tag: String,
 ): Boolean = clickNodeWithRetry(config, tag) { findTag(tag, OPTIONAL_TIMEOUT_MS) }
 
+internal fun MacrobenchmarkScope.clickAudioPlayPause(config: PerformanceConfig) {
+    // The current reader exposes an always-visible compact header button.
+    // Older/full-screen player flows still expose the expanded control.
+    if (clickTagIfPresent(config, PerformanceTags.AUDIO_COMPACT_PLAY_PAUSE)) return
+    clickTag(config, PerformanceTags.AUDIO_PLAY_PAUSE)
+}
+
 internal fun MacrobenchmarkScope.scrollTag(config: PerformanceConfig, tag: String) {
     val objectUnderTest = waitForTag(config, tag)
     val bounds = objectUnderTest.visibleBounds
