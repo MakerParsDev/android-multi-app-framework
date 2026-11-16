@@ -26,6 +26,11 @@ class TopBannerPlacementTest(unittest.TestCase):
         self.assertLess(screen.index("PrayerTimesAppHeader("), screen.index("bannerAdContent.invoke()"))
         self.assertLess(screen.index("bannerAdContent.invoke()"), screen.index("if (uiState.days.isEmpty())"))
 
+    def test_prayer_times_empty_state_has_no_lower_native_ad(self):
+        screen = source("feature/prayertimes/src/main/java/com/parsfilo/contentapp/feature/prayertimes/ui/PrayerTimesScreen.kt")
+        self.assertIn("if (nativeAdContent != null && uiState.days.isNotEmpty())", screen)
+        self.assertLess(screen.index("if (uiState.days.isEmpty())"), screen.index("nativeAdContent.invoke()"))
+
     def test_qibla_banner_precedes_compass_and_sensor_guidance(self):
         screen = source("feature/qibla/src/main/java/com/parsfilo/contentapp/feature/qibla/QiblaScreen.kt")
         self.assertEqual(screen.count("item { bannerAdContent() }"), 1)
