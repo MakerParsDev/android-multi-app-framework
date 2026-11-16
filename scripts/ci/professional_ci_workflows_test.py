@@ -377,11 +377,12 @@ def test_performance_startup_skips_prompts_and_remote_services() -> None:
     return_index = runtime_block.index("return", guard_index)
     for remote_call in (
         "observePermissionPrompts()",
-        'pushRegistrationManager.syncRegistration("app_start")',
-        'pushRegistrationManager.syncRegistration("notification_setting_changed")',
+        ".pushRegistrationReasons()",
+        "pushRegistrationManager.syncRegistration(reason)",
         "adOrchestrator.initialize(this, lifecycleScope)",
     ):
         assert return_index < runtime_block.index(remote_call)
+    assert 'pushRegistrationManager.syncRegistration("app_start")' not in runtime_block
 
     content_app = (
         ROOT / "app/src/main/java/com/parsfilo/contentapp/ui/ContentApp.kt"

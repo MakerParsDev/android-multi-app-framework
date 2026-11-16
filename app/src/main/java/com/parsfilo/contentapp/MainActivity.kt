@@ -116,16 +116,14 @@ class MainActivity : ComponentActivity() {
 
         observePermissionPrompts()
 
+        // Collect for the Activity's lifetime so re-entering STARTED does not
+        // send another registration for an unchanged notification preference.
+        // The initial emission replaces the former parallel app_start request.
         lifecycleScope.launch {
-            pushRegistrationManager.syncRegistration("app_start")
-        }
-
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                preferencesDataSource.userData.map { it.notificationsEnabled }.distinctUntilChanged().collect {
-                    pushRegistrationManager.syncRegistration("notification_setting_changed")
-                }
-            }
+            preferencesDataSource.userData
+                .map { it.notificationsEnabled }
+                .pushRegistrationReasons()
+                .collect { reason -> pushRegistrationManager.syncRegistration(reason) }
         }
 
         // Initialize Ads & Billing (off main thread logic handled in orchestrator)
