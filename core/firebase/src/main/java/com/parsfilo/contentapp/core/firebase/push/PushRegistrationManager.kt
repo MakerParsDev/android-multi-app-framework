@@ -10,6 +10,8 @@ import com.parsfilo.contentapp.core.common.logging.toPrivacySafeThrowable
 import com.parsfilo.contentapp.core.common.network.AppDispatchers
 import com.parsfilo.contentapp.core.common.network.Dispatcher
 import com.parsfilo.contentapp.core.datastore.PreferencesDataSource
+import com.parsfilo.contentapp.core.firebase.ReleaseHealthOperation
+import com.parsfilo.contentapp.core.firebase.ReleaseHealthTelemetry
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -34,6 +36,7 @@ class PushRegistrationManager @Inject constructor(
     private val preferencesDataSource: PreferencesDataSource,
     private val pushRegistrationSender: PushRegistrationSender,
     private val crashlytics: FirebaseCrashlytics,
+    private val releaseHealthTelemetry: ReleaseHealthTelemetry,
     @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) {
     suspend fun subscribeToTopics(topics: List<String>) = withContext(ioDispatcher) {
@@ -55,7 +58,8 @@ class PushRegistrationManager @Inject constructor(
         scheduleRetryOnFailure: Boolean = true,
     ): Boolean =
         withContext(ioDispatcher) {
-            runCatching {
+            releaseHealthTelemetry.attempt(ReleaseHealthOperation.PUSH_REGISTRATION)
+            val synced = runCatching {
                 val installationId = preferencesDataSource.getOrCreateInstallationId()
                 val preferences = preferencesDataSource.userData.first()
                 val adRuntimeTelemetry = preferences.adRuntimeTelemetry
@@ -137,6 +141,8 @@ class PushRegistrationManager @Inject constructor(
                 )
                 false
             }
+            releaseHealthTelemetry.result(ReleaseHealthOperation.PUSH_REGISTRATION, synced)
+            synced
         }
 
     private fun scheduleRetryIfNeeded(

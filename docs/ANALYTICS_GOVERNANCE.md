@@ -4,10 +4,10 @@
 
 ## Contract
 
-- Schema version: **2**
+- Schema version: **3**
 - GA4 property: **526790653**
 - Target GA4 event retention (not automatically enforced): **14 months**
-- Declared events: **72**
+- Declared events: **81**
 - Declared parameters: **86**
 - User properties: **8**
 
@@ -96,6 +96,9 @@ Retire from key-event status:
 | `audio_play` | audio | no |
 | `audio_stop` | audio | no |
 | `billing_error` | billing | no |
+| `billing_verification_attempt` | billing | no |
+| `billing_verification_failure` | billing | no |
+| `billing_verification_success` | billing | no |
 | `consent_debug_result` | privacy | no |
 | `consent_denied` | privacy | no |
 | `consent_error` | privacy | no |
@@ -131,6 +134,12 @@ Retire from key-event status:
 | `purchase_success` | billing | no |
 | `push_open` | notifications | yes |
 | `push_received` | notifications | no |
+| `push_registration_attempt` | notifications | no |
+| `push_registration_failure` | notifications | no |
+| `push_registration_success` | notifications | no |
+| `remote_config_fetch_attempt` | platform | no |
+| `remote_config_fetch_failure` | platform | no |
+| `remote_config_fetch_success` | platform | no |
 | `rewarded_intro_confirmed` | monetization | no |
 | `rewarded_intro_shown` | monetization | no |
 | `rewarded_intro_skipped` | monetization | no |

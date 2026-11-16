@@ -71,6 +71,35 @@ yetkili erisimle ilistirin; GitHub Actions'in otomatik bir checkpoint/publish
 workflow'u calistirdigini varsaymayin. `incomplete` karari exit code 2,
 `--fail-on` esigi asimi exit code 1 uretir.
 
+## Release-matched attempt/outcome telemetry (new signed builds)
+
+Each actual operation emits a separate GA4 start event and exactly one terminal
+outcome when it returns. These are low-cardinality event names with **no**
+account, token, purchase, device or free-text error parameters.
+
+| Operation | Attempt | Success | Failure |
+| --- | --- | --- | --- |
+| Server purchase verification | `billing_verification_attempt` | `billing_verification_success` | `billing_verification_failure` |
+| Push registration sync | `push_registration_attempt` | `push_registration_success` | `push_registration_failure` |
+| Remote Config fetch and activate | `remote_config_fetch_attempt` | `remote_config_fetch_success` | `remote_config_fetch_failure` |
+
+Filter by the **same GA4 stream, signed app version and reporting date window**.
+Compute a failure rate only when `attempts > 0` and the matching
+`attempts == successes + failures` holds (allow for normal GA4 ingestion
+latency before checking). Unfinished/cancelled work, consent-related data
+omissions and mismatches mean **INCOMPLETE**, never a fabricated zero.
+A completed retry is a *new attempt*; a scheduled retry that has not run is not.
+Remote Config's `activated=false` is a successful fetch, not an error.
+Billing counts purchase-verification attempts, never product catalogue reads,
+checkout launches or other revenue events.
+
+The new events cannot backfill denominators for Amen production v61.
+For UMP, use the existing `consent_flow_started` and `consent_error`
+events split by `consent_trigger`; old signed v61 does not emit runtime
+attempts. GA4 and AdMob count different ad request populations until proved
+otherwise. Technical ad error rates must exclude ordinary code-3 no-fill.
+No extra SDK, analytics identifier, new provider or paid service is required.
+
 ## Metrik tanimlari
 
 | Metrik | Hesap |

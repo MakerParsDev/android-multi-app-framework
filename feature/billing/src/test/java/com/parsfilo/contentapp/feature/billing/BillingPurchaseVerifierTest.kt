@@ -7,6 +7,8 @@ import com.google.android.gms.tasks.Tasks
 import com.google.common.truth.Truth.assertThat
 import com.google.firebase.appcheck.FirebaseAppCheck
 import com.google.firebase.auth.FirebaseAuth
+import com.parsfilo.contentapp.core.firebase.ReleaseHealthOperation
+import com.parsfilo.contentapp.core.firebase.ReleaseHealthTelemetry
 import com.parsfilo.contentapp.core.firebase.RuntimeFailure
 import com.parsfilo.contentapp.core.firebase.RuntimeObservability
 import com.parsfilo.contentapp.core.firebase.RuntimeSignal
@@ -28,6 +30,7 @@ class BillingPurchaseVerifierTest {
     private val firebaseAuth = mockk<FirebaseAuth>()
     private val firebaseAppCheck = mockk<FirebaseAppCheck>(relaxed = true)
     private val runtimeObservability = mockk<RuntimeObservability>(relaxed = true)
+    private val releaseHealthTelemetry = mockk<ReleaseHealthTelemetry>(relaxed = true)
     private val purchase = mockk<Purchase>(relaxed = true)
 
     @Test
@@ -36,6 +39,7 @@ class BillingPurchaseVerifierTest {
             firebaseAuth = firebaseAuth,
             firebaseAppCheck = firebaseAppCheck,
             runtimeObservability = runtimeObservability,
+            releaseHealthTelemetry = releaseHealthTelemetry,
             verificationUrl = "",
         )
 
@@ -43,6 +47,8 @@ class BillingPurchaseVerifierTest {
 
         assertThat(result.verified).isFalse()
         assertThat(result.purchaseState).isEqualTo("MISCONFIGURED")
+        verify(exactly = 0) { releaseHealthTelemetry.attempt(ReleaseHealthOperation.BILLING_VERIFICATION) }
+        verify(exactly = 0) { releaseHealthTelemetry.result(any(), any()) }
         verify {
             runtimeObservability.recordFailure(
                 match<RuntimeFailure> { failure ->
@@ -111,6 +117,7 @@ class BillingPurchaseVerifierTest {
             firebaseAuth = firebaseAuth,
             firebaseAppCheck = firebaseAppCheck,
             runtimeObservability = runtimeObservability,
+            releaseHealthTelemetry = releaseHealthTelemetry,
             verificationUrl = "https://example.com/verify",
         )
         every { firebaseAuth.currentUser } returns null
@@ -126,6 +133,7 @@ class BillingPurchaseVerifierTest {
             firebaseAuth = firebaseAuth,
             firebaseAppCheck = firebaseAppCheck,
             runtimeObservability = runtimeObservability,
+            releaseHealthTelemetry = releaseHealthTelemetry,
             verificationUrl = "https://example.com/verify",
         )
 
@@ -133,6 +141,8 @@ class BillingPurchaseVerifierTest {
 
         assertThat(result.verified).isFalse()
         assertThat(result.purchaseState).isEqualTo("AUTH_REQUIRED")
+        verify(exactly = 0) { releaseHealthTelemetry.attempt(ReleaseHealthOperation.BILLING_VERIFICATION) }
+        verify(exactly = 0) { releaseHealthTelemetry.result(any(), any()) }
         verify(exactly = 0) {
             runtimeObservability.recordFailure(any())
         }

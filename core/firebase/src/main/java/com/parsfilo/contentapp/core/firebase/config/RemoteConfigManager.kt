@@ -5,6 +5,8 @@ import android.content.pm.ApplicationInfo
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
 import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings
 import com.google.firebase.remoteconfig.FirebaseRemoteConfigValue
+import com.parsfilo.contentapp.core.firebase.ReleaseHealthOperation
+import com.parsfilo.contentapp.core.firebase.ReleaseHealthTelemetry
 import com.parsfilo.contentapp.core.firebase.RuntimeFailure
 import com.parsfilo.contentapp.core.firebase.RuntimeObservability
 import com.parsfilo.contentapp.core.firebase.RuntimeSignal
@@ -23,6 +25,7 @@ class RemoteConfigManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val remoteConfig: FirebaseRemoteConfig,
     private val runtimeObservability: RuntimeObservability,
+    private val releaseHealthTelemetry: ReleaseHealthTelemetry,
 ) {
     private val settingsApplied = AtomicBoolean(false)
     private val localDefaults = ConcurrentHashMap<String, Any>()
@@ -53,13 +56,16 @@ class RemoteConfigManager @Inject constructor(
     suspend fun fetchAndActivate(): Boolean =
         suspendCancellableCoroutine { continuation ->
             applyClientSettingsIfNeeded()
+            releaseHealthTelemetry.attempt(ReleaseHealthOperation.REMOTE_CONFIG_FETCH)
             remoteConfig.fetchAndActivate()
                 .addOnSuccessListener { activated ->
+                    releaseHealthTelemetry.result(ReleaseHealthOperation.REMOTE_CONFIG_FETCH, true)
                     if (continuation.isActive) {
                         continuation.resume(activated)
                     }
                 }
                 .addOnFailureListener { throwable ->
+                    releaseHealthTelemetry.result(ReleaseHealthOperation.REMOTE_CONFIG_FETCH, false)
                     reportFetchFailure("suspend", throwable)
                     if (continuation.isActive) {
                         continuation.resumeWithException(throwable)
@@ -72,9 +78,14 @@ class RemoteConfigManager @Inject constructor(
         onFailure: (Throwable) -> Unit = {},
     ) {
         applyClientSettingsIfNeeded()
+        releaseHealthTelemetry.attempt(ReleaseHealthOperation.REMOTE_CONFIG_FETCH)
         remoteConfig.fetchAndActivate()
-            .addOnSuccessListener { activated -> onSuccess(activated) }
+            .addOnSuccessListener { activated ->
+                releaseHealthTelemetry.result(ReleaseHealthOperation.REMOTE_CONFIG_FETCH, true)
+                onSuccess(activated)
+            }
             .addOnFailureListener { throwable ->
+                releaseHealthTelemetry.result(ReleaseHealthOperation.REMOTE_CONFIG_FETCH, false)
                 reportFetchFailure("async", throwable)
                 onFailure(throwable)
             }
