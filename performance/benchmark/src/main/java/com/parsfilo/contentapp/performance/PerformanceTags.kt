@@ -7,6 +7,7 @@ internal object PerformanceTags {
     const val CONTENT_FIRST_ITEM = "content_first_item"
     const val CONTENT_DETAIL = "content_detail"
     const val AUDIO_PLAY_PAUSE = "audio_play_pause"
+    const val AUDIO_COMPACT_PLAY_PAUSE = "audio_compact_play_pause"
     const val MIRACLES_LIST = "miracles_list"
     const val MIRACLES_FIRST_ITEM = "miracles_first_item"
     const val MIRACLES_DETAIL = "miracles_detail"

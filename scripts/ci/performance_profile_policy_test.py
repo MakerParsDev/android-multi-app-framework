@@ -227,7 +227,7 @@ class PerformanceProfileStructureTest(unittest.TestCase):
         self.assertIn('baselineProfile = "1.5.0"', catalog)
         self.assertIn('benchmark = "1.5.0"', catalog)
         self.assertIn('profileInstaller = "1.4.1"', catalog)
-        self.assertIn('uiautomator = "2.4.0"', catalog)
+        self.assertIn('uiautomator = "2.4.1"', catalog)
         self.assertIn(
             'androidx-baselineprofile = { id = "androidx.baselineprofile"',
             catalog,
@@ -306,6 +306,7 @@ class PerformanceProfileStructureTest(unittest.TestCase):
             "CONTENT_FIRST_ITEM",
             "CONTENT_DETAIL",
             "AUDIO_PLAY_PAUSE",
+            "AUDIO_COMPACT_PLAY_PAUSE",
             "MIRACLES_LIST",
             "MIRACLES_FIRST_ITEM",
             "MIRACLES_DETAIL",
@@ -320,6 +321,35 @@ class PerformanceProfileStructureTest(unittest.TestCase):
             "COUNTER_INCREMENT",
         ):
             self.assertIn(f"const val {tag}", source)
+
+    def test_audio_journeys_prefer_visible_compact_player_with_full_fallback(self) -> None:
+        audio_ui = (
+            ROOT
+            / "feature/audio/src/main/java/com/parsfilo/contentapp/feature/audio/ui/MiniAudioPlayer.kt"
+        ).read_text(encoding="utf-8")
+        actions = (
+            ROOT
+            / "performance/benchmark/src/main/java/com/parsfilo/contentapp/performance/UiAutomatorActions.kt"
+        ).read_text(encoding="utf-8")
+        journeys = (
+            ROOT
+            / "performance/benchmark/src/main/java/com/parsfilo/contentapp/performance/CriticalUserJourneys.kt"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('.testTag("audio_compact_play_pause")', audio_ui)
+        self.assertIn('.testTag("audio_play_pause")', audio_ui)
+        start = actions.index("internal fun MacrobenchmarkScope.clickAudioPlayPause(")
+        end = actions.index("\ninternal fun ", start + 1)
+        action = actions[start:end]
+        self.assertLess(
+            action.index("PerformanceTags.AUDIO_COMPACT_PLAY_PAUSE"),
+            action.index("clickTag(config, PerformanceTags.AUDIO_PLAY_PAUSE)"),
+        )
+        for method in ("audioContent", "prayerLibrary"):
+            section = journeys.split(f"private fun {method}(", 1)[1].split(
+                "\n    private fun ", 1
+            )[0]
+            self.assertEqual(2, section.count("clickAudioPlayPause(config)"))
 
     def test_performance_tags_mark_loaded_surfaces(self) -> None:
         content = (
@@ -361,7 +391,7 @@ class PerformanceProfileStructureTest(unittest.TestCase):
         self.assertNotIn("CONTENT_FIRST_ITEM", audio)
         self.assertNotIn("pressBack", audio)
         self.assertLess(
-            audio.index("AUDIO_PLAY_PAUSE"),
+            audio.index("clickAudioPlayPause(config)"),
             audio.index("scrollTag(config, PerformanceTags.CONTENT_LIST)"),
         )
 
@@ -374,7 +404,7 @@ class PerformanceProfileStructureTest(unittest.TestCase):
         )
         self.assertIn("pressBack", prayer)
         self.assertLess(
-            prayer.index("AUDIO_PLAY_PAUSE"),
+            prayer.index("clickAudioPlayPause(config)"),
             prayer.index("pressBack"),
         )
         self.assertLess(
