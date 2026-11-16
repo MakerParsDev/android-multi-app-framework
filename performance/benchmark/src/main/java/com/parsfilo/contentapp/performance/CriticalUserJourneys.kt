@@ -50,9 +50,9 @@ internal object CriticalUserJourneys {
     private fun audioContent(scope: MacrobenchmarkScope, config: PerformanceConfig) {
         scope.waitForTag(config, PerformanceTags.CONTENT_DETAIL)
         scope.waitForTag(config, PerformanceTags.CONTENT_LIST)
-        scope.clickTag(config, PerformanceTags.AUDIO_PLAY_PAUSE)
+        scope.clickAudioPlayPause(config)
         scope.device.waitForIdle()
-        scope.clickTag(config, PerformanceTags.AUDIO_PLAY_PAUSE)
+        scope.clickAudioPlayPause(config)
         scope.scrollTag(config, PerformanceTags.CONTENT_LIST)
     }
 
@@ -60,9 +60,9 @@ internal object CriticalUserJourneys {
         scope.waitForTag(config, PerformanceTags.CONTENT_LIST)
         scope.clickTag(config, PerformanceTags.CONTENT_FIRST_ITEM)
         scope.waitForTag(config, PerformanceTags.CONTENT_DETAIL)
-        scope.clickTag(config, PerformanceTags.AUDIO_PLAY_PAUSE)
+        scope.clickAudioPlayPause(config)
         scope.device.waitForIdle()
-        scope.clickTag(config, PerformanceTags.AUDIO_PLAY_PAUSE)
+        scope.clickAudioPlayPause(config)
         scope.device.pressBack()
         scope.waitForTag(config, PerformanceTags.CONTENT_LIST)
         scope.scrollTag(config, PerformanceTags.CONTENT_LIST)
