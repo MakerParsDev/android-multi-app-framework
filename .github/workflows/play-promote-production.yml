@@ -1,0 +1,106 @@
+name: Promote accepted Play Internal release
+
+on:
+  workflow_dispatch:
+    inputs:
+      flavor:
+        description: Canonical app flavor (one app only)
+        required: true
+        type: string
+        default: amenerrasulu
+      expected_internal_code:
+        description: Exact Play Internal versionCode already tested
+        required: true
+        type: string
+      expected_production_code:
+        description: Exact current Play Production versionCode
+        required: true
+        type: string
+      acceptance_issue:
+        description: GitHub issue number recording release-health acceptance
+        required: true
+        type: string
+        default: '1160'
+      mode:
+        description: Preview only by default; publish requires accepted release evidence
+        required: true
+        type: choice
+        default: preview
+        options: [preview, publish]
+
+permissions:
+  contents: read
+
+# Shares the legacy production release lock; never race a build-based publish.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    name: ${{ inputs.flavor }} - ${{ inputs.mode }}
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production
+    permissions:
+      contents: read
+    env:
+      REQUESTED_FLAVOR: ${{ inputs.flavor }}
+      INTERNAL_CODE: ${{ inputs.expected_internal_code }}
+      PRODUCTION_CODE: ${{ inputs.expected_production_code }}
+      ACCEPTANCE_ISSUE: ${{ inputs.acceptance_issue }}
+      PROMOTION_MODE: ${{ inputs.mode }}
+      DOPPLER_PROJECT: android-multi-app-framework
+      DOPPLER_CONFIG: prod
+    steps:
+      - name: Checkout protected main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+
+      - name: Install pinned Play Publisher dependencies
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --require-hashes \
+            --requirement scripts/ci/requirements-play-publisher.lock
+
+      - name: Validate manual request
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF" == "refs/heads/main" ]]
+          [[ "$INTERNAL_CODE" =~ ^[1-9][0-9]*$ ]]
+          [[ "$PRODUCTION_CODE" =~ ^[1-9][0-9]*$ ]]
+          [[ "$ACCEPTANCE_ISSUE" =~ ^[1-9][0-9]*$ ]]
+          [[ "$PROMOTION_MODE" == "preview" || "$PROMOTION_MODE" == "publish" ]]
+          # Python resolves flavor against the repository's canonical FlavorConfig.kt.
+
+      - name: Install verified Doppler CLI
+        run: |
+          set -euo pipefail
+          assignments="$(bash scripts/ci/install_doppler_cli.sh "$RUNNER_TEMP/doppler-bin")"
+          eval "$assignments"
+          printf '%s\n' "$(dirname "$DOPPLER_BIN")" >> "$GITHUB_PATH"
+
+      - name: Preview or promote exact Internal version
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+        run: |
+          set -euo pipefail
+          set -- --flavor "$REQUESTED_FLAVOR" \
+            --expected-internal-code "$INTERNAL_CODE" \
+            --expected-production-code "$PRODUCTION_CODE" \
+            --acceptance-issue "$ACCEPTANCE_ISSUE"
+          if [[ "$PROMOTION_MODE" == "publish" ]]; then
+            set -- "$@" --execute
+          fi
+          scripts/doppler-run.sh -- python3 scripts/ci/promote_play_internal.py "$@" \
+            | tee "$RUNNER_TEMP/play-promotion-result.json"
+          python3 -c 'import json,sys; r=json.load(open(sys.argv[1],encoding="utf-8")); print("### Play exact Internal promotion\n\n- App: %s\n- Internal version: %s\n- Previous production version: %s\n- State: %s\n- Acceptance issue: #%s\n\nRemote serving may lag behind the committed Play state." % (r["flavor"],r["internal_code"],r["production_code"],r["state"],r["acceptance_issue"]))' \
+            "$RUNNER_TEMP/play-promotion-result.json" >> "$GITHUB_STEP_SUMMARY"
