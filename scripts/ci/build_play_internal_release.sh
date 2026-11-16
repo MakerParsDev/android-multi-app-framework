@@ -21,7 +21,8 @@ python3 scripts/ci/fetch_play_version_codes.py \
   --tracks all \
   --suggest-next \
   --apply-to-app-versions \
-  --sync-version-names
+  --sync-version-names \
+  --verify-greater-than-play
 
 bash scripts/ci/restore_firebase_configs.sh "$RELEASE_FLAVOR"
 
