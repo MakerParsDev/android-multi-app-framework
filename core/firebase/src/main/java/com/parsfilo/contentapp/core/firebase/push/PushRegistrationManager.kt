@@ -127,6 +127,9 @@ class PushRegistrationManager @Inject constructor(
                 }
                 sent
             }.getOrElse { throwable ->
+                // Cancellation must propagate to WorkManager and must not be
+                // reported as a failed registration attempt.
+                if (throwable is CancellationException) throw throwable
                 Timber.w(throwable, "Push registration sync failed.")
                 preferencesDataSource.markPushSyncFailure(
                     reason = "exception:${throwable::class.simpleName}:$reason",
