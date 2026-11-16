@@ -16,6 +16,7 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CancellationException
 import timber.log.Timber
 import java.util.concurrent.TimeUnit
 
@@ -49,6 +50,8 @@ class PushRegistrationSyncWorker(
             }
             resultForAttempt(synced, inputData.getBoolean(KEY_IS_IMMEDIATE, false), runAttemptCount)
         }.getOrElse { throwable ->
+            // A cancelled Worker is neither a failed attempt nor a retry decision.
+            if (throwable is CancellationException) throw throwable
             Timber.w(throwable, "Push registration worker sync failed (reason=%s).", reason)
             resultForAttempt(false, inputData.getBoolean(KEY_IS_IMMEDIATE, false), runAttemptCount)
         }
