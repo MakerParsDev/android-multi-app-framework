@@ -374,8 +374,9 @@ fun PrayerTimesScreen(
                         }
                     }
 
-                    // Native feed ads remain in the scrollable feed.
-                    if (nativeAdContent != null) {
+                    // Native ads belong to real schedule content, never the no-data state.
+                    // The single banner remains under the header even without a schedule.
+                    if (nativeAdContent != null && uiState.days.isNotEmpty()) {
                         item { nativeAdContent.invoke() }
                     }
 
