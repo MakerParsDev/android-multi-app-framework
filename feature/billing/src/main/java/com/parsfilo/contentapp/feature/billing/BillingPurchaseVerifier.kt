@@ -6,6 +6,8 @@ import com.google.android.gms.tasks.Task
 import com.google.firebase.appcheck.FirebaseAppCheck
 import com.google.firebase.auth.FirebaseAuth
 import com.parsfilo.contentapp.core.common.network.TimberNetworkLoggingInterceptor
+import com.parsfilo.contentapp.core.firebase.ReleaseHealthOperation
+import com.parsfilo.contentapp.core.firebase.ReleaseHealthTelemetry
 import com.parsfilo.contentapp.core.firebase.RuntimeFailure
 import com.parsfilo.contentapp.core.firebase.RuntimeObservability
 import com.parsfilo.contentapp.core.firebase.RuntimeSignal
@@ -32,6 +34,7 @@ class BillingPurchaseVerifier @Inject constructor(
     private val firebaseAuth: FirebaseAuth,
     private val firebaseAppCheck: FirebaseAppCheck,
     private val runtimeObservability: RuntimeObservability,
+    private val releaseHealthTelemetry: ReleaseHealthTelemetry,
     @Named(PURCHASE_VERIFICATION_URL) private val verificationUrl: String,
 ) {
     /** An identity is required by the purchase verification API before checkout. */
@@ -155,8 +158,12 @@ class BillingPurchaseVerifier @Inject constructor(
                 .addHeader("Content-Type", "application/json")
                 .post(requestJson.toString().toRequestBody(JSON_MEDIA_TYPE)).build()
 
+        // Count only actual server-verification attempts, never missing-auth or
+        // locally rejected purchases that never reached the verification request.
+        releaseHealthTelemetry.attempt(ReleaseHealthOperation.BILLING_VERIFICATION)
         val response =
             runCatching { okHttpClient.newCall(request).execute() }.getOrElse { throwable ->
+                releaseHealthTelemetry.result(ReleaseHealthOperation.BILLING_VERIFICATION, false)
                 Timber.w(throwable, "Billing purchase verification request failed")
                 return VerificationResult(
                     verified = false,
@@ -171,6 +178,7 @@ class BillingPurchaseVerifier @Inject constructor(
         response.use { httpResponse ->
             val body = httpResponse.body.string()
             if (!httpResponse.isSuccessful) {
+                releaseHealthTelemetry.result(ReleaseHealthOperation.BILLING_VERIFICATION, false)
                 Timber.w(
                     "Billing purchase verification returned %s (%s)",
                     httpResponse.code,
@@ -186,7 +194,9 @@ class BillingPurchaseVerifier @Inject constructor(
                 )
             }
 
-            return parseBillingVerificationResponse(body)
+            val verifiedResult = parseBillingVerificationResponse(body)
+            releaseHealthTelemetry.result(ReleaseHealthOperation.BILLING_VERIFICATION, verifiedResult.verified)
+            return verifiedResult
         }
     }
 

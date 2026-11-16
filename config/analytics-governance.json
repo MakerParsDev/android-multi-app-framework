@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "ga4_property_id": "526790653",
   "retention_months": 14,
   "required_default_parameters": [
@@ -189,6 +189,10 @@
     {
       "prefix": "prayer_",
       "owner": "prayer-times"
+    },
+    {
+      "prefix": "remote_config_",
+      "owner": "platform"
     },
     {
       "prefix": "push_",
