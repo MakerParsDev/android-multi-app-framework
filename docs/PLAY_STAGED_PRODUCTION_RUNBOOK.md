@@ -63,5 +63,30 @@ Publish one app using explicit Release build/quality, do_publish=true, do_intern
 update_play_listing=false and production_rollout_percent=100. No code or
 listing changes are implied for other apps.
 
+## Promote the exact accepted Internal version without rebuilding
+
+When a signed Internal version has passed the real-device and release-health
+acceptance gates, use **Actions > Promote accepted Play Internal release**
+on protected main. This is distinct from release.yml, which builds and
+auto-increments a new AAB and therefore cannot guarantee artifact parity.
+
+1. Record the exact current Internal and Production versionCode values from
+   Google Play, the app flavor and an issue containing **completed** acceptance
+   evidence. The default preview mode checks these against the live Play
+   tracks but does not commit any release change.
+2. If the preview succeeds, verify the candidate's signed Play installation,
+   relevant CI/CodeQL, and complete eight-signal health evidence; unresolved
+   issue #1160 acceptance remains a blocker, not a release approval.
+3. Select publish only after acceptance. The existing protected production
+   environment gates the job. The script references the same already-uploaded
+   Internal versionCode, without building or uploading another AAB; it aborts
+   if either track changed or if Production has an in-progress/halted release.
+4. Publication remains **100% only**, consistent with owner decision #1060.
+   This workflow does not introduce a 5% rollout or silently change that policy.
+   After commit it reads the Production track again; an ambiguous result must
+   be inspected in Play Console **before retrying**. A successful read-back
+   proves the Play API state, not immediate installation or runtime health.
+5. Follow the 24/48/72-hour health checkpoints; react to proven regressions
+   using the Play Console incident process. No action is automatic.
 Full-release authorization is not proof of candidate health: monitor actual
 Play Vitals, UMP, AdMob and runtime observations as they become available.
