@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-from pathlib import Path
 import unittest
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -29,14 +29,12 @@ class BannerLayoutContractTest(unittest.TestCase):
         policy = (ROOT / "feature/ads/src/main/java/com/parsfilo/contentapp/feature/ads/ui/BannerSizingPolicy.kt").read_text()
 
         top = source.split("if (bannerPosition == ReaderBannerPosition.ABOVE_VERSES) {", 1)[1].split("// Gold divider", 1)[0]
-        bottom = source.split("if (bannerPosition == ReaderBannerPosition.AFTER_VERSES) {", 1)[1].split("BottomModeSelector(", 1)[0]
-
         self.assertIn("const val MAX_INLINE_BANNER_HEIGHT_DP = 80", policy)
         self.assertIn("val showTopBanner = uiState.shouldShowAds &&", source)
         self.assertIn("Box(", top)
         self.assertIn("Modifier.fillMaxWidth().height(MAX_INLINE_BANNER_HEIGHT_DP.dp)", top)
         self.assertIn("BannerAd(", top)
-        self.assertNotIn("MAX_INLINE_BANNER_HEIGHT_DP", bottom)
+        self.assertNotIn("ReaderBannerPosition.AFTER_VERSES", source)
 
     def test_long_content_keeps_a_top_banner_alongside_inline_ads(self) -> None:
         source = (ROOT / "feature/content/src/main/java/com/parsfilo/contentapp/feature/content/ui/NativeAdInsertionPolicy.kt").read_text(encoding="utf-8")
@@ -54,7 +52,7 @@ class BannerLayoutContractTest(unittest.TestCase):
         for path in ROOT.rglob("*.kt"):
             if "/build/" in str(path) or path.name == "BannerAd.kt":
                 continue
-            lines = path.read_text(errors="ignore").splitlines()
+            lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
             for index, line in enumerate(lines):
                 if "BannerAd(" not in line:
                     continue

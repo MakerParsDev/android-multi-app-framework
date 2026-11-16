@@ -177,9 +177,6 @@ fun AppNavHost(
                             nativeAd = nativeAd,
                             nativePlacement = AdPlacement.NATIVE_FEED_HOME,
                             nativeAdUnitId = adUnitIds.native,
-                            bannerAdUnitId = adUnitIds.banner,
-                            bannerPlacement = AdPlacement.BANNER_HOME,
-                            route = AppRoute.PrayerTimesHome.route,
                         )
                     },
                     onOpenQibla = {
@@ -229,9 +226,6 @@ fun AppNavHost(
                             nativeAd = nativeAd,
                             nativePlacement = AdPlacement.NATIVE_FEED_HOME,
                             nativeAdUnitId = adUnitIds.native,
-                            bannerAdUnitId = adUnitIds.banner,
-                            bannerPlacement = AdPlacement.BANNER_QIBLA,
-                            route = AppRoute.Qibla.route,
                         )
                     },
                 )
@@ -295,9 +289,6 @@ fun AppNavHost(
                             nativeAd = nativeAd,
                             nativePlacement = AdPlacement.NATIVE_FEED_ZIKIR,
                             nativeAdUnitId = adUnitIds.native,
-                            bannerAdUnitId = adUnitIds.banner,
-                            bannerPlacement = AdPlacement.BANNER_ZIKIR,
-                            route = AppRoute.ZikirCounter.route,
                         )
                     },
                 )
@@ -356,9 +347,6 @@ fun AppNavHost(
                                 nativeAd = nativeAd,
                                 nativePlacement = AdPlacement.NATIVE_FEED_HOME,
                                 nativeAdUnitId = adUnitIds.native,
-                                bannerAdUnitId = adUnitIds.banner,
-                                bannerPlacement = AdPlacement.BANNER_DEFAULT,
-                                route = AppRoute.QuranSuraList.route,
                             )
                         },
                     )
@@ -406,9 +394,6 @@ fun AppNavHost(
                                 nativeAd = nativeAd,
                                 nativePlacement = AdPlacement.NATIVE_FEED_CONTENT,
                                 nativeAdUnitId = adUnitIds.native,
-                                bannerAdUnitId = adUnitIds.banner,
-                                bannerPlacement = AdPlacement.BANNER_CONTENT_DETAIL,
-                                route = AppRoute.QuranSuraDetail.route.substringBefore("/{"),
                             )
                         },
                     )
@@ -434,9 +419,6 @@ fun AppNavHost(
                                 nativeAd = nativeAd,
                                 nativePlacement = AdPlacement.NATIVE_FEED_CONTENT,
                                 nativeAdUnitId = adUnitIds.native,
-                                bannerAdUnitId = adUnitIds.banner,
-                                bannerPlacement = AdPlacement.BANNER_CONTENT_DETAIL,
-                                route = AppRoute.QuranBookmarks.route,
                             )
                         },
                     )
@@ -500,9 +482,6 @@ fun AppNavHost(
                             nativeAd = nativeAd,
                             nativePlacement = AdPlacement.NATIVE_FEED_CONTENT,
                             nativeAdUnitId = adUnitIds.native,
-                            bannerAdUnitId = adUnitIds.banner,
-                            bannerPlacement = AdPlacement.BANNER_CONTENT_DETAIL,
-                            route = AppRoute.Content.route,
                         )
                     },
                     bannerAdUnitId = adUnitIds.banner,
@@ -534,9 +513,6 @@ fun AppNavHost(
                         nativeAd = nativeAd,
                         nativePlacement = AdPlacement.NATIVE_FEED_HOME,
                         nativeAdUnitId = adUnitIds.native,
-                        bannerAdUnitId = adUnitIds.banner,
-                        bannerPlacement = AdPlacement.BANNER_CONTENT_LIST,
-                        route = AppRoute.PrayerList.route,
                     )
                 }
             }
@@ -598,9 +574,6 @@ fun AppNavHost(
                             nativeAd = nativeAd,
                             nativePlacement = AdPlacement.NATIVE_FEED_CONTENT,
                             nativeAdUnitId = adUnitIds.native,
-                            bannerAdUnitId = adUnitIds.banner,
-                            bannerPlacement = AdPlacement.BANNER_CONTENT_DETAIL,
-                            route = AppRoute.PrayerDetail.route.substringBefore("/{"),
                         )
                     },
                     isDebug = useTestAds,
@@ -649,9 +622,6 @@ fun AppNavHost(
                             nativeAd = nativeAd,
                             nativePlacement = AdPlacement.NATIVE_FEED_HOME,
                             nativeAdUnitId = adUnitIds.native,
-                            bannerAdUnitId = adUnitIds.banner,
-                            bannerPlacement = AdPlacement.BANNER_CONTENT_LIST,
-                            route = AppRoute.MiraclesList.route,
                         )
                     },
                     audioPlayerContent =
@@ -718,9 +688,6 @@ fun AppNavHost(
                         nativeAd = nativeAd,
                         nativePlacement = AdPlacement.NATIVE_FEED_CONTENT,
                         nativeAdUnitId = adUnitIds.native,
-                        bannerAdUnitId = adUnitIds.banner,
-                        bannerPlacement = AdPlacement.BANNER_CONTENT_DETAIL,
-                        route = AppRoute.MiraclesDetail.route.substringBefore("/{"),
                     )
                 }
             }
