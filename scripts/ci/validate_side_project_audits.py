@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import argparse
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 import json
 from pathlib import Path
 import re
@@ -109,6 +109,8 @@ def _validate_exception(entry: dict[str, Any], today: date) -> tuple[str, str]:
         raise AuditPolicyError(f"invalid expiry for {context}") from error
     if expires_on < today:
         raise AuditPolicyError(f"expired audit exception: {context} expired {expires_on}")
+    if entry.get("severity") == "high" and expires_on > today + timedelta(days=14):
+        raise AuditPolicyError(f"high dev exception must expire within 14 days: {context}")
     return project, advisory
 
 

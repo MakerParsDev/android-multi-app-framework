@@ -1,6 +1,73 @@
 {
   "schemaVersion": 1,
   "productionPolicy": "zero-vulnerabilities",
-  "developmentPolicy": "no-high-or-critical-and-only-owned-moderate-or-low-exceptions",
-  "exceptions": []
+  "developmentPolicy": "no-critical-and-only-owned-expiring-development-exceptions",
+  "exceptions": [
+    {
+      "project": "admin-notifications",
+      "advisory": "GHSA-fc5q-39xc-vjpf",
+      "severity": "high",
+      "scope": "development",
+      "owner": "MakerParsDev",
+      "trackingIssue": "#1187",
+      "expiresOn": "2026-12-01",
+      "reason": "Confirmed picomatch 4.0.7 is dev-only in this project lockfile; 17 Nov 2026 current-main npm audit --omit=dev is zero. Official high ReDoS GHSA lists no patched release. This is a time-boxed development-tool exposure, never a production exception.",
+      "upgradePlan": "Check https://github.com/micromatch/picomatch/pull/194 and npm registry; update this project lockfile to a verified patched version and remove the scoped exception before 2026-12-01. The normal CI gate must fail when expired or stale."
+    },
+    {
+      "project": "admin-api",
+      "advisory": "GHSA-fc5q-39xc-vjpf",
+      "severity": "high",
+      "scope": "development",
+      "owner": "MakerParsDev",
+      "trackingIssue": "#1187",
+      "expiresOn": "2026-12-01",
+      "reason": "Confirmed picomatch 4.0.7 is dev-only in this project lockfile; 17 Nov 2026 current-main npm audit --omit=dev is zero. Official high ReDoS GHSA lists no patched release. This is a time-boxed development-tool exposure, never a production exception.",
+      "upgradePlan": "Check https://github.com/micromatch/picomatch/pull/194 and npm registry; update this project lockfile to a verified patched version and remove the scoped exception before 2026-12-01. The normal CI gate must fail when expired or stale."
+    },
+    {
+      "project": "content-api",
+      "advisory": "GHSA-fc5q-39xc-vjpf",
+      "severity": "high",
+      "scope": "development",
+      "owner": "MakerParsDev",
+      "trackingIssue": "#1187",
+      "expiresOn": "2026-12-01",
+      "reason": "Confirmed picomatch 4.0.7 is dev-only in this project lockfile; 17 Nov 2026 current-main npm audit --omit=dev is zero. Official high ReDoS GHSA lists no patched release. This is a time-boxed development-tool exposure, never a production exception.",
+      "upgradePlan": "Check https://github.com/micromatch/picomatch/pull/194 and npm registry; update this project lockfile to a verified patched version and remove the scoped exception before 2026-12-01. The normal CI gate must fail when expired or stale."
+    },
+    {
+      "project": "ssv-callback",
+      "advisory": "GHSA-fc5q-39xc-vjpf",
+      "severity": "high",
+      "scope": "development",
+      "owner": "MakerParsDev",
+      "trackingIssue": "#1187",
+      "expiresOn": "2026-12-01",
+      "reason": "Confirmed picomatch 4.0.7 is dev-only in this project lockfile; 17 Nov 2026 current-main npm audit --omit=dev is zero. Official high ReDoS GHSA lists no patched release. This is a time-boxed development-tool exposure, never a production exception.",
+      "upgradePlan": "Check https://github.com/micromatch/picomatch/pull/194 and npm registry; update this project lockfile to a verified patched version and remove the scoped exception before 2026-12-01. The normal CI gate must fail when expired or stale."
+    },
+    {
+      "project": "firebase-functions",
+      "advisory": "GHSA-fc5q-39xc-vjpf",
+      "severity": "high",
+      "scope": "development",
+      "owner": "MakerParsDev",
+      "trackingIssue": "#1187",
+      "expiresOn": "2026-12-01",
+      "reason": "Confirmed picomatch 4.0.7 is dev-only in this project lockfile; 17 Nov 2026 current-main npm audit --omit=dev is zero. Official high ReDoS GHSA lists no patched release. This is a time-boxed development-tool exposure, never a production exception.",
+      "upgradePlan": "Check https://github.com/micromatch/picomatch/pull/194 and npm registry; update this project lockfile to a verified patched version and remove the scoped exception before 2026-12-01. The normal CI gate must fail when expired or stale."
+    },
+    {
+      "project": "firebase-rules-tests",
+      "advisory": "GHSA-fc5q-39xc-vjpf",
+      "severity": "high",
+      "scope": "development",
+      "owner": "MakerParsDev",
+      "trackingIssue": "#1187",
+      "expiresOn": "2026-12-01",
+      "reason": "Confirmed picomatch 4.0.7 is dev-only in this project lockfile; 17 Nov 2026 current-main npm audit --omit=dev is zero. Official high ReDoS GHSA lists no patched release. This is a time-boxed development-tool exposure, never a production exception.",
+      "upgradePlan": "Check https://github.com/micromatch/picomatch/pull/194 and npm registry; update this project lockfile to a verified patched version and remove the scoped exception before 2026-12-01. The normal CI gate must fail when expired or stale."
+    }
+  ]
 }
