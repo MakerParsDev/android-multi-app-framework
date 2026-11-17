@@ -1,9 +1,11 @@
 package com.parsfilo.contentapp.feature.ads
 
 import com.parsfilo.contentapp.core.datastore.PreferencesDataSource
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.transformLatest
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -19,12 +21,20 @@ class AdGateChecker @Inject constructor(
     private val preferencesDataSource: PreferencesDataSource
 ) {
     /** true → reklam gösterilebilir, false → reklam gösterme */
-    val shouldShowAds: Flow<Boolean> = preferencesDataSource.userData.map { prefs ->
-        !prefs.isPremium && !isRewardActive(prefs.rewardedAdFreeUntil)
-    }
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val shouldShowAds: Flow<Boolean> = preferencesDataSource.userData.transformLatest { prefs ->
+        if (prefs.isPremium) {
+            emit(false)
+            return@transformLatest
+        }
 
-    private fun isRewardActive(rewardedAdFreeUntil: Long): Boolean {
-        return rewardedAdFreeUntil > System.currentTimeMillis()
+        val remainingAdFreeMillis = prefs.rewardedAdFreeUntil - System.currentTimeMillis()
+        if (remainingAdFreeMillis > 0) {
+            emit(false)
+            // Cancel this timer when Premium or the reward expiry changes.
+            delay(remainingAdFreeMillis)
+        }
+        emit(true)
     }
 
     /**
