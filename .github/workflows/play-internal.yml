@@ -18,8 +18,11 @@ on:
 permissions:
   contents: read
 
+# Serialize Play Internal builds across all flavors to prevent Maven Central HTTP 429
+# download storms; preserve every queued request rather than replacing pending runs.
 concurrency:
-  group: play-internal-${{ inputs.flavor }}
+  group: play-internal-publisher
+  queue: max
   cancel-in-progress: false
 
 jobs:
