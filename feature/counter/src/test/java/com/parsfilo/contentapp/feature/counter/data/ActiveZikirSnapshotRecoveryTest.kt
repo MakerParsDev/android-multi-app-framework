@@ -9,8 +9,9 @@ import com.parsfilo.contentapp.core.datastore.ActiveZikirSessionSnapshot
 import com.parsfilo.contentapp.core.datastore.PreferencesDataSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -45,7 +46,9 @@ class ActiveZikirSnapshotRecoveryTest {
             assertThat(file.exists()).isTrue()
             assertThat(file.length()).isGreaterThan(0L)
 
-            scope.cancel()
+            // DataStore releases its file lock when the original scope fully completes.
+            // Cancelling without joining can race reopening the same file in CI.
+            requireNotNull(scope.coroutineContext[Job]).cancelAndJoin()
             scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
             prefs = PreferencesDataSource(
                 PreferenceDataStoreFactory.create(scope = scope, produceFile = { file }),
@@ -54,7 +57,7 @@ class ActiveZikirSnapshotRecoveryTest {
             prefs.clearActiveZikirSessionIfId(sample.sessionId)
             assertThat(prefs.activeZikirSessionSnapshot.first()).isNull()
         } finally {
-            scope.cancel()
+            requireNotNull(scope.coroutineContext[Job]).cancelAndJoin()
             dir.deleteRecursively()
         }
     }
