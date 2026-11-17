@@ -143,10 +143,7 @@ fun PrayerTimesRoute(
                 )
             }
         },
-        onManualModeClick = {
-            viewModel.onModeChanged(PrayerTimesMode.MANUAL)
-            onOpenLocationPicker()
-        },
+        onManualModeClick = onOpenLocationPicker,
         onRefresh = viewModel::refresh,
         onResolveByDeviceLocation = viewModel::resolveByDeviceLocation,
         onConfirmResolvedLocation = viewModel::confirmResolvedLocationSuggestion,
