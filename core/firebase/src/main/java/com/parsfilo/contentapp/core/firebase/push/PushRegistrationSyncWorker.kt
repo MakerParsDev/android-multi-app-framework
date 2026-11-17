@@ -70,6 +70,10 @@ class PushRegistrationSyncWorker(
         // retrying indefinitely. The separate daily periodic sync remains eligible.
         private const val MAX_IMMEDIATE_ATTEMPTS = 5
 
+        // A repeated foreground failure must not cancel a pending retry or reset its
+        // bounded WorkManager runAttemptCount. New work can be scheduled after it finishes.
+        internal val IMMEDIATE_CONFLICT_POLICY = ExistingWorkPolicy.KEEP
+
         internal fun resultForAttempt(
             synced: Boolean,
             isImmediate: Boolean,
@@ -88,7 +92,7 @@ class PushRegistrationSyncWorker(
             Timber.d("Scheduling immediate PushRegistrationSyncWorker reason=%s", reason)
             WorkManager.getInstance(context).enqueueUniqueWork(
                 IMMEDIATE_WORK_NAME,
-                ExistingWorkPolicy.REPLACE,
+                IMMEDIATE_CONFLICT_POLICY,
                 buildImmediateWorkRequest(reason),
             )
         }
