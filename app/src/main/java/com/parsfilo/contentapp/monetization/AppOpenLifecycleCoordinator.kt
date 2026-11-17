@@ -207,13 +207,15 @@ class AppOpenLifecycleCoordinator
             this != null && !isFinishing && !isDestroyed
     }
 
-/** Keep the cold-start UMP request; skip repeated automatic retries while a failed refresh backs off. */
+/** Keep cold-start UMP authoritative; do not overlap an in-flight request or bypass retry backoff. */
 internal fun shouldRefreshAppOpenConsent(
     reason: AppOpenTriggerReason,
     privacyState: AdsPrivacyState = AdsConsentRuntimeState.state.value,
     nowMillis: Long = SystemTimeProvider.nowMillis(),
 ): Boolean {
     if (reason == AppOpenTriggerReason.COLD_START) return false
+    // Returning from background while a consent form/update is pending must not start a second UMP request.
+    if (privacyState is AdsPrivacyState.Gathering) return false
     val limited = privacyState as? AdsPrivacyState.DeniedOrLimited ?: return true
     val error = limited.consentStatus as? ConsentStatus.Error ?: return true
     return error.retryEligibleAtMillis <= nowMillis
