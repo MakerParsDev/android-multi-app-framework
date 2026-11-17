@@ -43,6 +43,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.parsfilo.contentapp.feature.prayertimes.R
 import com.parsfilo.contentapp.feature.prayertimes.data.PrayerDateTime
+import com.parsfilo.contentapp.feature.prayertimes.model.PrayerAlarmScheduleStatus
 import com.parsfilo.contentapp.feature.prayertimes.model.PrayerAppVariant
 import com.parsfilo.contentapp.feature.prayertimes.model.PrayerTimesDay
 import com.parsfilo.contentapp.feature.prayertimes.ui.PrayerTimesDesignTokens
@@ -53,6 +54,8 @@ internal fun PrayerTimesListSection(
     variant: PrayerAppVariant,
     upcomingDays: List<PrayerTimesDay>,
     selectedAlarmPrayerKeys: Set<String>,
+    alarmMasterEnabled: Boolean,
+    alarmScheduleStatus: PrayerAlarmScheduleStatus,
     onToggleAlarm: (String) -> Unit,
 ) {
     if (upcomingDays.isEmpty()) return
@@ -133,6 +136,21 @@ internal fun PrayerTimesListSection(
         }
     }
 
+    if (!alarmMasterEnabled || alarmScheduleStatus != PrayerAlarmScheduleStatus.SCHEDULED) {
+        Text(
+            text = stringResource(
+                if (!alarmMasterEnabled) {
+                    R.string.prayertimes_alarm_master_off_hint
+                } else {
+                    R.string.prayertimes_alarm_schedule_unconfirmed_hint
+                },
+            ),
+            modifier = Modifier.padding(horizontal = 8.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+
     Spacer(modifier = Modifier.height(8.dp))
 
     prayers.forEachIndexed { index, row ->
@@ -146,10 +164,10 @@ internal fun PrayerTimesListSection(
         PrayerTimeRow(
             row = row,
             rowState = rowState,
-            isAlarmEnabled = selectedAlarmPrayerKeys.isEmpty() ||
-                selectedAlarmPrayerKeys.contains(
-                    row.item.key,
-                ),
+            isAlarmSelected = selectedAlarmPrayerKeys.isEmpty() ||
+                selectedAlarmPrayerKeys.contains(row.item.key),
+            alarmMasterEnabled = alarmMasterEnabled,
+            alarmScheduleConfirmed = alarmScheduleStatus == PrayerAlarmScheduleStatus.SCHEDULED,
             onToggleAlarm = { onToggleAlarm(row.item.key) },
         )
 
@@ -186,7 +204,9 @@ private data class PrayerRow(
 private fun PrayerTimeRow(
     row: PrayerRow,
     rowState: PrayerRowState,
-    isAlarmEnabled: Boolean,
+    isAlarmSelected: Boolean,
+    alarmMasterEnabled: Boolean,
+    alarmScheduleConfirmed: Boolean,
     onToggleAlarm: () -> Unit,
 ) {
     val pulseTransition = rememberInfiniteTransition(label = "pulse")
@@ -233,10 +253,11 @@ private fun PrayerTimeRow(
         row.hm,
     )
     val spokenAlarmToggle = stringResource(
-        if (isAlarmEnabled) {
-            R.string.prayertimes_alarm_row_enabled_a11y
-        } else {
-            R.string.prayertimes_alarm_row_disabled_a11y
+        when {
+            !isAlarmSelected -> R.string.prayertimes_alarm_row_disabled_a11y
+            !alarmMasterEnabled -> R.string.prayertimes_alarm_row_master_off_a11y
+            !alarmScheduleConfirmed -> R.string.prayertimes_alarm_row_unconfirmed_a11y
+            else -> R.string.prayertimes_alarm_row_enabled_a11y
         },
         stringResource(row.item.labelRes),
     )
@@ -301,13 +322,17 @@ private fun PrayerTimeRow(
                 },
         ) {
             Icon(
-                imageVector = if (isAlarmEnabled) {
+                imageVector = if (isAlarmSelected) {
                     Icons.Filled.Notifications
                 } else {
                     Icons.Outlined.NotificationsNone
                 },
                 contentDescription = null,
-                tint = contentColor,
+                tint = if (isAlarmSelected && (!alarmMasterEnabled || !alarmScheduleConfirmed)) {
+                    contentColor.copy(alpha = 0.45f)
+                } else {
+                    contentColor
+                },
             )
         }
     }
