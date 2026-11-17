@@ -114,6 +114,25 @@ class SideProjectAuditPolicyTest(unittest.TestCase):
         self.assertEqual([], errors)
         self.assertEqual({("firebase-functions", ADVISORY)}, used)
 
+    def test_high_dev_exception_is_owned_and_expires_within_fourteen_days(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "policy.json"
+            high = exception()
+            high["severity"] = "high"
+            high["expiresOn"] = "2026-12-01"
+            payload = {
+                "schemaVersion": 1,
+                "productionPolicy": "zero-vulnerabilities",
+                "exceptions": [high],
+            }
+            path.write_text(json.dumps(payload), encoding="utf-8")
+            self.assertIn(("firebase-functions", ADVISORY), load_policy(path, date(2026, 11, 17)))
+
+            payload["exceptions"][0]["expiresOn"] = "2026-12-02"
+            path.write_text(json.dumps(payload), encoding="utf-8")
+            with self.assertRaisesRegex(AuditPolicyError, "within 14 days"):
+                load_policy(path, date(2026, 11, 17))
+
     def test_rejects_unowned_or_high_dev_findings(self) -> None:
         moderate = {
             "ts-deepmerge": {
