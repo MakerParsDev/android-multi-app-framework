@@ -137,8 +137,97 @@ class AdManagerUmpCallbacksTest {
         assertThat(eligible).isFalse()
         assertThat(manager.consentStatus.value).isEqualTo(ConsentStatus.Missing)
         assertThat(manager.canRequestAds.value).isFalse()
-        // A missing snapshot is published as one consent_refreshed event, not duplicated.
-        verify(exactly = 1) { analytics.logEvent("consent_refreshed", any()) }
+        // A failed UMP request is recorded separately from its missing consent outcome.
+        verify(exactly = 1) {
+            analytics.logEvent(
+                "consent_error",
+                withArg { params ->
+                    assertThat(params.getString(AnalyticsParamKey.UMP_ERROR_CATEGORY))
+                        .isEqualTo("runtime_refresh_internal")
+                    assertThat(params.getString(AnalyticsParamKey.CONSENT_TRIGGER))
+                        .isEqualTo("runtime")
+                },
+            )
+        }
+        verify(exactly = 1) {
+            analytics.logEvent(
+                "consent_refreshed",
+                withArg { params ->
+                    assertThat(params.getString(AnalyticsParamKey.CONSENT_STATUS))
+                        .isEqualTo("missing")
+                },
+            )
+        }
+        verify(exactly = 0) { analytics.logEvent("consent_granted", any()) }
+    }
+
+    @Test
+    fun coldStartInfoUpdateFailureWithoutCachedChoiceKeepsMissingAndRecordsNetworkError() {
+        manager.initialize(activity)
+        idleMain()
+
+        failure.captured.onConsentInfoUpdateFailure(
+            FormError(FormError.ErrorCode.INTERNET_ERROR, "request timed out"),
+        )
+        idleMain()
+
+        assertThat(manager.consentStatus.value).isEqualTo(ConsentStatus.Missing)
+        assertThat(manager.canRequestAds.value).isFalse()
+        verify(exactly = 1) {
+            analytics.logEvent(
+                "consent_error",
+                withArg { params ->
+                    assertThat(params.getString(AnalyticsParamKey.UMP_ERROR_CATEGORY))
+                        .isEqualTo("cold_start_info_update_network")
+                    assertThat(params.getString(AnalyticsParamKey.CONSENT_TRIGGER))
+                        .isEqualTo("cold_start")
+                },
+            )
+        }
+        verify(exactly = 1) {
+            analytics.logEvent(
+                "consent_refreshed",
+                withArg { params ->
+                    assertThat(params.getString(AnalyticsParamKey.CONSENT_STATUS))
+                        .isEqualTo("missing")
+                },
+            )
+        }
+        verify(exactly = 0) { analytics.logEvent("consent_granted", any()) }
+    }
+
+    @Test
+    fun coldStartFormFailureWithoutCachedChoiceRecordsErrorButKeepsAdsBlocked() {
+        manager.initialize(activity)
+        idleMain()
+        success.captured.onConsentInfoUpdateSuccess()
+        idleMain()
+
+        formDismissed.captured.onConsentFormDismissed(
+            FormError(FormError.ErrorCode.INTERNET_ERROR, "consent form network issue"),
+        )
+        idleMain()
+
+        assertThat(manager.consentStatus.value).isEqualTo(ConsentStatus.Missing)
+        assertThat(manager.canRequestAds.value).isFalse()
+        verify(exactly = 1) {
+            analytics.logEvent(
+                "consent_error",
+                withArg { params ->
+                    assertThat(params.getString(AnalyticsParamKey.UMP_ERROR_CATEGORY))
+                        .isEqualTo("cold_start_form_network")
+                },
+            )
+        }
+        verify(exactly = 1) {
+            analytics.logEvent(
+                "consent_refreshed",
+                withArg { params ->
+                    assertThat(params.getString(AnalyticsParamKey.CONSENT_STATUS))
+                        .isEqualTo("missing")
+                },
+            )
+        }
         verify(exactly = 0) { analytics.logEvent("consent_granted", any()) }
     }
 
