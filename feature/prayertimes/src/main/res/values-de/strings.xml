@@ -50,6 +50,10 @@
     <string name="prayertimes_alarm_title">Gebets-Erinnerungen</string>
     <string name="prayertimes_alarm_desc">Lokale Benachrichtigungen für Gebetszeiten planen</string>
     <string name="prayertimes_alarm_enabled">Erinnerungen gewünscht</string>
+    <string name="prayertimes_alarm_master_off_hint">Erinnerungen sind aus. In den Alarmeinstellungen einschalten.</string>
+    <string name="prayertimes_alarm_schedule_unconfirmed_hint">Erinnerungen sind ausgewählt; Alarmplanung nicht bestätigt. Alarmeinstellungen prüfen.</string>
+    <string name="prayertimes_alarm_row_master_off_a11y">Erinnerung für %1$s ausgewählt; Alarme sind aus</string>
+    <string name="prayertimes_alarm_row_unconfirmed_a11y">Erinnerung für %1$s ausgewählt; Alarmplanung nicht bestätigt</string>
     <string name="prayertimes_alarm_row_enabled_a11y">Erinnerung für %1$s an</string>
     <string name="prayertimes_alarm_row_disabled_a11y">Erinnerung für %1$s aus</string>
     <string name="prayertimes_alarm_disabled">Alarm aus</string>
