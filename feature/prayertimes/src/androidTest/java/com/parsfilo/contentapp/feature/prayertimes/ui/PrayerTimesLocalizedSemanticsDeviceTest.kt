@@ -12,6 +12,7 @@ import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.parsfilo.contentapp.core.designsystem.AppTheme
+import com.parsfilo.contentapp.feature.prayertimes.model.PrayerAlarmScheduleStatus
 import com.parsfilo.contentapp.feature.prayertimes.model.PrayerAppVariant
 import com.parsfilo.contentapp.feature.prayertimes.model.PrayerTimesDay
 import com.parsfilo.contentapp.feature.prayertimes.ui.components.HeroHeaderCard
@@ -98,6 +99,8 @@ class PrayerTimesLocalizedSemanticsDeviceTest {
                     ),
                 ),
                 selectedAlarmPrayerKeys = emptySet(),
+                alarmMasterEnabled = true,
+                alarmScheduleStatus = PrayerAlarmScheduleStatus.SCHEDULED,
                 onToggleAlarm = {},
             )
         }
@@ -109,7 +112,13 @@ class PrayerTimesLocalizedSemanticsDeviceTest {
 
     @Test fun germanPrayerRowsUseVisibleNames() = rows("de-DE", "Zeit für Dhuhr: 12:30")
 
-    private fun alarm(language: String, enabled: Boolean, expected: String) {
+    private fun alarm(
+        language: String,
+        enabled: Boolean,
+        expected: String,
+        masterEnabled: Boolean = true,
+        scheduleStatus: PrayerAlarmScheduleStatus = PrayerAlarmScheduleStatus.SCHEDULED,
+    ) {
         var clickedPrayer: String? = null
         render(language) {
             Column {
@@ -128,6 +137,8 @@ class PrayerTimesLocalizedSemanticsDeviceTest {
                     ),
                     // Empty means all selected; a set of Imsak alone leaves Dhuhr off.
                     selectedAlarmPrayerKeys = if (enabled) emptySet() else setOf("imsak"),
+                    alarmMasterEnabled = masterEnabled,
+                    alarmScheduleStatus = scheduleStatus,
                     onToggleAlarm = { clickedPrayer = it },
                 )
             }
@@ -147,4 +158,29 @@ class PrayerTimesLocalizedSemanticsDeviceTest {
 
     @Test fun germanDisabledAlarmIdentifiesPrayer() =
         alarm("de-DE", false, "Erinnerung für Dhuhr aus")
+
+    @Test fun englishSelectedWithMasterOffIsNotAnnouncedActive() =
+        alarm(
+            "en-US",
+            true,
+            "Dhuhr reminder selected; reminders are off",
+            masterEnabled = false,
+            scheduleStatus = PrayerAlarmScheduleStatus.DISABLED,
+        )
+
+    @Test fun germanSelectedWithUnknownScheduleIsNotAnnouncedActive() =
+        alarm(
+            "de-DE",
+            true,
+            "Erinnerung für Dhuhr ausgewählt; Alarmplanung nicht bestätigt",
+            scheduleStatus = PrayerAlarmScheduleStatus.UNKNOWN,
+        )
+
+    @Test fun englishSelectedWithNotScheduledIsNotAnnouncedActive() =
+        alarm(
+            "en-US",
+            true,
+            "Dhuhr reminder selected; scheduling not confirmed",
+            scheduleStatus = PrayerAlarmScheduleStatus.NOT_SCHEDULED,
+        )
 }
