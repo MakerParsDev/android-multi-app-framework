@@ -7,7 +7,11 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import org.junit.Test
 
 class AdGateCheckerTest {
@@ -35,6 +39,39 @@ class AdGateCheckerTest {
 
         preferences.value = userPreferences(rewardedAdFreeUntil = System.currentTimeMillis() - 1_000L)
         assertThat(checker.shouldShowAds.first()).isTrue()
+    }
+
+    @Test
+    fun rewardExpiryAutomaticallyRestoresAdsWithoutPreferenceEmission() = runTest {
+        preferences.value = userPreferences(rewardedAdFreeUntil = System.currentTimeMillis() + 60_000L)
+        val visibility = mutableListOf<Boolean>()
+        backgroundScope.launch {
+            checker.shouldShowAds.collect { visibility.add(it) }
+        }
+        runCurrent()
+        assertThat(visibility).containsExactly(false)
+
+        advanceTimeBy(61_000L)
+        runCurrent()
+        assertThat(visibility).containsExactly(false, true).inOrder()
+    }
+
+    @Test
+    fun premiumActivationCancelsRewardExpiryTimer() = runTest {
+        val expiresAt = System.currentTimeMillis() + 60_000L
+        preferences.value = userPreferences(rewardedAdFreeUntil = expiresAt)
+        val visibility = mutableListOf<Boolean>()
+        backgroundScope.launch {
+            checker.shouldShowAds.collect { visibility.add(it) }
+        }
+        runCurrent()
+        assertThat(visibility).containsExactly(false)
+
+        preferences.value = userPreferences(isPremium = true, rewardedAdFreeUntil = expiresAt)
+        runCurrent()
+        advanceTimeBy(61_000L)
+        runCurrent()
+        assertThat(visibility).doesNotContain(true)
     }
 
     private fun userPreferences(
