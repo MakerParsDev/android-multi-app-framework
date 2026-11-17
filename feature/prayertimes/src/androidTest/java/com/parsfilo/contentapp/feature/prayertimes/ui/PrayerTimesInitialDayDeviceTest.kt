@@ -10,6 +10,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.parsfilo.contentapp.core.designsystem.AppTheme
 import com.parsfilo.contentapp.feature.prayertimes.R
 import com.parsfilo.contentapp.feature.prayertimes.data.PrayerDateTime
+import com.parsfilo.contentapp.feature.prayertimes.model.PrayerAlarmScheduleStatus
 import com.parsfilo.contentapp.feature.prayertimes.model.PrayerAppVariant
 import com.parsfilo.contentapp.feature.prayertimes.model.PrayerTimesDay
 import com.parsfilo.contentapp.feature.prayertimes.ui.components.PrayerTimesListSection
@@ -50,6 +51,8 @@ class PrayerTimesInitialDayDeviceTest {
                         variant = PrayerAppVariant.NAMAZ_VAKITLERI,
                         upcomingDays = days,
                         selectedAlarmPrayerKeys = emptySet(),
+                        alarmMasterEnabled = false,
+                        alarmScheduleStatus = PrayerAlarmScheduleStatus.DISABLED,
                         onToggleAlarm = {},
                     )
                 }

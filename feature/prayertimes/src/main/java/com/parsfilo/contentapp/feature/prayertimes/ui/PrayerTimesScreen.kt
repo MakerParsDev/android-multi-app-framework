@@ -237,6 +237,8 @@ fun PrayerTimesScreen(
                                         variant = variant,
                                         upcomingDays = uiState.days,
                                         selectedAlarmPrayerKeys = uiState.alarmSettings.selectedPrayerKeys,
+                                        alarmMasterEnabled = uiState.alarmSettings.enabled,
+                                        alarmScheduleStatus = uiState.alarmScheduleStatus,
                                         onToggleAlarm = { prayerKey ->
                                             onAlarmPrayerKeysChanged(
                                                 togglePrayerKey(
