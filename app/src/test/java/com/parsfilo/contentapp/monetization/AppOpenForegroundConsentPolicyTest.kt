@@ -15,6 +15,12 @@ class AppOpenForegroundConsentPolicyTest {
     }
 
     @Test
+    fun resumeDoesNotStartAnotherUpdateWhileConsentIsGathering() {
+        val gathering = AdsPrivacyState.Gathering(ageGateStatus = AdAgeGateStatus.UNKNOWN)
+        assertFalse(shouldRefreshAppOpenConsent(AppOpenTriggerReason.RESUME, gathering, nowMillis = 0L))
+    }
+
+    @Test
     fun resumeStillRefreshesUmpBeforeAppOpen() {
         assertTrue(shouldRefreshAppOpenConsent(AppOpenTriggerReason.RESUME))
     }
