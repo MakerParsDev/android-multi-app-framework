@@ -170,17 +170,18 @@ class AdManager @Inject constructor(
                                 privacyOptionsRequired = _privacyOptionsRequired.value,
                                 canRequestAds = consentInformation.canRequestAds(),
                             )
+                            appAnalytics.logConsentError(
+                                trigger = "cold_start",
+                                message = loadAndShowError.message ?: "Unknown consent error",
+                                ageGateResult = ageGateStatus.analyticsValue(),
+                                errorCategory = classifyUmpConsentError("cold_start_form", loadAndShowError.errorCode),
+                            )
+                            // A failed UMP request is an error even when no prior consent exists.
+                            // Keep the resolved privacy state Missing, not Error, for ad gating.
                             if (resolvedStatus == ConsentStatus.Missing) {
                                 appAnalytics.logConsentMissing(
                                     trigger = "cold_start",
                                     ageGateResult = ageGateStatus.analyticsValue(),
-                                )
-                            } else {
-                                appAnalytics.logConsentError(
-                                    trigger = "cold_start",
-                                    message = loadAndShowError.message ?: "Unknown consent error",
-                                    ageGateResult = ageGateStatus.analyticsValue(),
-                                    errorCategory = classifyUmpConsentError("cold_start_form", loadAndShowError.errorCode),
                                 )
                             }
                             ConsentFunnelDebugDashboard.onConsentOutcome(
@@ -223,17 +224,16 @@ class AdManager @Inject constructor(
                                 cachedSuccessfulStatus = cachedSuccessfulConsentStatus,
                             )
                         }
+                    appAnalytics.logConsentError(
+                        trigger = "cold_start",
+                        message = requestConsentError.message ?: "Consent info update failed",
+                        ageGateResult = ageGateStatus.analyticsValue(),
+                        errorCategory = classifyUmpConsentError("cold_start_info_update", requestConsentError.errorCode),
+                    )
                     if (resolvedStatus == ConsentStatus.Missing) {
                         appAnalytics.logConsentMissing(
                             trigger = "cold_start_error",
                             ageGateResult = ageGateStatus.analyticsValue(),
-                        )
-                    } else {
-                        appAnalytics.logConsentError(
-                            trigger = "cold_start",
-                            message = requestConsentError.message ?: "Consent info update failed",
-                            ageGateResult = ageGateStatus.analyticsValue(),
-                            errorCategory = classifyUmpConsentError("cold_start_info_update", requestConsentError.errorCode),
                         )
                     }
                     updatePrivacyOptionsState(consentInformation)
@@ -371,17 +371,16 @@ class AdManager @Inject constructor(
                                 cachedSuccessfulStatus = cachedSuccessfulConsentStatus,
                             )
                         }
+                    appAnalytics.logConsentError(
+                        trigger = "runtime",
+                        message = requestConsentError.message ?: "Consent refresh failed",
+                        ageGateResult = ageGateStatus.analyticsValue(),
+                        errorCategory = classifyUmpConsentError("runtime_refresh", requestConsentError.errorCode),
+                    )
                     if (resolvedStatus == ConsentStatus.Missing) {
                         appAnalytics.logConsentMissing(
                             trigger = "runtime_error",
                             ageGateResult = ageGateStatus.analyticsValue(),
-                        )
-                    } else {
-                        appAnalytics.logConsentError(
-                            trigger = "runtime",
-                            message = requestConsentError.message ?: "Consent refresh failed",
-                            ageGateResult = ageGateStatus.analyticsValue(),
-                            errorCategory = classifyUmpConsentError("runtime_refresh", requestConsentError.errorCode),
                         )
                     }
                     applyConsentRuntimeState(
