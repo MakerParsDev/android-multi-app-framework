@@ -1,5 +1,6 @@
 package com.parsfilo.contentapp.core.firebase.push
 
+import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -18,6 +19,11 @@ class PushRegistrationSyncWorkerTest {
         assertEquals(NetworkType.CONNECTED, request.workSpec.constraints.requiredNetworkType)
         assertEquals("retry_after_app_start", request.workSpec.input.getString("reason"))
         assertTrue(request.workSpec.input.getBoolean("is_immediate", false))
+    }
+
+    @Test
+    fun `repeated foreground failures preserve the same bounded immediate retry`() {
+        assertEquals(ExistingWorkPolicy.KEEP, PushRegistrationSyncWorker.IMMEDIATE_CONFLICT_POLICY)
     }
 
     @Test
