@@ -699,6 +699,15 @@ def test_ad_inspector_is_opt_in_and_limited_to_issue_337_internal_builds() -> No
         ROOT / "app/src/main/java/com/parsfilo/contentapp/debug/AdInspectorDebugActivity.kt"
     ).read_text(encoding="utf-8")
     assert "BuildConfig.ENABLE_AD_INSPECTOR_DEBUG" in activity
+    assert "isLaunchAction" in activity
+    assert 'Log.e(TAG, "AD_INSPECTOR_ERROR")' in activity
+    assert "sessionId" not in activity
+
+    runner = (ROOT / "scripts/dev/open-ad-inspector.ps1").read_text(encoding="utf-8")
+    assert "android.permission.DUMP" in runner
+    assert "logcat -d -v epoch -s AdInspectorDebug" in runner
+    assert "AD_INSPECTOR_OPEN_REQUESTED" in runner
+    assert "sessionId" not in runner
 
     for flavor in ("namazsurelerivedualarsesli", "ismiazamduasi"):
         manifest = (ROOT / f"app/src/{flavor}/AndroidManifest.xml").read_text(

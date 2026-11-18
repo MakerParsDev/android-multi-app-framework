@@ -22,8 +22,7 @@ class AdInspectorDebugActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val sessionId = intent.getStringExtra(EXTRA_SESSION_ID)
-        if (intent.action != ACTION_OPEN_AD_INSPECTOR || !isValidSessionId(sessionId)) {
+        if (!AdInspectorDebugDevicePolicy.isLaunchAction(intent.action)) {
             Log.w(TAG, "AD_INSPECTOR_BLOCKED_INVALID_REQUEST")
             finish()
             return
@@ -32,7 +31,7 @@ class AdInspectorDebugActivity : ComponentActivity() {
         if (!AdInspectorDebugDevicePolicy.isEnabled(BuildConfig.ENABLE_AD_INSPECTOR_DEBUG, Build.MODEL)) {
             Log.w(
                 TAG,
-                "AD_INSPECTOR_BLOCKED_BY_BUILD_FLAG_OR_DEVICE session=" + sessionId,
+                "AD_INSPECTOR_BLOCKED_BY_BUILD_FLAG_OR_DEVICE",
             )
             finish()
             return
@@ -47,40 +46,37 @@ class AdInspectorDebugActivity : ComponentActivity() {
             if (!sdkReady) {
                 Log.e(
                     TAG,
-                    "AD_INSPECTOR_BLOCKED_SDK_NOT_READY session=" + sessionId +
-                        "; normal UMP flow was not bypassed",
+                    "AD_INSPECTOR_BLOCKED_SDK_NOT_READY; normal UMP flow was not bypassed",
                 )
                 finish()
                 return@launch
             }
 
-            Log.i(TAG, "AD_INSPECTOR_OPEN_REQUESTED session=" + sessionId)
+            Log.i(TAG, "AD_INSPECTOR_OPEN_REQUESTED")
             adManager.openAdInspector(this@AdInspectorDebugActivity) { error ->
                 if (error == null) {
-                    Log.i(TAG, "AD_INSPECTOR_CLOSED session=" + sessionId)
+                    Log.i(TAG, "AD_INSPECTOR_CLOSED")
                 } else {
-                    Log.e(TAG, "AD_INSPECTOR_ERROR session=" + sessionId + " message=" + error)
+                    Log.e(TAG, "AD_INSPECTOR_ERROR")
                 }
                 finish()
             }
         }
     }
 
-    private fun isValidSessionId(value: String?): Boolean =
-        value?.matches(SESSION_ID_PATTERN) == true
-
     companion object {
         const val ACTION_OPEN_AD_INSPECTOR = "com.parsfilo.contentapp.action.OPEN_AD_INSPECTOR"
-        const val EXTRA_SESSION_ID = "com.parsfilo.contentapp.extra.AD_INSPECTOR_SESSION_ID"
 
         private const val TAG = "AdInspectorDebug"
         private const val SDK_READY_TIMEOUT_MS = 60_000L
-        private val SESSION_ID_PATTERN = Regex("[a-f0-9]{32}")
     }
 }
 
 internal object AdInspectorDebugDevicePolicy {
     private const val ALLOWED_MODEL = "SM-G611F"
+
+    fun isLaunchAction(action: String?): Boolean =
+        action == AdInspectorDebugActivity.ACTION_OPEN_AD_INSPECTOR
 
     fun isEnabled(buildFlag: Boolean, model: String): Boolean = buildFlag && isAllowed(model)
 

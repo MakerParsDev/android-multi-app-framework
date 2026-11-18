@@ -91,9 +91,7 @@ function Get-TargetPackageFingerprint {
 }
 
 $before = Get-TargetPackageFingerprint
-$sessionId = [Guid]::NewGuid().ToString('N')
 $action = 'com.parsfilo.contentapp.action.OPEN_AD_INSPECTOR'
-$extra = 'com.parsfilo.contentapp.extra.AD_INSPECTOR_SESSION_ID'
 $mainComponent = $PackageName + '/com.parsfilo.contentapp.MainActivity'
 $inspectorComponent = $PackageName + '/com.parsfilo.contentapp.debug.AdInspectorDebugActivity'
 
@@ -107,7 +105,12 @@ if ($LASTEXITCODE -ne 0 -or ($mainStart -join [Environment]::NewLine) -match 'Er
 }
 
 Write-Output 'Calling the protected in-app Ad Inspector API entry point (no shake, no install).'
-$inspectorStart = & $adb -s $DeviceSerial shell am start -W -n $inspectorComponent -a $action --es $extra $sessionId 2>&1
+$startEpochText = (& $adb -s $DeviceSerial shell date +%s 2>&1 | Out-String).Trim()
+if ($LASTEXITCODE -ne 0 -or $startEpochText -notmatch '^\d+$') {
+    throw 'Could not establish the device log time boundary.'
+}
+$startEpoch = [double]$startEpochText
+$inspectorStart = & $adb -s $DeviceSerial shell am start -W -n $inspectorComponent -a $action 2>&1
 $inspectorStart | ForEach-Object { Write-Output $_ }
 if ($LASTEXITCODE -ne 0 -or ($inspectorStart -join [Environment]::NewLine) -match 'Error:|Permission Denial') {
     throw 'ADB could not start the DUMP-protected Ad Inspector entry point.'
@@ -116,14 +119,20 @@ if ($LASTEXITCODE -ne 0 -or ($inspectorStart -join [Environment]::NewLine) -matc
 $openRequested = $false
 $deadline = [DateTimeOffset]::UtcNow.AddSeconds(70)
 while ([DateTimeOffset]::UtcNow -lt $deadline) {
-    $logs = & $adb -s $DeviceSerial shell logcat -d -v brief -s AdInspectorDebug 2>&1
-    $sessionLogs = @($logs | Where-Object { $_ -match [regex]::Escape($sessionId) })
-    $sessionText = $sessionLogs -join [Environment]::NewLine
+    $logs = & $adb -s $DeviceSerial shell logcat -d -v epoch -s AdInspectorDebug 2>&1
+    $recentLogs = @(
+        foreach ($line in $logs) {
+            if ($line -match '^\s*(?<epoch>\d+(?:\.\d+)?)' -and [double]$Matches.epoch -ge $startEpoch) {
+                $line
+            }
+        }
+    )
+    $recentText = $recentLogs -join [Environment]::NewLine
 
-    if ($sessionText -match 'AD_INSPECTOR_BLOCKED|AD_INSPECTOR_ERROR') {
-        throw "Ad Inspector was blocked or returned an SDK error: $sessionText"
+    if ($recentText -match 'AD_INSPECTOR_BLOCKED|AD_INSPECTOR_ERROR') {
+        throw "Ad Inspector was blocked or returned an SDK error: $recentText"
     }
-    if ($sessionText -match 'AD_INSPECTOR_OPEN_REQUESTED') {
+    if ($recentText -match 'AD_INSPECTOR_OPEN_REQUESTED') {
         $openRequested = $true
         break
     }
@@ -165,6 +174,6 @@ if ($before -ne $after) {
 
 Write-Output 'AD_INSPECTOR_UI_VISIBLE'
 Write-Output "TARGET_APP_UNCHANGED package=$PackageName"
-Write-Output "AD_INSPECTOR_AUTOMATION_PASSED session=$sessionId"
+Write-Output "AD_INSPECTOR_AUTOMATION_PASSED package=$PackageName"
 $foreground | ForEach-Object { Write-Output $_ }
 Write-Output 'The Inspector remains open; close it normally when finished.'

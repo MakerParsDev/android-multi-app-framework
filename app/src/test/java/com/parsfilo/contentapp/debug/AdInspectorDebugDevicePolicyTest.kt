@@ -25,4 +25,15 @@ class AdInspectorDebugDevicePolicyTest {
         assertFalse(AdInspectorDebugDevicePolicy.isAllowed("Pixel 9"))
         assertFalse(AdInspectorDebugDevicePolicy.isAllowed(""))
     }
+
+    @Test
+    fun acceptsOnlyTheExplicitAdInspectorAction() {
+        assertTrue(
+            AdInspectorDebugDevicePolicy.isLaunchAction(
+                AdInspectorDebugActivity.ACTION_OPEN_AD_INSPECTOR,
+            ),
+        )
+        assertFalse(AdInspectorDebugDevicePolicy.isLaunchAction(null))
+        assertFalse(AdInspectorDebugDevicePolicy.isLaunchAction("android.intent.action.VIEW"))
+    }
 }
