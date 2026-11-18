@@ -175,11 +175,16 @@ jobs:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
           PACKAGE_NAME: ${{ steps.release-inputs.outputs.package_name }}
           AAB_PATH: ${{ steps.artifact.outputs.subject_path }}
-          RELEASE_NAME: ${{ steps.release-inputs.outputs.release_name_prefix }}-${{ github.sha }}
+          RELEASE_NAME: ${{ steps.release-inputs.outputs.release_name_prefix }}
           ENABLE_AD_INSPECTOR_DEBUG: ${{ steps.release-inputs.outputs.enable_ad_inspector_debug }}
           SIGNED_ARCHIVE_URL: ${{ steps.signed-evidence.outputs.artifact-url }}
         run: |
           set -euo pipefail
+          RELEASE_NAME="${RELEASE_NAME}-${GITHUB_SHA:0:12}"
+          [[ ${#RELEASE_NAME} -le 50 ]] || {
+            echo '::error::Google Play release name exceeds 50 characters' >&2
+            exit 1
+          }
           scripts/doppler-run.sh -- python3 scripts/ci/publish_play_internal.py \
             --package-name "$PACKAGE_NAME" \
             --aab "$AAB_PATH" \

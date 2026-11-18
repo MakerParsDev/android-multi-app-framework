@@ -680,7 +680,10 @@ def test_ad_inspector_is_opt_in_and_limited_to_issue_337_internal_builds() -> No
     build = named_step(job, "Build one signed AAB with next Play version code")
     assert "steps.release-inputs.outputs.enable_ad_inspector_debug" in build["env"]["ENABLE_AD_INSPECTOR_DEBUG"]
     publish = named_step(job, "Publish exact attested AAB to Play internal")
-    assert "steps.release-inputs.outputs.release_name_prefix" in publish["env"]["RELEASE_NAME"]
+    assert publish["env"]["RELEASE_NAME"] == "${{ steps.release-inputs.outputs.release_name_prefix }}"
+    assert 'RELEASE_NAME="${RELEASE_NAME}-${GITHUB_SHA:0:12}"' in publish["run"]
+    assert "[[ ${#RELEASE_NAME} -le 50 ]]" in publish["run"]
+    assert len("internal-ad-inspector-debug-" + "a" * 12) <= 50
     assert "steps.release-inputs.outputs.enable_ad_inspector_debug" in publish["env"]["ENABLE_AD_INSPECTOR_DEBUG"]
 
     release_script = (ROOT / "scripts/ci/build_play_internal_release.sh").read_text(
