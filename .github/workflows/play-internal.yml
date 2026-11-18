@@ -14,6 +14,11 @@ on:
         type: choice
         default: '14'
         options: ['7', '14', '30']
+      enable_ad_inspector_debug:
+        description: Enable the restricted Ad Inspector helper for the two #337 test apps
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -38,6 +43,7 @@ jobs:
     env:
       REQUESTED_FLAVOR: ${{ inputs.flavor }}
       REQUESTED_RETENTION_DAYS: ${{ inputs.retention_days }}
+      REQUESTED_AD_INSPECTOR_DEBUG: ${{ inputs.enable_ad_inspector_debug }}
       DOPPLER_PROJECT: android-multi-app-framework
       DOPPLER_CONFIG: prod
     steps:
@@ -85,7 +91,8 @@ jobs:
           set -euo pipefail
           python3 scripts/ci/validate_release_workflow_input.py \
             --flavor "$REQUESTED_FLAVOR" \
-            --retention-days "$REQUESTED_RETENTION_DAYS" >> "$GITHUB_OUTPUT"
+            --retention-days "$REQUESTED_RETENTION_DAYS" \
+            --enable-ad-inspector-debug "$REQUESTED_AD_INSPECTOR_DEBUG" >> "$GITHUB_OUTPUT"
 
       - name: Validate Doppler bootstrap
         env:
@@ -109,6 +116,7 @@ jobs:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
           RELEASE_FLAVOR: ${{ steps.release-inputs.outputs.flavor }}
           RELEASE_CAPITALIZED: ${{ steps.release-inputs.outputs.capitalized }}
+          ENABLE_AD_INSPECTOR_DEBUG: ${{ steps.release-inputs.outputs.enable_ad_inspector_debug }}
         run: |
           set -euo pipefail
           scripts/doppler-run.sh -- bash scripts/ci/build_play_internal_release.sh
@@ -167,7 +175,8 @@ jobs:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
           PACKAGE_NAME: ${{ steps.release-inputs.outputs.package_name }}
           AAB_PATH: ${{ steps.artifact.outputs.subject_path }}
-          RELEASE_NAME: internal-${{ github.sha }}
+          RELEASE_NAME: ${{ steps.release-inputs.outputs.release_name_prefix }}-${{ github.sha }}
+          ENABLE_AD_INSPECTOR_DEBUG: ${{ steps.release-inputs.outputs.enable_ad_inspector_debug }}
           SIGNED_ARCHIVE_URL: ${{ steps.signed-evidence.outputs.artifact-url }}
         run: |
           set -euo pipefail

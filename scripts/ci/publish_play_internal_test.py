@@ -147,11 +147,56 @@ def test_non_internal_track_is_rejected() -> None:
             raise AssertionError("production track unexpectedly accepted")
 
 
+def test_diagnostic_release_requires_nonpromotable_release_name() -> None:
+    with tempfile.TemporaryDirectory() as raw:
+        aab = Path(raw) / "app.aab"
+        aab.write_bytes(b"signed-aab-fixture")
+        service = Service({"versionCode": 123, "sha256": sha256_file(aab)})
+        try:
+            publish_aab(
+                service=service,
+                package_name="com.parsfilo.namazsurelerivedualarsesli",
+                aab_path=aab,
+                track="internal",
+                release_name="internal-source-sha",
+                media_factory=lambda path: path,
+                diagnostic_only=True,
+            )
+        except RuntimeError as error:
+            assert "ad-inspector-debug" in str(error)
+        else:
+            raise AssertionError("diagnostic-only release accepted an unmarked release name")
+        assert service.edits_api.calls == []
+
+
+def test_normal_release_rejects_diagnostic_only_marker() -> None:
+    with tempfile.TemporaryDirectory() as raw:
+        aab = Path(raw) / "app.aab"
+        aab.write_bytes(b"signed-aab-fixture")
+        service = Service({"versionCode": 123, "sha256": sha256_file(aab)})
+        try:
+            publish_aab(
+                service=service,
+                package_name="com.parsfilo.namazsurelerivedualarsesli",
+                aab_path=aab,
+                track="internal",
+                release_name="internal-ad-inspector-debug-source-sha",
+                media_factory=lambda path: path,
+                diagnostic_only=False,
+            )
+        except RuntimeError as error:
+            assert "diagnostic-only" in str(error)
+        else:
+            raise AssertionError("normal release accepted a diagnostic-only release name")
+        assert service.edits_api.calls == []
+
 def main() -> int:
     for test in (
         test_exact_bundle_hash_is_published_and_committed,
         test_hash_mismatch_deletes_edit_and_never_commits,
         test_non_internal_track_is_rejected,
+        test_diagnostic_release_requires_nonpromotable_release_name,
+        test_normal_release_rejects_diagnostic_only_marker,
     ):
         test()
         print(f"PASS {test.__name__}")

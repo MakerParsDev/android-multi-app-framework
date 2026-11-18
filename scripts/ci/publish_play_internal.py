@@ -36,6 +36,19 @@ def validate_service_account_path(raw: str) -> Path:
     return path
 
 
+def validate_release_name(release_name: str, *, diagnostic_only: bool) -> None:
+    if not release_name.strip():
+        raise RuntimeError("release name is required")
+    has_diagnostic_marker = "ad-inspector-debug" in release_name.casefold()
+    if diagnostic_only and not has_diagnostic_marker:
+        raise RuntimeError(
+            "diagnostic-only builds require the ad-inspector-debug release-name marker"
+        )
+    if not diagnostic_only and has_diagnostic_marker:
+        raise RuntimeError(
+            "diagnostic-only release names cannot be used for normal Internal builds"
+        )
+
 def publish_aab(
     *,
     service: Any,
@@ -44,7 +57,9 @@ def publish_aab(
     track: str,
     release_name: str,
     media_factory: Callable[[str], Any],
+    diagnostic_only: bool = False,
 ) -> dict[str, Any]:
+    validate_release_name(release_name, diagnostic_only=diagnostic_only)
     if track != ALLOWED_TRACK:
         raise RuntimeError(f"Only the {ALLOWED_TRACK!r} track is allowed")
     if not package_name.strip():
@@ -145,6 +160,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         service_account_path = validate_service_account_path(
             os.environ.get("PLAY_SERVICE_ACCOUNT_JSON", "")
         )
+        raw_diagnostic_flag = os.environ.get("ENABLE_AD_INSPECTOR_DEBUG", "false")
+        if raw_diagnostic_flag not in {"true", "false"}:
+            raise RuntimeError("ENABLE_AD_INSPECTOR_DEBUG must be true or false")
+        diagnostic_only = raw_diagnostic_flag == "true"
         service, media_factory = build_service(service_account_path)
         report = publish_aab(
             service=service,
@@ -153,6 +172,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             track=args.track,
             release_name=args.release_name,
             media_factory=media_factory,
+            diagnostic_only=diagnostic_only,
         )
         args.report.parent.mkdir(parents=True, exist_ok=True)
         args.report.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")

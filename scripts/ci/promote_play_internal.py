@@ -38,6 +38,9 @@ def make_plan(
         str(expected_internal_code)
     ]:
         raise ValueError("internal release does not match expected completed version")
+    source_release_name = str(internal.get("name") or "")
+    if "ad-inspector-debug" in source_release_name.casefold():
+        raise ValueError("diagnostic-only Internal release cannot be promoted to Production")
     production = _single_release(tracks, "production")
     if production.get("status") != "completed" or production.get("versionCodes") != [
         str(expected_production_code)
@@ -47,7 +50,7 @@ def make_plan(
         "flavor": flavor,
         "internal_code": expected_internal_code,
         "production_code": expected_production_code,
-        "source_release_name": internal.get("name") or "",
+        "source_release_name": source_release_name,
         "target_release": {
             "name": f"1.0.{expected_internal_code}",
             "versionCodes": [str(expected_internal_code)],

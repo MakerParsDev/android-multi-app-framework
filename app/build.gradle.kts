@@ -79,6 +79,13 @@ val releaseRevisionValue =
         pick("GITHUB_SHA"),
     ).firstOrNull { !it.isNullOrBlank() }.orEmpty().ifBlank { "local" }
 val releaseTrackValue = pick("PLAY_TRACK").orEmpty().ifBlank { "internal" }
+val adInspectorDebugEnabled =
+    providers
+        .gradleProperty("enableAdInspectorDebug")
+        .map { raw ->
+            raw.toBooleanStrictOrNull()
+                ?: error("Gradle property enableAdInspectorDebug must be true or false (resolved='$raw')")
+        }.orElse(false)
 val ciSmokeEnabled =
     providers
         .gradleProperty("ciSmoke")
@@ -387,6 +394,8 @@ android {
         buildConfigField("boolean", "CI_SMOKE", "false")
         manifestPlaceholders["ciSmokeFirebaseDisabled"] = "false"
         manifestPlaceholders["ciSmokeFirebaseEnabled"] = "true"
+        buildConfigField("boolean", "ENABLE_AD_INSPECTOR_DEBUG", adInspectorDebugEnabled.get().toString())
+        manifestPlaceholders["adInspectorDebugEnabled"] = adInspectorDebugEnabled.get().toString()
     }
 
     buildTypes {
