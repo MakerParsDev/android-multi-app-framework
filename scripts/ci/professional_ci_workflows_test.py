@@ -709,7 +709,16 @@ def test_ad_inspector_is_opt_in_and_limited_to_issue_337_internal_builds() -> No
     runner = (ROOT / "scripts/dev/open-ad-inspector.ps1").read_text(encoding="utf-8")
     assert "android.permission.DUMP" in runner
     assert "logcat -d -v epoch -s AdInspectorDebug" in runner
-    assert "AD_INSPECTOR_OPEN_REQUESTED" in runner
+    assert "shell cmd package resolve-activity --brief -n" in runner
+    assert "uiautomator dump $hierarchyPath" in runner
+    assert "shell cat $hierarchyPath" in runner
+    assert "$launchText -match 'Uygulamaya d?n|Return to app'" in runner
+    assert "Closing the normal full-screen app-open ad" in runner
+    assert "shell input keyevent KEYCODE_BACK" in runner
+    assert "$packageDetailsText = $packageDetails -join [Environment]::NewLine" in runner
+    assert "$shellPackageText = $shellPackage -join [Environment]::NewLine" in runner
+    assert "Ad units|Adapters|Privacy" in runner
+    assert "AD_INSPECTOR_OPEN_REQUESTED" not in runner
     assert "sessionId" not in runner
 
     for flavor in ("namazsurelerivedualarsesli", "ismiazamduasi"):
