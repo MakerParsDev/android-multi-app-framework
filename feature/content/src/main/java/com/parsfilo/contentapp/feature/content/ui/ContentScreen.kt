@@ -774,7 +774,7 @@ internal fun shouldUseCompactReader(heightDp: Float, fontScale: Float = 1f): Boo
 // Horizontally scroll the mode selector instead of stacking three tall rows.
 // Preserve 48dp minimum touch targets and large-text accessibility.
 internal fun shouldScrollReaderModes(widthDp: Float, fontScale: Float): Boolean =
-    widthDp < 360f || (fontScale >= 1.3f && widthDp < 600f)
+    widthDp < maxOf(360f, 195f * fontScale.coerceAtLeast(1f))
 
 // Scrolled mode chips need enough width for translated labels at large font scales.
 internal fun scrollableReaderModeWidthDp(fontScale: Float): Float = 120f * fontScale.coerceAtLeast(1f)
