@@ -665,6 +665,48 @@ def test_play_publisher_lock_matches_direct_requirement_pins() -> None:
         )
 
 
+def test_ad_inspector_is_opt_in_and_limited_to_issue_337_internal_builds() -> None:
+    workflow = load(".github/workflows/play-internal.yml")
+    event = workflow.get("on", workflow.get(True))
+    inputs = event["workflow_dispatch"]["inputs"]
+    inspector_input = inputs["enable_ad_inspector_debug"]
+    assert inspector_input["type"] == "boolean"
+    assert inspector_input["default"] is False
+
+    job = workflow["jobs"]["publish-internal"]
+    validate = named_step(job, "Validate release inputs")
+    assert "REQUESTED_AD_INSPECTOR_DEBUG" in job["env"]
+    assert "--enable-ad-inspector-debug" in validate["run"]
+    build = named_step(job, "Build one signed AAB with next Play version code")
+    assert "steps.release-inputs.outputs.enable_ad_inspector_debug" in build["env"]["ENABLE_AD_INSPECTOR_DEBUG"]
+    publish = named_step(job, "Publish exact attested AAB to Play internal")
+    assert "steps.release-inputs.outputs.release_name_prefix" in publish["env"]["RELEASE_NAME"]
+    assert "steps.release-inputs.outputs.enable_ad_inspector_debug" in publish["env"]["ENABLE_AD_INSPECTOR_DEBUG"]
+
+    release_script = (ROOT / "scripts/ci/build_play_internal_release.sh").read_text(
+        encoding="utf-8"
+    )
+    assert "ENABLE_AD_INSPECTOR_DEBUG" in release_script
+    assert "-PenableAdInspectorDebug=true" in release_script
+    assert "namazsurelerivedualarsesli|ismiazamduasi" in release_script
+
+    gradle = (ROOT / "app/build.gradle.kts").read_text(encoding="utf-8")
+    assert 'gradleProperty("enableAdInspectorDebug")' in gradle
+    assert 'buildConfigField("boolean", "ENABLE_AD_INSPECTOR_DEBUG"' in gradle
+    assert 'manifestPlaceholders["adInspectorDebugEnabled"]' in gradle
+
+    activity = (
+        ROOT / "app/src/main/java/com/parsfilo/contentapp/debug/AdInspectorDebugActivity.kt"
+    ).read_text(encoding="utf-8")
+    assert "BuildConfig.ENABLE_AD_INSPECTOR_DEBUG" in activity
+
+    for flavor in ("namazsurelerivedualarsesli", "ismiazamduasi"):
+        manifest = (ROOT / f"app/src/{flavor}/AndroidManifest.xml").read_text(
+            encoding="utf-8"
+        )
+        assert 'android:enabled="' + '$' + '{adInspectorDebugEnabled}"' in manifest
+        assert 'android:permission="android.permission.DUMP"' in manifest
+
 def main() -> int:
     tests = [value for key, value in globals().items() if key.startswith("test_") and callable(value)]
     for test in tests:
