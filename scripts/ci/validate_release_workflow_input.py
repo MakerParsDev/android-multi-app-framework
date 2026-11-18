@@ -10,12 +10,20 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from resolve_ci_flavor_matrix import load_flavors
 
 ALLOWED_RETENTION = {7, 14, 30}
+AD_INSPECTOR_DEBUG_FLAVORS = frozenset(
+    {"namazsurelerivedualarsesli", "ismiazamduasi"}
+)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--flavor", required=True)
     parser.add_argument("--retention-days", required=True)
+    parser.add_argument(
+        "--enable-ad-inspector-debug",
+        choices=("true", "false"),
+        default="false",
+    )
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[2]
     try:
@@ -35,6 +43,17 @@ def main() -> int:
     if retention not in ALLOWED_RETENTION:
         print("ERROR: retention days must be one of 7, 14, or 30", file=sys.stderr)
         return 1
+
+    enable_ad_inspector_debug = args.enable_ad_inspector_debug == "true"
+    if enable_ad_inspector_debug and args.flavor not in AD_INSPECTOR_DEBUG_FLAVORS:
+        allowed = ", ".join(sorted(AD_INSPECTOR_DEBUG_FLAVORS))
+        print(
+            "ERROR: Ad Inspector debug is only supported for the #337 test flavors: "
+            f"{allowed}",
+            file=sys.stderr,
+        )
+        return 1
+
     print(f"flavor={args.flavor}")
     package_name = package_by_flavor.get(args.flavor)
     if not isinstance(package_name, str) or not package_name.strip():
@@ -43,6 +62,9 @@ def main() -> int:
     print(f"capitalized={args.flavor[0].upper() + args.flavor[1:]}")
     print(f"package_name={package_name}")
     print(f"retention_days={retention}")
+    print(f"enable_ad_inspector_debug={str(enable_ad_inspector_debug).lower()}")
+    release_name_prefix = "internal-ad-inspector-debug" if enable_ad_inspector_debug else "internal"
+    print(f"release_name_prefix={release_name_prefix}")
     return 0
 
 

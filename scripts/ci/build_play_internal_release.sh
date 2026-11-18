@@ -8,6 +8,27 @@ cd "$repo_root"
 : "${RELEASE_CAPITALIZED:?RELEASE_CAPITALIZED is required}"
 : "${PLAY_SERVICE_ACCOUNT_JSON:?PLAY_SERVICE_ACCOUNT_JSON is required}"
 
+ad_inspector_gradle_args=()
+case "${ENABLE_AD_INSPECTOR_DEBUG:-false}" in
+  false)
+    ;;
+  true)
+    case "$RELEASE_FLAVOR" in
+      namazsurelerivedualarsesli|ismiazamduasi)
+        ad_inspector_gradle_args+=("-PenableAdInspectorDebug=true")
+        ;;
+      *)
+        echo "ERROR: Ad Inspector debug is only allowed for the two #337 test flavors" >&2
+        exit 1
+        ;;
+    esac
+    ;;
+  *)
+    echo "ERROR: ENABLE_AD_INSPECTOR_DEBUG must be true or false" >&2
+    exit 1
+    ;;
+esac
+
 cleanup_firebase() {
   rm -f -- "app/src/${RELEASE_FLAVOR}/google-services.json"
 }
@@ -33,6 +54,7 @@ python3 scripts/ci/verify_google_signin_config.py \
 python3 scripts/ci/performance_profile_policy.py validate-source --flavor "$RELEASE_FLAVOR"
 
 ./gradlew ":app:validate${RELEASE_CAPITALIZED}ReleaseBaselineProfileInBundle" \
+  "${ad_inspector_gradle_args[@]}" \
   --no-daemon \
   --no-configuration-cache \
   --stacktrace \
