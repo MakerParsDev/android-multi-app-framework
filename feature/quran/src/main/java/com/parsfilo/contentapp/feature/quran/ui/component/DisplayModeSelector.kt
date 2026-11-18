@@ -1,6 +1,7 @@
 package com.parsfilo.contentapp.feature.quran.ui.component
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -32,50 +33,59 @@ fun DisplayModeSelector(
     firstModeFocusRequester: FocusRequester? = null,
     previousFocusRequester: FocusRequester? = null,
 ) {
-    val largeText = LocalDensity.current.fontScale >= 1.3f
-    val modeWidth = if (largeText) Modifier.fillMaxWidth() else Modifier
-    FlowRow(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        ModeButton(
-            text = arabicLabel,
-            selected = currentMode == QuranDisplayMode.ARABIC,
-            largeText = largeText,
-            onClick = { onModeSelected(QuranDisplayMode.ARABIC) },
-            modifier = modeWidth.then(
-                if (firstModeFocusRequester != null) {
-                    Modifier
-                        .focusRequester(firstModeFocusRequester)
-                        .focusProperties {
-                            if (previousFocusRequester != null) {
-                                previous = previousFocusRequester
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val stackButtons = shouldStackDisplayModeButtons(
+            fontScale = LocalDensity.current.fontScale,
+            availableWidthDp = maxWidth.value,
+        )
+        val modeWidth = if (stackButtons) Modifier.fillMaxWidth() else Modifier
+        FlowRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            ModeButton(
+                text = arabicLabel,
+                selected = currentMode == QuranDisplayMode.ARABIC,
+                largeText = stackButtons,
+                onClick = { onModeSelected(QuranDisplayMode.ARABIC) },
+                modifier = modeWidth.then(
+                    if (firstModeFocusRequester != null) {
+                        Modifier
+                            .focusRequester(firstModeFocusRequester)
+                            .focusProperties {
+                                if (previousFocusRequester != null) {
+                                    previous = previousFocusRequester
+                                }
                             }
-                        }
-                } else {
-                    Modifier
-                },
-            ),
-        )
-        ModeButton(
-            text = latinLabel,
-            selected = currentMode == QuranDisplayMode.LATIN,
-            largeText = largeText,
-            onClick = { onModeSelected(QuranDisplayMode.LATIN) },
-            modifier = modeWidth,
-        )
-        ModeButton(
-            text = translationLabel,
-            selected = currentMode == QuranDisplayMode.TRANSLATION,
-            largeText = largeText,
-            onClick = { onModeSelected(QuranDisplayMode.TRANSLATION) },
-            modifier = modeWidth,
-        )
+                    } else {
+                        Modifier
+                    },
+                ),
+            )
+            ModeButton(
+                text = latinLabel,
+                selected = currentMode == QuranDisplayMode.LATIN,
+                largeText = stackButtons,
+                onClick = { onModeSelected(QuranDisplayMode.LATIN) },
+                modifier = modeWidth,
+            )
+            ModeButton(
+                text = translationLabel,
+                selected = currentMode == QuranDisplayMode.TRANSLATION,
+                largeText = stackButtons,
+                onClick = { onModeSelected(QuranDisplayMode.TRANSLATION) },
+                modifier = modeWidth,
+            )
+        }
     }
 }
+
+/** Keep enlarged reader controls stacked only where a row cannot remain usable. */
+internal fun shouldStackDisplayModeButtons(fontScale: Float, availableWidthDp: Float): Boolean =
+    fontScale >= 1.3f && availableWidthDp < 600f
 
 @Composable
 private fun ModeButton(
