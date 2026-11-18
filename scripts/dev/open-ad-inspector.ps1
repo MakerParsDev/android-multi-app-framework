@@ -51,15 +51,22 @@ if ($LASTEXITCODE -ne 0 -or -not ($targetInstall -match '^package:')) {
 }
 
 $packageDetails = & $adb -s $DeviceSerial shell dumpsys package $PackageName 2>&1
-if ($LASTEXITCODE -ne 0 -or $packageDetails -notmatch 'com\.parsfilo\.contentapp\.debug\.AdInspectorDebugActivity') {
-    throw "The installed $PackageName build does not contain the ADB-only Ad Inspector entry point. Update the Internal app first."
+if ($LASTEXITCODE -ne 0) {
+    throw "Could not inspect installed target package $PackageName."
 }
-if ($packageDetails -notmatch 'installerPackageName=com\.android\.vending') {
+$inspectorComponent = $PackageName + '/com.parsfilo.contentapp.debug.AdInspectorDebugActivity'
+$resolvedComponent = & $adb -s $DeviceSerial shell cmd package resolve-activity --brief -n $inspectorComponent 2>&1
+if ($LASTEXITCODE -ne 0 -or -not (($resolvedComponent -join [Environment]::NewLine).Contains($inspectorComponent))) {
+    throw "The installed $PackageName build does not expose the protected Ad Inspector activity. Update the Internal app first."
+}
+$packageDetailsText = $packageDetails -join [Environment]::NewLine
+if ($packageDetailsText -notmatch 'installerPackageName=com\.android\.vending') {
     throw 'Target app is not Play-installed; refusing to run this Play-build diagnostic.'
 }
 
 $shellPackage = & $adb -s $DeviceSerial shell dumpsys package com.android.shell 2>&1
-if ($shellPackage -notmatch 'android\.permission\.DUMP: granted=true') {
+$shellPackageText = $shellPackage -join [Environment]::NewLine
+if ($shellPackageText -notmatch 'android\.permission\.DUMP: granted=true') {
     throw 'ADB shell does not hold android.permission.DUMP on this device.'
 }
 
@@ -93,7 +100,6 @@ function Get-TargetPackageFingerprint {
 $before = Get-TargetPackageFingerprint
 $action = 'com.parsfilo.contentapp.action.OPEN_AD_INSPECTOR'
 $mainComponent = $PackageName + '/com.parsfilo.contentapp.MainActivity'
-$inspectorComponent = $PackageName + '/com.parsfilo.contentapp.debug.AdInspectorDebugActivity'
 
 Write-Output "Target package: $PackageName"
 Write-Output "Device model: $model"
@@ -102,6 +108,35 @@ $mainStart = & $adb -s $DeviceSerial shell am start -W -n $mainComponent 2>&1
 $mainStart | ForEach-Object { Write-Output $_ }
 if ($LASTEXITCODE -ne 0 -or ($mainStart -join [Environment]::NewLine) -match 'Error:|Permission Denial') {
     throw 'Could not start the existing MainActivity.'
+}
+
+# A normal app-open ad can cover the Inspector even when the SDK has launched it.
+# Give startup time to settle, then dismiss only an identified full-screen ad.
+Start-Sleep -Seconds 3
+$launchForeground = @(
+    & $adb -s $DeviceSerial shell dumpsys activity activities |
+        Select-String 'mResumedActivity|topResumedActivity' |
+        ForEach-Object { $_.Line.Trim() }
+)
+if (($launchForeground -join ' ') -match 'com\.google\.android\.gms\.ads') {
+    $launchUiPath = '/sdcard/ad-inspector-337-launch.xml'
+    try {
+        & $adb -s $DeviceSerial shell uiautomator dump $launchUiPath | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            $launchUi = & $adb -s $DeviceSerial shell cat $launchUiPath
+            $launchText = $launchUi -join [Environment]::NewLine
+            if ($launchText -match 'Uygulamaya d?n|Return to app' -and $launchText -notmatch 'Ad Inspector') {
+                Write-Output 'Closing the normal full-screen app-open ad before Inspector diagnostics.'
+                & $adb -s $DeviceSerial shell input keyevent KEYCODE_BACK | Out-Null
+                if ($LASTEXITCODE -ne 0) {
+                    throw 'Could not close the full-screen ad before Inspector diagnostics.'
+                }
+                Start-Sleep -Seconds 2
+            }
+        }
+    } finally {
+        & $adb -s $DeviceSerial shell rm -f $launchUiPath | Out-Null
+    }
 }
 
 Write-Output 'Calling the protected in-app Ad Inspector API entry point (no shake, no install).'
@@ -116,55 +151,54 @@ if ($LASTEXITCODE -ne 0 -or ($inspectorStart -join [Environment]::NewLine) -matc
     throw 'ADB could not start the DUMP-protected Ad Inspector entry point.'
 }
 
-$openRequested = $false
-$deadline = [DateTimeOffset]::UtcNow.AddSeconds(70)
-while ([DateTimeOffset]::UtcNow -lt $deadline) {
-    $logs = & $adb -s $DeviceSerial shell logcat -d -v epoch -s AdInspectorDebug 2>&1
-    $recentLogs = @(
-        foreach ($line in $logs) {
-            if ($line -match '^\s*(?<epoch>\d+(?:\.\d+)?)' -and [double]$Matches.epoch -ge $startEpoch) {
-                $line
+# Release R8 can remove informational Log.i entries; observable SDK UI is the success criterion.
+# Keep error/consent gating, but do not require informational logcat markers.
+$uiVisible = $false
+$deadline = [DateTimeOffset]::UtcNow.AddSeconds(90)
+$foreground = @()
+$hierarchyPath = '/sdcard/ad-inspector-337-ui.xml'
+try {
+    while ([DateTimeOffset]::UtcNow -lt $deadline) {
+        $logs = & $adb -s $DeviceSerial shell logcat -d -v epoch -s AdInspectorDebug 2>&1
+        $recentLogs = @(
+            foreach ($line in $logs) {
+                if ($line -match '^\s*(?<epoch>\d+(?:\.\d+)?)' -and [double]$Matches.epoch -ge $startEpoch) {
+                    $line
+                }
+            }
+        )
+        $recentText = $recentLogs -join [Environment]::NewLine
+        if ($recentText -match 'AD_INSPECTOR_BLOCKED|AD_INSPECTOR_ERROR') {
+            throw 'Ad Inspector was blocked or returned an SDK error. Consent was not reset or bypassed.'
+        }
+
+        $foreground = @(
+            & $adb -s $DeviceSerial shell dumpsys activity activities |
+                Select-String 'mResumedActivity|topResumedActivity' |
+                ForEach-Object { $_.Line.Trim() }
+        )
+        if (($foreground -join ' ') -match 'com\.google\.android\.gms\.ads') {
+            # Android 9's "uiautomator dump /dev/tty" reports a path, not the XML.
+            $dumpResult = & $adb -s $DeviceSerial shell uiautomator dump $hierarchyPath 2>&1
+            if ($LASTEXITCODE -eq 0) {
+                $hierarchy = & $adb -s $DeviceSerial shell cat $hierarchyPath 2>&1
+                if ($LASTEXITCODE -eq 0) {
+                    $uiText = $hierarchy -join [Environment]::NewLine
+                    if ($uiText -match 'Ad Inspector' -and $uiText -match 'Ad units|Adapters|Privacy') {
+                        $uiVisible = $true
+                        break
+                    }
+                }
             }
         }
-    )
-    $recentText = $recentLogs -join [Environment]::NewLine
-
-    if ($recentText -match 'AD_INSPECTOR_BLOCKED|AD_INSPECTOR_ERROR') {
-        throw "Ad Inspector was blocked or returned an SDK error: $recentText"
+        Start-Sleep -Seconds 2
     }
-    if ($recentText -match 'AD_INSPECTOR_OPEN_REQUESTED') {
-        $openRequested = $true
-        break
-    }
-    Start-Sleep -Seconds 1
-}
-if (-not $openRequested) {
-    throw 'Ad Inspector did not reach SDK-ready state within 70 seconds. UMP consent was not reset or bypassed.'
-}
-
-$uiVisible = $false
-$uiDeadline = [DateTimeOffset]::UtcNow.AddSeconds(30)
-$foreground = @()
-while ([DateTimeOffset]::UtcNow -lt $uiDeadline) {
-    $hierarchy = & $adb -s $DeviceSerial shell uiautomator dump /dev/tty 2>&1
-    if (($hierarchy -join [Environment]::NewLine) -match 'Ad Inspector|Reklam inceleyici') {
-        $uiVisible = $true
-        break
-    }
-
-    $foreground = @(
-        & $adb -s $DeviceSerial shell dumpsys activity activities |
-            Select-String 'mResumedActivity|topResumedActivity' |
-            ForEach-Object { $_.Line.Trim() }
-    )
-    if (($foreground -join ' ') -match 'AdInspector|com\.google\.android\.gms\.ads') {
-        $uiVisible = $true
-        break
-    }
-    Start-Sleep -Seconds 2
+} finally {
+    # Only remove our own temporary UI hierarchy; never touch app storage.
+    & $adb -s $DeviceSerial shell rm -f $hierarchyPath | Out-Null
 }
 if (-not $uiVisible) {
-    throw "The SDK API was called, but the Ad Inspector UI could not be confirmed. Foreground: $($foreground -join ' | ')"
+    throw 'Ad Inspector UI could not be confirmed within 90 seconds. Normal UMP consent was not bypassed.'
 }
 
 $after = Get-TargetPackageFingerprint
