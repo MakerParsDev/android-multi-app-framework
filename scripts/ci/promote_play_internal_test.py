@@ -101,6 +101,18 @@ class PromotionTests(unittest.TestCase):
             "name": "1.0.76", "versionCodes": ["76"], "status": "completed",
         })
 
+    def test_ad_inspector_diagnostic_internal_release_cannot_be_promoted(self):
+        tracks = starting_tracks()
+        tracks[0]["releases"][0]["name"] = (
+            "internal-ad-inspector-debug-source-sha"
+        )
+        with self.assertRaisesRegex(ValueError, "diagnostic-only"):
+            make_plan(
+                tracks,
+                flavor="namazsurelerivedualarsesli",
+                expected_internal_code=76,
+                expected_production_code=61,
+            )
     def test_preview_never_updates_or_commits(self):
         service = FakeService()
         result = promote(service, package_name="com.parsfilo.amenerrasulu",
