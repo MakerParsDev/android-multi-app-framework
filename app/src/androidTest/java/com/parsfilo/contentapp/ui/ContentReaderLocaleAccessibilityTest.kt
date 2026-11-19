@@ -56,7 +56,7 @@ class ContentReaderLocaleAccessibilityTest {
     @Test
     fun germanFullModeLabelsRemainVisibleAt411dpAnd200Percent() {
         showReader("de-DE", 411, 2f)
-        assertGermanModeFits()
+        assertAllGermanModesVisibleWithoutScrolling()
     }
 
     @Test
@@ -95,6 +95,26 @@ class ContentReaderLocaleAccessibilityTest {
         rule.onNodeWithText(label).assertIsDisplayed()
         rule.onNodeWithTag("content_rewards_menu").performClick()
         rule.runOnIdle { assertEquals("Rewards action must fire", 1, rewardsOpened) }
+    }
+
+    private fun assertAllGermanModesVisibleWithoutScrolling() {
+        listOf("Arabisch", "Latein", "\u00DCbersetzung").forEach { label ->
+            val node = rule.onNodeWithText(label, useUnmergedTree = true)
+                .assertIsDisplayed()
+                .fetchSemanticsNode()
+            val layouts = mutableListOf<TextLayoutResult>()
+            assertTrue(
+                "$label must expose text layout",
+                node.config[SemanticsActions.GetTextLayoutResult].action?.invoke(layouts) == true,
+            )
+            val layout = layouts.single()
+            assertFalse("$label must remain fully visible", layout.didOverflowHeight)
+            assertEquals(
+                "$label must not be truncated, even when wrapped",
+                label.length,
+                layout.getLineEnd(layout.lineCount - 1, visibleEnd = true),
+            )
+        }
     }
 
     private fun assertGermanModeFits() {

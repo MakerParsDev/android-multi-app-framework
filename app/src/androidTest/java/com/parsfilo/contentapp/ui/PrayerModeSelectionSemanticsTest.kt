@@ -17,6 +17,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -111,6 +112,28 @@ class PrayerModeSelectionSemanticsTest {
         }
 
         val labels = listOf("Arabisch", "Latein", "Übersetzung")
+        if (widthDp == 411) {
+            // Regular-width phones must expose all three choices immediately.
+            // Longer translated labels may wrap, but cannot be truncated.
+            labels.forEach { label ->
+                val node = rule.onNodeWithText(label, useUnmergedTree = true)
+                    .assertIsDisplayed()
+                    .fetchSemanticsNode()
+                val layouts = mutableListOf<TextLayoutResult>()
+                assertTrue(
+                    "$label must expose its text layout",
+                    node.config[SemanticsActions.GetTextLayoutResult].action?.invoke(layouts) == true,
+                )
+                val layout = layouts.single()
+                assertFalse("$label must remain readable", layout.didOverflowHeight)
+                assertEquals(
+                    "$label must retain every character even when wrapped",
+                    label.length,
+                    layout.getLineEnd(layout.lineCount - 1, visibleEnd = true),
+                )
+            }
+            return
+        }
         labels.forEach { label ->
             val node = rule.onNodeWithText(label, useUnmergedTree = true).fetchSemanticsNode()
             val layouts = mutableListOf<TextLayoutResult>()
