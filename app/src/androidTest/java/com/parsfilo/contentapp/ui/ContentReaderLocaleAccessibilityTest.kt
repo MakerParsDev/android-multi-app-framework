@@ -56,7 +56,13 @@ class ContentReaderLocaleAccessibilityTest {
     @Test
     fun germanFullModeLabelsRemainVisibleAt411dpAnd200Percent() {
         showReader("de-DE", 411, 2f)
-        assertAllGermanModesVisibleWithoutScrolling()
+        assertLongModeLabelsStayOnOneLine(listOf("Arabisch", "Latein", "Übersetzung"))
+    }
+
+    @Test
+    fun englishFullModeLabelsStayOnOneLineAt411dpAnd200Percent() {
+        showReader("en-US", 411, 2f)
+        assertLongModeLabelsStayOnOneLine(listOf("Arabic", "Latin", "Translation"))
     }
 
     @Test
@@ -97,8 +103,8 @@ class ContentReaderLocaleAccessibilityTest {
         rule.runOnIdle { assertEquals("Rewards action must fire", 1, rewardsOpened) }
     }
 
-    private fun assertAllGermanModesVisibleWithoutScrolling() {
-        listOf("Arabisch", "Latein", "\u00DCbersetzung").forEach { label ->
+    private fun assertLongModeLabelsStayOnOneLine(labels: List<String>) {
+        labels.forEach { label ->
             val node = rule.onNodeWithText(label, useUnmergedTree = true)
                 .assertIsDisplayed()
                 .fetchSemanticsNode()
@@ -108,9 +114,10 @@ class ContentReaderLocaleAccessibilityTest {
                 node.config[SemanticsActions.GetTextLayoutResult].action?.invoke(layouts) == true,
             )
             val layout = layouts.single()
+            assertEquals("$label must stay on one line at 200%", 1, layout.lineCount)
             assertFalse("$label must remain fully visible", layout.didOverflowHeight)
             assertEquals(
-                "$label must not be truncated, even when wrapped",
+                "$label must not be truncated",
                 label.length,
                 layout.getLineEnd(layout.lineCount - 1, visibleEnd = true),
             )

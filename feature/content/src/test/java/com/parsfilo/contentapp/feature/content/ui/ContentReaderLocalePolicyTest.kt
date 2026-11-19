@@ -72,4 +72,13 @@ class ContentReaderLocalePolicyTest {
         assertEquals(120f, scrollableReaderModeWidthDp(1f), 0f)
         assertEquals(240f, scrollableReaderModeWidthDp(2f), 0f)
     }
+
+    @Test
+    fun largeLocalizedModeLabelsGetProportionalSpaceWithoutReducingFontSize() {
+        assertEquals(1f, readerModeWeight("Translation", 1.5f), 0f)
+        assertEquals(8f, readerModeWeight("Arabisch", 2f), 0f)
+        assertEquals(6f, readerModeWeight("Latein", 2f), 0f)
+        assertEquals(11f, readerModeWeight("Übersetzung", 2f), 0f)
+        assertEquals(1f, readerModeWeight("", 2f), 0f)
+    }
 }
