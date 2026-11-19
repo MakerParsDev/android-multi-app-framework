@@ -9,7 +9,6 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -48,6 +48,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -478,7 +479,11 @@ private fun PlansList(
                     },
                     shape = RoundedCornerShape(dimens.radiusMedium)
                 )
-                .clickable { selectedPackageId = productPackage.id },
+                .selectable(
+                    selected = isSelected,
+                    role = Role.RadioButton,
+                    onClick = { selectedPackageId = productPackage.id }
+                ),
             colors = CardDefaults.cardColors(
                 containerColor = if (isSelected) {
                     MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
@@ -492,28 +497,35 @@ private fun PlansList(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(dimens.space16),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(dimens.space12),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = planLabel,
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
                 )
-                Box(contentAlignment = Alignment.CenterEnd) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(dimens.space4)
+                ) {
                     Text(
                         text = priceText,
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.End
                     )
                     if (isSelected) {
                         Text(
                             text = stringResource(R.string.billing_selected_badge),
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = dimens.space20 + dimens.space2)
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.End
                         )
                     }
                 }
