@@ -232,8 +232,12 @@ class AdOrchestratorPreloadGateTest {
         adsAllowed.value = true
         orchestrator.updateSessionContext(activeRoute = "prayer_list")
         runCurrent()
-        // The SDK-ready observer and route-hint can each legitimately request a load.
-        verify(atLeast = 1) { interstitial.loadAd(any(), any(), any(), any(), any()) }
+        // Prayer-library navigation never shows interstitials; do not warm unused ads.
+        if (BuildConfig.FLAVOR_NAME == "namazsurelerivedualarsesli") {
+            verify(exactly = 0) { interstitial.loadAd(any(), any(), any(), any(), any()) }
+        } else {
+            verify(atLeast = 1) { interstitial.loadAd(any(), any(), any(), any(), any()) }
+        }
         verify(atLeast = 1) { appOpen.loadAd(any(), any(), any()) }
 
         // Isolate the revocation period: no *new* request is permitted.
@@ -317,11 +321,12 @@ class AdOrchestratorPreloadGateTest {
         verify(exactly = 0) { interstitial.loadAd(any(), any(), any(), any(), any()) }
         verify(exactly = 0) { appOpen.loadAd(any(), any(), any()) }
 
-        // SDK readiness still enables interstitials, but a cold-start app-open
-        // request cannot be shown and must wait for the background-resume path.
+        // An initialized SDK must not preload an interstitial that prayer-library
+        // navigation cannot display; other families keep the existing behavior.
         sdkReady.value = true
         runCurrent()
-        verify(exactly = 1) { interstitial.loadAd(any(), any(), any(), any(), any()) }
+        val expectedLoads = if (BuildConfig.FLAVOR_NAME == "namazsurelerivedualarsesli") 0 else 1
+        verify(exactly = expectedLoads) { interstitial.loadAd(any(), any(), any(), any(), any()) }
         verify(exactly = 0) { appOpen.loadAd(any(), any(), any()) }
     }
 
@@ -434,22 +439,23 @@ class AdOrchestratorPreloadGateTest {
         runCurrent()
 
         // Both privacy and ad-show gates can be open while GMA initialization is pending.
+        val expectedLoads = if (BuildConfig.FLAVOR_NAME == "namazsurelerivedualarsesli") 0 else 1
         AdsConsentRuntimeState.update(true)
         runCurrent()
         verify(exactly = 0) { interstitial.loadAd(any(), any(), any(), any(), any()) }
 
         sdkReady.value = true
         runCurrent()
-        verify(exactly = 1) { interstitial.loadAd(any(), any(), any(), any(), any()) }
+        verify(exactly = expectedLoads) { interstitial.loadAd(any(), any(), any(), any(), any()) }
 
         // A paid or temporarily ad-free user must not preload, even with the SDK ready.
         adsAllowed.value = false
         runCurrent()
-        verify(exactly = 1) { interstitial.loadAd(any(), any(), any(), any(), any()) }
+        verify(exactly = expectedLoads) { interstitial.loadAd(any(), any(), any(), any(), any()) }
 
         adsAllowed.value = true
         runCurrent()
-        verify(exactly = 2) { interstitial.loadAd(any(), any(), any(), any(), any()) }
+        verify(exactly = expectedLoads * 2) { interstitial.loadAd(any(), any(), any(), any(), any()) }
 
         // Short-content flavors have fewer than 12 verses and cannot compose
         // an inline native slot. Avoid loading ads they can never display.
@@ -470,6 +476,6 @@ class AdOrchestratorPreloadGateTest {
         // SDK ready alone cannot reopen the ad gate after consent is revoked.
         assertEquals(false, AdsConsentRuntimeState.canRequestAds.value)
         runCurrent()
-        verify(exactly = 2) { interstitial.loadAd(any(), any(), any(), any(), any()) }
+        verify(exactly = expectedLoads * 2) { interstitial.loadAd(any(), any(), any(), any(), any()) }
     }
 }
