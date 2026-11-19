@@ -33,6 +33,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -180,6 +182,7 @@ fun OtherAppsScreen(
 fun AppItem(app: OtherApp, onClick: () -> Unit) {
     val dimens = LocalDimens.current
     val colorScheme = MaterialTheme.colorScheme
+    val installAccessibleLabel = stringResource(R.string.other_apps_install_named, app.appName)
     AppCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(dimens.space14),
@@ -256,6 +259,7 @@ fun AppItem(app: OtherApp, onClick: () -> Unit) {
             AppButton(
                 text = stringResource(R.string.other_apps_install),
                 onClick = onClick,
+                modifier = Modifier.semantics { contentDescription = installAccessibleLabel },
                 shape = RoundedCornerShape(dimens.radiusXLarge),
                 colors = ButtonDefaults.buttonColors(containerColor = colorScheme.primary),
                 contentPadding = PaddingValues(horizontal = dimens.space12, vertical = dimens.space8),
