@@ -540,8 +540,8 @@ private fun PlansList(
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
-            disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
-            disabledContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.55f)
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            disabledContentColor = MaterialTheme.colorScheme.onSurface
         ),
         shape = RoundedCornerShape(dimens.radiusMedium)
     ) {
@@ -551,7 +551,11 @@ private fun PlansList(
             ),
             fontWeight = FontWeight.Bold,
             fontSize = 16.sp,
-            color = MaterialTheme.colorScheme.onPrimary
+            color = if (selectedPackageId == null) {
+                MaterialTheme.colorScheme.onSurface
+            } else {
+                MaterialTheme.colorScheme.onPrimary
+            }
         )
     }
 

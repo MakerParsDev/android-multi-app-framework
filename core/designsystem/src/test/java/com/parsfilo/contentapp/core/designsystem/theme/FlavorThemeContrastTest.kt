@@ -78,6 +78,21 @@ class FlavorThemeContrastTest {
     }
 
     @Test
+    fun disabledActionLabelsHaveReadableNeutralColorsInLightAndDarkThemes() {
+        flavorKeys.forEach { flavor ->
+            val tokens = FlavorColors.forFlavor(flavor)
+            assertTrue(
+                "$flavor light disabled button",
+                contrast(tokens.onSurface, tokens.surfaceVariant) >= 4.5f,
+            )
+        }
+        assertTrue(
+            "dark disabled button",
+            contrast(Color(0xFFE8E6F0), Color(0xFF1A1E2A)) >= 4.5f,
+        )
+    }
+
+    @Test
     fun alreadyAccessibleDarkAccentIsPreserved() {
         val accent = Color(0xFFC07818)
         assertEquals(accent, accessibleDarkAccent(accent))
