@@ -723,12 +723,16 @@ fun BottomModeSelector(
     onModeSelected: (DisplayMode) -> Unit
 ) {
     val dimens = LocalDimens.current
+    val fontScale = LocalDensity.current.fontScale
+    val arabicLabel = stringResource(R.string.content_mode_arabic)
+    val latinLabel = stringResource(R.string.content_mode_latin)
+    val translationLabel = stringResource(R.string.content_mode_turkish)
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = dimens.space6, vertical = dimens.space2)
     ) {
-        val scrollModes = shouldScrollReaderModes(maxWidth.value, LocalDensity.current.fontScale)
+        val scrollModes = shouldScrollReaderModes(maxWidth.value, fontScale)
         val scrollState = rememberScrollState()
         Row(
             modifier =
@@ -738,29 +742,30 @@ fun BottomModeSelector(
                     .selectableGroup(),
             horizontalArrangement = Arrangement.spacedBy(dimens.space8),
         ) {
-            val itemModifier =
-                if (scrollModes) {
-                    Modifier.width(scrollableReaderModeWidthDp(LocalDensity.current.fontScale).dp)
-                } else {
-                    Modifier.weight(1f)
-                }
+            val scrolledModifier = Modifier.width(scrollableReaderModeWidthDp(fontScale).dp)
+            val arabicModifier =
+                if (scrollModes) scrolledModifier else Modifier.weight(readerModeWeight(arabicLabel, fontScale))
+            val latinModifier =
+                if (scrollModes) scrolledModifier else Modifier.weight(readerModeWeight(latinLabel, fontScale))
+            val translationModifier =
+                if (scrollModes) scrolledModifier else Modifier.weight(readerModeWeight(translationLabel, fontScale))
             ModeButton(
-                text = stringResource(R.string.content_mode_arabic),
+                text = arabicLabel,
                 isSelected = currentMode == DisplayMode.ARABIC,
                 onClick = { onModeSelected(DisplayMode.ARABIC) },
-                modifier = itemModifier,
+                modifier = arabicModifier,
             )
             ModeButton(
-                text = stringResource(R.string.content_mode_latin),
+                text = latinLabel,
                 isSelected = currentMode == DisplayMode.LATIN,
                 onClick = { onModeSelected(DisplayMode.LATIN) },
-                modifier = itemModifier,
+                modifier = latinModifier,
             )
             ModeButton(
-                text = stringResource(R.string.content_mode_turkish),
+                text = translationLabel,
                 isSelected = currentMode == DisplayMode.TURKISH,
                 onClick = { onModeSelected(DisplayMode.TURKISH) },
-                modifier = itemModifier,
+                modifier = translationModifier,
             )
         }
     }
@@ -778,6 +783,11 @@ internal fun shouldScrollReaderModes(widthDp: Float, fontScale: Float): Boolean 
 
 // Scrolled mode chips need enough width for translated labels at large font scales.
 internal fun scrollableReaderModeWidthDp(fontScale: Float): Float = 120f * fontScale.coerceAtLeast(1f)
+
+// Preserve large accessibility fonts while distributing chip widths by
+// the full localized label rather than giving every mode equal space.
+internal fun readerModeWeight(label: String, fontScale: Float): Float =
+    if (fontScale >= 1.8f) label.length.coerceAtLeast(1).toFloat() else 1f
 
 @Composable
 private fun ContentLoadingSkeleton(appName: String) {
