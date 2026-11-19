@@ -115,6 +115,14 @@ internal fun nativeBootstrapPlacement(
     }
 }
 
+/**
+ * Prayer-library detail navigation is intentionally uninterrupted: it never
+ * asks to show a navigation interstitial. Do not request unused inventory.
+ * The other product families retain their existing capped navigation ads.
+ */
+internal fun shouldPreloadNavigationInterstitial(family: ContentFamily): Boolean =
+    family != ContentFamily.PRAYER_LIBRARY
+
 @Singleton
 class AdOrchestrator
     @Inject
@@ -965,17 +973,21 @@ class AdOrchestrator
                 includeAppOpenWarmup,
                 reason.analyticsValue,
             )
-            interstitialAdManager.loadAd(
-                context,
-                AppAdUnitIds.resolvePlacement(
+            if (shouldPreloadNavigationInterstitial(AppProductDefinition.current.contentFamily)) {
+                interstitialAdManager.loadAd(
                     context,
+                    AppAdUnitIds.resolvePlacement(
+                        context,
+                        AdPlacement.INTERSTITIAL_NAV_BREAK,
+                        BuildConfig.USE_TEST_ADS,
+                    ),
                     AdPlacement.INTERSTITIAL_NAV_BREAK,
-                    BuildConfig.USE_TEST_ADS,
-                ),
-                AdPlacement.INTERSTITIAL_NAV_BREAK,
-                adSessionContext.activeRoute,
-                loadReason = reason.analyticsValue,
-            )
+                    adSessionContext.activeRoute,
+                    loadReason = reason.analyticsValue,
+                )
+            } else {
+                Timber.d("Interstitial bootstrap skipped: prayer-library routes have no show trigger")
+            }
             val nativePlacement =
                 nativeBootstrapPlacement(
                     family = AppProductDefinition.current.contentFamily,
@@ -1063,7 +1075,8 @@ class AdOrchestrator
                 if (!policy.isHotInterstitialRoute(route)) return@launch
 
                 val interstitialPlacement = AdPlacement.INTERSTITIAL_NAV_BREAK
-                if (policy.shouldUseAggressiveInterstitialPreload(context.packageName) &&
+                if (shouldPreloadNavigationInterstitial(AppProductDefinition.current.contentFamily) &&
+                    policy.shouldUseAggressiveInterstitialPreload(context.packageName) &&
                     policy.isInterstitialPlacementEnabled(interstitialPlacement) &&
                     !policy.isBlockedContext(route)
                 ) {
