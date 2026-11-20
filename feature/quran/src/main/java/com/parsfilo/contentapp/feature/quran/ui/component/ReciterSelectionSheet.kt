@@ -1,18 +1,24 @@
 package com.parsfilo.contentapp.feature.quran.ui.component
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.parsfilo.contentapp.feature.quran.config.QuranApiConfig
 
@@ -24,7 +30,22 @@ fun ReciterSelectionSheet(
     onSelect: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        dragHandle = {
+            // Keep Material's compact visual bar, but expose a full-size
+            // accessibility node and gesture target for the reciter sheet.
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .testTag("quran_reciter_drag_handle")
+                    .semantics(mergeDescendants = true) {},
+                contentAlignment = Alignment.Center,
+            ) {
+                BottomSheetDefaults.DragHandle()
+            }
+        },
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
