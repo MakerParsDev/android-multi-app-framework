@@ -54,12 +54,14 @@ data class AdSessionContext(
 )
 
 /**
- * Keep an existing reading task visible after a brief app/background switch.
- * App-open ads remain eligible on lists, settings and other real breakpoints.
+ * Keep reading and prayer selection uninterrupted after a brief app/background switch.
+ * Most lists and settings retain their normal app-open eligibility, but the
+ * prayer-library home list is already an active tap target on resume.
  */
 private val appOpenReadingRoutes =
     setOf(
         AppRoute.Content.route,
+        AppRoute.PrayerList.route,
         AppRoute.MiraclesDetail.route.substringBefore('/'),
         AppRoute.PrayerDetail.route.substringBefore('/'),
         AppRoute.QuranSuraDetail.route.substringBefore('/'),
