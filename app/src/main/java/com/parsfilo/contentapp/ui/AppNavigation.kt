@@ -94,9 +94,8 @@ fun AppNavHost(
             resolveHomeStartDestination(productDefinition)
         }
     val coroutineScope = rememberCoroutineScope()
-    // First entry into reading content should never require watching an ad.
+    // Miracles currently caps later navigation breaks; Quran reading is always direct.
     var hasOpenedMiraclesDetail by remember { mutableStateOf(false) }
-    var hasOpenedQuranDetail by remember { mutableStateOf(false) }
     var rewardedInterstitialIntroRequest by remember {
         mutableStateOf<RewardedInterstitialIntroRequest?>(null)
     }
@@ -300,29 +299,16 @@ fun AppNavHost(
                     }
                     QuranSuraListRoute(
                         onSuraClick = { suraNumber ->
-                            val destination = AppRoute.QuranSuraDetail.createRoute(suraNumber)
-                            val shouldRequestAd = shouldRequestFirstDetailInterstitial(
-                                hasOpenedDetail = hasOpenedQuranDetail,
-                                hasHostActivity = hostActivity != null,
-                            )
-                            hasOpenedQuranDetail = true
-                            if (!shouldRequestAd) {
+                            // Reading selection must never launch a full-screen ad;
+                            // keep the same uninterrupted contract as saved-position resume.
+                            navigateToQuranReading(suraNumber) { destination ->
                                 navController.navigate(destination)
-                            } else {
-                                requestInterstitialAd(
-                                    placement = AdPlacement.INTERSTITIAL_NAV_BREAK,
-                                    route = AppRoute.QuranSuraList.route,
-                                    triggerKind = InterstitialTriggerKind.NAV_BREAK,
-                                    onAdDismissed = { navController.navigate(destination) },
-                                )
                             }
                         },
                         onLastReadClick = { suraNumber, ayahNumber ->
-                            // A user's saved reading position is a direct resume action, not an ad break.
-                            hasOpenedQuranDetail = true
-                            navController.navigate(
-                                AppRoute.QuranSuraDetail.createRoute(suraNumber, ayahNumber),
-                            )
+                            navigateToQuranReading(suraNumber, ayahNumber) { destination ->
+                                navController.navigate(destination)
+                            }
                         },
                         onBookmarksClick = {
                             navController.navigate(
@@ -850,7 +836,16 @@ private data class RewardedInterstitialIntroRequest(
     val onRewardEarned: () -> Unit,
 )
 
-/** First detail opening is uninterrupted; later navigation remains eligible for capped ads. */
+/** Quran reading actions always dispatch directly, without full-screen ad callbacks. */
+internal fun navigateToQuranReading(
+    suraNumber: Int,
+    ayahNumber: Int? = null,
+    navigate: (String) -> Unit,
+) {
+    navigate(AppRoute.QuranSuraDetail.createRoute(suraNumber, ayahNumber))
+}
+
+/** Miracles first detail opening is uninterrupted; later breaks are capped. */
 internal fun shouldRequestFirstDetailInterstitial(
     hasOpenedDetail: Boolean,
     hasHostActivity: Boolean,
