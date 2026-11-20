@@ -680,6 +680,7 @@ dependencies {
     // MediaSessionService is exercised only in the dedicated API31 instrumented test.
     androidTestImplementation(libs.androidx.media3.session)
     androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.play.billing.ktx)
     androidTestImplementation(libs.androidx.room.runtime)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
