@@ -99,6 +99,13 @@ class QuranReaderAccessibilityDeviceTest {
         val bookmark = rule.onNodeWithTag("quran_ayah_1_bookmark").fetchSemanticsNode().boundsInRoot
         val play = rule.onNodeWithTag("quran_ayah_1_play").fetchSemanticsNode().boundsInRoot
         assertTrue(bookmark.left < play.left)
+        // Material's expanded pointer area is not a substitute for a full-size
+        // accessibility semantics hit target in the signed Play UI hierarchy.
+        val minimumTouchPixels = 48f * ctx.resources.displayMetrics.density
+        assertTrue("Verse bookmark must expose a 48dp target", bookmark.width >= minimumTouchPixels - 1f)
+        assertTrue("Verse bookmark must expose a 48dp target", bookmark.height >= minimumTouchPixels - 1f)
+        assertTrue("Verse playback must expose a 48dp target", play.width >= minimumTouchPixels - 1f)
+        assertTrue("Verse playback must expose a 48dp target", play.height >= minimumTouchPixels - 1f)
         rule.onNodeWithText(ayah.arabic, useUnmergedTree = true).assertExists()
         rule.runOnIdle {
             assertEquals(listOf("bookmark", "play"), actions)
