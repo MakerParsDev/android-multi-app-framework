@@ -427,6 +427,31 @@ class AdManagerUmpCallbacksTest {
     }
 
     @Test
+    fun privacyOptionsSuccessAlreadyRefreshesConsentBeforeNotifyingSettings() {
+        every { consentInfo.privacyOptionsRequirementStatus } returns
+            ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED
+        var completed: Boolean? = null
+
+        manager.showPrivacyOptions(activity) { completed = it }
+        idleMain()
+        verify(exactly = 0) { consentInfo.requestConsentInfoUpdate(any(), any(), any(), any()) }
+
+        privacyFormDismissed.captured.onConsentFormDismissed(null)
+        idleMain()
+        assertThat(completed).isNull()
+        verify(exactly = 1) { consentInfo.requestConsentInfoUpdate(any(), any(), any(), any()) }
+
+        every { consentInfo.canRequestAds() } returns true
+        success.captured.onConsentInfoUpdateSuccess()
+        idleMain()
+
+        assertThat(completed).isTrue()
+        assertThat(manager.canRequestAds.value).isTrue()
+        assertThat(manager.isSdkReady.value).isTrue()
+        verify(exactly = 1) { consentInfo.requestConsentInfoUpdate(any(), any(), any(), any()) }
+    }
+
+    @Test
     fun privacyOptionsFormFailureEmitsCategoryWithoutChangingPreviousRefusal() {
         setExplicitEeaRefusal()
         every { consentInfo.privacyOptionsRequirementStatus } returns
@@ -552,6 +577,7 @@ class AdManagerUmpCallbacksTest {
         assertThat(completed).isTrue()
         assertThat(manager.canRequestAds.value).isTrue()
         assertThat(manager.consentStatus.value).isEqualTo(ConsentStatus.Obtained)
+        assertThat(manager.isSdkReady.value).isTrue()
         verify(exactly = 1) { consentInfo.requestConsentInfoUpdate(any(), any(), any(), any()) }
         verify(exactly = 1) {
             analytics.logEvent(
