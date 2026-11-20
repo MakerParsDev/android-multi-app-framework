@@ -21,6 +21,17 @@ class AppOpenReadingResumePolicyTest {
     }
 
     @Test
+    fun prayerLibraryListBlocksLateAppOpenBeforeTheFirstReadingTap() {
+        // The landing list is immediately interactive: a delayed resume ad
+        // must not appear under the user's first attempt to open a prayer.
+        assertTrue(isReadingSurfaceForAppOpenResume("prayer_list"))
+        assertEquals(
+            AdSuppressReason.CONTENT_IN_PROGRESS,
+            appOpenLatePresentationBlockReason("prayer_list", "prayer_list", false),
+        )
+    }
+
+    @Test
     fun navigationChangeOrNewActiveReadingInvalidatesPendingAppOpen() {
         assertEquals(
             AdSuppressReason.APP_LIFECYCLE,
@@ -58,7 +69,6 @@ class AppOpenReadingResumePolicyTest {
     fun listAndNonReadingDestinationsRetainEligibleAppOpenPlacements() {
         listOf(
             "miracles_list",
-            "prayer_list",
             "quran_sura_list",
             "quran_bookmarks",
             "settings",
