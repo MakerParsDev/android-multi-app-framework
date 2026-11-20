@@ -227,6 +227,29 @@ class QuranReaderAccessibilityDeviceTest {
     }
 
     @Test
+    fun reciterSheetDragHandleKeepsItsLabelAndProvides48dpTouchTarget() {
+        verifyHost()
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val reciters = QuranApiConfig.Reciters.ALL
+        rule.setContent {
+            AppTheme(flavorName = "kuran_kerim") {
+                ReciterSelectionSheet(
+                    reciters = reciters,
+                    selectedReciterId = reciters.first().id,
+                    onSelect = {},
+                    onDismiss = {},
+                )
+            }
+        }
+        val handle = rule.onNodeWithTag("quran_reciter_drag_handle").fetchSemanticsNode()
+        val minPixels = 48f * context.resources.displayMetrics.density
+        assertTrue("Reciter sheet handle width must be at least 48dp", handle.boundsInRoot.width >= minPixels - 1f)
+        assertTrue("Reciter sheet handle height must be at least 48dp", handle.boundsInRoot.height >= minPixels - 1f)
+        rule.onNodeWithTag("quran_reciter_drag_handle")
+            .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.ContentDescription))
+    }
+
+    @Test
     fun reciterIsAnActualMutuallyExclusiveRadioChoice() {
         verifyHost()
         val reciters = QuranApiConfig.Reciters.ALL
