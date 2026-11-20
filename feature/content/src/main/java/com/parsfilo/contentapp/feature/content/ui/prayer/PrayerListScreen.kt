@@ -56,6 +56,7 @@ import com.parsfilo.contentapp.core.model.Prayer
 import com.parsfilo.contentapp.core.model.PrayerVerse
 import com.parsfilo.contentapp.feature.ads.AdPlacement
 import com.parsfilo.contentapp.feature.ads.ui.BannerAd
+import com.parsfilo.contentapp.feature.ads.ui.MAX_INLINE_BANNER_HEIGHT_DP
 import com.parsfilo.contentapp.feature.content.R
 import com.parsfilo.contentapp.feature.content.ui.shouldInsertInlineFeedAdAfterItem
 import com.parsfilo.contentapp.feature.content.ui.shouldPreferInlineFeedAds
@@ -92,6 +93,12 @@ fun PrayerListScreen(
     onRewardsClick: () -> Unit = {},
     showVerseCount: Boolean = true,
     bannerAdUnitId: String,
+    bannerAdContent: @Composable () -> Unit = {
+        BannerAd(
+            adUnitId = bannerAdUnitId,
+            placement = AdPlacement.BANNER_CONTENT_LIST,
+        )
+    },
     content: @Composable () -> Unit = {},
 ) {
     val dimens = LocalDimens.current
@@ -141,12 +148,18 @@ fun PrayerListScreen(
                     modifier = Modifier.padding(horizontal = dimens.space24)
                 )
 
-                // Place the single consent-gated banner directly under the header.
+                // Reserve the full capped banner height before consent / SDK load:
+                // a late creative must not move tappable prayer rows beneath a finger.
                 if (showTopBanner) {
-                    BannerAd(
-                        adUnitId = bannerAdUnitId,
-                        placement = AdPlacement.BANNER_CONTENT_LIST,
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(MAX_INLINE_BANNER_HEIGHT_DP.dp)
+                            .testTag("prayer_banner_slot"),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        bannerAdContent()
+                    }
                 }
 
                 // Liste
