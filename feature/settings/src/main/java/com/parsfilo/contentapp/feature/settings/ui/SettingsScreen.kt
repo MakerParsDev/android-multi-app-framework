@@ -538,7 +538,8 @@ fun SettingsScreen(
                                             adManager.retryConsentFromSettings(activity) { success ->
                                                 isConsentRetryInProgress = false
                                                 if (success) {
-                                                    onPrivacyOptionsUpdated()
+                                                    // retryConsentFromSettings already applied UMP eligibility.
+                                                    // Do not make a second consent network request.
                                                     showMessage(privacyOptionsSavedText)
                                                 } else {
                                                     showMessage(privacyRetryErrorText)
@@ -580,7 +581,8 @@ fun SettingsScreen(
                                             }
                                             adManager.showPrivacyOptions(activity) { success ->
                                                 if (success) {
-                                                    onPrivacyOptionsUpdated()
+                                                    // showPrivacyOptions already refreshed UMP and the SDK.
+                                                    // An extra orchestrator refresh duplicates the request.
                                                     showMessage(privacyOptionsSavedText)
                                                 } else {
                                                     showMessage(privacyOptionsErrorText)
