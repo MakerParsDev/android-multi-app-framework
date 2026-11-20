@@ -76,7 +76,9 @@ fun AyahItem(
                 ) {
                     IconButton(
                         onClick = { onBookmarkClick(state.ayah) },
-                        modifier = Modifier.testTag("quran_ayah_" + ayahNumber + "_bookmark"),
+                        modifier = Modifier
+                            .size(48.dp)
+                            .testTag("quran_ayah_" + ayahNumber + "_bookmark"),
                     ) {
                         Icon(
                             imageVector = if (state.isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
@@ -92,7 +94,9 @@ fun AyahItem(
                     )
                     IconButton(
                         onClick = { onPlayPauseClick(state.ayah) },
-                        modifier = Modifier.testTag("quran_ayah_" + ayahNumber + "_play"),
+                        modifier = Modifier
+                            .size(48.dp)
+                            .testTag("quran_ayah_" + ayahNumber + "_play"),
                     ) {
                         Icon(
                             imageVector = if (state.isCurrentlyPlaying) Icons.Default.PauseCircle else Icons.Default.PlayCircle,
