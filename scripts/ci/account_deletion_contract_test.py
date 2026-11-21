@@ -175,6 +175,21 @@ class AccountDeletionContractTest(unittest.TestCase):
         self.assertNotIn('firebase auth:delete', guide)
         self.assertNotIn('serviceAccountKey.json', guide)
 
+    def test_operator_quiesces_sessions_and_checks_privileged_scope(self) -> None:
+        guide = (ROOT / "docs/ACCOUNT_DELETION_REQUEST_OPERATIONS.md").read_text(encoding="utf-8")
+        for phrase in (
+            "admins/{uid}",
+            "ADMIN_ALLOWED_EMAILS",
+            "revoking its refresh tokens",
+            "verifyIdToken(idToken, true)",
+            "do not independently detect revocation",
+            "in-flight writes have drained",
+            "delete Auth",
+            "Do not automatically re-enable",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, guide)
+
     def test_provider_erasure_does_not_infer_uid_to_device_or_analytics_ids(self) -> None:
         guide = (ROOT / "docs/ACCOUNT_DELETION_REQUEST_OPERATIONS.md").read_text()
         analytics = (ROOT / "core/firebase/src/main/java/com/parsfilo/contentapp/core/firebase/"

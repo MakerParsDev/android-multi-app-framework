@@ -16,6 +16,8 @@ let playError;
 let requests;
 let writes;
 let errorLogs;
+let authFailureCode;
+let authCalls;
 
 before(() => {
   if (admin.apps.length === 0) {
@@ -29,10 +31,15 @@ before(() => {
   requests = [];
   writes = [];
   errorLogs = [];
+  authCalls = [];
   mock.method(logger, "error", (...args) => errorLogs.push(args));
 
-  mock.method(auth, "verifyIdToken", async (token) => {
+  mock.method(auth, "verifyIdToken", async (token, checkRevoked) => {
     assert.equal(token, "fake-id-token");
+    authCalls.push({ checkRevoked });
+    if (checkRevoked && authFailureCode) {
+      throw Object.assign(new Error("synthetic Auth rejection"), { code: authFailureCode });
+    }
     return { uid: "fake-user" };
   });
   mock.method(appCheck, "verifyToken", async (token) => {
@@ -139,6 +146,33 @@ test("Google Play v186 purchase verifier preserves fail-closed premium entitleme
       createHash("sha256").update("fake-purchase-token").digest("hex"),
     );
     assert.equal("purchaseToken" in writes.at(-1).data, false);
+  });
+
+  await t.test("invalidated accounts cannot verify a purchase or create new entitlement records", async () => {
+    playResponse = {
+      subscriptionState: "SUBSCRIPTION_STATE_ACTIVE",
+      lineItems: [{ productId: "reklamsiz_kullanim", expiryTime: "2030-01-01T00:00:00Z" }],
+    };
+    const requestsBefore = requests.length;
+    const writesBefore = writes.length;
+    try {
+      for (const code of ["auth/id-token-revoked", "auth/user-disabled", "auth/user-not-found"]) {
+        authFailureCode = code;
+        const response = await invoke(fakeRequest());
+        assert.equal(response.code, 401);
+      }
+      assert.equal(requests.length, requestsBefore);
+      assert.equal(writes.length, writesBefore);
+    } finally {
+      authFailureCode = undefined;
+    }
+    // A valid account still has access to the normal verification flow.
+    const resumed = await invoke(fakeRequest());
+    assert.equal(resumed.code, 200);
+    assert.equal(resumed.payload.verified, true);
+    assert.equal(requests.length, requestsBefore + 1);
+    assert.equal(writes.length, writesBefore + 1);
+    assert.ok(authCalls.every(call => call.checkRevoked === true));
   });
 
   await t.test("active token for a different product does not grant entitlement", async () => {
