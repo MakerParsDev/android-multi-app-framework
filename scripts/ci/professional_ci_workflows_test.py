@@ -728,6 +728,26 @@ def test_ad_inspector_is_opt_in_and_limited_to_issue_337_internal_builds() -> No
         assert 'android:enabled="' + '$' + '{adInspectorDebugEnabled}"' in manifest
         assert 'android:permission="android.permission.DUMP"' in manifest
 
+
+def test_ad_inspector_opaque_android_webview_requires_visual_review_not_success() -> None:
+    runner = (ROOT / "scripts/dev/open-ad-inspector.ps1").read_text(encoding="utf-8")
+    # On Android 9, UIAutomator exposes the Google Ads inspector as a bare WebView.
+    # The runner must neither claim the Inspector passed nor report a proven SDK failure.
+    assert 'android.webkit.WebView' in runner
+    assert '$opaqueWebViewSamples' in runner
+    assert '$uiDumpFailures' in runner
+    assert '$uiDumpFailures -ge 3' in runner
+    assert 'AD_INSPECTOR_VISUAL_REVIEW_REQUIRED' in runner
+    assert 'AD_INSPECTOR_AUTOMATION_INCONCLUSIVE' in runner
+    assert 'exit 2' in runner
+    assert 'AD_INSPECTOR_AUTOMATION_PASSED' in runner
+    assert 'No successful Ad Inspector UI verification can be inferred' in runner
+    assert 'shell am start -n $mainComponent' in runner
+    assert "$mainStartExitCode = $LASTEXITCODE" in runner
+    assert "$ErrorActionPreference = 'Continue'" in runner
+    assert "$ErrorActionPreference = $previousErrorActionPreference" in runner
+
+
 def main() -> int:
     tests = [value for key, value in globals().items() if key.startswith("test_") and callable(value)]
     for test in tests:
