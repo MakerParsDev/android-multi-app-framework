@@ -7,7 +7,7 @@ const admin = require("firebase-admin");
 
 const ALLOWLIST_EMAIL = "bootstrap@example.invalid";
 process.env.ADMIN_ALLOWED_EMAILS = ALLOWLIST_EMAIL;
-const { resolveAdminAccess } = require("../lib/adminAuth.js");
+const { authenticateAdminRequest, resolveAdminAccess } = require("../lib/adminAuth.js");
 
 let firestore;
 let ownsFirebaseApp = false;
@@ -99,3 +99,31 @@ test("missing allowlisted admin documents retain the intended bootstrap path", a
   assert.deepEqual(writes[0].options, { merge: true });
 });
 
+
+
+test("revoked, disabled and deleted accounts cannot enter the admin authorization flow", async () => {
+  const auth = admin.auth();
+  const calls = [];
+  let failureCode;
+  mock.method(auth, "verifyIdToken", async (token, checkRevoked) => {
+    calls.push({ token, checkRevoked });
+    if (checkRevoked && failureCode) {
+      throw Object.assign(new Error("synthetic Auth rejection"), { code: failureCode });
+    }
+    return { uid: "test-admin", email: ALLOWLIST_EMAIL };
+  });
+  const writes = stubAdminDocument(null);
+  for (const code of ["auth/id-token-revoked", "auth/user-disabled", "auth/user-not-found"]) {
+    failureCode = code;
+    const result = await authenticateAdminRequest("Bearer synthetic-id-token");
+    assert.deepEqual(result, { ok: false, statusCode: 401, error: "Invalid Firebase Auth token" });
+  }
+  assert.equal(writes.length, 0, "an invalidated account must never bootstrap an admin document");
+  failureCode = undefined;
+  const result = await authenticateAdminRequest("Bearer synthetic-id-token");
+  assert.equal(result.ok, true);
+  assert.equal(result.uid, "test-admin");
+  assert.equal(writes.length, 1, "a valid allowlisted account may still bootstrap");
+  assert.equal(calls.length, 4);
+  assert.ok(calls.every(call => call.checkRevoked === true));
+});
