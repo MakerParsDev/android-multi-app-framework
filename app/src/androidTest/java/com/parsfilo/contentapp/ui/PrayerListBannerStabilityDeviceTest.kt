@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.parsfilo.contentapp.core.designsystem.AppTheme
@@ -41,11 +42,12 @@ class PrayerListBannerStabilityDeviceTest {
     @Test
     fun lateBannerCreativeNeverMovesTheFirstPrayer() {
         var creativeReady by mutableStateOf(false)
+        var selectedPrayerId: Int? = null
         rule.setContent {
             AppTheme(flavorName = "namazsurelerivedualarsesli") {
                 PrayerListScreen(
                     uiState = PrayerListUiState.Success(prayers, shouldShowAds = true),
-                    onPrayerClick = {},
+                    onPrayerClick = { selectedPrayerId = it },
                     bannerAdUnitId = "synthetic-placeholder",
                     bannerAdContent = {
                         if (creativeReady) {
@@ -63,13 +65,21 @@ class PrayerListBannerStabilityDeviceTest {
         val first = rule.onNodeWithTag("content_first_item")
         val slotBefore = slot.getUnclippedBoundsInRoot()
         val rowBefore = first.getUnclippedBoundsInRoot()
-        assertEquals(MAX_INLINE_BANNER_HEIGHT_DP.dp, slotBefore.bottom - slotBefore.top)
+        // Density rounding can yield 79.99999dp for an intended 80dp slot.
+        assertEquals(
+            MAX_INLINE_BANNER_HEIGHT_DP.toFloat(),
+            (slotBefore.bottom - slotBefore.top).value,
+            0.01f,
+        )
 
         rule.runOnUiThread { creativeReady = true }
         rule.waitForIdle()
 
         assertEquals(slotBefore, slot.getUnclippedBoundsInRoot())
         assertEquals(rowBefore.top, first.getUnclippedBoundsInRoot().top)
+        // Synthetic banner: prove the row stays actionable without touching an ad.
+        first.performClick()
+        rule.runOnIdle { assertEquals(1, selectedPrayerId) }
     }
 
     @Test
