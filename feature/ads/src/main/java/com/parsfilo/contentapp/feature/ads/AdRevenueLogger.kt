@@ -557,7 +557,7 @@ class AdRevenueLogger @Inject constructor(
         route: String? = null,
     ) {
         appAnalytics.logEvent(
-            AnalyticsEventName.AD_CLICK,
+            AnalyticsEventName.AD_PLACEMENT_CLICK,
             adEventBundle(adFormat, placement, adUnitId, route),
         )
     }

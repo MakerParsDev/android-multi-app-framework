@@ -74,7 +74,7 @@ Reklam funnel:
 - `ad_impression`
 - `ad_failed_to_show`
 - `ad_served`
-- `ad_click`
+- `ad_placement_click` (SDK callback with format and placement; Firebase-reserved `ad_click` is not logged manually)
 - `ad_paid_event`
 - `ad_after_engagement`
 

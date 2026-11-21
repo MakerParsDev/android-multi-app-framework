@@ -14,6 +14,7 @@ from analytics_governance import (
     parse_schema_version,
     resolve_event_owner,
     validate_contract,
+    validate_names,
 )
 
 
@@ -53,6 +54,18 @@ object AnalyticsEventName {
             {"FIRST": "first_event", "SECOND": "second_event"},
             parse_object_constants(text, "AnalyticsEventName"),
         )
+
+    def test_reserved_mobile_ad_events_cannot_be_custom_events(self) -> None:
+        # Google Analytics for Firebase rejects these SDK-owned event names.
+        for event in (
+            "ad_activeview", "ad_click", "ad_exposure",
+            "ad_query", "ad_reward", "adunit_exposure",
+        ):
+            with self.subTest(event=event):
+                self.assertTrue(
+                    any("reserved" in error for error in validate_names([event], "Event", 40))
+                )
+        self.assertEqual([], validate_names(["ad_placement_click"], "Event", 40))
 
     def test_parse_schema_version(self) -> None:
         self.assertEqual(

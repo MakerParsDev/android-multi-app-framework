@@ -4,7 +4,7 @@
 
 ## Contract
 
-- Schema version: **3**
+- Schema version: **4**
 - GA4 property: **526790653**
 - Target GA4 event retention (not automatically enforced): **14 months**
 - Declared events: **81**
@@ -71,7 +71,6 @@ Retire from key-event status:
 | Event | Owner | Key event |
 |---|---|---|
 | `ad_after_engagement` | monetization | no |
-| `ad_click` | monetization | no |
 | `ad_clicked` | monetization | no |
 | `ad_dismissed` | monetization | no |
 | `ad_failed_to_load` | monetization | no |
@@ -81,6 +80,7 @@ Retire from key-event status:
 | `ad_inventory_discarded` | monetization | no |
 | `ad_loaded` | monetization | no |
 | `ad_paid_event` | monetization | no |
+| `ad_placement_click` | monetization | no |
 | `ad_placement_impression` | monetization | no |
 | `ad_preload_requested` | monetization | no |
 | `ad_request_sent` | monetization | no |

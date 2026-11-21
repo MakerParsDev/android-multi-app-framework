@@ -11,6 +11,12 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Set, 
 
 NAME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
 RESERVED_PREFIXES = ("firebase_", "google_", "ga_")
+# Google Analytics for Firebase rejects SDK-owned mobile ad event names.
+# https://firebase.google.com/docs/reference/android/com/google/firebase/analytics/FirebaseAnalytics.Event
+RESERVED_MOBILE_AD_EVENTS = frozenset({
+    "ad_activeview", "ad_click", "ad_exposure",
+    "ad_query", "ad_reward", "adunit_exposure",
+})
 CONST_PATTERN = re.compile(r'const\s+val\s+(\w+)\s*=\s*"([^"]+)"')
 SCHEMA_VERSION_PATTERN = re.compile(
     r"const\s+val\s+ANALYTICS_SCHEMA_VERSION(?:\s*:\s*Int)?\s*=\s*(\d+)"
@@ -149,6 +155,8 @@ def validate_names(
             errors.append("%s has an invalid name: %s" % (label, value))
         if value.lower().startswith(RESERVED_PREFIXES):
             errors.append("%s uses a reserved prefix: %s" % (label, value))
+        if label == "Event" and value.lower() in RESERVED_MOBILE_AD_EVENTS:
+            errors.append("Event uses a reserved Firebase name: %s" % value)
     return errors
 
 
