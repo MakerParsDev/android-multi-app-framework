@@ -1,6 +1,6 @@
 package com.parsfilo.contentapp.core.firebase
 
-const val ANALYTICS_SCHEMA_VERSION: Int = 3
+const val ANALYTICS_SCHEMA_VERSION: Int = 4
 
 /**
  * Analytics contract:
@@ -44,7 +44,9 @@ object AnalyticsEventName {
     const val AD_PLACEMENT_IMPRESSION = "ad_placement_impression"
     const val AD_SERVED = "ad_served"
     const val AD_PAID_EVENT = "ad_paid_event"
-    const val AD_CLICK = "ad_click"
+
+    // Firebase reserves ad_click for SDK-owned analytics; this is our placement callback.
+    const val AD_PLACEMENT_CLICK = "ad_placement_click"
     const val REWARDED_INTRO_SHOWN = "rewarded_intro_shown"
     const val REWARDED_INTRO_SKIPPED = "rewarded_intro_skipped"
     const val REWARDED_INTRO_CONFIRMED = "rewarded_intro_confirmed"
