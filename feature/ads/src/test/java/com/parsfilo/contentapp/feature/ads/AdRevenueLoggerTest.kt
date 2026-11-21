@@ -80,6 +80,33 @@ class AdRevenueLoggerTest {
     }
 
     @Test
+    fun `SDK click logs a placement event instead of reserved Firebase ad click`() {
+        assertThat(AnalyticsEventName.AD_PLACEMENT_CLICK).isEqualTo("ad_placement_click")
+        logger.logClick(
+            adFormat = AdFormat.BANNER,
+            placement = AdPlacement.BANNER_CONTENT_LIST,
+            adUnitId = "test-banner-unit",
+            route = "prayer_list",
+        )
+
+        verify(exactly = 1) {
+            appAnalytics.logEvent(
+                AnalyticsEventName.AD_PLACEMENT_CLICK,
+                withArg { bundle ->
+                    requireNotNull(bundle)
+                    assertThat(bundle.getString(AnalyticsParamKey.AD_FORMAT)).isEqualTo("banner")
+                    assertThat(bundle.getString(AnalyticsParamKey.PLACEMENT))
+                        .isEqualTo(AdPlacement.BANNER_CONTENT_LIST.analyticsValue)
+                    assertThat(bundle.getString(AnalyticsParamKey.AD_UNIT_ID))
+                        .isEqualTo("test-banner-unit")
+                    assertThat(bundle.getString(AnalyticsParamKey.ROUTE)).isEqualTo("prayer_list")
+                },
+            )
+        }
+        verify(exactly = 0) { appAnalytics.logEvent("ad_click", any()) }
+    }
+
+    @Test
     fun `show intent logs GA4 event and placement runtime counter`() {
         logger.logShowIntent(
             adFormat = AdFormat.REWARDED,
