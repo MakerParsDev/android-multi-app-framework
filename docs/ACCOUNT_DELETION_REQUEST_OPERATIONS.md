@@ -33,6 +33,40 @@ or deleted while preparing this procedure.
    basis, categories and applicable retention period for any exception;
    **no default 90-day deadline has been established**. Without a
    decision, STOP before any irreversible operation.
+5. Check whether the verified UID has an `admins/{uid}` grant or is
+   eligible through `ADMIN_ALLOWED_EMAILS`. For a privileged account,
+   STOP for separately authorized access-removal and retention decisions;
+   do not merely delete its grant while an email allowlist can recreate it.
+   Do not change an unrelated administrator's access.
+
+## Quiesce the verified account before erasure
+
+After identity, shared-app scope, retention and execution authorization are
+confirmed, prevent new sign-ins before beginning the final deletion
+inventory. In the trusted Admin SDK, disabling the verified account and
+revoking its refresh tokens keep the UID available for scoped cleanup.
+Record the confirmed revocation time privately. Do not perform either
+action merely to rehearse deletion.
+
+Firebase ID tokens may remain valid for up to one hour. The server-side
+admin and purchase endpoints must use `verifyIdToken(idToken, true)` to
+reject revoked, disabled or deleted accounts before granting access or
+writing purchase records. Confirm the fix is deployed before relying on
+that protection. Firestore client rules that check only `request.auth.uid`
+do not independently detect revocation. Do not begin the final destructive
+pass until existing ID tokens have expired (allow for clock skew),
+in-flight writes have drained, and scoped queries can be rechecked; if
+quiescence cannot be established, STOP. A confirmed, deployed write-denial
+rule for the verified account may provide a separate fence, but is not
+introduced by this procedure.
+
+Keep the account disabled throughout the authorized cleanup and delete Auth
+last. Do not automatically re-enable an account after partial failure.
+An extra Auth lookup is required by revocation-aware server verification;
+a failed lookup must not silently authorize a stale session. This is
+session containment, not proof of complete provider-side erasure.
+
+Reference: [Firebase session management](https://firebase.google.com/docs/auth/admin/manage-sessions).
 
 ## Safe, bounded operator inventory (admin-only)
 
@@ -89,7 +123,7 @@ automatically remove subcollections.
 
 ## Execute only for a verified, authorized individual request
 
-1. Record a **dry-run inventory** in the private case (UID match verified,
+1. Confirm the account-quiescence gate above, then record a **dry-run inventory** in the private case (UID match verified,
    per-collection *counts*, entitlement/retention classification, linked
    installation evidence, provider status). No raw personal data in logs.
 2. Verify the retention decision and that no other user/app is affected.

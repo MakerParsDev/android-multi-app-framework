@@ -88,7 +88,8 @@ export async function authenticateAdminRequest(
     }
 
     try {
-        const decoded = await admin.auth().verifyIdToken(idToken);
+        // Deny revoked sessions and disabled/deleted accounts before any authorized side effect.
+        const decoded = await admin.auth().verifyIdToken(idToken, true);
         const access = await resolveAdminAccess(decoded.uid, decoded.email);
         if (access.authorized) {
             return { ok: true, uid: decoded.uid, email: decoded.email };

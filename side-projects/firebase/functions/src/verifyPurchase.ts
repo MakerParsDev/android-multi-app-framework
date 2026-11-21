@@ -120,7 +120,8 @@ async function authenticateRequest(authorizationHeader: string | undefined): Pro
     }
 
     try {
-        const decoded = await admin.auth().verifyIdToken(idToken);
+        // Deny revoked sessions and disabled/deleted accounts before any authorized side effect.
+        const decoded = await admin.auth().verifyIdToken(idToken, true);
         return {
             ok: true,
             uid: decoded.uid,
