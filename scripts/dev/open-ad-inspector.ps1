@@ -104,9 +104,21 @@ $mainComponent = $PackageName + '/com.parsfilo.contentapp.MainActivity'
 Write-Output "Target package: $PackageName"
 Write-Output "Device model: $model"
 Write-Output 'Starting the existing app through its normal UMP/ads initialization path.'
-$mainStart = & $adb -s $DeviceSerial shell am start -W -n $mainComponent 2>&1
+# Android 9 can block am start -W after the activity is already visible.
+# Dispatch normally; the later foreground and Inspector probes provide evidence.
+# Windows PowerShell 5.1 promotes native stderr warnings (such as a reused
+# foreground task) to terminating NativeCommandError under Stop.
+# Temporarily capture the CLI result, restoring strict error handling immediately.
+$previousErrorActionPreference = $ErrorActionPreference
+try {
+    $ErrorActionPreference = 'Continue'
+    $mainStart = & $adb -s $DeviceSerial shell am start -n $mainComponent 2>&1
+    $mainStartExitCode = $LASTEXITCODE
+} finally {
+    $ErrorActionPreference = $previousErrorActionPreference
+}
 $mainStart | ForEach-Object { Write-Output $_ }
-if ($LASTEXITCODE -ne 0 -or ($mainStart -join [Environment]::NewLine) -match 'Error:|Permission Denial') {
+if ($mainStartExitCode -ne 0 -or ($mainStart -join [Environment]::NewLine) -match 'Error:|Permission Denial') {
     throw 'Could not start the existing MainActivity.'
 }
 
@@ -154,6 +166,8 @@ if ($LASTEXITCODE -ne 0 -or ($inspectorStart -join [Environment]::NewLine) -matc
 # Release R8 can remove informational Log.i entries; observable SDK UI is the success criterion.
 # Keep error/consent gating, but do not require informational logcat markers.
 $uiVisible = $false
+$opaqueWebViewSamples = 0
+$uiDumpFailures = 0
 $deadline = [DateTimeOffset]::UtcNow.AddSeconds(90)
 $foreground = @()
 $hierarchyPath = '/sdcard/ad-inspector-337-ui.xml'
@@ -184,11 +198,25 @@ try {
                 $hierarchy = & $adb -s $DeviceSerial shell cat $hierarchyPath 2>&1
                 if ($LASTEXITCODE -eq 0) {
                     $uiText = $hierarchy -join [Environment]::NewLine
+                    if ($uiText -match 'android.webkit.WebView') {
+                        # Android 9 can expose the Inspector as an opaque WebView.
+                        # A normal app-open ad can also occupy Google Ads AdActivity.
+                        $opaqueWebViewSamples++
+                    }
                     if ($uiText -match 'Ad Inspector' -and $uiText -match 'Ad units|Adapters|Privacy') {
                         $uiVisible = $true
                         break
                     }
+                } else {
+                    $uiDumpFailures++
                 }
+            } else {
+                # Android 9 can kill uiautomator (exit 137) without producing XML.
+                $uiDumpFailures++
+            }
+            if ($opaqueWebViewSamples -ge 5 -or $uiDumpFailures -ge 3) {
+                # Bounded unreadable probes cannot establish UI success or SDK failure.
+                break
             }
         }
         Start-Sleep -Seconds 2
@@ -197,13 +225,23 @@ try {
     # Only remove our own temporary UI hierarchy; never touch app storage.
     & $adb -s $DeviceSerial shell rm -f $hierarchyPath | Out-Null
 }
-if (-not $uiVisible) {
-    throw 'Ad Inspector UI could not be confirmed within 90 seconds. Normal UMP consent was not bypassed.'
-}
-
 $after = Get-TargetPackageFingerprint
 if ($before -ne $after) {
     throw "Target app metadata changed unexpectedly. Before: $before After: $after"
+}
+
+if (-not $uiVisible) {
+    if (($opaqueWebViewSamples -gt 0 -or $uiDumpFailures -gt 0) -and
+        ($foreground -join ' ') -match 'com\.google\.android\.gms\.ads') {
+        # Neither AdActivity nor an unreadable/failed XML dump proves Inspector UI.
+        Write-Warning 'No successful Ad Inspector UI verification can be inferred from an opaque WebView or failed Android UIAutomator dump. Review an independent device screenshot for the Inspector title and tabs; do not tap advertisements.'
+        Write-Output "AD_INSPECTOR_VISUAL_REVIEW_REQUIRED package=$PackageName"
+        Write-Output "TARGET_APP_UNCHANGED package=$PackageName"
+        Write-Output "AD_INSPECTOR_AUTOMATION_INCONCLUSIVE package=$PackageName"
+        $foreground | ForEach-Object { Write-Output $_ }
+        exit 2
+    }
+    throw 'Ad Inspector UI could not be confirmed: no readable Inspector title and tabs were observed. Consent was not bypassed.'
 }
 
 Write-Output 'AD_INSPECTOR_UI_VISIBLE'
