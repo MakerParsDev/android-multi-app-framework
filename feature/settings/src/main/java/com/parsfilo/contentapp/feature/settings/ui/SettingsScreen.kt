@@ -150,7 +150,7 @@ fun SettingsScreen(
     onDeveloperModeChanged: (Boolean) -> Unit,
     onNotificationsChanged: (Boolean) -> Unit,
     onPrivacyOptionsUpdated: () -> Unit = {},
-    onAdsAgeGateChanged: (AdAgeGateStatus) -> Unit,
+    onAdsAgeGateChanged: (AdAgeGateStatus, () -> Unit) -> Unit,
     onResetConsent: () -> Unit,
     onSetConsentDebugGeography: (UmpDebugGeography) -> Unit,
     adManager: AdManager,
@@ -678,9 +678,10 @@ fun SettingsScreen(
                                             text = { Text(stringResource(labelRes)) },
                                             onClick = {
                                                 ageGateMenuExpanded = false
-                                                onAdsAgeGateChanged(status)
-                                                if (activity != null) {
-                                                    adManager.onAdsConfigChanged(activity) { _ ->
+                                                onAdsAgeGateChanged(status) {
+                                                    if (activity != null) {
+                                                        // Refresh after persistence, exactly once.
+                                                        // The orchestrator also rechecks preloads.
                                                         onPrivacyOptionsUpdated()
                                                         showMessage(adsConfigUpdatedText)
                                                     }
