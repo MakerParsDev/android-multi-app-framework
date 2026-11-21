@@ -79,10 +79,14 @@ class SettingsViewModel
             appAnalytics.logAppShared(platform = platform)
         }
 
-        fun setAdsAgeGateStatus(status: AdAgeGateStatus) {
+        fun setAdsAgeGateStatus(
+            status: AdAgeGateStatus,
+            onPersisted: () -> Unit = {},
+        ) {
             viewModelScope.launch {
                 preferencesDataSource.setAdsAgeGateStatus(status.storageValue)
                 preferencesDataSource.setAdsAgeGatePromptCompleted(true)
+                onPersisted()
             }
         }
 

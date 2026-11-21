@@ -30,3 +30,30 @@ def test_retry_copy_is_localized() -> None:
         source = (ROOT / f"feature/settings/src/main/res/{locale}/strings.xml").read_text(encoding="utf8")
         for key in ("settings_privacy_retry_title", "settings_privacy_retry_desc", "settings_privacy_retry_button", "settings_privacy_retry_error"):
             assert f'name="{key}"' in source
+
+
+def test_age_gate_change_uses_one_orchestrated_ump_refresh() -> None:
+    # Age-gate selection must not fetch UMP consent twice before reloading ads.
+    settings = SETTINGS.read_text(encoding="utf8")
+    start = settings.index("ageGateOptions.forEach")
+    end = settings.index("HorizontalDivider(", start)
+    age_gate_action = settings[start:end]
+    assert "onAdsAgeGateChanged(status) {" in age_gate_action
+    assert age_gate_action.count("onPrivacyOptionsUpdated()") == 1
+
+    view_model = (ROOT / "feature/settings/src/main/java/com/parsfilo/contentapp/feature/settings/ui/SettingsViewModel.kt").read_text(encoding="utf8")
+    age_gate_save = view_model.split("fun setAdsAgeGateStatus(", 1)[1].split(
+        "fun setConsentDebugGeography(", 1
+    )[0]
+    assert age_gate_save.index("setAdsAgeGateStatus(status.storageValue)") < age_gate_save.index(
+        "setAdsAgeGatePromptCompleted(true)"
+    ) < age_gate_save.index("onPersisted()")
+    assert "adManager.onAdsConfigChanged(" not in age_gate_action
+
+    activity = (ROOT / "app/src/main/java/com/parsfilo/contentapp/MainActivity.kt").read_text(encoding="utf8")
+    orchestrator = (
+        ROOT / "app/src/main/java/com/parsfilo/contentapp/monetization/AdOrchestrator.kt"
+    ).read_text(encoding="utf8")
+    assert "onPrivacyOptionsUpdated = {" in activity
+    assert "adOrchestrator.refreshConsent(" in activity
+    assert "adManager.refreshConsent(activity)" in orchestrator
